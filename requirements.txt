@@ -1,0 +1,2 @@
+google-cloud-dialogflow-cx
+pandas
