@@ -1,11 +1,11 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import json
-import logging
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
+from google.protobuf import field_mask_pb2
 
-# logging config
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)-8s %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
 
 class DialogflowCX:
     def __init__(self, creds_path, agent_id=None):          
@@ -21,12 +21,11 @@ class DialogflowCX:
         self.pages = services.pages.PagesClient()
         self.flows = services.flows.FlowsClient()
         self.sessions = services.sessions.SessionsClient()
-        self.route_groups = \
-          services.transition_route_groups.TransitionRouteGroupsClient()
+        self.route_groups =           services.transition_route_groups.TransitionRouteGroupsClient()
         self.webhooks = services.webhooks.WebhooksClient()
             
         if agent_id:
-            self.agent_id = agent_id 
+            self.agent_id = agent_id
             
 ### TODO (pmarlow@) break each set of Functions into its own Class so that we 
 ### can separate each Class into its own file to keep file line numbers within
@@ -79,6 +78,46 @@ class DialogflowCX:
         
         return response
     
+    def create_intent(self, agent_id, obj=None, **kwargs):
+        #If intent_obj is given, set intent variable to it
+        if obj:
+            intent = obj
+            intent.name = ''
+        else:
+            intent = types.intent.Intent()
+
+        #Set optional arguments as intent attributes
+        for key, value in kwargs.items():
+            if key == 'training_phrases':
+                assert type(kwargs[key]) == list
+                training_phrases = []
+                for x in kwargs[key]:
+                    if type(x) == dict:
+                        tp = types.intent.Intent.TrainingPhrase()
+                        parts = []
+                        for y in x['parts']:
+                            if type(y) == dict:
+                                part = types.intent.Intent.TrainingPhrase.Part()
+                                part.text = y['text']
+                                part.parameter_id = y.get('parameter_id')
+                                parts.append(part)
+                            else:
+                                print("Wrong object in parts list")
+                                return
+                        tp.parts = parts
+                        tp.repeat_count = x.get("repeat_count")
+                        training_phrases.append(tp)
+                    else:
+                        print("Wrong object in training phrases list")
+                        return
+                setattr(intent, key, training_phrases)
+            setattr(intent, key, value)
+
+        client = self.intents
+        response = client.create_intent(parent=agent_id, intent=intent)
+        
+        return response
+    
     def update_intent(self, intent_id, obj=None, **kwargs):
         """ Updates a single Intent object based on provided args.
         
@@ -117,6 +156,32 @@ class DialogflowCX:
         
         return entities
     
+    def get_entity_type(self, entity_id):
+        client = self.entities
+        response = client.get_entity_type(name=entity_id)
+        
+        return response
+        
+
+    def create_entity_type(self, agent_id, obj=None, **kwargs):
+        #If entity_type_obj is given set entity_type to it
+        if obj:
+            entity_type = obj
+            entity_type.name = ''
+        else:
+            entity_type = types.entity_type.EntityType()
+            
+        #set optional arguments to entity type attributes
+        for key, value in kwargs.items():
+            setattr(entity_type, key, value)
+
+        #Apply any optional functions argument to entity_type object
+#         entity_type = set_entity_type_attr(entity_type, kwargs)
+
+        client = self.entities
+        response = client.create_entity_type(parent=agent_id, entity_type=entity_type)
+        return response
+    
     
 ### FLOWS FX
     
@@ -140,15 +205,33 @@ class DialogflowCX:
         
         return response
     
+    def update_flow(self, flow_id, obj=None, **kwargs):
+        if obj:
+            flow = obj
+            flow.name = flow_id
+        else:
+            flow = self.get_flow(flow_id)
+            
+        # set flow attributes to args
+        for key,value in kwargs.items():
+            setattr(flow,key,value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+        
+        client = self.flows
+        response = client.update_flow(flow=flow, update_mask=mask)
+        
+        return response
+    
 ### PAGES FX
 
     def list_pages(self, flow_id):
         request = types.page.ListPagesRequest()
         request.parent = flow_id
-            
+        
         client = self.pages
         response = client.list_pages(request)
-                
+        
         cx_pages = []
         for page in response.pages:
             for cx_page in page.pages:
@@ -162,7 +245,48 @@ class DialogflowCX:
         
         return response
     
-    def create_transition_route(self, intent=None, condition=None, 
+    def create_page(self, flow_id, obj=None, **kwargs):
+        #Intialize client library for pages
+        client = services.pages.PagesClient()
+
+        #if page object is given, set page to it
+        if obj:
+            page = obj
+            page.name = ''
+        else:
+            page = types.page.Page()
+
+        #set optional arguments to page attributes
+        for key, value in kwargs.items():  
+            setattr(page, key, value)
+
+        response = client.create_page(parent=flow_id, page=page)
+        return response
+    
+    def update_page(self, page_id, obj=None, **kwargs):
+        #Initialize client library for pages
+        client = services.pages.PagesClient()
+
+        #If page object is given set page to it
+        if obj:
+            #Set page variable to page object
+            page = obj
+            #Set name attribute to the name of the updated page
+            page.name = page_id
+        else:
+            page = get_page(page_id)
+
+        #Set page attributes to arguments
+        for key, value in kwargs.items():
+            setattr(page, key, value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+
+        #Call client function with page and mask as arguments
+        response = client.update_page(page=page, update_mask=mask)
+        return response
+    
+    def create_transition_route_old(self, intent=None, condition=None, 
                                 target_page=None, target_flow=None, 
                                trigger_fulfillment=None):
         route = types.page.TransitionRoute()
@@ -226,24 +350,55 @@ class DialogflowCX:
         return response
     
     
-    def create_transition_route_group(self, route_group, flow_id=None):
-        request = types.transition_route_group.CreateTransitionRouteGroupRequest()
+    def create_transition_route_group(self, flow_id, obj, **kwargs):
+#         request = types.transition_route_group.CreateTransitionRouteGroupRequest()
         
-        if flow_id:
-            request.parent = flow_id
+        #if rg object is given, set rg to it
+        if obj:
+            trg = obj
+            trg.name = ''
+        else:
+            trg =  types.transition_route_group.TransitionRouteGroup()
+        
+        # set optional args to rg attributes
+        for key, value in kwargs.items():
+            setattr(trg,key,value)
+                        
+#         if obj['display_name']:
+#             trg.display_name = route_group['display_name']
             
-        trg = types.transition_route_group.TransitionRouteGroup()
-            
-        if route_group['display_name']:
-            trg.display_name = route_group['display_name']
-            
-        if route_group['transition_routes']:
-            trg.transition_routes = route_group['transition_routes']
+#         if obj['transition_routes']:
+#             trg.transition_routes = route_group['transition_routes']
 
             
-        request.transition_route_group = trg        
+#         request.transition_route_group = trg        
         client = self.route_groups
-        response = client.create_transition_route_group(request)
+        response = client.create_transition_route_group(parent=flow_id, transition_route_group=trg)
+        
+        return response
+    
+    def update_transition_route_group(self, rg_id, obj=None, **kwargs):
+        request = types.transition_route_group.UpdateTransitionRouteGroupRequest()
+        
+        trg = types.transition_route_group.TransitionRouteGroup()
+        
+        # If route group object is given set route group to it
+        if obj:
+            #Set rg variable to rg object
+            rg = obj
+            #Set name attribute to the name of the updated page
+            rg.name = rg_id
+        else:
+            rg = self.get_transition_route_group(rg_id)
+
+        # Set rg attributes to arguments
+        for key, value in kwargs.items():
+            setattr(rg, key, value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+                  
+        client = self.route_groups
+        response = client.update_transition_route_group(transition_route_group=rg, update_mask=mask)
         
         return response
 
@@ -263,36 +418,241 @@ class DialogflowCX:
                 cx_webhooks.append(cx_webhook)
         
         return cx_webhooks
+    
+    def create_webhook(self, agent_id, obj=None, **kwargs):
+        # if webhook object is given, set webhook to it
+        if obj:
+            webhook = obj
+            webhook.name = ''
+        else:
+            webhook = types.webhook.Webhook()
+            
+        # set optional kwargs to webhook attributes
+        for key, value in kwargs.items():
+            setattr(webhook, key, value)
+        
+        client = self.webhooks
+        response = client.create_webhook(parent=agent_id, webhook=webhook)
+        
+        return response
         
     
 ### SESSION FX
-    def detect_intent_texts(self, agent, session_id, texts, language_code):
+    def run_conversation(self, agent, session_id, conversation, parameters=None, response_text=False):
+        """Tests a full conversation with the bot.
+
+        Using the same `session_id` between requests allows continuation
+        of the conversation."""
+        session_client = self.sessions
+        session_path = "{}/sessions/{}".format(agent, session_id)
+        
+        if parameters:
+            query_params = types.session.QueryParameters(parameters=parameters)
+            text_input = types.session.TextInput(text='')
+            query_input = types.session.QueryInput(text=text_input, language_code='en')
+            request = types.session.DetectIntentRequest(session=session_path,
+                                                       query_params=query_params,
+                                                       query_input=query_input)
+            
+            response = session_client.detect_intent(request=request)
+            
+        for text in texts:
+            text_input = types.session.TextInput(text=text)
+            query_input = types.session.QueryInput(text=text_input, language_code='en')
+            request = types.session.DetectIntentRequest(
+                session=session_path, query_input=query_input
+            )
+            response = session_client.detect_intent(request=request)
+            qr = response.query_result
+
+            print("=" * 20)
+            print("Query text: {}".format(qr.text))
+            if "intent" in qr:
+                print("Triggered Intent: {}".format(qr.intent.display_name))
+                
+            if "intent_detection_confidence" in qr:
+                print("Intent Confidence {}".format(qr.intent_detection_confidence))
+                
+            print("Response Page: {}".format(qr.current_page.display_name))
+            
+            for param in qr.parameters: 
+                if param == "statusMessage":
+                    print("Status Message: {}".format(qr.parameters[param]))
+            
+            if response_text:
+                print(
+                    "Response Text: {}\n".format(
+                        " ".join(
+                            [
+                                " ".join(response_message.text.text)
+                                for response_message in qr.response_messages
+                            ]
+                        )
+                    )
+                )
+                
+    
+    def detect_intent(self, agent, session_id, text, parameters=None, response_text=False):
         """Returns the result of detect intent with texts as inputs.
 
         Using the same `session_id` between requests allows continuation
         of the conversation."""
-        session_client = SessionsClient()
+        session_client = self.sessions
         session_path = "{}/sessions/{}".format(agent, session_id)
-        print("Session path: {}\n".format(session_path))
-
-        for text in texts:
-            text_input = session.TextInput(text=text)
-            query_input = session.QueryInput(text=text_input, language_code=language_code)
-            request = session.DetectIntentRequest(
-                session=session_path, query_input=query_input
-            )
-            print(request)
+        
+        if parameters:
+            query_params = types.session.QueryParameters(parameters=parameters)
+            text_input = types.session.TextInput(text='')
+            query_input = types.session.QueryInput(text=text_input, language_code='en')
+            request = types.session.DetectIntentRequest(session=session_path,
+                                                       query_params=query_params,
+                                                       query_input=query_input)
+            
             response = session_client.detect_intent(request=request)
+            
+        text_input = types.session.TextInput(text=text)
+        query_input = types.session.QueryInput(text=text_input, language_code='en')
+        request = types.session.DetectIntentRequest(
+            session=session_path, query_input=query_input
+        )
+        response = session_client.detect_intent(request=request)
+        qr = response.query_result
 
-            print("=" * 20)
-            print("Query text: {}".format(response.query_result.text))
-            print(
-                "Response text: {}\n".format(
-                    " ".join(
-                        [
-                            " ".join(response_message.text.text)
-                            for response_message in response.query_result.response_messages
-                        ]
-                    )
-                )
-            )
+        return qr
+    
+    def preset_parameters(self, agent, session_id, parameters):
+        session_client = self.sessions
+        session_path = "{}/sessions/{}".format(agent, session_id)
+        
+        query_params = types.session.QueryParameters(parameters=parameters)
+        text_input = types.session.TextInput(text=None)
+        query_input = types.session.QueryInput(text=text_input, language_code='en')
+        request = types.session.DetectIntentRequest(session=session_path,
+                                                   query_params=query_params,
+                                                   query_input=query_input)
+
+        response = session_client.detect_intent(request=request)
+        
+        return response
+                
+### Make Component Functions
+
+### TODO (pmarlow@): Turn these into @staticmethods since we are not
+### doing any authentication with these
+    def make_transition_route(self, obj=None, **kwargs):
+        """ Creates a single Transition Route object for Dialogflow CX.
+        
+        Transition routes are used to navigate a user from page to page, or
+        page to flow in Dialogflow CX. Routes can be part of a Page object or
+        they can also be associated with Route Groups. In either case, the 
+        structure of the Route is the same. This method allows the user to 
+        create a single Route object that can be used interchangeably with 
+        Pages or Route Groups as needed.
+        
+        Note: if no args are provided, a blank Route object will be created.
+        
+        Args:
+          obj, (Optional) an existing Route object can be provided if the
+              user wants to modify or duplicate the object.
+              
+        Keyword Args:
+          intent, (str): The UUID of the Intent to route to
+          condition, (str): The condition to evaluate on the route
+          target_page, (str): The UUID of the target page to transition to
+          target_flow, (str): The UUID of the target flow to transition to
+          trigger_fulfillment, (obj): Requires an object in the format of
+              type <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
+          
+        Returns:
+          Route object of type <google.cloud.dialogflowcx_v3beta1.types.page.TransitionRoute>
+          """
+        
+        if obj:
+            route = obj
+            
+            # make sure the route name is cleared if this is a copy of 
+            # another existing route object
+            route.name = ""
+            
+        else:
+            route = types.page.TransitionRoute()
+            
+        # Set route attributes to args
+        for key, value in kwargs.items():
+            if key == 'trigger_fulfillment':
+                tf = self.make_trigger_fulfillment(value)
+                setattr(route, key, tf)
+            else:
+                setattr(route, key, value)
+                
+        return route
+
+    def make_trigger_fulfillment(self, messages=None, webhook_id=None, webhook_tag=None):
+        """ Creates a single Fulfillment object for Dialogflow CX.
+        
+        Fulfillments are used as part of Transition Routes to add Dialogue
+        messages back to the user, trigger webhooks, set parameter presets, 
+        and enable IVR options where applicable.
+        
+        Note: if no args are provided, a blank Fulfillment object will be returned.
+        
+        Args:
+          messages, (list): (Optional) The list of Dialogue messages to send back to the user
+          webhook_id, (str): (Optional) The UUID of the Dialogflow CX webhook to trigger 
+            when the Fulfillment is triggered by the conversation.
+          webhook_tag, (str): (Required if webhook_id is provided) User defined tag 
+            associated with
+            
+        Returns:
+          Fulfillment object of type <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
+        """
+        fulfillment = types.fulfillment.Fulfillment()
+        
+        if messages:
+            response_message = types.response_message.ResponseMessage()
+            message_text = response_message.Text()
+            
+            message_text.text = messages
+            response_message.text = message_text
+            fulfillment.messages = [response_message]
+
+        if webhook_id:
+            fulfillment.webhook = webhook_id
+            
+            if not webhook_tag:
+                print("webhook_tag is required when specifying webhook_id")
+                return
+            
+            else:
+                fulfillment.tag = webhook_tag
+
+        print(fulfillment)
+        return fulfillment
+    
+def set_entity_type_attr(self, entity_type, kwargs):
+    for key, value in kwargs.items():
+        if key == 'kind':
+            kind = types.entity_type.EntityType.Kind
+            obj = make_generic(value, kind, kind(0))
+            setattr(entity_type, key, obj)
+        #For the auto expansion mode case create helper object to set at entity_type attribute
+        elif key == "auto_expansion_mode":
+            aem = types.entity_type.EntityType.AutoExpansionMode
+            obj = make_generic(value, aem, aem(1))
+            setattr(entity_type, key, obj)
+            
+        #For the entities case iterate over dictionary and assign key value pairs to entity type elements of entities list
+        elif key == "entities":
+            entity = types.entity_type.EntityType.Entity
+            obj = make_seq(value, entity, entity())
+            setattr(entity_type, key, obj)
+            
+        #For the excluded phrases case assign value to the excluded phrase object then set as the entity_type attribute
+        elif key == "excluded_phrases":
+            ep = types.entity_type.EntityType.ExcludedPhrase
+            obj = make_seq(value, ep, ep())
+            setattr(entity_type, key, obj)
+            
+        else:
+            setattr(entity_type, key, value)
+
