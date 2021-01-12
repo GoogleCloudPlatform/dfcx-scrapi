@@ -13,7 +13,7 @@ import pandas as pd
 import pathlib
 import time
 from collections import defaultdict
-from dfcx.dfcx import DialogflowCX
+from .dfcx import DialogflowCX
 
 # logging config
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)-8s %(message)s',
