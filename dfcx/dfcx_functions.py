@@ -13,10 +13,7 @@ import pandas as pd
 import pathlib
 import time
 from collections import defaultdict
-import nbimporter
-# from dfcx_api import Agents, Intents
-from ipynb.fs.full.dfcx import DialogflowCX
-# from dfcx import DialogflowCX
+from dfcx.dfcx import DialogflowCX
 
 # logging config
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)-8s %(message)s',
