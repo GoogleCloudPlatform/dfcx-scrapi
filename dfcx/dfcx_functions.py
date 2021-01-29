@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
-
 import copy
 import json
 import logging
@@ -11,8 +8,11 @@ import os
 import sys
 import pandas as pd
 import pathlib
+import requests
+import subprocess
 import time
 from collections import defaultdict
+from typing import Dict
 from .dfcx import DialogflowCX
 
 # logging config
@@ -39,13 +39,12 @@ class DialogflowFunctions:
 ### TODO: (pmarlow@) move this to @staticmethod outside of main function.
 ### perhaps move to the main dfcx.py file as a @staticmethod ?
 
-# RESOURCE MAP FUNCTIONS
-
-    def get_flows_map(self, agent_id=None, reverse=False):
+    def get_flows_map(self, agent_id, reverse=False):
         """ Exports Agent Flow Names and UUIDs into a user friendly dict.
         
         Args:
-          - agent_id (Optional), the formatted CX Agent ID to use
+          - agent_id, the formatted CX Agent ID to use
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
           
         Returns:
           - flows_map, Dictionary containing flow UUIDs as keys and 
@@ -63,11 +62,12 @@ class DialogflowFunctions:
         return flows_dict
     
     
-    def get_intents_map(self, agent_id=None, reverse=False):
+    def get_intents_map(self, agent_id, reverse=False):
         """ Exports Agent Intent Names and UUIDs into a user friendly dict.
         
         Args:
-          - agent_id (Optional), the formatted CX Agent ID to use
+          - agent_id, the formatted CX Agent ID to use
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
           
         Returns:
           - intents_map, Dictionary containing Intent UUIDs as keys and 
@@ -84,11 +84,13 @@ class DialogflowFunctions:
         
         return intents_dict
     
-    def get_entities_map(self, agent_id=None, reverse=False):
+
+    def get_entities_map(self, agent_id, reverse=False):
         """ Exports Agent Entityt Names and UUIDs into a user friendly dict.
         
         Args:
-          - agent_id (Optional), the formatted CX Agent ID to use
+          - agent_id, the formatted CX Agent ID to use
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
           
         Returns:
           - intents_map, Dictionary containing Entity UUIDs as keys and 
@@ -105,12 +107,13 @@ class DialogflowFunctions:
         
         return entities_dict
     
-    
-    def get_webhooks_map(self, agent_id=None, reverse=False):
+
+    def get_webhooks_map(self, agent_id, reverse=False):
         """ Exports Agent Webhook Names and UUIDs into a user friendly dict.
         
         Args:
-          - agent_id (Optional), the formatted CX Agent ID to use
+          - agent_id, the formatted CX Agent ID to use
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
           
         Returns:
           - webhooks_map, Dictionary containing Webhook UUIDs as keys and
@@ -127,13 +130,13 @@ class DialogflowFunctions:
         
         return webhooks_dict
     
+
     def get_pages_map(self, flow_id, reverse=False):
         """ Exports Agent Page UUIDs and Names into a user friendly dict.
         
         Args:
-          - agent_id, the formatted CX Agent ID to use
           - flow_id, the formatted CX Agent Flow ID to use
-          - reverse (Optional), provides page_name:ID mapping instead of ID:page_name
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
           
         Returns:
           - webhooks_map, Dictionary containing Webhook UUIDs as keys and
@@ -151,14 +154,13 @@ class DialogflowFunctions:
             
         return pages_dict
     
-    
+
     def get_route_groups_map(self, flow_id, reverse=False):
         """ Exports Agent Route Group UUIDs and Names into a user friendly dict.
         
         Args:
-          - agent_id, the formatted CX Agent ID to use
           - flow_id, the formatted CX Agent Flow ID to use
-          - reverse (Optional), provides page_name:ID mapping instead of ID:page_name
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
           
         Returns:
           - webhooks_map, Dictionary containing Webhook UUIDs as keys and
@@ -747,7 +749,7 @@ class DialogflowFunctions:
         params_list = []
 
         for flow in flows_map:
-            temp_pages = dfcx.list_pages(flows_map[flow])
+            temp_pages = self.dfcx.list_pages(flows_map[flow])
             for page in temp_pages:
                 for param in page.form.parameters:
                     if param.is_list:
@@ -759,172 +761,76 @@ class DialogflowFunctions:
                             print(param.entity_type.split('/')[-1])
                         else: 
                             print(param.entity_type)
-                            print(mm11_entities_map[param.entity_type.split('/')[-1]])
+                            print(entities_map[param.entity_type.split('/')[-1]])
                         print('\n')
 
-        return params_map
+        return params_list
+    
+### EXPORT/IMPORT FUNCTIONS
+    def export_flow(self, flow_id: str, gcs_path: str, data_format: str ='BLOB', ref_flows: bool =True) -> Dict[str, str]:
+        """ Exports DFCX Flow(s) into GCS bucket.
+
+        Args:
+          flow_id, the formatted CX Flow ID to export
+          gcs_path, the full GCS Bucket and File name path
+          data_format, (Optional) One of 'BLOB' or 'JSON'. Defaults to 'BLOB'.
+          ref_flows, (Optional) Bool to include referenced flows connected to primary flow
+
+        Returns:
+          lro, Dict with value containing a Long Running Operation UUID that can be
+              used to retrieve status of LRO from dfcx.get_lro
+        """
+        base_url = 'https://dialogflow.googleapis.com/v3beta1'
+        url = '{0}/{1}:export'.format(base_url, flow_id)
+        body = {'flow_uri': '{}'.format(gcs_path), 'data_format': data_format, 'include_referenced_flows': ref_flows}
+        token = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'], 
+                              stdout=subprocess.PIPE,
+                              text=True).stdout
+
+        token = token.strip('\n') # remove newline appended as part of stdout
+        headers = {'Authorization': 'Bearer {}'.format(token), 'Content-Type': 'application/json; charset=utf-8'}
+
+        # Make REST call
+        r = requests.post(url, json=body, headers=headers)
+        r.raise_for_status()
+
+        lro = r.json()
+
+        return lro
+    
+    def import_flow(self, agent_id: str, gcs_path: str, import_option: str = 'FALLBACK') -> Dict[str, str]:
+        """ Imports a DFCX Flow from GCS bucket to CX Agent.
+
+        Args:
+          agent_id, the DFCX formatted Agent ID
+          gcs_path, the full GCS Bucket and File name path
+          import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'FALLBACK'
+
+        Returns:
+          lro, Dict with value containing a Long Running Operation UUID that can be
+              used to retrieve status of LRO from dfcx.get_lro
+        """
+
+        base_url = 'https://dialogflow.googleapis.com/v3beta1'
+        url = '{0}/{1}/flows:import'.format(base_url, agent_id)
+        body = {'flow_uri': '{}'.format(gcs_path), 'import_option': '{}'.format(import_option)}
+        token = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'], 
+                              stdout=subprocess.PIPE,
+                              text=True).stdout
+
+        token = token.strip('\n') # remove newline appended as part of stdout
+
+        headers = {'Authorization': 'Bearer {}'.format(token), 'Content-Type': 'application/json; charset=utf-8'}
+
+        # Make REST call
+        r = requests.post(url, json=body, headers=headers)
+        r.raise_for_status()
+
+        lro = r.json()
+
+        return lro
     
 ### LEGACY FUNCTIONS
-
-    def agent_intents_to_csv(self,agents):
-        """
-        This function takes an Agent object in JSON format from the DFCX API, extracts all of the
-        Intents and TPs to a dataframe, and then writes them to a CSV files.
-        """
-        intent_file_list = []
-        for agent in agents['agents']:
-            # Get agent_id, agent_name from Agent object
-            project_id = agent['name'].split('/')[1]
-            agent_id = agent['name'].split('/')[-1]
-            agent_name = agent['displayName'].replace(" ","_").replace("/","_")
-
-            # Define path and filename to write
-#             path = 'agents/{}'.format(agent_name)
-            path = 'agents/{}'.format(agent_id)
-            filename = 'intents_and_tps.csv'
-
-            logging.info('Getting Intents for Agent: {}'.format(agent_name))
-            intents = self.intents.get_intents(agent_id)
-
-            logging.info('Writing Intents to dataframe...')
-            df = self.intents_to_dataframe(intents)
-
-            logging.info('Saving dataframe to CSV...')
-            pathlib.Path(path).mkdir(parents=True, exist_ok=True) 
-            df.to_csv(path+'/'+filename, index=False)
-
-            intent_file_list.append(path+'/'+filename)
-            logging.info('CSV write complete.')
-
-        return intent_file_list
-
-    def agent_full_export_to_json(self,agents):
-        """
-        This function takes an Agent object in JSON format from the DFCX API, makes a call
-        to the Export Agent API for each Agent, then retrieves the Agent in JSON format
-        and writes it to file.
-        """
-        agent_file_list = []
-        for agent in agents['agents']:
-            # Get agent_id, agent_name from Agent object
-            project_id = agent['name'].split('/')[1]
-            agent_id = agent['name'].split('/')[-1]
-            agent_name = agent['displayName'].replace(" ","_").replace("/","_")
-
-            # Define path and filename to write
-            path = 'agents/{}'.format(agent_id)
-            filename = 'full_agent.json'
-
-            logging.info('Getting Agent Export for Agent: {}'.format(agent_name))
-            agent_data = self.agents.export_agent(agent_id)
-
-            # Check to see if file path exists
-            pathlib.Path(path).mkdir(parents=True, exist_ok=True) 
-
-            logging.info('Writing Agent to file...')
-            with open(path+'/'+filename, 'w') as f:
-                f.write(json.dumps(agent_data, indent=2))
-
-            agent_file_list.append(path+'/'+filename)
-            logging.info('File write complete.')
-
-        return agent_file_list
-
-    def single_agent_export_to_json(self,agent_id):
-        """
-        This function takes a single Agent ID, makes a call to the Export Agent API,
-        then retrieves the Agent in JSON format and writes it to file
-        """
-        agent_file_list = []
-        
-        agent = self.agents.get_agent(agent_id)
-        
-        # Get agent_id, agent_name from Agent object
-        project_id = agent['name'].split('/')[1]
-        agent_id = agent['name'].split('/')[-1]
-        agent_name = agent['displayName'].replace(" ","_").replace("/","_")
-
-        # Define path and filename to write
-        path = 'agents/{}'.format(agent_id)
-        filename = 'full_agent.json'
-
-        logging.info('Getting Agent Export for Agent: {}'.format(agent_name))
-        agent_data = self.agents.export_agent(agent_id)
-
-        # Check to see if file path exists
-        pathlib.Path(path).mkdir(parents=True, exist_ok=True) 
-
-        logging.info('Writing Agent to file...')
-        with open(path+'/'+filename, 'w') as f:
-            f.write(json.dumps(agent_data, indent=2))
-
-        agent_file_list.append(path+'/'+filename)
-        logging.info('File write complete.')
-
-        return agent_file_list
-
-    def single_agent_intent_to_csv(self,agent_id):
-        """
-        This function takes a single Agent ID, extracts all of the
-        Intents and TPs to a dataframe, and then writes this to a CSV file.
-        """
-        intent_file_list = []
-        
-        agent = self.agents.get_agent(agent_id)
-        
-        # Get project_id, agent_id, agent_name from Agent object
-        project_id = agent['name'].split('/')[1]
-        agent_id = agent['name'].split('/')[-1]
-        agent_name = agent['displayName'].replace(" ","_").replace("/","_")
-
-        # Define path and filename to write
-        path = 'agents/{}'.format(agent_id)
-        filename = 'intents_and_tps.csv'.format(agent_id)
-
-        logging.info('Getting Intents for Agent: {}'.format(agent_name))
-        intents = self.intents.get_intents(agent_id)
-
-        logging.info('Writing Intents to dataframe...')
-        df = self.intents_to_dataframe(intents)
-
-        logging.info('Saving dataframe to CSV...')
-        pathlib.Path(path).mkdir(parents=True, exist_ok=True) 
-        df.to_csv(path+'/'+filename, index=False)
-
-        intent_file_list.append(path+'/'+filename)
-        logging.info('CSV write complete.')
-        
-        return intent_file_list
-    
-    def df_export_project(self):
-        
-        # get all agents in project
-        agents = self.agents.list_agents()
-        
-        # export all agents and get file list
-        agent_file_list = self.agent_full_export_to_json(agents)
-        
-        # export all intents and get file list
-        intent_file_list = self.agent_intents_to_csv(agents)
-        
-        # concat files
-        files = agent_file_list + intent_file_list
-        
-        return files
-    
-    def df_export_single_agent(self,agent_id=None):
-        
-        # get single agent full export
-        agent_file_list = self.single_agent_export_to_json(agent_id)
-        
-        # get single agent intent export
-        intent_file_list = self.single_agent_intent_to_csv(agent_id)
-        
-        # concat files
-        files = agent_file_list + intent_file_list
-        
-        return files
-    
     
 class GitlabFunctions:
     def __init__(self):
@@ -963,18 +869,3 @@ class GitlabFunctions:
         }
 
         return data
-
-
-# In[ ]:
-
-
-
-
-
-# # Explore DFCX Functions Class
-
-# In[2]:
-
-
-
-

@@ -6,6 +6,7 @@
 
 import json
 import logging
+import os
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
 from google.protobuf import field_mask_pb2
@@ -20,6 +21,7 @@ class DialogflowCX:
             data = json.load(json_file)
         project_id = data['project_id']
 
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
         self.project_id = 'projects/{}/locations/global'.format(project_id)
         
         self.agents = services.agents.AgentsClient()
@@ -55,9 +57,9 @@ class DialogflowCX:
         return agents
     
     
-    def get_agent(self, project_id):
+    def get_agent(self, agent_id):
         request = types.agent.GetAgentRequest()
-        request.name = self.agent_id
+        request.name = agent_id
         client = self.agents
         response = client.get_agent(request)
         
