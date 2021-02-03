@@ -7,10 +7,10 @@ import pandas as pd
 import pathlib
 import time
 from collections import defaultdict
-import nbimporter
+
 # from dfcx_api import Agents, Intents
 # from ipynb.fs.full.dfcx import DialogflowCX
-from python_df_cx_api.dfcx.dfcx import DialogflowCX
+from dfcx.dfcx import DialogflowCX
 # from dfcx import DialogflowCX
 from google.cloud.dialogflowcx_v3beta1.services.agents import AgentsClient
 from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
@@ -28,7 +28,7 @@ import uuid
 
 class DialogflowClient:
 
-    def __init__(self, creds=None, creds_path=None, agent_path=None):
+    def __init__(self, creds=None, creds_path=None, agent_path=None, language_code='en'):
         """
         one of:
             creds_path: IAM creds file which sets which projects you can access
@@ -89,13 +89,13 @@ class DialogflowClient:
             dtmf_input = session.DtmfInput(digits=dtmf)
             query_input = session.QueryInput(
                 dtmf=dtmf_input,
-                language_code=language_code,
+                language_code=self.language_code,
             )
         else:
             text_input = session.TextInput(text=text)
             query_input = session.QueryInput(
                 text=text_input,
-                language_code=self.language_code or 'en',
+                language_code=self.language_code,
             )
 
         request = session.DetectIntentRequest(

@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
-
 import json
 import logging
 import os
@@ -283,7 +280,7 @@ class DialogflowCX:
             #Set name attribute to the name of the updated page
             page.name = page_id
         else:
-            page = get_page(page_id)
+            page = self.get_page(page_id)
 
         #Set page attributes to arguments
         for key, value in kwargs.items():
@@ -379,7 +376,6 @@ class DialogflowCX:
 #         if obj['transition_routes']:
 #             trg.transition_routes = route_group['transition_routes']
 
-            
 #         request.transition_route_group = trg        
         client = self.route_groups
         response = client.create_transition_route_group(parent=flow_id, transition_route_group=trg)
@@ -447,7 +443,7 @@ class DialogflowCX:
         
     
 ### SESSION FX
-    def run_conversation(self, agent, session_id, conversation, parameters=None, response_text=False):
+    def run_conversation(self, agent, session_id, texts, parameters=None, response_text=False):
         """Tests a full conversation with the bot.
 
         Using the same `session_id` between requests allows continuation
@@ -637,31 +633,33 @@ class DialogflowCX:
 
         print(fulfillment)
         return fulfillment
-    
-def set_entity_type_attr(self, entity_type, kwargs):
-    for key, value in kwargs.items():
-        if key == 'kind':
-            kind = types.entity_type.EntityType.Kind
-            obj = make_generic(value, kind, kind(0))
-            setattr(entity_type, key, obj)
-        #For the auto expansion mode case create helper object to set at entity_type attribute
-        elif key == "auto_expansion_mode":
-            aem = types.entity_type.EntityType.AutoExpansionMode
-            obj = make_generic(value, aem, aem(1))
-            setattr(entity_type, key, obj)
+
+# commented out for now cos of make_generic and make_seq
+
+# def set_entity_type_attr(self, entity_type, kwargs):
+#     for key, value in kwargs.items():
+#         if key == 'kind':
+#             kind = types.entity_type.EntityType.Kind
+#             obj = make_generic(value, kind, kind(0))
+#             setattr(entity_type, key, obj)
+#         #For the auto expansion mode case create helper object to set at entity_type attribute
+#         elif key == "auto_expansion_mode":
+#             aem = types.entity_type.EntityType.AutoExpansionMode
+#             obj = make_generic(value, aem, aem(1))
+#             setattr(entity_type, key, obj)
             
-        #For the entities case iterate over dictionary and assign key value pairs to entity type elements of entities list
-        elif key == "entities":
-            entity = types.entity_type.EntityType.Entity
-            obj = make_seq(value, entity, entity())
-            setattr(entity_type, key, obj)
+#         #For the entities case iterate over dictionary and assign key value pairs to entity type elements of entities list
+#         elif key == "entities":
+#             entity = types.entity_type.EntityType.Entity
+#             obj = make_seq(value, entity, entity())
+#             setattr(entity_type, key, obj)
             
-        #For the excluded phrases case assign value to the excluded phrase object then set as the entity_type attribute
-        elif key == "excluded_phrases":
-            ep = types.entity_type.EntityType.ExcludedPhrase
-            obj = make_seq(value, ep, ep())
-            setattr(entity_type, key, obj)
+#         #For the excluded phrases case assign value to the excluded phrase object then set as the entity_type attribute
+#         elif key == "excluded_phrases":
+#             ep = types.entity_type.EntityType.ExcludedPhrase
+#             obj = make_seq(value, ep, ep())
+#             setattr(entity_type, key, obj)
             
-        else:
-            setattr(entity_type, key, value)
+#         else:
+#             setattr(entity_type, key, value)
 
