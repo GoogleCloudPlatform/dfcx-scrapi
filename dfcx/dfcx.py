@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 import json
 import logging
 import os
@@ -283,7 +277,7 @@ class DialogflowCX:
             #Set name attribute to the name of the updated page
             page.name = page_id
         else:
-            page = get_page(page_id)
+            page = self.get_page(page_id)
 
         #Set page attributes to arguments
         for key, value in kwargs.items():
@@ -387,10 +381,6 @@ class DialogflowCX:
         return response
     
     def update_transition_route_group(self, rg_id, obj=None, **kwargs):
-        request = types.transition_route_group.UpdateTransitionRouteGroupRequest()
-        
-        trg = types.transition_route_group.TransitionRouteGroup()
-        
         # If route group object is given set route group to it
         if obj:
             #Set rg variable to rg object
@@ -465,7 +455,7 @@ class DialogflowCX:
             
             response = session_client.detect_intent(request=request)
             
-        for text in texts:
+        for text in conversation:
             text_input = types.session.TextInput(text=text)
             query_input = types.session.QueryInput(text=text_input, language_code='en')
             request = types.session.DetectIntentRequest(
@@ -548,6 +538,40 @@ class DialogflowCX:
 
 ### TODO (pmarlow@): Turn these into @staticmethods since we are not
 ### doing any authentication with these
+
+    def make_generic(self, obj, obj_type, default, conditionals=dict()):
+        if type(obj) == obj_type:
+            return obj
+        
+        elif type(obj) == dict:
+            obj_ins = obj_type()
+            for key, value in obj.items():
+                if key in conditionals.keys():
+                    func = conditionals[key]
+                    out = func(value)
+                    setattr(obj_ins, key, out)
+                else:
+                    print(value)
+                    setattr(obj_ins, key, value)
+            return obj_ins
+        
+        elif type(obj) == str:
+            dic = {'unspecified': 0, 'map': 1, 'list': 2, 'regexp': 3, 'default': 1}
+            t = dic.get(obj.lower())
+            if t:
+                return obj_type(t)
+            else:
+                return default
+        else:
+            return default
+        
+    def make_seq(self, obj, obj_type, default, conditionals=dict()):
+        assert type(obj) == list
+        l = []
+        for x in obj:
+            l.append(self.make_generic(x, obj_type, default, conditionals))
+        return l
+
     def make_transition_route(self, obj=None, **kwargs):
         """ Creates a single Transition Route object for Dialogflow CX.
         
@@ -642,24 +666,24 @@ def set_entity_type_attr(self, entity_type, kwargs):
     for key, value in kwargs.items():
         if key == 'kind':
             kind = types.entity_type.EntityType.Kind
-            obj = make_generic(value, kind, kind(0))
+            obj = self.make_generic(value, kind, kind(0))
             setattr(entity_type, key, obj)
         #For the auto expansion mode case create helper object to set at entity_type attribute
         elif key == "auto_expansion_mode":
             aem = types.entity_type.EntityType.AutoExpansionMode
-            obj = make_generic(value, aem, aem(1))
+            obj = self.make_generic(value, aem, aem(1))
             setattr(entity_type, key, obj)
             
         #For the entities case iterate over dictionary and assign key value pairs to entity type elements of entities list
         elif key == "entities":
             entity = types.entity_type.EntityType.Entity
-            obj = make_seq(value, entity, entity())
+            obj = self.make_seq(value, entity, entity())
             setattr(entity_type, key, obj)
             
         #For the excluded phrases case assign value to the excluded phrase object then set as the entity_type attribute
         elif key == "excluded_phrases":
             ep = types.entity_type.EntityType.ExcludedPhrase
-            obj = make_seq(value, ep, ep())
+            obj = self.make_seq(value, ep, ep())
             setattr(entity_type, key, obj)
             
         else:
