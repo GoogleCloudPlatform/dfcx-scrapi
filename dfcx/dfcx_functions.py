@@ -12,8 +12,10 @@ import requests
 import subprocess
 import time
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, List
 from .dfcx import DialogflowCX
+
+import google.cloud.dialogflowcx_v3beta1.types as types
 
 # logging config
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)-8s %(message)s',
@@ -223,7 +225,7 @@ class DialogflowFunctions:
             logging.info('If you are trying to update an existing Entity, see method dfcx.update_entity_type()')
             
             
-    def create_page_shells(self, pages_list, destination_agent, destination_flow=None):
+    def create_page_shells(self, pages_list: List[types.Page], destination_agent: str, destination_flow: str ='Default Start Flow'):
         """ Create blank DFCX Page object(s) with given Display Name.
 
         This function aids in the copy/pasting of pages from one DFCX agent to
@@ -233,7 +235,7 @@ class DialogflowFunctions:
         destination.
 
         Args:
-          pages_list, List of Page Display Names to be created
+          pages_list, List of Page(s) object to extract page names from
           destination_agent, DFCX Agent ID of the Destination Agent
           destination_flow, DFCX Flow ID of the Destination Flow. If no Flow ID is
             provided, Default Start Flow will be used.
@@ -241,23 +243,23 @@ class DialogflowFunctions:
         Returns:
           Success!
         """
-
+        
         destination_flows = self.get_flows_map(destination_agent, reverse=True)
-        if destination_flow:
-            flow = destination_flow
-        else:
-            flow = 'Default Start Flow'
-
+        
         for page in pages_list:
             try:
-                self.dfcx.create_page(destination_flows[flow], display_name=page.display_name)
+                self.dfcx.create_page(destination_flows[destination_flow], display_name=page.display_name)
                 logging.info('Page \'{}\' created successfully'.format(page.display_name))
-            except:
+            except Exception as e:
+                logging.info(e)
                 logging.info('Page \'{}\' already exists in agent'.format(page.display_name))
                 continue
                 
                 
-    def copy_paste_agent_resources(self, resource_dict, source_agent, destination_agent, skip_list=[]):
+    def copy_paste_agent_resources(self, resource_dict: Dict[str,str], 
+                                   source_agent: str, destination_agent: str, 
+                                   destination_flow: str='Default Start Flow', 
+                                   skip_list: List[str]=[]):
         """ Copy/Paste Agent level resources from one DFCX agent to another.
         
         Agent level resources in DFCX are resources like Entities, Intents, and
@@ -270,11 +272,14 @@ class DialogflowFunctions:
         get_page_dependencies() method included in the DFFX library.
         
         Args:
-          resource_dict, Dictionary of Lists of DFCX Resource IDs with keys
+          resource_dict: Dictionary of Lists of DFCX Resource IDs with keys
             corresponding to the Resource type (i.e. intents, entities, etc.)
             and values corresponding to the Resource ID itself.
-          source_agent, DFCX Source Agent ID (Name)
-          destination_agent, DFCX Destination Agent ID (Name)
+          source_agent: DFCX Source Agent ID (Name)
+          destination_agent: DFCX Destination Agent ID (Name)
+          destination_flow: (Optional) Defaults to 'Default Start Flow'
+          skip_list: (Optional) List of resources to exclude. Use the following
+              strings: 'intents', 'entities', 'webhooks', 'route_groups'
           
         Returns:
           Success!
@@ -282,27 +287,30 @@ class DialogflowFunctions:
         resource_obj_dict = defaultdict(list)
 
         # COPY
-        source_entities = self.dfcx.list_entity_types(source_agent)
-        source_intents = self.dfcx.list_intents(source_agent)
-        source_webhooks = self.dfcx.list_webhooks(source_agent)
-        source_flows_map = self.get_flows_map(source_agent, reverse=True)
-        source_route_groups = self.dfcx.list_transition_route_groups(source_flows_map['Default Start Flow'])
-
-        for entity in source_entities:
-            if entity.name in resource_dict['entities']:
-                resource_obj_dict['entities'].append(entity)
-
-        for intent in source_intents:
-            if intent.name in resource_dict['intents']:
-                resource_obj_dict['intents'].append(intent)
-
-        for webhook in source_webhooks:
-            if webhook.name in resource_dict['webhooks']:
-                resource_obj_dict['webhooks'].append(webhook)
-       
-        for rg in source_route_groups:
-            if rg.name in resource_dict['route_groups']:
-                resource_obj_dict['route_groups'].append(rg)
+        if 'entities' not in skip_list:
+            source_entities = self.dfcx.list_entity_types(source_agent)
+            for entity in source_entities:
+                if entity.name in resource_dict['entities']:
+                    resource_obj_dict['entities'].append(entity)
+            
+        if 'intents' not in skip_list:
+            source_intents = self.dfcx.list_intents(source_agent)
+            for intent in source_intents:
+                if intent.name in resource_dict['intents']:
+                    resource_obj_dict['intents'].append(intent)
+            
+        if 'webhooks' not in skip_list:
+            source_webhooks = self.dfcx.list_webhooks(source_agent)
+            for webhook in source_webhooks:
+                if webhook.name in resource_dict['webhooks']:
+                    resource_obj_dict['webhooks'].append(webhook)
+        
+        if 'route_groups' not in skip_list:
+            source_flows_map = self.get_flows_map(source_agent, reverse=True)
+            source_route_groups = self.dfcx.list_transition_route_groups(source_flows_map['Default Start Flow'])
+            for rg in source_route_groups:
+                if rg.name in resource_dict['route_groups']:
+                    resource_obj_dict['route_groups'].append(rg)
 
         ### TODO (pmarlow@): Add more descriptive Error Handling messages
         ### TODO (pmarlow@): Need to identify strategy for dedupe logic / Design Doc
@@ -312,6 +320,9 @@ class DialogflowFunctions:
         """
         # PASTE
         if 'webhooks' in resource_obj_dict and 'webhooks' not in skip_list:
+            # Attempt to Create the new Webhook Resource. If the Resource is
+            # a duplicate, then we will skip it. Duplicate is determined by
+            # display_name only at this time.
             for webhook in resource_obj_dict['webhooks']:
                 try:
                     self.dfcx.create_webhook(destination_agent, webhook)
@@ -323,6 +334,9 @@ class DialogflowFunctions:
 
         if 'entities' in resource_obj_dict and 'entities' not in skip_list:
             for entity in resource_obj_dict['entities']:
+                # Attempt to Create the new Entity Resource. If the Resource is
+                # a duplicate, then we will skip it. Duplicate is determined by
+                # display_name only at this time.
                 try:
                     self.dfcx.create_entity_type(destination_agent, entity)
                     logging.info('Entity \'{}\' created successfully.'.format(entity.display_name))
@@ -347,6 +361,9 @@ class DialogflowFunctions:
                             destination_name = destination_entities_map[source_name]
                             param.entity_type = destination_name
                 
+                # Attempt to Create the new Intent Resource. If the Resource is
+                # a duplicate, then we will skip it. Duplicate is determined by
+                # display_name only at this time.
                 try:
                     self.dfcx.create_intent(destination_agent, intent)
                     logging.info('Intent \'{}\' created successfully'.format(intent.display_name))
@@ -363,7 +380,8 @@ class DialogflowFunctions:
             destination_flows = self.get_flows_map(destination_agent, reverse=True)
             destination_intents_map = self.get_intents_map(destination_agent, reverse=True)
             destination_webhooks_map = self.get_webhooks_map(destination_agent, reverse=True)
-            destination_pages_map = self.get_pages_map(destination_flows['Default Start Flow'], reverse=True)
+            
+            destination_pages_map = self.get_pages_map(destination_flows[destination_flow], reverse=True)
             
             for rg in resource_obj_dict['route_groups']:
                 for tr in rg.transition_routes:
@@ -379,14 +397,14 @@ class DialogflowFunctions:
 
                     if 'target_page' in tr:
                         if tr.target_page.split('/')[-1] == 'END_FLOW':
-                            tr.target_page = destination_flows['Default Start Flow'] + '/pages/END_FLOW'
+                            tr.target_page = destination_flows[destination_flow] + '/pages/END_FLOW'
                         else:
                             source_page = source_pages_map[tr.target_page]
                             destination_page = destination_pages_map[source_page]
                             tr.target_page = destination_page
                     
                 try:
-                    self.dfcx.create_transition_route_group(destination_flows['Default Start Flow'], rg)
+                    self.dfcx.create_transition_route_group(destination_flows[destination_flow], rg)
                     logging.info('Route Group \'{}\' created successfully'.format(rg.display_name))
                 except Exception as e:
                     print(e)
@@ -394,7 +412,8 @@ class DialogflowFunctions:
                     pass
     
     
-    def convert_page_dependencies(self, agent_id, pages, agent_type='source', flow='Default Start Flow'):
+    def convert_page_dependencies(self, agent_id: str, pages: List[types.Page], agent_type: str='source', flow: str='Default Start Flow') -> List[types.Page]:
+        
         pages_mod = copy.deepcopy(pages)
 
         if agent_type == 'source':
@@ -405,16 +424,28 @@ class DialogflowFunctions:
             pages_map = self.get_pages_map(flows_map[flow])
             rgs_map = self.get_route_groups_map(flows_map[flow])
 
+            # For each page, recurse through the resources and look for
+            # specific resource types that will have local agent 
+            # dependencies, then replace that UUID with a literal 
+            # str display_name. We will use this display_name to map back
+            # to the appropriate destination UUID later.
             for page in pages_mod:
                 if 'entry_fulfillment' in page:
                     if 'webhook' in page.entry_fulfillment:
                         page.entry_fulfillment.webhook = webhooks_map[page.entry_fulfillment.webhook]
-                    
+                
                 if 'transition_routes' in page:
                     for tr in page.transition_routes:
                         if 'target_page' in tr:
                             if tr.target_page.split('/')[-1] == 'END_FLOW':
                                 tr.target_page = 'END_FLOW'
+                                
+                            elif tr.target_page.split('/')[-1] == 'END_SESSION':
+                                tr.target_page = 'END_SESSION'
+                                
+                            elif tr.target_page.split('/')[-1] == 'CURRENT_PAGE':
+                                tr.target_page = 'CURRENT_PAGE'
+                                
                             else:
                                 tr.target_page = pages_map[tr.target_page]
 
@@ -430,6 +461,13 @@ class DialogflowFunctions:
                         if 'target_page' in handler:
                             if handler.target_page.split('/')[-1] == 'END_FLOW':
                                 handler.target_page = 'END_FLOW'
+                                
+                            elif handler.target_page.split('/')[-1] == 'END_SESSION':
+                                handler.target_page = 'END_SESSION'
+                                
+                            elif handler.target_page.split('/')[-1] == 'CURRENT_PAGE':
+                                handler.target_page = 'CURRENT_PAGE'
+                                
                             else:
                                 handler.target_page = pages_map[handler.target_page]
                                 
@@ -450,6 +488,21 @@ class DialogflowFunctions:
                                         if 'trigger_fulfillment' in handler:
                                             if 'webhook' in handler.trigger_fulfillment:
                                                 handler.trigger_fulfillment.webhook = webhooks_map[handler.trigger_fulfillment.webhook]
+                                                
+                                        if 'target_page' in handler:
+                                            print(handler.target_page)
+                                            if handler.target_page.split('/')[-1] == 'END_FLOW':
+                                                handler.target_page = 'END_FLOW'
+                                                
+                                            elif handler.target_page.split('/')[-1] == 'END_SESSION':
+                                                handler.target_page = 'END_SESSION'
+                                                
+                                            elif handler.target_page.split('/')[-1] == 'CURRENT_PAGE':
+                                                handler.target_page = 'CURRENT_PAGE'
+                                                
+                                            else:
+                                                handler.target_page = pages_map[handler.target_page]
+                                            
 
                             if 'sys.' in param.entity_type:
                                 pass
@@ -471,7 +524,12 @@ class DialogflowFunctions:
             flows_map = self.get_flows_map(agent_id, reverse=True)
             pages_map = self.get_pages_map(flows_map[flow], reverse=True)
             rgs_map = self.get_route_groups_map(flows_map[flow], reverse=True)
-
+            
+            # For each page, recurse through the resources and look for
+            # specific resource types that have been replaced with literal
+            # string display_name. Perform a lookup using the map resources
+            # and replace the str display_name with the appropriate str UUID
+            
             for page in pages_mod:
                 page.name = pages_map[page.display_name]
 
@@ -484,6 +542,13 @@ class DialogflowFunctions:
                         if 'target_page' in tr:
                             if tr.target_page == 'END_FLOW':
                                 tr.target_page = flows_map[flow] + '/pages/END_FLOW'
+                                
+                            elif tr.target_page == 'END_SESSION':
+                                tr.target_page = flows_map[flow] + '/pages/END_SESSION'
+                                
+                            elif tr.target_page == 'CURRENT_PAGE':
+                                tr.target_page = flows_map[flow] + '/pages/CURRENT_PAGE'
+                                
                             else:
                                 tr.target_page = pages_map[tr.target_page]
 
@@ -499,6 +564,13 @@ class DialogflowFunctions:
                         if 'target_page' in handler:
                             if handler.target_page == 'END_FLOW':
                                 handler.target_page = flows_map[flow] + '/pages/END_FLOW'
+                                
+                            elif handler.target_page == 'END_SESSION':
+                                handler.target_page = flows_map[flow] + '/pages/END_SESSION'
+                                
+                            elif handler.target_page == 'CURRENT_PAGE':
+                                handler.target_page = flows_map[flow] + '/pages/CURRENT_PAGE'
+                                
                             else:
                                 handler.target_page = pages_map[handler.target_page]
                                 
@@ -518,6 +590,19 @@ class DialogflowFunctions:
                                         if 'trigger_fulfillment' in handler:
                                             if 'webhook' in handler.trigger_fulfillment:
                                                 handler.trigger_fulfillment.webhook = webhooks_map[handler.trigger_fulfillment.webhook]
+                                                
+                                        if 'target_page' in handler:
+                                            if handler.target_page == 'END_FLOW':
+                                                handler.target_page = flows_map[flow] + '/pages/END_FLOW'
+                                                
+                                            elif handler.target_page == 'END_SESSION':
+                                                handler.target_page = flows_map[flow] + '/pages/END_SESSION'
+                                                
+                                            elif handler.target_page == 'CURRENT_PAGE':
+                                                handler.target_page = flows_map[flow] + '/pages/CURRENT_PAGE'
+                                                
+                                            else:
+                                                handler.target_page = pages_map[handler.target_page]
                                         
                             if 'sys.' in param.entity_type:
                                 pass
@@ -742,7 +827,7 @@ class DialogflowFunctions:
         
         if not agent_id:
             agent_id = self.agent_id 
-        entities = self.dfcx.list_entity_types(agent_id)
+        # entities = self.dfcx.list_entity_types(agent_id)
         flows_map = self.get_flows_map(agent_id)
         entities_map = self.get_entities_map(agent_id)
 
