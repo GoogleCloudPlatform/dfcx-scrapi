@@ -165,11 +165,14 @@ class DialogflowClient:
     def format_other_intents(self, qr):
         other_intents = qr.diagnostic_info.get('Alternative Matched Intents')
         items = []
+        rank = 0
         for alt in other_intents:
             items.append({
                 'name': alt.get('DisplayName'),
-                'score': alt.get('Score')
+                'score': alt.get('Score'),
+                'rank': rank
             })
+            rank += 1
 #             intents_map[alt['DisplayName']] = alt['Score']
         return items
 

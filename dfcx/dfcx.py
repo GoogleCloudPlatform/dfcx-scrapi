@@ -13,14 +13,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)-8s %(me
                     datefmt='%Y-%m-%d %H:%M:%S')
 
 class DialogflowCX:
-    def __init__(self, creds_path, agent_id=None):          
+    def __init__(self, creds_path, agent_id=None):
         with open(creds_path) as json_file:
             data = json.load(json_file)
         project_id = data['project_id']
 
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
         self.project_id = 'projects/{}/locations/global'.format(project_id)
-        
+
         self.agents = services.agents.AgentsClient()
         self.intents = services.intents.IntentsClient()
         self.entities = services.entity_types.EntityTypesClient()
@@ -29,7 +29,7 @@ class DialogflowCX:
         self.sessions = services.sessions.SessionsClient()
         self.route_groups =           services.transition_route_groups.TransitionRouteGroupsClient()
         self.webhooks = services.webhooks.WebhooksClient()
-            
+
         if agent_id:
             self.agent_id = agent_id
             
@@ -383,9 +383,8 @@ class DialogflowCX:
         return response
     
     def update_transition_route_group(self, rg_id, obj=None, **kwargs):
-        request = types.transition_route_group.UpdateTransitionRouteGroupRequest()
-        
-        trg = types.transition_route_group.TransitionRouteGroup()
+        # request = types.transition_route_group.UpdateTransitionRouteGroupRequest()
+        # trg = types.transition_route_group.TransitionRouteGroup()
         
         # If route group object is given set route group to it
         if obj:
