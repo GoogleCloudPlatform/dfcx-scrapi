@@ -54,7 +54,6 @@ class DialogflowCX:
 
 # AGENT FX
 
-
     def list_agents(self, location_id: str) -> List[types.Agent]:
         """Get list of all CX agents in a given GCP project
 
@@ -135,10 +134,10 @@ class DialogflowCX:
 
         return response
 
-    def validate(self, agent_id:str) -> Dict:
+    def validate(self, agent_id: str) -> Dict:
         """Initiates the Validation of the CX Agent or Flow.
 
-        This function will start the Validation feature for the given Agent 
+        This function will start the Validation feature for the given Agent
         and then return the results as a Dict.
 
         Args:
@@ -151,17 +150,21 @@ class DialogflowCX:
         """
         location = agent_id.split('/')[3]
         if location != 'global':
-            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(location)
+            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
+                location)
         else:
             base_url = 'https://dialogflow.googleapis.com/v3beta1'
 
         url = '{0}/{1}/validationResult'.format(base_url, agent_id)
-        
-        token = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'], 
-                              stdout=subprocess.PIPE,
-                              text=True).stdout
 
-        token = token.strip('\n') # remove newline appended as part of stdout
+        token = subprocess.run(['gcloud',
+                                'auth',
+                                'application-default',
+                                'print-access-token'],
+                               stdout=subprocess.PIPE,
+                               text=True).stdout
+
+        token = token.strip('\n')  # remove newline appended as part of stdout
         headers = {"Authorization": "Bearer {}".format(token)}
 
         # Make REST call
@@ -170,8 +173,10 @@ class DialogflowCX:
 
         return results.json()
 
-
-    def get_validation_result(self, agent_id:str, flow_id:str=None) -> Dict:
+    def get_validation_result(
+            self,
+            agent_id: str,
+            flow_id: str = None) -> Dict:
         """Extract Validation Results from CX Validation feature.
 
         This function will get the LATEST validation result run for the given
@@ -183,7 +188,7 @@ class DialogflowCX:
         ALL flows.
         Passing in the Flow ID will provide validation results for only
         that Flow ID.
-        
+
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
@@ -198,7 +203,8 @@ class DialogflowCX:
         if flow_id:
             location = flow_id.split('/')[3]
             if location != 'global':
-                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(location)
+                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
+                    location)
             else:
                 base_url = 'https://dialogflow.googleapis.com/v3beta1'
 
@@ -206,17 +212,21 @@ class DialogflowCX:
         else:
             location = agent_id.split('/')[3]
             if location != 'global':
-                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(location)
+                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
+                    location)
             else:
                 base_url = 'https://dialogflow.googleapis.com/v3beta1'
 
             url = '{0}/{1}/validationResult'.format(base_url, agent_id)
-        
-        token = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'], 
-                              stdout=subprocess.PIPE,
-                              text=True).stdout
 
-        token = token.strip('\n') # remove newline appended as part of stdout
+        token = subprocess.run(['gcloud',
+                                'auth',
+                                'application-default',
+                                'print-access-token'],
+                               stdout=subprocess.PIPE,
+                               text=True).stdout
+
+        token = token.strip('\n')  # remove newline appended as part of stdout
         headers = {"Authorization": "Bearer {}".format(token)}
 
         # Make REST call
@@ -227,6 +237,7 @@ class DialogflowCX:
 
 
 # INTENTS FX
+
 
     def list_intents(self, agent_id):
         request = types.intent.ListIntentsRequest()
@@ -316,12 +327,14 @@ class DialogflowCX:
 
 # ENTITIES FX
 
+
     def list_entity_types(self, agent_id):
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
-            
+
         client_options = self._set_region(agent_id)
-        client = services.entity_types.EntityTypesClient(client_options=client_options)
+        client = services.entity_types.EntityTypesClient(
+            client_options=client_options)
 
         response = client.list_entity_types(request)
 
@@ -334,7 +347,8 @@ class DialogflowCX:
 
     def get_entity_type(self, entity_id):
         client_options = self._set_region(entity_id)
-        client = services.entity_types.EntityTypesClient(client_options=client_options)
+        client = services.entity_types.EntityTypesClient(
+            client_options=client_options)
         response = client.get_entity_type(name=entity_id)
 
         return response
@@ -355,18 +369,21 @@ class DialogflowCX:
 #         entity_type = set_entity_type_attr(entity_type, kwargs)
 
         client_options = self._set_region(agent_id)
-        client = services.entity_types.EntityTypesClient(client_options=client_options)
-        response = client.create_entity_type(parent=agent_id, entity_type=entity_type)
+        client = services.entity_types.EntityTypesClient(
+            client_options=client_options)
+        response = client.create_entity_type(
+            parent=agent_id, entity_type=entity_type)
         return response
 
 
 # FLOWS FX
 
+
     def list_flows(self, agent_id):
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
 
-        client_options = self._set_region(agent_id)            
+        client_options = self._set_region(agent_id)
         client = services.flows.FlowsClient(client_options=client_options)
         response = client.list_flows(request)
 
@@ -378,7 +395,7 @@ class DialogflowCX:
         return flows
 
     def get_flow(self, flow_id):
-        client_options = self._set_region(flow_id)            
+        client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(client_options=client_options)
         response = client.get_flow(name=flow_id)
 
@@ -396,8 +413,8 @@ class DialogflowCX:
             setattr(flow, key, value)
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
-        
-        client_options = self._set_region(flow_id)            
+
+        client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(client_options=client_options)
         response = client.update_flow(flow=flow, update_mask=mask)
 
@@ -408,8 +425,8 @@ class DialogflowCX:
     def list_pages(self, flow_id):
         request = types.page.ListPagesRequest()
         request.parent = flow_id
-        
-        client_options = self._set_region(flow_id)            
+
+        client_options = self._set_region(flow_id)
         client = services.pages.PagesClient(client_options=client_options)
         response = client.list_pages(request)
 
@@ -421,14 +438,14 @@ class DialogflowCX:
         return cx_pages
 
     def get_page(self, page_id):
-        client_options = self._set_region(page_id)            
+        client_options = self._set_region(page_id)
         client = services.pages.PagesClient(client_options=client_options)
         response = client.get_page(name=page_id)
 
         return response
 
     def create_page(self, flow_id, obj=None, **kwargs):
-        #if page object is given, set page to it
+        # if page object is given, set page to it
         if obj:
             page = obj
             page.name = ''
@@ -439,14 +456,14 @@ class DialogflowCX:
         for key, value in kwargs.items():
             setattr(page, key, value)
 
-        client_options = self._set_region(flow_id)            
+        client_options = self._set_region(flow_id)
         client = services.pages.PagesClient(client_options=client_options)
 
         response = client.create_page(parent=flow_id, page=page)
         return response
 
     def update_page(self, page_id, obj=None, **kwargs):
-        #If page object is given set page to it
+        # If page object is given set page to it
         if obj:
             # Set page variable to page object
             page = obj
@@ -461,10 +478,10 @@ class DialogflowCX:
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
 
-        client_options = self._set_region(page_id)            
+        client_options = self._set_region(page_id)
         client = services.pages.PagesClient(client_options=client_options)
 
-        #Call client function with page and mask as arguments
+        # Call client function with page and mask as arguments
         response = client.update_page(page=page, update_mask=mask)
         return response
 
@@ -546,13 +563,14 @@ class DialogflowCX:
 
         # set optional args to rg attributes
         for key, value in kwargs.items():
-            setattr(trg,key,value)
-                             
+            setattr(trg, key, value)
+
         client_options = self._set_region(flow_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
             client_options=client_options)
-        response = client.create_transition_route_group(parent=flow_id, transition_route_group=trg)
-        
+        response = client.create_transition_route_group(
+            parent=flow_id, transition_route_group=trg)
+
         return response
 
     def update_transition_route_group(self, rg_id, obj=None, **kwargs):
@@ -570,23 +588,26 @@ class DialogflowCX:
             setattr(rg, key, value)
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
-                  
+
         client_options = self._set_region(rg_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
             client_options=client_options)
-        response = client.update_transition_route_group(transition_route_group=rg, update_mask=mask)
-        
+        response = client.update_transition_route_group(
+            transition_route_group=rg, update_mask=mask)
+
         return response
 
 
 # WEBHOOK FX
+
 
     def list_webhooks(self, agent_id):
         request = types.webhook.ListWebhooksRequest()
         request.parent = agent_id
 
         client_options = self._set_region(agent_id)
-        client = services.webhooks.WebhooksClient(client_options=client_options)
+        client = services.webhooks.WebhooksClient(
+            client_options=client_options)
         response = client.list_webhooks(request)
 
         cx_webhooks = []
@@ -607,16 +628,16 @@ class DialogflowCX:
         # set optional kwargs to webhook attributes
         for key, value in kwargs.items():
             setattr(webhook, key, value)
-        
+
         client_options = self._set_region(agent_id)
-        client = services.webhooks.WebhooksClient(client_options=client_options)
+        client = services.webhooks.WebhooksClient(
+            client_options=client_options)
         response = client.create_webhook(parent=agent_id, webhook=webhook)
 
         return response
 
 
 # SESSION FX
-
 
     def run_conversation(
             self,
@@ -630,7 +651,8 @@ class DialogflowCX:
         Using the same `session_id` between requests allows continuation
         of the conversation."""
         client_options = self._set_region(agent)
-        session_client = services.sessions.SessionsClient(client_options=client_options)
+        session_client = services.sessions.SessionsClient(
+            client_options=client_options)
         session_path = "{}/sessions/{}".format(agent, session_id)
 
         if parameters:
@@ -693,7 +715,8 @@ class DialogflowCX:
         Using the same `session_id` between requests allows continuation
         of the conversation."""
         client_options = self._set_region(agent)
-        session_client = services.sessions.SessionsClient(client_options=client_options)
+        session_client = services.sessions.SessionsClient(
+            client_options=client_options)
         session_path = "{}/sessions/{}".format(agent, session_id)
 
         if parameters:
@@ -719,7 +742,8 @@ class DialogflowCX:
 
     def preset_parameters(self, agent, session_id, parameters):
         client_options = self._set_region(agent)
-        session_client = services.sessions.SessionsClient(client_options=client_options)
+        session_client = services.sessions.SessionsClient(
+            client_options=client_options)
         session_path = "{}/sessions/{}".format(agent, session_id)
 
         query_params = types.session.QueryParameters(parameters=parameters)
