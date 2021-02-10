@@ -1,5 +1,9 @@
+venv
 *.py[cod]
 *.sw[op]
+
+# cloud shell
+.theia
 
 # Jupyter Notebook
 .ipynb_checkpoints
