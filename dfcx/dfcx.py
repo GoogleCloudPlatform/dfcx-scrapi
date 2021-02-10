@@ -5,8 +5,11 @@ import requests
 import subprocess
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
+from google.auth import credentials
 from google.protobuf import field_mask_pb2
 from typing import Dict, List
+
+from typing import List
 
 # logging config
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)-8s %(message)s',
@@ -14,12 +17,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)-8s %(me
 
 class DialogflowCX:
     def __init__(self, creds_path, agent_id=None):          
-        with open(creds_path) as json_file:
-            data = json.load(json_file)
-        project_id = data['project_id']
+        # with open(creds_path) as json_file:
+        #     data = json.load(json_file)
 
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
-        self.project_id = 'projects/{}/locations/global'.format(project_id)
         
         self.agents = services.agents.AgentsClient()
         self.intents = services.intents.IntentsClient()
@@ -27,11 +28,22 @@ class DialogflowCX:
         self.pages = services.pages.PagesClient()
         self.flows = services.flows.FlowsClient()
         self.sessions = services.sessions.SessionsClient()
-        self.route_groups =           services.transition_route_groups.TransitionRouteGroupsClient()
+        self.route_groups = services.transition_route_groups.TransitionRouteGroupsClient()
         self.webhooks = services.webhooks.WebhooksClient()
             
         if agent_id:
             self.agent_id = agent_id
+
+    @staticmethod
+    def _set_region(id):
+        location = id.split('/')[3]
+
+        if location != 'global':
+            api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
+            client_options = {'api_endpoint': api_endpoint}
+
+            return client_options
+        
             
 ### TODO (pmarlow@) break each set of Functions into its own Class so that we 
 ### can separate each Class into its own file to keep file line numbers within
@@ -39,11 +51,20 @@ class DialogflowCX:
 
 ### AGENT FX
 
-    def list_agents(self, project_id):
-        request = types.agent.ListAgentsRequest()
-        request.parent = self.project_id
+    def list_agents(self, location_id:str) -> List[types.Agent]:
+        """Get list of all CX agents in a given GCP project
         
-        client = self.agents
+        Args:
+          location_id: The GCP Project/Location ID in the following format
+              `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
+        Returns:
+          agents: List of Agent objects
+        """
+        request = types.agent.ListAgentsRequest()
+        request.parent = location_id
+        
+        client_options = self._set_region(location_id)
+        client = services.agents.AgentsClient(client_options=client_options)
         response = client.list_agents(request)
         
         agents = []
@@ -57,7 +78,8 @@ class DialogflowCX:
     def get_agent(self, agent_id):
         request = types.agent.GetAgentRequest()
         request.name = agent_id
-        client = self.agents
+        client_options = self._set_region(agent_id)
+        client = services.agents.AgentsClient(client_options=client_options)
         response = client.get_agent(request)
         
         return response
@@ -99,7 +121,8 @@ class DialogflowCX:
         for key, value in kwargs.items():
             setattr(agent, key, value)
 
-        client = self.agents
+        client_options = self._set_region(parent)
+        client = services.agents.AgentsClient(client_options=client_options)
         response = client.create_agent(parent=parent, agent=agent)
 
         return response
@@ -200,8 +223,9 @@ class DialogflowCX:
     def list_intents(self, agent_id):
         request = types.intent.ListIntentsRequest()
         request.parent = agent_id
-            
-        client = self.intents
+        
+        client_options = self._set_region(agent_id)
+        client = services.intents.IntentsClient(client_options=client_options)
         response = client.list_intents(request)
 
         intents = []
@@ -212,7 +236,8 @@ class DialogflowCX:
         return intents
     
     def get_intent(self, intent_id):
-        client = self.intents
+        client_options = self._set_region(intent_id)
+        client = services.intents.IntentsClient(client_options=client_options)
         response = client.get_intent(name=intent_id)
         
         return response
@@ -252,7 +277,8 @@ class DialogflowCX:
                 setattr(intent, key, training_phrases)
             setattr(intent, key, value)
 
-        client = self.intents
+        client_options = self._set_region(agent_id)
+        client = services.intents.IntentsClient(client_options=client_options)
         response = client.create_intent(parent=agent_id, intent=intent)
         
         return response
@@ -273,7 +299,8 @@ class DialogflowCX:
         else:
             intent = self.get_intent(intent_id)
         
-        client = self.intents
+        client_options = self._set_region(intent_id)
+        client = services.intents.IntentsClient(client_options=client_options)
         response = client.update_intent(intent=intent)
         
         return response
