@@ -354,8 +354,9 @@ class DialogflowCX:
     def list_flows(self, agent_id):
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
-            
-        client = self.flows
+
+        client_options = self._set_region(agent_id)            
+        client = services.flows.FlowsClient(client_options=client_options)
         response = client.list_flows(request)
         
         flows = []
@@ -366,7 +367,8 @@ class DialogflowCX:
         return flows
     
     def get_flow(self, flow_id):
-        client = self.flows
+        client_options = self._set_region(flow_id)            
+        client = services.flows.FlowsClient(client_options=client_options)
         response = client.get_flow(name=flow_id)
         
         return response
@@ -384,7 +386,8 @@ class DialogflowCX:
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
         
-        client = self.flows
+        client_options = self._set_region(flow_id)            
+        client = services.flows.FlowsClient(client_options=client_options)
         response = client.update_flow(flow=flow, update_mask=mask)
         
         return response
