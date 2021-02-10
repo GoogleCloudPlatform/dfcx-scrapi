@@ -1,0 +1,18 @@
+
+ol.black]
+line-length = 130 
+py36 = true
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+| \.mypy_cache
+| \.tox
+| \.venv
+| _build
+| buck-out
+| build
+| dist
+)/
+'''
+
