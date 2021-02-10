@@ -4,7 +4,7 @@ tracks session internally
 """
 
 # import copy
-import json
+# import json
 import logging
 import os
 import uuid
@@ -68,6 +68,7 @@ class DialogflowClient:
         self.agent_path = agent_path
         self.language_code = language_code
         self.restart()
+
 
     def restart(self):
         """starts a new session/conversation for this agent"""
@@ -196,14 +197,15 @@ class DialogflowClient:
         #             intents_map[alt['DisplayName']] = alt['Score']
         return items
 
+
     def to_json(self, qr):
-        blob = json_format.MessageToJson(
-            qr._pb)  # AttributeError: 'DESCRIPTOR'
+        '''extractor of private fields'''
+        blob = json_format.MessageToJson(qr._pb)
         return blob
 
-    # get value at path in object
 
     def getpath(self, obj, xpath, default=None):
+        '''get data at a pathed location out of object internals'''
         elem = obj
         try:
             for x in xpath.strip("/").split("/"):
