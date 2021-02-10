@@ -75,7 +75,18 @@ class DialogflowClient:
         self.session_id = uuid.uuid4()
         # print('restarted DFCX.client=>', self.agent_path)
 
-    # SESSION FX
+
+    def _set_region(self, agent_id=None):
+        '''non global agents require a special endpoint in client_options'''
+        agent_id = agent_id or self.agent_path
+        location = agent_id.split('/')[3]
+        if location != 'global':
+            api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
+            client_options = {'api_endpoint': api_endpoint}
+            # logger.info('client options %s', client_options)
+            return client_options
+        return None
+
 
     def reply(self, send_obj, restart=False, raw=False, retries=0):
         """
@@ -89,8 +100,8 @@ class DialogflowClient:
         """
         if restart:
             self.restart()
-
-        session_client = SessionsClient()
+        client_options = self._set_region()
+        session_client = SessionsClient(client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
         text = send_obj.get("text")
