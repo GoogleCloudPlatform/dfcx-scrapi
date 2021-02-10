@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 import json
 import logging
 import os
@@ -61,6 +58,49 @@ class DialogflowCX:
         response = client.get_agent(request)
         
         return response
+
+    def create_agent(self, project_id:str, display_name:str, 
+    gcp_region:str='global', obj:types.Agent=None, **kwargs):
+        """Create a Dialogflow CX Agent with given display name.
+
+        By default the CX Agent will be created in the project that the user
+        is currently authenticated to
+        If the user provides an existing Agent object, create a new CX agent
+        based on this object.
+
+        Args:
+          project_id: GCP project id where the CX agent will be created
+          display_name: Human readable display name for the CX agent
+          gcp_region: GCP region to create CX agent. Defaults to 'global'
+          obj: (Optional) Agent object to create new agent from
+
+        Returns:
+          response
+        """
+
+        if obj:
+            agent = obj
+            parent = 'projects/{}/location/{}'.format(
+                agent.name.split('/')[1], 
+                agent.name.split('/')[3])
+            agent.display_name = display_name
+        else:
+            agent = types.agent.Agent()
+            parent = 'projects/{}/locations/{}'.format(project_id, gcp_region)
+            agent.display_name = display_name
+
+        agent.default_language_code = 'en'
+        agent.time_zone='America/Chicago'
+
+        # set optional args as agent attributes
+        for key, value in kwargs.items():
+            setattr(agent, key, value)
+
+        client = self.agents
+        response = client.create_agent(parent=parent, agent=agent)
+
+        return response
+
 
 ### INTENTS FX    
     
@@ -383,9 +423,6 @@ class DialogflowCX:
         return response
     
     def update_transition_route_group(self, rg_id, obj=None, **kwargs):
-        # request = types.transition_route_group.UpdateTransitionRouteGroupRequest()
-        # trg = types.transition_route_group.TransitionRouteGroup()
-        
         # If route group object is given set route group to it
         if obj:
             #Set rg variable to rg object
@@ -460,7 +497,7 @@ class DialogflowCX:
             
             response = session_client.detect_intent(request=request)
             
-        for text in texts:
+        for text in conversation:
             text_input = types.session.TextInput(text=text)
             query_input = types.session.QueryInput(text=text_input, language_code='en')
             request = types.session.DetectIntentRequest(
@@ -543,6 +580,40 @@ class DialogflowCX:
 
 ### TODO (pmarlow@): Turn these into @staticmethods since we are not
 ### doing any authentication with these
+
+    def make_generic(self, obj, obj_type, default, conditionals=dict()):
+        if type(obj) == obj_type:
+            return obj
+        
+        elif type(obj) == dict:
+            obj_ins = obj_type()
+            for key, value in obj.items():
+                if key in conditionals.keys():
+                    func = conditionals[key]
+                    out = func(value)
+                    setattr(obj_ins, key, out)
+                else:
+                    print(value)
+                    setattr(obj_ins, key, value)
+            return obj_ins
+        
+        elif type(obj) == str:
+            dic = {'unspecified': 0, 'map': 1, 'list': 2, 'regexp': 3, 'default': 1}
+            t = dic.get(obj.lower())
+            if t:
+                return obj_type(t)
+            else:
+                return default
+        else:
+            return default
+        
+    def make_seq(self, obj, obj_type, default, conditionals=dict()):
+        assert type(obj) == list
+        l = []
+        for x in obj:
+            l.append(self.make_generic(x, obj_type, default, conditionals))
+        return l
+
     def make_transition_route(self, obj=None, **kwargs):
         """ Creates a single Transition Route object for Dialogflow CX.
         
@@ -632,33 +703,31 @@ class DialogflowCX:
 
         print(fulfillment)
         return fulfillment
-
-# commented out for now cos of make_generic and make_seq
-
-# def set_entity_type_attr(self, entity_type, kwargs):
-#     for key, value in kwargs.items():
-#         if key == 'kind':
-#             kind = types.entity_type.EntityType.Kind
-#             obj = make_generic(value, kind, kind(0))
-#             setattr(entity_type, key, obj)
-#         #For the auto expansion mode case create helper object to set at entity_type attribute
-#         elif key == "auto_expansion_mode":
-#             aem = types.entity_type.EntityType.AutoExpansionMode
-#             obj = make_generic(value, aem, aem(1))
-#             setattr(entity_type, key, obj)
+    
+def set_entity_type_attr(self, entity_type, kwargs):
+    for key, value in kwargs.items():
+        if key == 'kind':
+            kind = types.entity_type.EntityType.Kind
+            obj = self.make_generic(value, kind, kind(0))
+            setattr(entity_type, key, obj)
+        #For the auto expansion mode case create helper object to set at entity_type attribute
+        elif key == "auto_expansion_mode":
+            aem = types.entity_type.EntityType.AutoExpansionMode
+            obj = self.make_generic(value, aem, aem(1))
+            setattr(entity_type, key, obj)
             
-#         #For the entities case iterate over dictionary and assign key value pairs to entity type elements of entities list
-#         elif key == "entities":
-#             entity = types.entity_type.EntityType.Entity
-#             obj = make_seq(value, entity, entity())
-#             setattr(entity_type, key, obj)
+        #For the entities case iterate over dictionary and assign key value pairs to entity type elements of entities list
+        elif key == "entities":
+            entity = types.entity_type.EntityType.Entity
+            obj = self.make_seq(value, entity, entity())
+            setattr(entity_type, key, obj)
             
-#         #For the excluded phrases case assign value to the excluded phrase object then set as the entity_type attribute
-#         elif key == "excluded_phrases":
-#             ep = types.entity_type.EntityType.ExcludedPhrase
-#             obj = make_seq(value, ep, ep())
-#             setattr(entity_type, key, obj)
+        #For the excluded phrases case assign value to the excluded phrase object then set as the entity_type attribute
+        elif key == "excluded_phrases":
+            ep = types.entity_type.EntityType.ExcludedPhrase
+            obj = self.make_seq(value, ep, ep())
+            setattr(entity_type, key, obj)
             
-#         else:
-#             setattr(entity_type, key, value)
+        else:
+            setattr(entity_type, key, value)
 
