@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 import copy
 import json
 import logging
@@ -778,7 +775,7 @@ class DialogflowFunctions:
             
         return df
 
-    def intents_to_dataframe(self,intents):
+    def intents_to_dataframe(self, intents):
         """
         This functions takes an Intents object from the DFCX API and returns
         a Pandas Dataframe
@@ -802,6 +799,39 @@ class DialogflowFunctions:
         df = df.stack().to_frame().reset_index(level=1)
         df = df.rename(columns={'level_1':'intent',0:'tp'}).reset_index(drop=True)
         df = df.sort_values(['intent','tp'])
+
+        return df
+
+    
+    def validation_results_to_dataframe(self, validation_results:Dict):
+        """"Transform the Validation results into a dataframe"""
+
+        agent_id = '/'.join(validation_results['name'].split('/')[0:6])
+
+        flows_map = self.get_flows_map(agent_id)
+        max_cols_old = 0
+        df = pd.DataFrame()
+
+        for flow in validation_results['flowValidationResults']:
+            temp = '/'.join(flow['name'].split('/')[:-1])
+            temp_df = pd.DataFrame(flow['validationMessages'])
+            temp_df.insert(0, 'flow', flows_map[temp])
+            
+            max_cols_new = max([len(x) for x in temp_df.resourceNames])
+            
+            if max_cols_new > max_cols_old:
+                for i in range(1, max_cols_new+1):
+                    temp_df['resource{}'.format(i)] = None
+                max_cols_old = max_cols_new
+            
+            for index in temp_df.index:
+                i = 1
+                for d in temp_df['resourceNames'][index]:
+                    temp_df['resource{}'.format(i)][index] = d['displayName']
+                    i+=1
+
+            df = df.append(temp_df)
+            max_cols_old = 0
 
         return df
 
