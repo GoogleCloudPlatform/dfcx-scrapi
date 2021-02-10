@@ -1,5 +1,5 @@
-# defautl file for whitespace fixes
-f:=dfcx.py
+# defautl file for whitespace fixes if not defined at cmdline
+f ?= dfcx.py
 
 # just fix selected whitespace
 autofix-min-whitespace:

@@ -44,6 +44,7 @@ MAX_RETRIES = 10  # JWT errors on CX API
 
 class DialogflowClient:
     """wrapping client requests to a CX agent"""
+
     def __init__(self, creds_path=None, agent_path=None, language_code="en"):
         """
         one of:
@@ -69,12 +70,10 @@ class DialogflowClient:
         self.language_code = language_code
         self.restart()
 
-
     def restart(self):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
         # print('restarted DFCX.client=>', self.agent_path)
-
 
     def _set_region(self, agent_id=None):
         '''non global agents require a special endpoint in client_options'''
@@ -86,7 +85,6 @@ class DialogflowClient:
             # logger.info('client options %s', client_options)
             return client_options
         return None
-
 
     def reply(self, send_obj, restart=False, raw=False, retries=0):
         """
@@ -208,12 +206,10 @@ class DialogflowClient:
         #             intents_map[alt['DisplayName']] = alt['Score']
         return items
 
-
     def to_json(self, qr):
         '''extractor of private fields'''
         blob = json_format.MessageToJson(qr._pb)
         return blob
-
 
     def getpath(self, obj, xpath, default=None):
         '''get data at a pathed location out of object internals'''
