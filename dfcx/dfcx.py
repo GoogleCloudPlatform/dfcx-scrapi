@@ -312,7 +312,9 @@ class DialogflowCX:
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
             
-        client = self.entities
+        client_options = self._set_region(agent_id)
+        client = services.entity_types.EntityTypesClient(client_options=client_options)
+
         response = client.list_entity_types(request)
         
         entities = []
@@ -323,7 +325,8 @@ class DialogflowCX:
         return entities
     
     def get_entity_type(self, entity_id):
-        client = self.entities
+        client_options = self._set_region(entity_id)
+        client = services.entity_types.EntityTypesClient(client_options=client_options)
         response = client.get_entity_type(name=entity_id)
         
         return response
@@ -344,7 +347,8 @@ class DialogflowCX:
         #Apply any optional functions argument to entity_type object
 #         entity_type = set_entity_type_attr(entity_type, kwargs)
 
-        client = self.entities
+        client_options = self._set_region(agent_id)
+        client = services.entity_types.EntityTypesClient(client_options=client_options)
         response = client.create_entity_type(parent=agent_id, entity_type=entity_type)
         return response
     
@@ -398,7 +402,8 @@ class DialogflowCX:
         request = types.page.ListPagesRequest()
         request.parent = flow_id
         
-        client = self.pages
+        client_options = self._set_region(flow_id)            
+        client = services.pages.PagesClient(client_options=client_options)
         response = client.list_pages(request)
         
         cx_pages = []
@@ -409,15 +414,13 @@ class DialogflowCX:
         return cx_pages
     
     def get_page(self, page_id):
-        client = self.pages
+        client_options = self._set_region(page_id)            
+        client = services.pages.PagesClient(client_options=client_options)
         response = client.get_page(name=page_id)
         
         return response
     
     def create_page(self, flow_id, obj=None, **kwargs):
-        #Intialize client library for pages
-        client = services.pages.PagesClient()
-
         #if page object is given, set page to it
         if obj:
             page = obj
@@ -429,13 +432,13 @@ class DialogflowCX:
         for key, value in kwargs.items():  
             setattr(page, key, value)
 
+        client_options = self._set_region(flow_id)            
+        client = services.pages.PagesClient(client_options=client_options)
+
         response = client.create_page(parent=flow_id, page=page)
         return response
     
     def update_page(self, page_id, obj=None, **kwargs):
-        #Initialize client library for pages
-        client = services.pages.PagesClient()
-
         #If page object is given set page to it
         if obj:
             #Set page variable to page object
@@ -450,6 +453,9 @@ class DialogflowCX:
             setattr(page, key, value)
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
+
+        client_options = self._set_region(page_id)            
+        client = services.pages.PagesClient(client_options=client_options)
 
         #Call client function with page and mask as arguments
         response = client.update_page(page=page, update_mask=mask)
@@ -498,8 +504,10 @@ class DialogflowCX:
     def list_transition_route_groups(self, flow_id):
         request = types.transition_route_group.ListTransitionRouteGroupsRequest()
         request.parent = flow_id
-            
-        client = self.route_groups
+
+        client_options = self._set_region(flow_id)
+        client = services.transition_route_groups.TransitionRouteGroupsClient(
+            client_options=client_options)
         response = client.list_transition_route_groups(request)
         
         cx_route_groups = []
@@ -513,7 +521,9 @@ class DialogflowCX:
     def get_transition_route_group(self, name):
         request = types.transition_route_group.GetTransitionRouteGroupRequest()
         request.name = name
-        client = self.route_groups
+        client_options = self._set_region(name)
+        client = services.transition_route_groups.TransitionRouteGroupsClient(
+            client_options=client_options)
         response = client.get_transition_route_group(request)
         
         return response
@@ -532,16 +542,10 @@ class DialogflowCX:
         # set optional args to rg attributes
         for key, value in kwargs.items():
             setattr(trg,key,value)
-                        
-#         if obj['display_name']:
-#             trg.display_name = route_group['display_name']
-            
-#         if obj['transition_routes']:
-#             trg.transition_routes = route_group['transition_routes']
-
-            
-#         request.transition_route_group = trg        
-        client = self.route_groups
+                             
+        client_options = self._set_region(flow_id)
+        client = services.transition_route_groups.TransitionRouteGroupsClient(
+            client_options=client_options)
         response = client.create_transition_route_group(parent=flow_id, transition_route_group=trg)
         
         return response
@@ -562,7 +566,9 @@ class DialogflowCX:
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
                   
-        client = self.route_groups
+        client_options = self._set_region(rg_id)
+        client = services.transition_route_groups.TransitionRouteGroupsClient(
+            client_options=client_options)
         response = client.update_transition_route_group(transition_route_group=rg, update_mask=mask)
         
         return response
@@ -573,8 +579,9 @@ class DialogflowCX:
     def list_webhooks(self, agent_id):
         request = types.webhook.ListWebhooksRequest()
         request.parent = agent_id
-            
-        client = self.webhooks
+
+        client_options = self._set_region(agent_id)
+        client = services.webhooks.WebhooksClient(client_options=client_options)
         response = client.list_webhooks(request)
         
         cx_webhooks = []
@@ -596,7 +603,8 @@ class DialogflowCX:
         for key, value in kwargs.items():
             setattr(webhook, key, value)
         
-        client = self.webhooks
+        client_options = self._set_region(agent_id)
+        client = services.webhooks.WebhooksClient(client_options=client_options)
         response = client.create_webhook(parent=agent_id, webhook=webhook)
         
         return response
@@ -608,7 +616,8 @@ class DialogflowCX:
 
         Using the same `session_id` between requests allows continuation
         of the conversation."""
-        session_client = self.sessions
+        client_options = self._set_region(agent)
+        session_client = services.sessions.SessionsClient(client_options=client_options)
         session_path = "{}/sessions/{}".format(agent, session_id)
         
         if parameters:
@@ -662,7 +671,8 @@ class DialogflowCX:
 
         Using the same `session_id` between requests allows continuation
         of the conversation."""
-        session_client = self.sessions
+        client_options = self._set_region(agent)
+        session_client = services.sessions.SessionsClient(client_options=client_options)
         session_path = "{}/sessions/{}".format(agent, session_id)
         
         if parameters:
@@ -686,7 +696,8 @@ class DialogflowCX:
         return qr
     
     def preset_parameters(self, agent, session_id, parameters):
-        session_client = self.sessions
+        client_options = self._set_region(agent)
+        session_client = services.sessions.SessionsClient(client_options=client_options)
         session_path = "{}/sessions/{}".format(agent, session_id)
         
         query_params = types.session.QueryParameters(parameters=parameters)
