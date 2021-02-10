@@ -1,66 +1,84 @@
-import copy
+'''
+client of DfCx agent
+tracks session internally
+'''
+
+# import copy
 import json
 import logging
 import os
-import sys
-import pandas as pd
-import pathlib
-import time
-from collections import defaultdict
+import uuid
+# import sys
+# import pandas as pd
+# import pathlib
+# import time
+# from collections import defaultdict
+from sys import stdout
 
 # from dfcx_api import Agents, Intents
 # from ipynb.fs.full.dfcx import DialogflowCX
-from dfcx.dfcx import DialogflowCX
+# from dfcx.dfcx import DialogflowCX
 # from dfcx import DialogflowCX
-from google.cloud.dialogflowcx_v3beta1.services.agents import AgentsClient
+# from google.cloud.dialogflowcx_v3beta1.services.agents import AgentsClient
 from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
 # from google.cloud.dialogflowcx_v3beta1 import types as CxTypes
-import google.cloud.dialogflowcx_v3beta1.types as CxTypes
+# import google.cloud.dialogflowcx_v3beta1.types as CxTypes
 
 from google.protobuf import json_format  # type: ignore
 
 # import google.protobuf.json_format
 # import google.protobuf.message.Message
 
-import uuid
+
+logger = logging.getLogger('dfcx')
+formatter = logging.Formatter('[dfcx    ] %(message)s')
+handler = logging.StreamHandler(stdout)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.propagate = False
+
+
+MAX_RETRIES = 10 # JWT errors on CX API
 
 
 class DialogflowClient:
+    '''wrapping client requests to a CX agent'''
 
-    def __init__(self, creds=None, creds_path=None, agent_path=None, language_code='en'):
+    def __init__(self, creds_path=None, agent_path=None, language_code='en'):
         """
         one of:
             creds_path: IAM creds file which sets which projects you can access
-            creds: already loaded creds data
+            creds: already loaded creds data 
         agent_path = full path to project
         """
-        if creds_path:
-            with open(creds_path) as json_file:
-                creds = json.load(json_file)
+        # TODO implement using already loaded creds not setting env path
+        # if creds_path:
+        #     with open(creds_path) as json_file:
+        #         creds = json.load(json_file)
 
-        # FIXME - the creds are not used anywhere else? 
+        # FIXME - the creds are not used anywhere else?
         # so maybe the env is what is relied on
         # this env var gets changed OUTSIDE of here
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
-                
-#         project_id = data['project_id']
-#         self.project_id = f'projects/{project_id}/locations/global'
+
+        # project_id = data['project_id']
+        # self.project_id = f'projects/{project_id}/locations/global'
 
         # projects/*/locations/*/agents/*/
         self.agent_path = agent_path
-        self.language_code = 'en'
+        self.language_code = language_code
         self.restart()
 
 
     def restart(self):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
-#         print('restarted DFCX.client=>', self.agent_path)
+        # print('restarted DFCX.client=>', self.agent_path)
 
 
 ### SESSION FX
-    def reply(self, send_obj, restart=False, raw=False):
+    def reply(self, send_obj, restart=False, raw=False, retries=0):
         """
         send_obj to bot and get reply
             text
@@ -106,12 +124,16 @@ class DialogflowClient:
 
         try:
             response = session_client.detect_intent(request=request)
+
         except Exception as err:
-            logging.error('Exception on CX.detect')
-#             logging.error(err) # fails to JSONify
-#             print('error', err)
-            raise err
-#             return None ## try next one
+            logging.error('Exception on CX.detect %s', err)
+            retries += 1
+            if (retries < MAX_RETRIES):
+                self.reply(send_obj, restart=restart, raw=raw, retries=retries)
+            else:
+                logging.error('MAX_RETRIES exceeded')
+                raise err
+                # return None ## try next one
 
         qr = response.query_result
 
@@ -154,7 +176,7 @@ class DialogflowClient:
         reply['intent_name'] = qr.intent.display_name
         reply['other_intents'] = self.format_other_intents(qr)
         if raw:
-            self.qr = qr
+            # self.qr = qr
             reply['qr'] = qr 
             reply['json'] = self.to_json(qr)
         return reply
@@ -163,6 +185,7 @@ class DialogflowClient:
     # TODO - dfqr class that has convenience accessor methods for different properties
     # basically to unwind the protobut
     def format_other_intents(self, qr):
+        '''unwind protobufs into more friendly dict'''
         other_intents = qr.diagnostic_info.get('Alternative Matched Intents')
         items = []
         rank = 0
@@ -193,8 +216,8 @@ class DialogflowClient:
                 except ValueError:
                     elem = elem.get(x) # array
         except:
-            logging.warning(f'failed to getpath: {xpath}')
+            logging.warning('failed to getpath: %s ', xpath)
             return default
 
-        logging.info(f'OK getpath: {xpath}')
+        logging.info('OK getpath: %s', xpath)
         return elem
