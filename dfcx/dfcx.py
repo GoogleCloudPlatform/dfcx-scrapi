@@ -248,6 +248,7 @@ class DialogflowCX:
         response = client.list_intents(request)
 
         intents = []
+        # pager through the response, not CX 'pages'
         for page in response.pages:
             for intent in page.intents:
                 intents.append(intent)
