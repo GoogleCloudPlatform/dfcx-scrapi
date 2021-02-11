@@ -1,5 +1,9 @@
+venv
 *.py[cod]
 *.sw[op]
+
+# cloud shell
+.theia
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -66,3 +70,6 @@ system_tests/local_test_setup
 # Make sure a generated file isn't accidentally committed.
 pylintrc
 pylintrc.test
+
+# virtual env
+venv
