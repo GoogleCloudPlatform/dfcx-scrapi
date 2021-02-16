@@ -78,7 +78,7 @@ class DialogflowFunctions:
                             for intent in self.dfcx.list_intents(agent_id)}
         
         else:
-            intents_dict = {intent.name:intent.display_name 
+            intents_dict = {intent.name:intent.display_name
                        for intent in self.dfcx.list_intents(agent_id)}
         
         return intents_dict
@@ -101,7 +101,7 @@ class DialogflowFunctions:
                             for entity in self.dfcx.list_entity_types(agent_id)}
         
         else:
-            entities_dict = {entity.name:entity.display_name 
+            entities_dict = {entity.name:entity.display_name
                        for entity in self.dfcx.list_entity_types(agent_id)}
         
         return entities_dict
@@ -120,11 +120,11 @@ class DialogflowFunctions:
           """
         
         if reverse:
-            webhooks_dict = {webhook.display_name:webhook.name 
+            webhooks_dict = {webhook.display_name:webhook.name
                              for webhook in self.dfcx.list_webhooks(agent_id)}
             
         else:
-            webhooks_dict = {webhook.name:webhook.display_name 
+            webhooks_dict = {webhook.name:webhook.display_name
                              for webhook in self.dfcx.list_webhooks(agent_id)}
         
         return webhooks_dict
@@ -144,11 +144,11 @@ class DialogflowFunctions:
           """
         
         if reverse:
-            pages_dict = {page.display_name:page.name 
+            pages_dict = {page.display_name:page.name
                           for page in self.dfcx.list_pages(flow_id)}
             
         else:
-            pages_dict = {page.name:page.display_name 
+            pages_dict = {page.name:page.display_name
                           for page in self.dfcx.list_pages(flow_id)}
             
         return pages_dict
@@ -168,11 +168,11 @@ class DialogflowFunctions:
           """
         
         if reverse:
-            pages_dict = {page.display_name:page.name 
+            pages_dict = {page.display_name:page.name
                           for page in self.dfcx.list_transition_route_groups(flow_id)}
             
         else:
-            pages_dict = {page.name:page.display_name 
+            pages_dict = {page.name:page.display_name
                           for page in self.dfcx.list_transition_route_groups(flow_id)}
             
         return pages_dict
@@ -253,9 +253,9 @@ class DialogflowFunctions:
                 continue
                 
                 
-    def copy_paste_agent_resources(self, resource_dict: Dict[str,str], 
-                                   source_agent: str, destination_agent: str, 
-                                   destination_flow: str='Default Start Flow', 
+    def copy_paste_agent_resources(self, resource_dict: Dict[str,str],
+                                   source_agent: str, destination_agent: str,
+                                   destination_flow: str='Default Start Flow',
                                    skip_list: List[str]=[]):
         """ Copy/Paste Agent level resources from one DFCX agent to another.
         
@@ -342,7 +342,8 @@ class DialogflowFunctions:
                     logging.info('Entity \'{}\' created successfully.'.format(entity.display_name))
                 except Exception as e:
                     print(e)
-                    pass  
+                    logging.info('Entity \'{}\' already exists in agent'.format(entity.display_name))
+                    pass
                 
         if 'intents' in resource_obj_dict and 'intents' not in skip_list:
             source_entities_map = self.get_entities_map(source_agent)
@@ -424,8 +425,8 @@ class DialogflowFunctions:
             rgs_map = self.get_route_groups_map(flows_map[flow])
 
             # For each page, recurse through the resources and look for
-            # specific resource types that will have local agent 
-            # dependencies, then replace that UUID with a literal 
+            # specific resource types that will have local agent
+            # dependencies, then replace that UUID with a literal
             # str display_name. We will use this display_name to map back
             # to the appropriate destination UUID later.
             for page in pages_mod:
@@ -606,7 +607,7 @@ class DialogflowFunctions:
                             if 'sys.' in param.entity_type:
                                 pass
                             else:
-                                param.entity_type = entities_map[param.entity_type]                      
+                                param.entity_type = entities_map[param.entity_type]
                         
                 if 'transition_route_groups' in page:
                     temp_list = []
@@ -738,16 +739,16 @@ class DialogflowFunctions:
         """
         
         if not agent_id:
-            agent_id = self.agent_id            
+            agent_id = self.agent_id
         
         # The following dicts and lists are setup to use to map "user friendly"
         # data labels before writing the Route Group object to a dataframe.
         flows_dict = {flow.display_name: flow.name for flow in self.dfcx.list_flows(agent_id)}
                 
-        intent_dict = {intent.name.split('/')[-1]:intent.display_name 
+        intent_dict = {intent.name.split('/')[-1]:intent.display_name
                        for intent in self.dfcx.list_intents(agent_id)}
         
-        webhooks_dict = {webhook.name.split('/')[-1]:webhook.display_name 
+        webhooks_dict = {webhook.name.split('/')[-1]:webhook.display_name
                          for webhook in self.dfcx.list_webhooks(agent_id)}
                 
         route_groups_dict = {flow:self.dfcx.list_transition_route_groups(flows_dict[flow]) for flow in flows_dict}
@@ -858,7 +859,7 @@ class DialogflowFunctions:
         """
         
         if not agent_id:
-            agent_id = self.agent_id 
+            agent_id = self.agent_id
         # entities = self.dfcx.list_entity_types(agent_id)
         flows_map = self.get_flows_map(agent_id)
         entities_map = self.get_entities_map(agent_id)
@@ -876,7 +877,7 @@ class DialogflowFunctions:
                         print(param.display_name)
                         if 'sys' in param.entity_type.split('/')[-1]:
                             print(param.entity_type.split('/')[-1])
-                        else: 
+                        else:
                             print(param.entity_type)
                             print(entities_map[param.entity_type.split('/')[-1]])
                         print('\n')
@@ -900,7 +901,7 @@ class DialogflowFunctions:
         base_url = 'https://dialogflow.googleapis.com/v3beta1'
         url = '{0}/{1}:export'.format(base_url, flow_id)
         body = {'flow_uri': '{}'.format(gcs_path), 'data_format': data_format, 'include_referenced_flows': ref_flows}
-        token = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'], 
+        token = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'],
                               stdout=subprocess.PIPE,
                               text=True).stdout
 
@@ -931,7 +932,7 @@ class DialogflowFunctions:
         base_url = 'https://dialogflow.googleapis.com/v3beta1'
         url = '{0}/{1}/flows:import'.format(base_url, agent_id)
         body = {'flow_uri': '{}'.format(gcs_path), 'import_option': '{}'.format(import_option)}
-        token = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'], 
+        token = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'],
                               stdout=subprocess.PIPE,
                               text=True).stdout
 
