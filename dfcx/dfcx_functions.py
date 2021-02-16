@@ -282,6 +282,7 @@ class DialogflowFunctions:
           Success!
         """
         resource_obj_dict = defaultdict(list)
+        resource_skip_list = defaultdict(list)
 
         # COPY
         if 'entities' not in skip_list:
@@ -323,10 +324,11 @@ class DialogflowFunctions:
             for webhook in resource_obj_dict['webhooks']:
                 try:
                     self.dfcx.create_webhook(destination_agent, webhook)
+                    resource_skip_list['webhooks'].append(webhook.name)
                     logging.info('Webhook \'{}\' created successfully.'.format(webhook.display_name))
+
                 except Exception as e:
                     logging.info(e)
-                    logging.info('Webhook \'{}\' already exists in agent'.format(webhook.display_name))
                     pass
 
         if 'entities' in resource_obj_dict and 'entities' not in skip_list:
@@ -336,6 +338,7 @@ class DialogflowFunctions:
                 # display_name only at this time.
                 try:
                     self.dfcx.create_entity_type(destination_agent, entity)
+                    resource_skip_list['entities'].append(entity.name)
                     logging.info('Entity \'{}\' created successfully.'.format(entity.display_name))
                 except Exception as e:
                     print(e)
@@ -363,10 +366,10 @@ class DialogflowFunctions:
                 # display_name only at this time.
                 try:
                     self.dfcx.create_intent(destination_agent, intent)
+                    resource_skip_list['intents'].append(intent.name)
                     logging.info('Intent \'{}\' created successfully'.format(intent.display_name))
                 except Exception as e:
                     print(e)
-                    logging.info('Intent \'{}\' already exists in agent'.format(intent.display_name))
                     pass
         
         if 'route_groups' in resource_obj_dict and 'route_groups' not in skip_list:
@@ -402,10 +405,10 @@ class DialogflowFunctions:
                     
                 try:
                     self.dfcx.create_transition_route_group(destination_flows[destination_flow], rg)
+                    resource_skip_list['route_groups'].append(rg.name)
                     logging.info('Route Group \'{}\' created successfully'.format(rg.display_name))
                 except Exception as e:
                     print(e)
-                    logging.info('Route Group \'{}\' already exists in agent'.format(rg.display_name))
                     pass
     
     
