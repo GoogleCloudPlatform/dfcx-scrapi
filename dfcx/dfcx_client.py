@@ -8,13 +8,14 @@ tracks session internally
 import logging
 import os
 import uuid
-
+import time
 # import sys
 # import pandas as pd
 # import pathlib
-# import time
 # from collections import defaultdict
-from sys import stdout
+# from sys import stdout
+
+# from profilehooks import profile
 
 # from dfcx_api import Agents, Intents
 # from ipynb.fs.full.dfcx import DialogflowCX
@@ -32,12 +33,14 @@ from google.protobuf import json_format  # type: ignore
 # import google.protobuf.json_format
 # import google.protobuf.message.Message
 
-logger = logging.getLogger("dfcx")
-formatter = logging.Formatter("[dfcx    ] %(message)s")
-handler = logging.StreamHandler(stdout)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.propagate = False
+# logger = logging.getLogger("dfcx")
+# formatter = logging.Formatter("[dfcx    ] %(message)s")
+# handler = logging.StreamHandler(stdout)
+# handler.setFormatter(formatter)
+# logger.addHandler(handler)
+# logger.propagate = False
+
+logger = logging
 
 MAX_RETRIES = 10  # JWT errors on CX API
 
@@ -45,11 +48,12 @@ MAX_RETRIES = 10  # JWT errors on CX API
 class DialogflowClient:
     """wrapping client requests to a CX agent"""
 
-    def __init__(self, creds_path=None, agent_path=None, language_code="en"):
+    def __init__(self, config=None, creds_path=None, agent_path=None, language_code="en"):
         """
         one of:
+            config: object with creds_path and agent_path
             creds_path: IAM creds file which sets which projects you can access
-            creds: already loaded creds data
+            creds: TODO - already loaded creds data
         agent_path = full path to project
         """
         # TODO implement using already loaded creds not setting env path
@@ -60,20 +64,24 @@ class DialogflowClient:
         # FIXME - the creds are not used anywhere else?
         # so maybe the env is what is relied on
         # this env var gets changed OUTSIDE of here
+        creds_path = creds_path or config['creds_path']
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
 
         # project_id = data['project_id']
         # self.project_id = f'projects/{project_id}/locations/global'
 
         # projects/*/locations/*/agents/*/
-        self.agent_path = agent_path
-        self.language_code = language_code
+        self.agent_path = agent_path or config['agent_path']
+        self.language_code = language_code or config['language_code']
+        self.start_time = None
         self.restart()
+
 
     def restart(self):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
         # print('restarted DFCX.client=>', self.agent_path)
+
 
     def _set_region(self, agent_id=None):
         '''non global agents require a special endpoint in client_options'''
@@ -81,10 +89,25 @@ class DialogflowClient:
         location = agent_id.split('/')[3]
         if location != 'global':
             api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
-            client_options = {'api_endpoint': api_endpoint}
+            client_options = {
+                'api_endpoint': api_endpoint
+            }
             # logger.info('client options %s', client_options)
             return client_options
         return None
+
+    def checkpoint(self, msg=None, start=False):
+        '''print a checkpoint to time progress and debug bottleneck'''
+        if start:
+            start_time = time.perf_counter()
+            self.start_time = start_time
+        else:
+            start_time = self.start_time
+        duration = round((time.perf_counter() - start_time), 2)
+        if duration > 2:
+            if msg:
+                print("{:0.2f}s {}".format(duration, msg))
+
 
     def reply(self, send_obj, restart=False, raw=False, retries=0):
         """
@@ -96,14 +119,19 @@ class DialogflowClient:
         Pass restart=True to start a new conv with a new session_id
         otherwise uses the agents continues conv with session_id
         """
+
+        text = send_obj.get("text")
+        send_params = send_obj.get("params")
+        self.checkpoint(start=True)
+
         if restart:
             self.restart()
         client_options = self._set_region()
         session_client = SessionsClient(client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
-        text = send_obj.get("text")
-        send_params = send_obj.get("params")
+        # self.checkpoint('made client')
+
 
         # set parameters separately with single query and an empty text
         query_params = None
@@ -118,11 +146,14 @@ class DialogflowClient:
                 language_code=self.language_code,
             )
         else:
+            # logging.debug('text input %s', text)
             text_input = session.TextInput(text=text)
             query_input = session.QueryInput(
                 text=text_input,
                 language_code=self.language_code,
             )
+
+        # self.checkpoint('<< prepared request')
 
         request = session.DetectIntentRequest(session=session_path,
                                               query_input=query_input,
@@ -130,11 +161,13 @@ class DialogflowClient:
 
         try:
             response = session_client.detect_intent(request=request)
+            self.checkpoint('<< got response')
 
         except Exception as err:
             logging.error("Exception on CX.detect %s", err)
             retries += 1
             if retries < MAX_RETRIES:
+                logging.error("retrying")
                 self.reply(send_obj, restart=restart, raw=raw, retries=retries)
             else:
                 logging.error("MAX_RETRIES exceeded")
@@ -186,6 +219,9 @@ class DialogflowClient:
             # self.qr = qr
             reply["qr"] = qr
             reply["json"] = self.to_json(qr)
+        
+        # self.checkpoint('<< formatted response')
+
         return reply
 
     # TODO - dfqr class that has convenience accessor methods for different properties
