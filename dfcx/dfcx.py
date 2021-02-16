@@ -54,6 +54,7 @@ class DialogflowCX:
 
 # AGENT FX
 
+
     def list_agents(self, location_id: str) -> List[types.Agent]:
         """Get list of all CX agents in a given GCP project
 
@@ -234,58 +235,61 @@ class DialogflowCX:
         results.raise_for_status()
 
         return results.json()
-    
-    
-    def export_agent(self, agent_id:str, gcs_bucket_uri:str) -> str:
+
+    def export_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
         """Exports the specified CX agent to Google Cloud Storage bucket.
-        
+
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
           gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
             agent to in the following format:
               `gs://<bucket-name>/<object-name>`
-            
+
         Returns:
-          response: A Long Running Operation (LRO) ID that can be used to 
+          response: A Long Running Operation (LRO) ID that can be used to
             check the status of the export using dfcx.get_lro()
         """
 
         request = types.agent.ExportAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
-    
+
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(client_options=client_options)
         response = client.export_agent(request)
 
         return response.operation.name
-    
+
 # OPERATIONS FX
-    
-    def get_lro(self, lro:str):
+
+    def get_lro(self, lro: str):
         """Used to retrieve the status of LROs for Dialogflow CX.
-        
+
         Args:
           lro: The Long Running Operation(LRO) ID
-          
+
         Returns:
           response: Response status and payload from LRO
         """
-        
+
         location = lro.split('/')[3]
         if location != 'global':
-            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(location)
+            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
+                location)
         else:
             base_url = 'https://dialogflow.googleapis.com/v3beta1'
 
         url = '{0}/{1}'.format(base_url, lro)
-        
-        token = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'], 
-                              stdout=subprocess.PIPE,
-                              text=True).stdout
 
-        token = token.strip('\n') # remove newline appended as part of stdout
+        token = subprocess.run(['gcloud',
+                                'auth',
+                                'application-default',
+                                'print-access-token'],
+                               stdout=subprocess.PIPE,
+                               text=True).stdout
+
+        token = token.strip('\n')  # remove newline appended as part of stdout
         headers = {"Authorization": "Bearer {}".format(token)}
 
         # Make REST call
@@ -295,9 +299,7 @@ class DialogflowCX:
         return results.json()
 
 
-
 # INTENTS FX
-
 
     def list_intents(self, agent_id):
         request = types.intent.ListIntentsRequest()
@@ -384,18 +386,19 @@ class DialogflowCX:
         response = client.update_intent(intent=intent)
 
         return response
-    
-    
+
     def delete_intent(self, intent_id, obj=None):
         if obj:
             intent_id = obj.name
         else:
             client_options = self._set_region(intent_id)
-            client = services.intents.IntentsClient(client_options=client_options)
+            client = services.intents.IntentsClient(
+                client_options=client_options)
             client.delete_intent(name=intent_id)
-    
-    
-### ENTITIES FX
+
+
+# ENTITIES FX
+
 
     def list_entity_types(self, agent_id):
         request = types.entity_type.ListEntityTypesRequest()
@@ -446,7 +449,6 @@ class DialogflowCX:
 
 
 # FLOWS FX
-
 
     def list_flows(self, agent_id):
         request = types.flow.ListFlowsRequest()
@@ -669,7 +671,6 @@ class DialogflowCX:
 
 # WEBHOOK FX
 
-
     def list_webhooks(self, agent_id):
         request = types.webhook.ListWebhooksRequest()
         request.parent = agent_id
@@ -707,6 +708,7 @@ class DialogflowCX:
 
 
 # SESSION FX
+
 
     def run_conversation(
             self,
