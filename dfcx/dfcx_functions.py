@@ -180,9 +180,22 @@ class DialogflowFunctions:
 
     def copy_intent_to_agent(
             self,
-            intent_display_name,
-            source_agent,
-            destination_agent):
+            intent_display_name: str,
+            source_agent: str,
+            destination_agent: str,
+            copy_option: str = 'create'):
+        """Copy an Intent object from one CX agent to another.
+        
+        Args:
+          intent_display_name: The human readable display name of the intent.
+          source_agent: the Agent ID string in the following format:
+            projects/<project_id>/locations/<location_id>/agents/<agent_id>
+          destination_agent: the Agent ID string in the following format:
+            projects/<project_id>/locations/<location_id>/agents/<agent_id>
+          copy_optoion: The update method of the copy to the new agent.
+            One of 'create' or 'update'. Defaults to 'create'
+          
+          """
         # retrieve from source agent
         intents_map = self.get_intents_map(source_agent, reverse=True)
         intent_id = intents_map[intent_display_name]
@@ -201,12 +214,29 @@ class DialogflowFunctions:
                     destination_name = destination_entities_map[source_name]
                     param.entity_type = destination_name
 
+        # if copy_option = update, pull existing intent from destination agent
+        if copy_option == 'update':
+            destination_intents = self.dfcx.list_intents(destination_agent)
+            for intent in destination_intents:
+                if intent.display_name == intent_display_name:
+                    destination_intent_obj = intent
+
+
         # push to destination agent
         try:
-            self.dfcx.create_intent(destination_agent, intent_object)
-            logging.info(
-                'Intent \'{}\' created successfully'.format(
-                    intent_object.display_name))
+            if copy_option == 'create':
+                self.dfcx.create_intent(destination_agent, intent_object)
+                logging.info(
+                    'Intent \'{}\' created successfully'.format(
+                        intent_object.display_name))
+            elif copy_option == 'update':
+                self.dfcx.update_intent(destination_intent_obj.name,
+                  intent_object)
+                logging.info(
+                    'Intent \'{}\' updated successfully'.format(
+                        intent_object.display_name))
+            else:
+                logging.info('Invalid copy option. Please use \'create\' or \'update\'')
         except Exception as e:
             print(e)
             print(
