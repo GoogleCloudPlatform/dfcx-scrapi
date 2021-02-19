@@ -42,6 +42,9 @@ from google.protobuf import json_format  # type: ignore
 
 logger = logging
 
+logging.basicConfig(
+    format='[dfcx] %(levelname)s:%(message)s', level=logging.DEBUG)
+
 MAX_RETRIES = 10  # JWT errors on CX API
 
 
@@ -74,12 +77,15 @@ class DialogflowClient:
         self.agent_path = agent_path or config['agent_path']
         self.language_code = language_code or config['language_code']
         self.start_time = None
+        self.qr = None
         self.restart()
 
 
     def restart(self):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
+        self.turn_count = 0
+        logging.info('restarted agent: session: %s', self.session_id)
         # print('restarted DFCX.client=>', self.agent_path)
 
 
@@ -126,12 +132,13 @@ class DialogflowClient:
 
         if restart:
             self.restart()
+
         client_options = self._set_region()
         session_client = SessionsClient(client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
         # self.checkpoint('made client')
-
+        logging.info('session_path %s', session_path)
 
         # set parameters separately with single query and an empty text
         query_params = None
@@ -175,6 +182,7 @@ class DialogflowClient:
                 # return None ## try next one
 
         qr = response.query_result
+        self.qr = qr # for debugging
 
         # flatten array of text responses
         # seems like there should be a better interface to pull out the texts
@@ -219,7 +227,7 @@ class DialogflowClient:
             # self.qr = qr
             reply["qr"] = qr
             reply["json"] = self.to_json(qr)
-        
+
         # self.checkpoint('<< formatted response')
 
         return reply
@@ -251,13 +259,13 @@ class DialogflowClient:
         '''get data at a pathed location out of object internals'''
         elem = obj
         try:
-            for x in xpath.strip("/").split("/"):
+            for xpitem in xpath.strip("/").split("/"):
                 try:
-                    x = int(x)
-                    elem = elem[x]  # dict
+                    xpitem = int(xpitem)
+                    elem = elem[xpitem]  # dict
                 except ValueError:
-                    elem = elem.get(x)  # array
-        except BaseException:
+                    elem = elem.get(xpitem)  # array
+        except KeyError:
             logging.warning("failed to getpath: %s ", xpath)
             return default
 
