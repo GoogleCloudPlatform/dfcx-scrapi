@@ -54,7 +54,6 @@ class DialogflowCX:
 
 # AGENT FX
 
-
     def list_agents(self, location_id: str) -> List[types.Agent]:
         """Get list of all CX agents in a given GCP project
 
@@ -301,6 +300,7 @@ class DialogflowCX:
 
 # INTENTS FX
 
+
     def list_intents(self, agent_id):
         request = types.intent.ListIntentsRequest()
         request.parent = agent_id
@@ -399,7 +399,6 @@ class DialogflowCX:
 
 # ENTITIES FX
 
-
     def list_entity_types(self, agent_id):
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
@@ -450,6 +449,7 @@ class DialogflowCX:
 
 # FLOWS FX
 
+
     def list_flows(self, agent_id):
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
@@ -490,7 +490,6 @@ class DialogflowCX:
         response = client.update_flow(flow=flow, update_mask=mask)
 
         return response
-
 
     def export_flow(self,
                     flow_id: str,
@@ -563,7 +562,7 @@ class DialogflowCX:
                 location)
         else:
             base_url = 'https://dialogflow.googleapis.com/v3beta1'
-        url = '{0}/{1}:export'.format(base_url, destination_agent_id)
+        url = '{0}/{1}/flows:import'.format(base_url, destination_agent_id)
 
         body = {
             'flow_uri': '{}'.format(gcs_path),
@@ -769,6 +768,7 @@ class DialogflowCX:
 
 # WEBHOOK FX
 
+
     def list_webhooks(self, agent_id):
         request = types.webhook.ListWebhooksRequest()
         request.parent = agent_id
@@ -806,7 +806,6 @@ class DialogflowCX:
 
 
 # SESSION FX
-
 
     def run_conversation(
             self,

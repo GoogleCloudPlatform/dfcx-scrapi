@@ -41,7 +41,6 @@ class DialogflowFunctions:
 # TODO: (pmarlow@) move this to @staticmethod outside of main function.
 # perhaps move to the main dfcx.py file as a @staticmethod ?
 
-
     def get_flows_map(self, agent_id, reverse=False):
         """ Exports Agent Flow Names and UUIDs into a user friendly dict.
 
@@ -185,7 +184,7 @@ class DialogflowFunctions:
             destination_agent: str,
             copy_option: str = 'create'):
         """Copy an Intent object from one CX agent to another.
-        
+
         Args:
           intent_display_name: The human readable display name of the intent.
           source_agent: the Agent ID string in the following format:
@@ -194,7 +193,7 @@ class DialogflowFunctions:
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
           copy_optoion: The update method of the copy to the new agent.
             One of 'create' or 'update'. Defaults to 'create'
-          
+
           """
         # retrieve from source agent
         intents_map = self.get_intents_map(source_agent, reverse=True)
@@ -221,7 +220,6 @@ class DialogflowFunctions:
                 if intent.display_name == intent_display_name:
                     destination_intent_obj = intent
 
-
         # push to destination agent
         try:
             if copy_option == 'create':
@@ -231,12 +229,13 @@ class DialogflowFunctions:
                         intent_object.display_name))
             elif copy_option == 'update':
                 self.dfcx.update_intent(destination_intent_obj.name,
-                  intent_object)
+                                        intent_object)
                 logging.info(
                     'Intent \'{}\' updated successfully'.format(
                         intent_object.display_name))
             else:
-                logging.info('Invalid copy option. Please use \'create\' or \'update\'')
+                logging.info(
+                    'Invalid copy option. Please use \'create\' or \'update\'')
         except Exception as e:
             print(e)
             print(
@@ -802,6 +801,7 @@ class DialogflowFunctions:
 
 # PAGE FUNCTIONS
 
+
     def get_page_dependencies(self, obj_list):
         """ Pass in DFCX Page object(s) and retrieve all resource dependencies.
 
@@ -873,7 +873,6 @@ class DialogflowFunctions:
 
 
 # DATAFRAME FUNCTIONS
-
 
     def route_groups_to_dataframe(self, agent_id=None):
         """ This method extracts the Transition Route Groups from a given DFCX Agent
@@ -1009,6 +1008,7 @@ class DialogflowFunctions:
 
 
 # SPECIAL PURPOSE FUNCTIONS
+
 
     def find_list_parameters(self, agent_id):
         """ This method extracts Parameters set at a page level that are
