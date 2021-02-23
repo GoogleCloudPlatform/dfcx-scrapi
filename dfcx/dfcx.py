@@ -491,6 +491,104 @@ class DialogflowCX:
 
         return response
 
+
+    def export_flow(self,
+                    flow_id: str,
+                    gcs_path: str,
+                    data_format: str = 'BLOB',
+                    ref_flows: bool = True) -> Dict[str,
+                                                    str]:
+        """ Exports DFCX Flow(s) into GCS bucket.
+
+        Args:
+          flow_id, the formatted CX Flow ID to export
+          gcs_path, the full GCS Bucket and File name path
+          data_format, (Optional) One of 'BLOB' or 'JSON'. Defaults to 'BLOB'.
+          ref_flows, (Optional) Bool to include referenced flows connected to primary flow
+
+        Returns:
+          lro, Dict with value containing a Long Running Operation UUID that can be
+              used to retrieve status of LRO from dfcx.get_lro
+        """
+
+        location = flow_id.split('/')[3]
+        if location != 'global':
+            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
+                location)
+        else:
+            base_url = 'https://dialogflow.googleapis.com/v3beta1'
+        url = '{0}/{1}:export'.format(base_url, flow_id)
+
+        body = {
+            'flow_uri': '{}'.format(gcs_path),
+            'data_format': data_format,
+            'include_referenced_flows': ref_flows}
+        token = subprocess.run(['gcloud',
+                                'auth',
+                                'application-default',
+                                'print-access-token'],
+                               stdout=subprocess.PIPE,
+                               text=True).stdout
+
+        token = token.strip('\n')  # remove newline appended as part of stdout
+        headers = {
+            'Authorization': 'Bearer {}'.format(token),
+            'Content-Type': 'application/json; charset=utf-8'}
+
+        # Make REST call
+        r = requests.post(url, json=body, headers=headers)
+        r.raise_for_status()
+
+        lro = r.json()
+
+        return lro
+
+    def import_flow(self, destination_agent_id: str, gcs_path: str,
+                    import_option: str = 'FALLBACK') -> Dict[str, str]:
+        """ Imports a DFCX Flow from GCS bucket to CX Agent.
+
+        Args:
+          agent_id, the DFCX formatted Agent ID
+          gcs_path, the full GCS Bucket and File name path
+          import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'FALLBACK'
+
+        Returns:
+          lro, Dict with value containing a Long Running Operation UUID that can be
+              used to retrieve status of LRO from dfcx.get_lro
+        """
+
+        location = destination_agent_id.split('/')[3]
+        if location != 'global':
+            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
+                location)
+        else:
+            base_url = 'https://dialogflow.googleapis.com/v3beta1'
+        url = '{0}/{1}:export'.format(base_url, destination_agent_id)
+
+        body = {
+            'flow_uri': '{}'.format(gcs_path),
+            'import_option': '{}'.format(import_option)}
+        token = subprocess.run(['gcloud',
+                                'auth',
+                                'application-default',
+                                'print-access-token'],
+                               stdout=subprocess.PIPE,
+                               text=True).stdout
+
+        token = token.strip('\n')  # remove newline appended as part of stdout
+
+        headers = {
+            'Authorization': 'Bearer {}'.format(token),
+            'Content-Type': 'application/json; charset=utf-8'}
+
+        # Make REST call
+        r = requests.post(url, json=body, headers=headers)
+        r.raise_for_status()
+
+        lro = r.json()
+
+        return lro
+
 # PAGES FX
 
     def list_pages(self, flow_id):
