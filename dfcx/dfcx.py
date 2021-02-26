@@ -260,8 +260,12 @@ class DialogflowCX:
 
         return response.operation.name
 
+
     def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
-        '''restore an agent from a gcs_bucket location. Currently there is no way to restore back to default settings via the api. The feature request for this is logged. 
+        """Restores a CX agent from a gcs_bucket location. 
+        TODO(pmarlow@) Currently there is no way to restore back to default 
+        settings via the api. The feature request for this is logged. 
+
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
@@ -272,16 +276,19 @@ class DialogflowCX:
         Returns:
           response: A Long Running Operation (LRO) ID that can be used to
             check the status of the import using dfcx.get_lro()
-        '''
+        """
 
         request = types.RestoreAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
+
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(client_options=client_options)
         response = client.restore_agent(request)
+
         return response.operation.name
-    
+
+
 # OPERATIONS FX
 
     def get_lro(self, lro: str):
