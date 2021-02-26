@@ -476,6 +476,16 @@ class DialogflowCX:
         return response
 
 
+    def delete_entity_type(self, entity_id, obj=None):
+        if obj:
+            entity_id = obj.name
+        else:
+            client_options = self._set_region(entity_id)
+            client = services.entity_types.EntityTypesClient(
+                client_options=client_options)
+            client.delete_entity_type(name=entity_id)
+
+
 # FLOWS FX
 
 
