@@ -513,24 +513,30 @@ class DialogflowCX:
 
         return response
     
-    def nlu_settings(self, model_type, classification_threshold, model_training_mode):
-        '''
-        Generates nlu settings objects. 
-        args:
-        flow_id: flow_id to provide the specified settings for
-        model_type:  [0:unspecified, 1:MODEL_TYPE_STANDARD, 2:Custom, 3:Advanced]
-        classification_threshold: treshold for the flow
-        model_training_mode: [0:unspecified, 1:automatic, 2:'manual]
+    def nlu_settings(self,
+                     flow_id: str, 
+                     model_type: int, 
+                     classification_threshold: float, 
+                     model_training_mode: int):
+        """Generates nlu settings objects. 
 
-        returns:
-        nlu settings objects which can be passed to the nlu_settings kwarg of the update_flow fxn
-        '''
+        Args:
+          flow_id: flow_id to provide the specified settings for
+          model_type:  [0:unspecified, 1:MODEL_TYPE_STANDARD, 2:Custom, 3:Advanced]
+          classification_threshold: treshold for the flow
+          model_training_mode: [0:unspecified, 1:automatic, 2:'manual]
+
+        Returns:
+          nlu settings objects which can be passed to the nlu_settings kwarg of the update_flow fxn
+        """
 
         nlu_settings = types.flow.NluSettings()
         nlu_settings.model_type = model_type
         nlu_settings.classification_threshold = classification_threshold
         nlu_settings.model_training_mode = model_training_mode
+
         return nlu_settings
+
 
     def export_flow(self,
                     flow_id: str,
