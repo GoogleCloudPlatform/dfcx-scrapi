@@ -22,11 +22,8 @@ from oauth2client.client import GoogleCredentials
 import numpy as np
 import google.cloud.dialogflowcx_v3beta1.types as types
 
-    
-
-from dfcx_sapi.dfcx.dfcx import DialogflowCX
-from dfcx_sapi.dfcx.dfcx_functions import DialogflowFunctions
-
+from python_df_cx_api.dfcx.dfcx import DialogflowCX
+from python_df_cx_api.dfcx.dfcx_functions import DialogflowFunctions
 import pygsheets
 import gspread
 import pickle

@@ -10,6 +10,14 @@ import numpy as np
 import time
 import math
 import google.cloud.dialogflowcx_v3beta1.types as types
+import json
+import ast
+from google.oauth2 import service_account
+import pygsheets
+import gspread
+import pickle
+#authorization
+from oauth2client.service_account import ServiceAccountCredentials
 
 module_path = os.path.abspath(os.path.join('../../../..'))
 if module_path not in sys.path:
@@ -35,6 +43,7 @@ class creators:
         self.agent_id = agent_id
         self.gcs_bucket_uri = gcs_bucket_uri
         self.store = store
+        self.creds = creds
         if store:
             self.dfcx.export_agent(agent_id=self.agent_id,gcs_bucket_uri = self.gcs_bucket_uri)
         return
@@ -53,11 +62,18 @@ class creators:
     ***create an intent from a file with intent_name, training_phrase
     To do is add entity tagging. 
     '''
-    def create_intents(self, filePath, naming_convention = None):
-        if filePath == None:
-            raise ValueError('must provide a file path in the parameters with the filePath key')
-            
-        new_intents_phrases = pd.read_csv(filePath)
+    def create_intents(self, gsheet, worksheet, naming_convention = None):
+        
+        
+        scope = ['https://spreadsheets.google.com/feeds',
+                         'https://www.googleapis.com/auth/drive']
+        creds_gdrive = ServiceAccountCredentials.from_json_keyfile_name(self.creds, scope)
+        client = gspread.authorize(creds_gdrive)
+        g_sheets = client.open(gsheet)
+        sheet = g_sheets.worksheet(worksheet)
+        dataPull = data = sheet.get_all_values()
+        new_intents_phrases = pd.DataFrame(columns=dataPull[0],data=dataPull[1:])
+        
         existing_intents = self.dfcx.list_intents(agent_id=self.agent_id)
         names = []
         for intent in existing_intents:
@@ -99,8 +115,15 @@ class creators:
         return
 
     '''Add training phrases to new intents'''
-    def create_tps_intents(self, filePath):
-        tps = pd.read_csv(filePath)
+    def create_tps_intents(self, gsheet, worksheet):
+        scope = ['https://spreadsheets.google.com/feeds',
+                         'https://www.googleapis.com/auth/drive']
+        creds_gdrive = ServiceAccountCredentials.from_json_keyfile_name(self.creds, scope)
+        client = gspread.authorize(creds_gdrive)
+        g_sheets = client.open(gsheet)
+        sheet = g_sheets.worksheet(worksheet)
+        dataPull = data = sheet.get_all_values()
+        tps = pd.DataFrame(columns=dataPull[0],data=dataPull[1:])
         intents = self.dfcx.list_intents(agent_id=self.agent_id)
         intents_update = list(set(tps['display_name']))
         i=0
@@ -132,9 +155,111 @@ class creators:
                     
     '''create route group by providing intents + other data like params and fullfillment and transition first 
     display_name, parameters, .... intents should be created first. '''
-    def create_route_group(self, rg):
-        return
+    def create_transition_route(self, intent, condition, target_flow, target_page,
+                                customPayload, webhook, webhook_tag, parameter_presets, fulfillment_text):
+        transitionRoute = types.TransitionRoute()
+        transitionRoute.intent = intent
+        transitionRoute.condition = condition
+        transitionRoute.target_page = target_page
+        transitionRoute.target_flow = target_flow
+
+        #fulfillment
+        fulfillment = types.Fulfillment()
+        fulfillment.webhook = webhook
+        fulfillment.tag = webhook_tag
+
+        custy_payloads = []
+        if customPayload:
+            customPayload = json.loads(customPayload)
+            for cp in customPayload:
+                custy_payloads.append({'payload':cp})
+
+        if fulfillment_text:
+            fulfillment_text = ast.literal_eval(fulfillment_text)
+
+        #custom payloads and text
+        #cp = json.loads(customPayload)
+        payload = {"messages": 
+            custy_payloads +
+            [{'text': {'text': fulfillment_text}}]
+                  }
+
+
+        payload_json = json.dumps(payload) 
+        payload_json = json.dumps(payload) 
+        fulfillment = types.Fulfillment.from_json(payload_json)
+
+        #parameter - presets
+        set_param_actions = []
+
+        if parameter_presets:
+            parameter_presets = json.loads(parameter_presets)
+            for param in parameter_presets.keys():
+                set_param_action = types.Fulfillment.SetParameterAction()
+                set_param_action.parameter = param
+                set_param_action.value = parameter_presets[param]
+                set_param_actions.append(set_param_action)
+        fulfillment.set_parameter_actions = set_param_actions
+        transitionRoute.trigger_fulfillment = fulfillment
+
+        return transitionRoute
+
+
+
+    def create_routeGroup(self, display_name, routes, flow_id):
+        existing_rgs = dict((v,k) for k,v in self.dffx.get_route_groups_map(flow_id=flow_id).items())
+        if display_name in existing_rgs.keys():
+            raise ValueError('route group name {0} exists in flow {1}'.format(display_name,flow_id))
+        rg = types.TransitionRouteGroup()
+        rg.display_name = display_name
+        rg.transition_routes = routes
+        return rg
     
+    def create_RG(self, gsheet,worksheet,RG_name,flow_name):
+        scope = ['https://spreadsheets.google.com/feeds',
+                         'https://www.googleapis.com/auth/drive']
+        creds_gdrive = ServiceAccountCredentials.from_json_keyfile_name(self.creds, scope)
+        client = gspread.authorize(creds_gdrive)
+        g_sheets = client.open(gsheet)
+        sheet = g_sheets.worksheet(worksheet)
+
+        flow_map = dict((v,k) for k,v in self.dffx.get_flows_map(agent_id=self.agent_id).items())
+        intents_map = dict((v,k) for k,v in self.dffx.get_intents_map(agent_id=self.agent_id).items())
+
+        flow_i = flow_map[flow_name]
+        page_map = dict((v,k) for k,v in self.dffx.get_pages_map(flow_id=flow_i).items())
+        routes = []
+        i = 0
+        dataPull = sheet.get_all_values()[1:]
+        i = 0
+        for data in dataPull:
+            data = [None if x=='' else x for x in data]
+            intent = intents_map.get(data[0] if 0 < len(data) else None ,None)
+            if intent == None:
+                print(data)
+            condition=data[1] if 1 < len(data) else None
+            fulfillment_text = data[2] if 2 < len(data) else None
+            customPayload=data[3] if 3 < len(data) else None
+            parameter_presets=data[4] if 4 < len(data) else None
+            webhook=data[5] if 5 < len(data) else None
+            webhook_tag=data[6] if 6 < len(data) else None
+            target_flow= flow_map.get(data[7] if 7 < len(data) else None ,None)
+            target_page=page_map.get(data[8] if 8 < len(data) else None ,None)
+
+            route = self.create_transition_route(intent=intent, condition=condition, fulfillment_text=fulfillment_text,
+                                    customPayload=customPayload, parameter_presets=parameter_presets, webhook=webhook,
+                                   webhook_tag=webhook_tag,target_flow=target_flow, target_page=target_page)
+            i+=1
+            routes.append(route)
+            self.progressBar(current=i,total=len(dataPull))
+
+        RG = self.create_routeGroup(routes=routes, flow_id=flow_i,display_name=RG_name)
+        
+        self.dfcx.create_transition_route_group(flow_id=flow_map[flow_name],obj=RG)
+
+        return RG
+
+
     
     def restore(self,gsc_bucket_uri_spec= None):
             if gsc_bucket_uri_spec:
@@ -144,4 +269,4 @@ class creators:
     
 
 
-
+    
