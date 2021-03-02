@@ -33,21 +33,22 @@ import re
 from nltk.tokenize import wordpunct_tokenize, WhitespaceTokenizer, word_tokenize
 import itertools
 
-    
-module_path = os.path.abspath(os.path.join('../../intent_lib'))
-if module_path not in sys.path:
-    sys.path.append(module_path)
-
 
 
 module_path = os.path.abspath(os.path.join('../../../..'))
 if module_path not in sys.path:
     sys.path.append(module_path)
     
+module_path = os.path.abspath(os.path.join('../../intent_lib'))
+if module_path not in sys.path:
+    sys.path.append(module_path)
 
-from dfcx_sapi.dfcx.dfcx import DialogflowCX
-from dfcx_sapi.dfcx.dfcx_functions import DialogflowFunctions
 from update_intents_lib import *
+
+from python_df_cx_api.dfcx.dfcx import DialogflowCX
+from python_df_cx_api.dfcx.dfcx_functions import DialogflowFunctions
+
+
 # In[66]:
 
 
