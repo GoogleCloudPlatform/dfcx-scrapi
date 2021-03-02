@@ -626,6 +626,17 @@ class DialogflowCX:
         lro = r.json()
 
         return lro
+    
+    def delete_flow(self, flow_id,force=False):
+        '''args
+        flow_id - flow to delete
+        force = False means a flow will not be deleted if a route to the flow exists, True means the flow will be deleted and all '''
+        request = types.DeleteFlowRequest()
+        request.name = flow_id
+        request.force = force
+        client = services.flows.FlowsClient()
+        client.delete_flow(request)
+        return 
 
 # PAGES FX
 
