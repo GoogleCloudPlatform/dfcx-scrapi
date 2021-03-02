@@ -38,14 +38,29 @@ class DialogflowCX:
             self.agent_id = agent_id
 
     @staticmethod
-    def _set_region(id):
-        location = id.split('/')[3]
+    def _set_region(item_id):
+        """different regions have different API endpoints
+
+        Args:
+            item_id: agent/flow/page - any type of long path id like 
+                `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
+
+        Returns:
+            client_options: use when instantiating other library client objects
+        """
+        try:
+            location = item_id.split('/')[3]
+        except IndexError as err:
+            logging.error('IndexError - path too short? %s', item_id)
+            raise err
 
         if location != 'global':
             api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
             client_options = {'api_endpoint': api_endpoint}
-
             return client_options
+
+        else:
+            return None # explicit None return when not required
 
 
 # TODO (pmarlow@) break each set of Functions into its own Class so that we
@@ -489,7 +504,8 @@ class DialogflowCX:
 # FLOWS FX
 
 
-    def list_flows(self, agent_id):
+    def list_flows(self, agent_id=None):
+        agent_id = agent_id or self.agent_id # default value
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
 
