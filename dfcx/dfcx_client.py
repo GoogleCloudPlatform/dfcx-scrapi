@@ -43,7 +43,7 @@ from google.protobuf import json_format  # type: ignore
 logger = logging
 
 logging.basicConfig(
-    format='[dfcx] %(levelname)s:%(message)s', level=logging.DEBUG)
+    format='[dfcx] %(levelname)s:%(message)s', level=logging.INFO)
 
 MAX_RETRIES = 10  # JWT errors on CX API
 
@@ -115,8 +115,8 @@ class DialogflowClient:
             if msg:
                 print("{:0.2f}s {}".format(duration, msg))
 
-
-    def reply(self, send_obj, restart=False, raw=False, retries=0):
+    # TODO - refactor options as a dict?
+    def reply(self, send_obj, restart=False, raw=False, retries=0, disable_webhook=True):
         """
         send_obj to bot and get reply
             text
@@ -126,6 +126,9 @@ class DialogflowClient:
         Pass restart=True to start a new conv with a new session_id
         otherwise uses the agents continues conv with session_id
         """
+
+        if disable_webhook:
+            logging.info('disable_webhook: %s', disable_webhook)
 
         text = send_obj.get("text")
         send_params = send_obj.get("params")
@@ -143,9 +146,17 @@ class DialogflowClient:
         # logging.info('session_path %s', session_path)
 
         # set parameters separately with single query and an empty text
-        query_params = None
+        # query_params = {'disable_webhook': True }
+
         if send_params:
-            query_params = session.QueryParameters(parameters=send_params)
+            query_params = session.QueryParameters(
+                disable_webhook=disable_webhook,
+                parameters=send_params
+            )
+        else:
+            query_params = session.QueryParameters(
+                disable_webhook=disable_webhook,
+            )
 
         dtmf = send_obj.get("dtmf")
         if dtmf:
@@ -184,7 +195,7 @@ class DialogflowClient:
                 # return None ## try next one
 
         qr = response.query_result
-        logging.info('dfcx>qr %s', qr)
+        logging.debug('dfcx>qr %s', qr)
         self.qr = qr # for debugging
         reply = {}
 
