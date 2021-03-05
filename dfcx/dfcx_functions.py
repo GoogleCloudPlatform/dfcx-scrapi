@@ -41,7 +41,6 @@ class DialogflowFunctions:
 # TODO: (pmarlow@) move this to @staticmethod outside of main function.
 # perhaps move to the main dfcx.py file as a @staticmethod ?
 
-
     def get_flows_map(self, agent_id, reverse=False):
         """ Exports Agent Flow Names and UUIDs into a user friendly dict.
 
@@ -180,9 +179,22 @@ class DialogflowFunctions:
 
     def copy_intent_to_agent(
             self,
-            intent_display_name,
-            source_agent,
-            destination_agent):
+            intent_display_name: str,
+            source_agent: str,
+            destination_agent: str,
+            copy_option: str = 'create'):
+        """Copy an Intent object from one CX agent to another.
+
+        Args:
+          intent_display_name: The human readable display name of the intent.
+          source_agent: the Agent ID string in the following format:
+            projects/<project_id>/locations/<location_id>/agents/<agent_id>
+          destination_agent: the Agent ID string in the following format:
+            projects/<project_id>/locations/<location_id>/agents/<agent_id>
+          copy_optoion: The update method of the copy to the new agent.
+            One of 'create' or 'update'. Defaults to 'create'
+
+          """
         # retrieve from source agent
         intents_map = self.get_intents_map(source_agent, reverse=True)
         intent_id = intents_map[intent_display_name]
@@ -201,12 +213,29 @@ class DialogflowFunctions:
                     destination_name = destination_entities_map[source_name]
                     param.entity_type = destination_name
 
+        # if copy_option = update, pull existing intent from destination agent
+        if copy_option == 'update':
+            destination_intents = self.dfcx.list_intents(destination_agent)
+            for intent in destination_intents:
+                if intent.display_name == intent_display_name:
+                    destination_intent_obj = intent
+
         # push to destination agent
         try:
-            self.dfcx.create_intent(destination_agent, intent_object)
-            logging.info(
-                'Intent \'{}\' created successfully'.format(
-                    intent_object.display_name))
+            if copy_option == 'create':
+                self.dfcx.create_intent(destination_agent, intent_object)
+                logging.info(
+                    'Intent \'{}\' created successfully'.format(
+                        intent_object.display_name))
+            elif copy_option == 'update':
+                self.dfcx.update_intent(destination_intent_obj.name,
+                                        intent_object)
+                logging.info(
+                    'Intent \'{}\' updated successfully'.format(
+                        intent_object.display_name))
+            else:
+                logging.info(
+                    'Invalid copy option. Please use \'create\' or \'update\'')
         except Exception as e:
             print(e)
             print(
@@ -772,6 +801,7 @@ class DialogflowFunctions:
 
 # PAGE FUNCTIONS
 
+
     def get_page_dependencies(self, obj_list):
         """ Pass in DFCX Page object(s) and retrieve all resource dependencies.
 
@@ -843,7 +873,6 @@ class DialogflowFunctions:
 
 
 # DATAFRAME FUNCTIONS
-
 
     def route_groups_to_dataframe(self, agent_id=None):
         """ This method extracts the Transition Route Groups from a given DFCX Agent
@@ -980,6 +1009,7 @@ class DialogflowFunctions:
 
 # SPECIAL PURPOSE FUNCTIONS
 
+
     def find_list_parameters(self, agent_id):
         """ This method extracts Parameters set at a page level that are
         designated as "lists".
@@ -1024,88 +1054,3 @@ class DialogflowFunctions:
                         print('\n')
 
         return params_list
-
-# EXPORT/IMPORT FUNCTIONS
-    def export_flow(self,
-                    flow_id: str,
-                    gcs_path: str,
-                    data_format: str = 'BLOB',
-                    ref_flows: bool = True) -> Dict[str,
-                                                    str]:
-        """ Exports DFCX Flow(s) into GCS bucket.
-
-        Args:
-          flow_id, the formatted CX Flow ID to export
-          gcs_path, the full GCS Bucket and File name path
-          data_format, (Optional) One of 'BLOB' or 'JSON'. Defaults to 'BLOB'.
-          ref_flows, (Optional) Bool to include referenced flows connected to primary flow
-
-        Returns:
-          lro, Dict with value containing a Long Running Operation UUID that can be
-              used to retrieve status of LRO from dfcx.get_lro
-        """
-        base_url = 'https://dialogflow.googleapis.com/v3beta1'
-        url = '{0}/{1}:export'.format(base_url, flow_id)
-        body = {
-            'flow_uri': '{}'.format(gcs_path),
-            'data_format': data_format,
-            'include_referenced_flows': ref_flows}
-        token = subprocess.run(['gcloud',
-                                'auth',
-                                'application-default',
-                                'print-access-token'],
-                               stdout=subprocess.PIPE,
-                               text=True).stdout
-
-        token = token.strip('\n')  # remove newline appended as part of stdout
-        headers = {
-            'Authorization': 'Bearer {}'.format(token),
-            'Content-Type': 'application/json; charset=utf-8'}
-
-        # Make REST call
-        r = requests.post(url, json=body, headers=headers)
-        r.raise_for_status()
-
-        lro = r.json()
-
-        return lro
-
-    def import_flow(self, destination_agent_id: str, gcs_path: str,
-                    import_option: str = 'FALLBACK') -> Dict[str, str]:
-        """ Imports a DFCX Flow from GCS bucket to CX Agent.
-
-        Args:
-          agent_id, the DFCX formatted Agent ID
-          gcs_path, the full GCS Bucket and File name path
-          import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'FALLBACK'
-
-        Returns:
-          lro, Dict with value containing a Long Running Operation UUID that can be
-              used to retrieve status of LRO from dfcx.get_lro
-        """
-
-        base_url = 'https://dialogflow.googleapis.com/v3beta1'
-        url = '{0}/{1}/flows:import'.format(base_url, destination_agent_id)
-        body = {
-            'flow_uri': '{}'.format(gcs_path),
-            'import_option': '{}'.format(import_option)}
-        token = subprocess.run(['gcloud',
-                                'auth',
-                                'application-default',
-                                'print-access-token'],
-                               stdout=subprocess.PIPE,
-                               text=True).stdout
-
-        token = token.strip('\n')  # remove newline appended as part of stdout
-
-        headers = {
-            'Authorization': 'Bearer {}'.format(token),
-            'Content-Type': 'application/json; charset=utf-8'}
-
-        # Make REST call
-        r = requests.post(url, json=body, headers=headers)
-        r.raise_for_status()
-
-        lro = r.json()
-
-        return lro

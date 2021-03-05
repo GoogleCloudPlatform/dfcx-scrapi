@@ -69,7 +69,6 @@ class DialogflowCX:
 
 # AGENT FX
 
-
     def list_agents(self, location_id: str) -> List[types.Agent]:
         """Get list of all CX agents in a given GCP project
 
@@ -276,6 +275,35 @@ class DialogflowCX:
 
         return response.operation.name
 
+
+    def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
+        """Restores a CX agent from a gcs_bucket location. 
+        TODO(pmarlow@) Currently there is no way to restore back to default 
+        settings via the api. The feature request for this is logged. 
+
+        Args:
+          agent_id: CX Agent ID string in the following format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+          gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
+            agent to in the following format:
+              `gs://<bucket-name>/<object-name>`
+
+        Returns:
+          response: A Long Running Operation (LRO) ID that can be used to
+            check the status of the import using dfcx.get_lro()
+        """
+
+        request = types.RestoreAgentRequest()
+        request.name = agent_id
+        request.agent_uri = gcs_bucket_uri
+
+        client_options = self._set_region(agent_id)
+        client = services.agents.AgentsClient(client_options=client_options)
+        response = client.restore_agent(request)
+
+        return response.operation.name
+
+
 # OPERATIONS FX
 
     def get_lro(self, lro: str):
@@ -315,6 +343,7 @@ class DialogflowCX:
 
 
 # INTENTS FX
+
 
     def list_intents(self, agent_id):
         request = types.intent.ListIntentsRequest()
@@ -414,7 +443,6 @@ class DialogflowCX:
 
 # ENTITIES FX
 
-
     def list_entity_types(self, agent_id):
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
@@ -463,6 +491,16 @@ class DialogflowCX:
         return response
 
 
+    def delete_entity_type(self, entity_id, obj=None):
+        if obj:
+            entity_id = obj.name
+        else:
+            client_options = self._set_region(entity_id)
+            client = services.entity_types.EntityTypesClient(
+                client_options=client_options)
+            client.delete_entity_type(name=entity_id)
+
+
 # FLOWS FX
 
 
@@ -507,6 +545,142 @@ class DialogflowCX:
         response = client.update_flow(flow=flow, update_mask=mask)
 
         return response
+    
+    def nlu_settings(self,
+                     flow_id: str, 
+                     model_type: int, 
+                     classification_threshold: float, 
+                     model_training_mode: int):
+        """Generates nlu settings objects. 
+
+        Args:
+          flow_id: flow_id to provide the specified settings for
+          model_type:  [0:unspecified, 1:MODEL_TYPE_STANDARD, 2:Custom, 3:Advanced]
+          classification_threshold: treshold for the flow
+          model_training_mode: [0:unspecified, 1:automatic, 2:'manual]
+
+        Returns:
+          nlu settings objects which can be passed to the nlu_settings kwarg of the update_flow fxn
+        """
+
+        nlu_settings = types.flow.NluSettings()
+        nlu_settings.model_type = model_type
+        nlu_settings.classification_threshold = classification_threshold
+        nlu_settings.model_training_mode = model_training_mode
+
+        return nlu_settings
+
+
+    def export_flow(self,
+                    flow_id: str,
+                    gcs_path: str,
+                    data_format: str = 'BLOB',
+                    ref_flows: bool = True) -> Dict[str,
+                                                    str]:
+        """ Exports DFCX Flow(s) into GCS bucket.
+
+        Args:
+          flow_id, the formatted CX Flow ID to export
+          gcs_path, the full GCS Bucket and File name path
+          data_format, (Optional) One of 'BLOB' or 'JSON'. Defaults to 'BLOB'.
+          ref_flows, (Optional) Bool to include referenced flows connected to primary flow
+
+        Returns:
+          lro, Dict with value containing a Long Running Operation UUID that can be
+              used to retrieve status of LRO from dfcx.get_lro
+        """
+
+        location = flow_id.split('/')[3]
+        if location != 'global':
+            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
+                location)
+        else:
+            base_url = 'https://dialogflow.googleapis.com/v3beta1'
+        url = '{0}/{1}:export'.format(base_url, flow_id)
+
+        body = {
+            'flow_uri': '{}'.format(gcs_path),
+            'data_format': data_format,
+            'include_referenced_flows': ref_flows}
+        token = subprocess.run(['gcloud',
+                                'auth',
+                                'application-default',
+                                'print-access-token'],
+                               stdout=subprocess.PIPE,
+                               text=True).stdout
+
+        token = token.strip('\n')  # remove newline appended as part of stdout
+        headers = {
+            'Authorization': 'Bearer {}'.format(token),
+            'Content-Type': 'application/json; charset=utf-8'}
+
+        # Make REST call
+        r = requests.post(url, json=body, headers=headers)
+        r.raise_for_status()
+
+        lro = r.json()
+
+        return lro
+
+    def import_flow(self, destination_agent_id: str, gcs_path: str,
+                    import_option: str = 'FALLBACK') -> Dict[str, str]:
+        """ Imports a DFCX Flow from GCS bucket to CX Agent.
+
+        Args:
+          agent_id, the DFCX formatted Agent ID
+          gcs_path, the full GCS Bucket and File name path
+          import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'FALLBACK'
+
+        Returns:
+          lro, Dict with value containing a Long Running Operation UUID that can be
+              used to retrieve status of LRO from dfcx.get_lro
+        """
+
+        location = destination_agent_id.split('/')[3]
+        if location != 'global':
+            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
+                location)
+        else:
+            base_url = 'https://dialogflow.googleapis.com/v3beta1'
+        url = '{0}/{1}/flows:import'.format(base_url, destination_agent_id)
+
+        body = {
+            'flow_uri': '{}'.format(gcs_path),
+            'import_option': '{}'.format(import_option)}
+        token = subprocess.run(['gcloud',
+                                'auth',
+                                'application-default',
+                                'print-access-token'],
+                               stdout=subprocess.PIPE,
+                               text=True).stdout
+
+        token = token.strip('\n')  # remove newline appended as part of stdout
+
+        headers = {
+            'Authorization': 'Bearer {}'.format(token),
+            'Content-Type': 'application/json; charset=utf-8'}
+
+        # Make REST call
+        r = requests.post(url, json=body, headers=headers)
+        r.raise_for_status()
+
+        lro = r.json()
+
+        return lro
+
+
+    def delete_flow(self, flow_id: str, force: bool=False):
+        """
+        Args:
+          flow_id: flow to delete
+          force: False means a flow will not be deleted if a route to the flow exists, True means the flow will be deleted and all
+        """
+        request = types.DeleteFlowRequest()
+        request.name = flow_id
+        request.force = force
+        client = services.flows.FlowsClient()
+        client.delete_flow(request)
+
 
 # PAGES FX
 
@@ -688,6 +862,7 @@ class DialogflowCX:
 
 # WEBHOOK FX
 
+
     def list_webhooks(self, agent_id):
         request = types.webhook.ListWebhooksRequest()
         request.parent = agent_id
@@ -725,7 +900,6 @@ class DialogflowCX:
 
 
 # SESSION FX
-
 
     def run_conversation(
             self,
