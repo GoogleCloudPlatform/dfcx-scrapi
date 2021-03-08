@@ -4,7 +4,7 @@ tracks session internally
 """
 
 # import copy
-# import json
+import json
 import logging
 import os
 import uuid
@@ -42,6 +42,9 @@ from google.protobuf import json_format  # type: ignore
 
 logger = logging
 
+logging.basicConfig(
+    format='[dfcx] %(levelname)s:%(message)s', level=logging.INFO)
+
 MAX_RETRIES = 10  # JWT errors on CX API
 
 
@@ -74,12 +77,15 @@ class DialogflowClient:
         self.agent_path = agent_path or config['agent_path']
         self.language_code = language_code or config['language_code']
         self.start_time = None
+        self.qr = None
         self.restart()
 
 
     def restart(self):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
+        self.turn_count = 0
+        # logging.info('restarted agent: session: %s', self.session_id)
         # print('restarted DFCX.client=>', self.agent_path)
 
 
@@ -96,6 +102,7 @@ class DialogflowClient:
             return client_options
         return None
 
+
     def checkpoint(self, msg=None, start=False):
         '''print a checkpoint to time progress and debug bottleneck'''
         if start:
@@ -108,8 +115,8 @@ class DialogflowClient:
             if msg:
                 print("{:0.2f}s {}".format(duration, msg))
 
-
-    def reply(self, send_obj, restart=False, raw=False, retries=0):
+    # TODO - refactor options as a dict?
+    def reply(self, send_obj, restart=False, raw=False, retries=0, disable_webhook=True):
         """
         send_obj to bot and get reply
             text
@@ -120,23 +127,36 @@ class DialogflowClient:
         otherwise uses the agents continues conv with session_id
         """
 
+        if disable_webhook:
+            logging.info('disable_webhook: %s', disable_webhook)
+
         text = send_obj.get("text")
         send_params = send_obj.get("params")
+        # logging.info('send params %s', send_params)
         self.checkpoint(start=True)
 
         if restart:
             self.restart()
+
         client_options = self._set_region()
         session_client = SessionsClient(client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
         # self.checkpoint('made client')
-
+        # logging.info('session_path %s', session_path)
 
         # set parameters separately with single query and an empty text
-        query_params = None
+        # query_params = {'disable_webhook': True }
+
         if send_params:
-            query_params = session.QueryParameters(parameters=send_params)
+            query_params = session.QueryParameters(
+                disable_webhook=disable_webhook,
+                parameters=send_params
+            )
+        else:
+            query_params = session.QueryParameters(
+                disable_webhook=disable_webhook,
+            )
 
         dtmf = send_obj.get("dtmf")
         if dtmf:
@@ -175,11 +195,16 @@ class DialogflowClient:
                 # return None ## try next one
 
         qr = response.query_result
+        logging.debug('dfcx>qr %s', qr)
+        self.qr = qr # for debugging
+        reply = {}
 
         # flatten array of text responses
         # seems like there should be a better interface to pull out the texts
         texts = []
         for msg in qr.response_messages:
+            if msg.payload:
+                reply['payload'] = self.extract_payload(msg)
             if (len(msg.text.text)) > 0:
                 text = msg.text.text[-1]  # this could be multiple lines too?
                 # print('text', text)
@@ -208,7 +233,10 @@ class DialogflowClient:
         #     else:
         #         result['text'] = '\n'.join(texts)
 
-        reply = {}
+        # payload = qr.response_messages.payload
+        # logging.info('payload %s', payload)
+
+        # reply['payload'] = payload
         reply["text"] = "\n".join(texts)
         reply["params"] = params
         reply["confidence"] = qr.intent_detection_confidence
@@ -219,13 +247,21 @@ class DialogflowClient:
             # self.qr = qr
             reply["qr"] = qr
             reply["json"] = self.to_json(qr)
-        
-        # self.checkpoint('<< formatted response')
 
+        # self.checkpoint('<< formatted response')
+        logging.info('reply %s', reply)        
         return reply
+
 
     # TODO - dfqr class that has convenience accessor methods for different properties
     # basically to unwind the protobut
+
+    def extract_payload(self, msg):
+        '''convert to json so we can get at the object'''
+        blobstr = json_format.MessageToJson(msg._pb)
+        blob = json.loads(blobstr)
+        return blob.get('payload') # deref for nesting
+
 
     def format_other_intents(self, qr):
         """unwind protobufs into more friendly dict"""
@@ -243,21 +279,22 @@ class DialogflowClient:
         return items
 
     def to_json(self, qr):
-        '''extractor of private fields'''
-        blob = json_format.MessageToJson(qr._pb)
+        '''extractor of private fields
+        '''
+        blob = json_format.MessageToJson(qr._pb) # i think this returns JSON as a string
         return blob
 
     def getpath(self, obj, xpath, default=None):
         '''get data at a pathed location out of object internals'''
         elem = obj
         try:
-            for x in xpath.strip("/").split("/"):
+            for xpitem in xpath.strip("/").split("/"):
                 try:
-                    x = int(x)
-                    elem = elem[x]  # dict
+                    xpitem = int(xpitem)
+                    elem = elem[xpitem]  # dict
                 except ValueError:
-                    elem = elem.get(x)  # array
-        except BaseException:
+                    elem = elem.get(xpitem)  # array
+        except KeyError:
             logging.warning("failed to getpath: %s ", xpath)
             return default
 
