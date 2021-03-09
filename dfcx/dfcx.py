@@ -546,27 +546,23 @@ class DialogflowCX:
 
         return response
     
+    
     def nlu_settings(self,flow_id, **kwargs):
         """updates flow to new NLU setting.
-
-        kwargs:
-          flow_id: flow_id to provide the specified settings for
-          model_type:  [0:unspecified, 1:MODEL_TYPE_STANDARD, 2:Custom, 3:Advanced]
-          classification_threshold: treshold for the flow
-          model_training_mode: [0:unspecified, 1:automatic, 2:'manual]
-
-        Returns:
-          nlu settings objects which can be passed to the nlu_settings kwarg of the update_flow fxn
+        Args:
+            flow_id: flow id to update nlu settings for.
+            model_type: (Optional) [0:unspecified, 1:MODEL_TYPE_STANDARD, 2:Custom, 3:Advanced]
+            classification_threshold: (Optional) threshold for the flow
+            model_training_mode: (Optional) [0:unspecified, 1:automatic, 2:'manual]
         """
+        
         flow = self.get_flow(flow_id)
         currentSettings = flow.nlu_settings
-        newsettings = currentSettings
         for key, value in kwargs.items():
-            setattr(newsettings, key, value)
+            setattr(currentSettings, key, value)
         self.update_flow(flow_id=flow_id, 
                          nlu_settings=currentSettings)
-
-        return 
+ 
 
 
     def export_flow(self,
