@@ -17,7 +17,8 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 
 class Operations:
     def __init__(self, creds):
-        self.creds = service_account.Credentials.from_service_account_file(creds,scopes=SCOPES)
+        self.creds = service_account.Credentials.from_service_account_file(
+            creds,scopes=SCOPES)
         self.creds.refresh(Request()) # used for REST API calls
         self.token = self.creds.token # used for REST API calls
 
