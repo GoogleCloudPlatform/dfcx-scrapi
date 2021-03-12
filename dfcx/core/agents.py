@@ -323,7 +323,7 @@ class Agents:
         return response
 
 
-    def delete_agent(self, agent_id: str) -> None:
+    def delete_agent(self, agent_id: str) -> str:
         """Deletes the specified Dialogflow CX Agent.
 
         Args:
@@ -335,3 +335,5 @@ class Agents:
             credentials = self.creds,
             client_options = client_options)
         client.delete_agent(name=agent_id)
+
+        return 'Agent \'{}\' successfully deleted.'.format(agent_id)
