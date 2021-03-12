@@ -1,9 +1,9 @@
 import logging
 import requests
-import subprocess
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
 from google.oauth2 import service_account
+from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from typing import Dict, List
@@ -15,10 +15,15 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-class Agents:
-    def __init__(self, creds, agent_id=None):
+SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
+'https://www.googleapis.com/auth/dialogflow']
 
-        self.creds = service_account.Credentials.from_service_account_file(creds)
+class Agents:
+    def __init__(self, creds_path: str, agent_id: str=None):
+        self.creds = service_account.Credentials.from_service_account_file(
+            creds_path, scopes=SCOPES)
+        self.creds.refresh(Request()) # used for REST API calls
+        self.token = self.creds.token # used for REST API calls
 
         if agent_id:
             self.agent_id = agent_id
@@ -161,16 +166,7 @@ class Agents:
             base_url = 'https://dialogflow.googleapis.com/v3beta1'
 
         url = '{0}/{1}/validationResult'.format(base_url, agent_id)
-
-        token = subprocess.run(['gcloud',
-                                'auth',
-                                'application-default',
-                                'print-access-token'],
-                               stdout=subprocess.PIPE,
-                               text=True).stdout
-
-        token = token.strip('\n')  # remove newline appended as part of stdout
-        headers = {"Authorization": "Bearer {}".format(token)}
+        headers = {"Authorization": "Bearer {}".format(self.token)}
 
         # Make REST call
         results = requests.get(url, headers=headers)
@@ -224,15 +220,7 @@ class Agents:
 
             url = '{0}/{1}/validationResult'.format(base_url, agent_id)
 
-        token = subprocess.run(['gcloud',
-                                'auth',
-                                'application-default',
-                                'print-access-token'],
-                               stdout=subprocess.PIPE,
-                               text=True).stdout
-
-        token = token.strip('\n')  # remove newline appended as part of stdout
-        headers = {"Authorization": "Bearer {}".format(token)}
+        headers = {"Authorization": "Bearer {}".format(self.token)}
 
         # Make REST call
         results = requests.get(url, headers=headers)
@@ -260,7 +248,9 @@ class Agents:
         request.agent_uri = gcs_bucket_uri
 
         client_options = self._set_region(agent_id)
-        client = services.agents.AgentsClient(client_options=client_options)
+        client = services.agents.AgentsClient(
+            credentials=self.creds, 
+            client_options=client_options)
         response = client.export_agent(request)
 
         return response.operation.name
