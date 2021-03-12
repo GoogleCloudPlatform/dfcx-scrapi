@@ -293,8 +293,7 @@ class Agents:
         agent_id: str, 
         obj: types.Agent=None, 
         **kwargs) -> types.Agent:
-
-        """ Updates a single Agent object based on provided kwargs.
+        """Updates a single Agent object based on provided kwargs.
 
         Args:
           agent_id: CX Agent ID string in the following format
@@ -309,7 +308,7 @@ class Agents:
         else:
             agent = self.get_agent(agent_id)
 
-        # set agemt attributes to args
+        # set agent attributes to args
         for key, value in kwargs.items():
             setattr(agent, key, value)
         paths = kwargs.keys()
@@ -318,10 +317,21 @@ class Agents:
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
             credentials = self.creds,
-            client_options=client_options)
+            client_options = client_options)
         response = client.update_agent(agent=agent, update_mask=mask)
 
         return response
 
-    # def delete_agent(self, agent_id: str,)
 
+    def delete_agent(self, agent_id: str) -> None:
+        """Deletes the specified Dialogflow CX Agent.
+
+        Args:
+          agent_id: CX Agent ID string in the following format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+        """
+        client_options = self._set_region(agent_id)
+        client = services.agents.AgentsClient(
+            credentials = self.creds,
+            client_options = client_options)
+        client.delete_agent(name=agent_id)
