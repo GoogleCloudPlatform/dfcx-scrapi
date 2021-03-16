@@ -30,6 +30,8 @@ from google.cloud.dialogflowcx_v3beta1.types import session
 
 from google.protobuf import json_format  # type: ignore
 
+from proto.marshal.collections.repeated import RepeatedComposite
+
 # import google.protobuf.json_format
 # import google.protobuf.message.Message
 
@@ -219,24 +221,18 @@ class DialogflowClient:
         if qr.parameters:
             for param in qr.parameters:
                 # turn into key: value pairs
-                params[param] = qr.parameters[param]
+                actual = qr.parameters[param]
+                if isinstance(actual, RepeatedComposite):
+                    actual = ' '.join(actual)
 
-        # print('params', params)
+                if not isinstance(actual, str) and not isinstance(actual, bool) and not isinstance(actual, int):
+                    # FIXME - still not an actual recognized type just stringify it
+                    logging.error('ERROR convert to string type for param %s | type: %s', param, type(actual))
+                    logging.info("converted: [before: %s |after: %s]", actual, str(actual))
+                    actual = str(actual)
 
-        # TODO - pluck some other fields - but these are methods, not values so cannot be json.dump'd
-        # fields = ['match', 'parameters', 'intent', 'current_page', 'intent_detection_confidence']
-        # result = dict((k, getattr(qr, k)) for k in fields if hasattr(qr, k) )
+                params[param] = actual
 
-        # add some more convenience fields to make result comparison easier
-        #     if len(texts) == 1:
-        #         result['text'] = texts[0]  # last text entry
-        #     else:
-        #         result['text'] = '\n'.join(texts)
-
-        # payload = qr.response_messages.payload
-        # logging.info('payload %s', payload)
-
-        # reply['payload'] = payload
         reply["text"] = "\n".join(texts)
         reply["params"] = params
         reply["confidence"] = qr.intent_detection_confidence
@@ -249,7 +245,12 @@ class DialogflowClient:
             reply["json"] = self.to_json(qr)
 
         # self.checkpoint('<< formatted response')
-        logging.info('reply %s', reply)        
+        try:
+            logging.info('reply: \n%s', json.dumps(reply, indent=2))
+        except TypeError as err:
+            logging.error('cannot JSON reply %s', err)
+            logging.info('reply %s', reply)
+
         return reply
 
 
