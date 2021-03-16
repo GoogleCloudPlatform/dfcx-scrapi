@@ -38,6 +38,8 @@ from proto.marshal.collections import RepeatedComposite
 
 
 
+from proto.marshal.collections.repeated import RepeatedComposite
+
 # import google.protobuf.json_format
 # import google.protobuf.message.Message
 
@@ -272,9 +274,66 @@ class DialogflowClient:
                 logging.error("retrying")
                 self.reply(send_obj, restart=restart, raw=raw, retries=retries)
             else:
-                logging.error("MAX_RETRIES exceeded, skipping")
-                # raise err
-                return None ## try next one
+                logging.error("MAX_RETRIES exceeded")
+                raise err
+                # return None ## try next one
+
+        qr = response.query_result
+        logging.debug('dfcx>qr %s', qr)
+        self.qr = qr # for debugging
+        reply = {}
+
+        # flatten array of text responses
+        # seems like there should be a better interface to pull out the texts
+        texts = []
+        for msg in qr.response_messages:
+            if msg.payload:
+                reply['payload'] = self.extract_payload(msg)
+            if (len(msg.text.text)) > 0:
+                text = msg.text.text[-1]  # this could be multiple lines too?
+                # print('text', text)
+                texts.append(text)
+
+        # print('texts', texts)
+
+        # flatten params struct
+        params = {}
+        # print('parameters', json.dumps(qr.parameters))  ## not JSON
+        # serialisable
+        if qr.parameters:
+            for param in qr.parameters:
+                # turn into key: value pairs
+                actual = qr.parameters[param]
+                if isinstance(actual, RepeatedComposite):
+                    actual = ' '.join(actual)
+
+                if not isinstance(actual, str) and not isinstance(actual, bool) and not isinstance(actual, int):
+                    # FIXME - still not an actual recognized type just stringify it
+                    logging.error('ERROR convert to string type for param %s | type: %s', param, type(actual))
+                    logging.info("converted: [before: %s |after: %s]", actual, str(actual))
+                    actual = str(actual)
+
+                params[param] = actual
+
+        reply["text"] = "\n".join(texts)
+        reply["params"] = params
+        reply["confidence"] = qr.intent_detection_confidence
+        reply["page_name"] = qr.current_page.display_name
+        reply["intent_name"] = qr.intent.display_name
+        reply["other_intents"] = self.format_other_intents(qr)
+        if raw:
+            # self.qr = qr
+            reply["qr"] = qr
+            reply["json"] = self.to_json(qr)
+
+        # self.checkpoint('<< formatted response')
+        try:
+            logging.info('reply: \n%s', json.dumps(reply, indent=2))
+        except TypeError as err:
+            logging.error('cannot JSON reply %s', err)
+            logging.info('reply %s', reply)
+
+        return reply
 
 
     # TODO - dfqr class that has convenience accessor methods for different properties
