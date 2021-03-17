@@ -28,27 +28,9 @@ from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
 
 
-# from google.cloud.dialogflowcx_v3beta1 import types as CxTypes
-# import google.cloud.dialogflowcx_v3beta1.types as CxTypes
-
 from google.protobuf import json_format  # type: ignore
-from proto.marshal.collections import RepeatedComposite
-
-# from google.protobuf.collections.repeated import RepeatedComposite
-
-
-
 from proto.marshal.collections.repeated import RepeatedComposite
 
-# import google.protobuf.json_format
-# import google.protobuf.message.Message
-
-# logger = logging.getLogger("dfcx")
-# formatter = logging.Formatter("[dfcx    ] %(message)s")
-# handler = logging.StreamHandler(stdout)
-# handler.setFormatter(formatter)
-# logger.addHandler(handler)
-# logger.propagate = False
 
 logger = logging
 
