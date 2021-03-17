@@ -1,13 +1,7 @@
 import json
 import logging
 import os
-import requests
-import subprocess
-import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.auth import credentials
-from google.protobuf import field_mask_pb2
-from typing import Dict, List
 from tabulate import tabulate
 from .dfcx import *
 from .dfcx_functions import *
@@ -22,7 +16,7 @@ logging.basicConfig(
 
 
 class Dataframe_fxns:
-    def __init__(self, creds):
+    def __init__(self, creds: str):
         self.dfcx =  DialogflowCX(creds)
         self.dffx =  DialogflowFunctions(creds)
 
@@ -35,7 +29,7 @@ class Dataframe_fxns:
             intent_id: name parameter of the intent to update
             train_phrases: dataframe of training phrases in advanced have training_phrase and parts column to track the build
             params(optional): dataframe of parameters
-            mode: basic - build assuming one row is one training phrase, advance - build keeping track of training phrases and parts with the training_phrase and parts column. 
+            mode: basic - build assuming one row is one training phrase no entities, advance - build keeping track of training phrases and parts with the training_phrase and parts column. 
 
         Returns:
             intentPb: the new intents protobuf object
@@ -46,9 +40,8 @@ class Dataframe_fxns:
             pSchema = pd.DataFrame(index=['id','entity_type'], columns=[0], data=['string','string']).astype({0:'string'})
 
         elif mode == 'basic':
-            train_phrases = train_phrases[['text', 'parameter_id']]
-            tpSchema = pd.DataFrame(index=['text','parameter_id'], columns=[0], data=['string','string']).astype({0:'string'})
-            pSchema = pd.DataFrame(index=['id','entity_type'], columns=[0], data=['string','string']).astype({0:'string'})
+            train_phrases = train_phrases[['text']]
+            tpSchema = pd.DataFrame(index=['text'], columns=[0], data=['string']).astype({0:'string'})
         else:
             raise ValueError('mode must be basic or advanced')
 
@@ -57,8 +50,9 @@ class Dataframe_fxns:
 
         if (myTpSchema.equals(tpSchema))==False:
             raise ValueError('training phrase schema must be {} for {} mode'.format(tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql'), mode))
-        if (myPSchema.equals(pSchema))==False and len(paramDf)>0:
-            raise ValueError('parameter schema must be {}'.format(tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
+        if mode == 'advanced': 
+            if (myPSchema.equals(pSchema))==False and len(params)>0:
+                raise ValueError('parameter schema must be {}'.format(tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
 
         original = self.dfcx.get_intent(intent_id=intent_id)
         intent = {}
@@ -86,36 +80,38 @@ class Dataframe_fxns:
                                  'repeat_count':1,
                                  'id':''}
                 trainingPhrases.append(trainingPhrase)
+            
+            intent['training_phrases'] = trainingPhrases
+            parameters = []
+            for index, row in params.iterrows():
+                parameter = {
+                    'id':row['id'],
+                    'entity_type':row['entity_type'],
+                    'is_list':False,
+                    'redact':False
+                }
+
+                parameters.append(parameter)
+            if len(parameters) > 0:
+                intent['parameters'] = parameters
 
         elif mode == 'basic':
             trainingPhrases = []
             for index, row in train_phrases.iterrows():
                 part = {
                     'text': row['text'],
-                    'parameter_id':row['parameter_id']
+                    'parameter_id': None
                 }
                 parts = [part]
-
                 trainingPhrase = {'parts': parts,
                                  'repeat_count':1,
                                  'id':''}
                 trainingPhrases.append(trainingPhrase)
+            intent['training_phrases'] = trainingPhrases
         else:
             raise ValueError('mode must be basic or advanced')
 
-        intent['training_phrases'] = trainingPhrases
-        parameters = []
-        for index, row in params.iterrows():
-            parameter = {
-                'id':row['id'],
-                'entity_type':row['entity_type'],
-                'is_list':False,
-                'redact':False
-            }
-
-            parameters.append(parameter)
-        if len(parameters) > 0:
-            intent['parameters'] = parameters
+            
         jsonIntent = json.dumps(intent)
         intentPb = types.Intent.from_json(jsonIntent)
         return intentPb
@@ -128,7 +124,7 @@ class Dataframe_fxns:
             agent_id: name parameter of the agent to update
             blk_train_phrases: dataframe of bulk training phrases in advanced mode have training_phrase and parts column to track the build
             blk_params(optional): dataframe of bulk parameters
-            mode: basic - build assuming one row is one training phrase, advance - build keeping track of training phrases and parts with the training_phrase and parts column. 
+            mode: basic - build assuming one row is one training phrase no entities, advance - build keeping track of training phrases and parts with the training_phrase and parts column. 
             update: True to update the intents in the agent
 
         Returns:
@@ -139,9 +135,9 @@ class Dataframe_fxns:
             pSchema = pd.DataFrame(index=['display_name','id','entity_type'], columns=[0], data=['string','string','string']).astype({0:'string'})
 
         elif mode == 'basic':
-            blk_train_phrases = blk_train_phrases[['display_name','text', 'parameter_id']]
-            tpSchema = pd.DataFrame(index=['display_name','text','parameter_id'], columns=[0], data=['string','string','string']).astype({0:'string'})
-            pSchema = pd.DataFrame(index=['display_name', 'id','entity_type'], columns=[0], data=['string','string','string']).astype({0:'string'})
+            blk_train_phrases = blk_train_phrases[['display_name','text']]
+            tpSchema = pd.DataFrame(index=['display_name','text'], columns=[0], data=['string','string']).astype({0:'string'})
+            
         else:
             raise ValueError('mode must be basic or advanced')
 
@@ -151,8 +147,9 @@ class Dataframe_fxns:
 
         if (myTpSchema.equals(tpSchema))==False:
             raise ValueError('training phrase schema must be {} for {} mode'.format(tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql'), mode))
-        if (myPSchema.equals(pSchema))==False and len(paramDf)>0:
-            raise ValueError('parameter schema must be {}'.format(tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
+        if mode =='advanced':
+            if (myPSchema.equals(pSchema))==False and len(blk_params)>0:
+                raise ValueError('parameter schema must be {}'.format(tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
 
 
         intentsMap = self.dffx.get_intents_map(agent_id=agent_id, reverse=True)
@@ -161,7 +158,9 @@ class Dataframe_fxns:
         newIntents = {}
         for instance in blkIntents:
             tps = blk_train_phrases.copy()[blk_train_phrases['display_name']==instance].drop(columns='display_name')
-            params = blk_params.copy()[blk_params['display_name']==instance].drop(columns='display_name')
+            params = pd.DataFrame()
+            if mode == 'advanced':
+                params = blk_params.copy()[blk_params['display_name']==instance].drop(columns='display_name')
             newIntent = self.update_intent_from_dataframe(intent_id=intentsMap[instance], train_phrases=tps, params=params, mode=mode)
             newIntents[instance] = newIntent
             if update:
