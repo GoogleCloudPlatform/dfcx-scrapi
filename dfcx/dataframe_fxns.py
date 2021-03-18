@@ -19,9 +19,11 @@ logging.basicConfig(
 
 
 class Dataframe_fxns:
-    def __init__(self, creds: str):
-        self.dfcx =  DialogflowCX(creds)
-        self.dffx =  DialogflowFunctions(creds)
+    def __init__(self, creds_path: str):
+        logging.info('create dfcx creds %s', creds_path)
+        self.dfcx =  DialogflowCX(creds_path)
+        logging.info('create dffx creds %s', creds_path)
+        self.dffx =  DialogflowFunctions(creds_path)
 
 
     def update_intent_from_dataframe(self, intent_id: str, train_phrases: List[str],
