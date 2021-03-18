@@ -1,3 +1,7 @@
+'''DFCX manipulation functions to extend dfcx_sapi lib'''
+
+from typing import List
+
 import json
 import logging
 import os
@@ -6,7 +10,6 @@ from tabulate import tabulate
 from .dfcx import *
 from .dfcx_functions import *
 
-from typing import List
 
 # logging config
 logging.basicConfig(
@@ -21,7 +24,7 @@ class Dataframe_fxns:
         self.dffx =  DialogflowFunctions(creds)
 
 
-    def update_intent_from_dataframe(self, intent_id: str, train_phrases: List(str),
+    def update_intent_from_dataframe(self, intent_id: str, train_phrases: List[str],
                                      params=pd.DataFrame(), mode='basic'):
         """update an existing intents training phrases and parameters
         the intent must exist in the agent
@@ -133,7 +136,7 @@ class Dataframe_fxns:
         """update an existing intents training phrases and parameters
 
         Args:
-            agent_id: name parameter of the agent to update_flag
+            agent_id: name parameter of the agent to update_flag - full path to agent
             train_phrases_df: dataframe of bulk training phrases
                 required columns: text, display_name
                 in advanced mode have training_phrase and parts column to track the build
@@ -149,10 +152,10 @@ class Dataframe_fxns:
         """
         if mode == 'advanced':
             phrase_schema_master = pd.DataFrame(index=['display_name', 'training_phrase','part','text','parameter_id'], columns=[0], data=['string','int32', 'int32','string','string']).astype({0:'string'})
-            param_schema_master = pd.DataFrame(index=['display_name','id','entity_type'], columns=[0], data=['string','string','string']).astype({0:'string'})
+            param_schema_master = pd.DataFrame(index=['display_name', 'id', 'entity_type'], columns=[0], data=['string','string','string']).astype({0:'string'})
 
         elif mode == 'basic':
-            train_phrases_df = train_phrases_df[['display_name','text']]
+            train_phrases_df = train_phrases_df[['display_name', 'text']]
             phrase_schema_master = pd.DataFrame(index=['display_name','text'], columns=[0], data=['string','string']).astype({0:'string'})
         else:
             raise ValueError('mode must be basic or advanced')
@@ -162,14 +165,22 @@ class Dataframe_fxns:
         param_schema_user = params_df.dtypes.to_frame().astype({0:'string'})
 
         if (phrase_schema_user.equals(phrase_schema_master))==False:
-            raise ValueError('training phrase schema must be {} for {} mode'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql'), mode))
+            logging.error('training phrase schema must be\n {} \n'.format(
+                tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
+            logging.error('got schema \n {}'.format(
+                tabulate(phrase_schema_user.transpose(), headers='keys', tablefmt='psql')))
+            logging.error('df.head \n%s', train_phrases_df.head() )
+            # raise ValueError('wrong schema format \n%s' % phrase_schema_user)
 
         if mode =='advanced':
             if (param_schema_user.equals(param_schema_master))==False and len(params_df)>0:
                 raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
 
+        logging.info('updating agent_id %s', agent_id)
+
         intents_map = self.dffx.get_intents_map(agent_id=agent_id, reverse=True)
         intents_list = list(set(train_phrases_df['display_name']))
+
 
         new_intents = {}
         for instance in intents_list:
@@ -177,9 +188,15 @@ class Dataframe_fxns:
             params = pd.DataFrame()
             if mode == 'advanced':
                 params = params_df.copy()[params_df['display_name']==instance].drop(columns='display_name')
-            newIntent = self.update_intent_from_dataframe(intent_id=intents_map[instance], train_phrases=tps, params=params, mode=mode)
-            new_intents[instance] = newIntent
+
+            logging.info('instance %s', instance)
+            new_intent = self.update_intent_from_dataframe(
+                intent_id=intents_map[instance],
+                train_phrases=tps,
+                params=params,
+                mode=mode)
+            new_intents[instance] = new_intent
             if update_flag:
-                self.dfcx.update_intent(intent_id=newIntent.name, obj=newIntent)
+                self.dfcx.update_intent(intent_id=new_intent.name, obj=new_intent)
 
         return new_intents
