@@ -214,14 +214,15 @@ class Dataframe_fxns:
  
 
         logging.info('updating agent_id %s', agent_id)
-
         intents_map = self.dffx.get_intents_map(agent_id=agent_id, reverse=True)
         intent_names = list(set(train_phrases_df['display_name']))
 
-
         modified_intents = {}
         for intent_name in intent_names:
-            if not intent_name:
+            # logging.info('process intent_name: %s type: %s', intent_name, type(intent_name))
+
+            # easier way to compare for empty pd cell values?
+            if isinstance(intent_name, pd._libs.missing.NAType):
                 logging.warning('empty intent_name')
                 continue
 
