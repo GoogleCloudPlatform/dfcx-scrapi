@@ -46,30 +46,44 @@ class Dataframe_fxns:
             intent_pb: the new intents protobuf object
         """
 
-        if mode == 'advanced':
-            phrase_schema_master = pd.DataFrame(index=['training_phrase',
-                'part', 'text', 'parameter_id'],
-                columns=[0], 
-                data=['int32', 'int32','string','string']).astype({0:'string'})
-            param_schema_master = pd.DataFrame(index=['id',
-                'entity_type'], 
-                columns=[0], 
-                data=['string','string']).astype({0:'string'})
+        if mode == 'basic':
+            try: 
+                train_phrases = train_phrases[['text']]
+                train_phrases = train_phrases.astype({'text':'string'})
+            except:
+                tpSchema = pd.DataFrame(index=['text','parameter_id'], columns=[0], data=['string','string']).astype({0:'string'})
+                logging.error('{0} mode train_phrases schema must be {1} \n'.format(
+                    mode, tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
 
-        elif mode == 'basic':
-            train_phrases = train_phrases[['text']]
-            phrase_schema_master = pd.DataFrame(index=['text'], columns=[0], data=['string']).astype({0:'string'})
+        elif mode == 'advanced':
+            try: 
+                train_phrases = train_phrases[['training_phrase', 'part','text', 'parameter_id']]
+                train_phrases = train_phrases.astype({'training_phrase': 'int32', 'part':'int32',
+                                                      'text':'string', 'parameter_id':'string'})
+                if len(params) > 0:
+                    params = params[['id','entity_type']]
+                    params = params.astype({'id':'string', 
+                                                     'entity_type':'string'})
+            except:
+                tpSchema = pd.DataFrame(index=['training_phrase', 'part','text','parameter_id'], columns=[0], data=['int32', 'int32','string','string']).astype({0:'string'})
+                pSchema = pd.DataFrame(index=['id','entity_type'], columns=[0], data=['string','string']).astype({0:'string'})
+                logging.error('{0} mode train_phrases schema must be {1} \n'.format(
+                    mode, tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
+                logging.error('{0} mode parameter schema must be {1} \n'.format(
+                    mode, tabulate(pSchema.transpose(), headers='keys', tablefmt='psql')))
+                
         else:
             raise ValueError('mode must be basic or advanced')
 
-        phrase_schema_user = train_phrases.dtypes.to_frame().astype({0:'string'})
-        param_schema_user = params.dtypes.to_frame().astype({0:'string'})
 
+        # phrase_schema_user = train_phrases.dtypes.to_frame().astype({0:'string'})
+        # param_schema_user = params.dtypes.to_frame().astype({0:'string'})
         # if (phrase_schema_user.equals(phrase_schema_master))==False:
         #     raise ValueError('training phrase schema must be {} for {} mode'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql'), mode))
         # if mode == 'advanced': 
         #     if (param_schema_user.equals(param_schema_master))==False and len(params)>0:
         #         raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
+ 
 
         original = self.dfcx.get_intent(intent_id=intent_id)
         intent = {}
@@ -153,19 +167,38 @@ class Dataframe_fxns:
                 and the new intent protobufs as values
 
         """
-        if mode == 'advanced':
-            phrase_schema_master = pd.DataFrame(index=['display_name', 'training_phrase','part','text','parameter_id'], columns=[0], data=['string','int32', 'int32','string','string']).astype({0:'string'})
-            param_schema_master = pd.DataFrame(index=['display_name', 'id', 'entity_type'], columns=[0], data=['string','string','string']).astype({0:'string'})
+        if mode == 'basic':
+            try: 
+                train_phrases_df = train_phrases_df[['display_name','text']]
+                train_phrases_df = train_phrases_df.astype({'display_name': 'string','text':'string'})
+            except:
+                tpSchema = pd.DataFrame(index=['display_name','text','parameter_id'], columns=[0], data=['string','string','string']).astype({0:'string'})
+                logging.error('{0} mode train_phrases schema must be {1} \n'.format(
+                    mode, tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
 
-        elif mode == 'basic':
-            train_phrases_df = train_phrases_df[['display_name', 'text']]
-            phrase_schema_master = pd.DataFrame(index=['display_name','text'], columns=[0], data=['string','string']).astype({0:'string'})
+        elif mode == 'advanced':
+            try: 
+                train_phrases_df = train_phrases_df[['display_name','training_phrase', 'part','text', 'parameter_id']]
+                train_phrases_df = train_phrases_df.astype({'display_name':'string','training_phrase': 'int32', 'part':'int32',
+                                                      'text':'string', 'parameter_id':'string'})
+                if len(params_df) > 0:
+                    params_df = params_df[['display_name','id','entity_type']]
+                    params_df = params_df.astype({'display_name':'string', 'id':'string', 
+                                                     'entity_type':'string'})
+            except:
+                tpSchema = pd.DataFrame(index=['display_name','training_phrase', 'part','text','parameter_id'], columns=[0], data=['string', 'int32', 'int32','string','string']).astype({0:'string'})
+                pSchema = pd.DataFrame(index=['display_name','id','entity_type'], columns=[0], data=['string','string','string']).astype({0:'string'})
+                logging.error('{0} mode train_phrases schema must be {1} \n'.format(
+                    mode, tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
+                logging.error('{0} mode parameter schema must be {1} \n'.format(
+                    mode, tabulate(pSchema.transpose(), headers='keys', tablefmt='psql')))
+                
         else:
             raise ValueError('mode must be basic or advanced')
 
         # TODO - check if user provided DF is in the right shape
-        phrase_schema_user = train_phrases_df.dtypes.to_frame().astype({0:'string'})
-        param_schema_user = params_df.dtypes.to_frame().astype({0:'string'})
+        # phrase_schema_user = train_phrases_df.dtypes.to_frame().astype({0:'string'})
+        # param_schema_user = params_df.dtypes.to_frame().astype({0:'string'})
 
         # if (phrase_schema_user.equals(phrase_schema_master))==False:
         #     logging.error('training phrase schema must be\n {} \n'.format(
@@ -175,9 +208,10 @@ class Dataframe_fxns:
         #     logging.error('df.head \n%s', train_phrases_df.head() )
             # raise ValueError('wrong schema format \n%s' % phrase_schema_user)
 
-        if mode =='advanced':
-            if (param_schema_user.equals(param_schema_master))==False and len(params_df)>0:
-                raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
+        # if mode =='advanced':
+        #     if (param_schema_user.equals(param_schema_master))==False and len(params_df)>0:
+        #         raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
+ 
 
         logging.info('updating agent_id %s', agent_id)
 
@@ -196,7 +230,7 @@ class Dataframe_fxns:
             if mode == 'advanced':
                 params = params_df.copy()[params_df['display_name']==intent_name].drop(columns='display_name')
 
-            if not intent_name in intent_names:
+            if not intent_name in intents_map.keys():
                 logging.error('FAIL to update - intent not found: [%s]', intent_name)
                 continue
 
