@@ -179,23 +179,28 @@ class Dataframe_fxns:
         logging.info('updating agent_id %s', agent_id)
 
         intents_map = self.dffx.get_intents_map(agent_id=agent_id, reverse=True)
-        intents_list = list(set(train_phrases_df['display_name']))
+        intent_names = list(set(train_phrases_df['display_name']))
 
 
         new_intents = {}
-        for instance in intents_list:
-            tps = train_phrases_df.copy()[train_phrases_df['display_name']==instance].drop(columns='display_name')
+        for intent_name in intent_names:
+            tps = train_phrases_df.copy()[train_phrases_df['display_name']==intent_name].drop(columns='display_name')
             params = pd.DataFrame()
             if mode == 'advanced':
-                params = params_df.copy()[params_df['display_name']==instance].drop(columns='display_name')
+                params = params_df.copy()[params_df['display_name']==intent_name].drop(columns='display_name')
 
-            logging.info('instance %s', instance)
+            if not intent_name in new_intents:
+                logging.error('FAIL to update - intent not found: [%s]', intent_name)
+                continue
+
+            new_intents[intent_name] = new_intent
+            logging.info('update intent %s', intent_name)
             new_intent = self.update_intent_from_dataframe(
-                intent_id=intents_map[instance],
+                intent_id=intents_map[intent_name],
                 train_phrases=tps,
                 params=params,
                 mode=mode)
-            new_intents[instance] = new_intent
+            new_intents[intent_name] = new_intent
             if update_flag:
                 self.dfcx.update_intent(intent_id=new_intent.name, obj=new_intent)
 
