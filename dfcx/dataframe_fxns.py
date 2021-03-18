@@ -172,7 +172,7 @@ class Dataframe_fxns:
                 train_phrases_df = train_phrases_df[['display_name','training_phrase', 'part','text', 'parameter_id']]
                 train_phrases_df = train_phrases_df.astype({'display_name':'string','training_phrase': 'int32', 'part':'int32',
                                                       'text':'string', 'parameter_id':'string'})
-                if len(params) > 0:
+                if len(params_df) > 0:
                     params_df = params_df[['display_name','id','entity_type']]
                     params_df = params_df.astype({'display_name':'string', 'id':'string', 
                                                      'entity_type':'string'})
