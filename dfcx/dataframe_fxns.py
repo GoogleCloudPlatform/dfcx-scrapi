@@ -65,11 +65,11 @@ class Dataframe_fxns:
         phrase_schema_user = train_phrases.dtypes.to_frame().astype({0:'string'})
         param_schema_user = params.dtypes.to_frame().astype({0:'string'})
 
-        if (phrase_schema_user.equals(phrase_schema_master))==False:
-            raise ValueError('training phrase schema must be {} for {} mode'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql'), mode))
-        if mode == 'advanced': 
-            if (param_schema_user.equals(param_schema_master))==False and len(params)>0:
-                raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
+        # if (phrase_schema_user.equals(phrase_schema_master))==False:
+        #     raise ValueError('training phrase schema must be {} for {} mode'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql'), mode))
+        # if mode == 'advanced': 
+        #     if (param_schema_user.equals(param_schema_master))==False and len(params)>0:
+        #         raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
 
         original = self.dfcx.get_intent(intent_id=intent_id)
         intent = {}
@@ -149,7 +149,8 @@ class Dataframe_fxns:
             update_flag: True to update_flag the intents in the agent
 
         Returns:
-            new_intents: dictionary with intent display names as keys and the new intent protobufs as values
+            modified_intents: dictionary with intent display names as keys 
+                and the new intent protobufs as values
 
         """
         if mode == 'advanced':
@@ -166,12 +167,12 @@ class Dataframe_fxns:
         phrase_schema_user = train_phrases_df.dtypes.to_frame().astype({0:'string'})
         param_schema_user = params_df.dtypes.to_frame().astype({0:'string'})
 
-        if (phrase_schema_user.equals(phrase_schema_master))==False:
-            logging.error('training phrase schema must be\n {} \n'.format(
-                tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
-            logging.error('got schema \n {}'.format(
-                tabulate(phrase_schema_user.transpose(), headers='keys', tablefmt='psql')))
-            logging.error('df.head \n%s', train_phrases_df.head() )
+        # if (phrase_schema_user.equals(phrase_schema_master))==False:
+        #     logging.error('training phrase schema must be\n {} \n'.format(
+        #         tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
+        #     logging.error('got schema \n {}'.format(
+        #         tabulate(phrase_schema_user.transpose(), headers='keys', tablefmt='psql')))
+        #     logging.error('df.head \n%s', train_phrases_df.head() )
             # raise ValueError('wrong schema format \n%s' % phrase_schema_user)
 
         if mode =='advanced':
@@ -184,26 +185,30 @@ class Dataframe_fxns:
         intent_names = list(set(train_phrases_df['display_name']))
 
 
-        new_intents = {}
+        modified_intents = {}
         for intent_name in intent_names:
+            if not intent_name:
+                logging.warning('empty intent_name')
+                continue
+
             tps = train_phrases_df.copy()[train_phrases_df['display_name']==intent_name].drop(columns='display_name')
             params = pd.DataFrame()
             if mode == 'advanced':
                 params = params_df.copy()[params_df['display_name']==intent_name].drop(columns='display_name')
 
-            if not intent_name in new_intents:
+            if not intent_name in intent_names:
                 logging.error('FAIL to update - intent not found: [%s]', intent_name)
                 continue
 
-            new_intents[intent_name] = new_intent
             logging.info('update intent %s', intent_name)
             new_intent = self.update_intent_from_dataframe(
                 intent_id=intents_map[intent_name],
                 train_phrases=tps,
                 params=params,
                 mode=mode)
-            new_intents[intent_name] = new_intent
+            modified_intents[intent_name] = new_intent
             if update_flag:
+                logging.info('updating_intent %s', intent_name)
                 self.dfcx.update_intent(intent_id=new_intent.name, obj=new_intent)
 
-        return new_intents
+        return modified_intents

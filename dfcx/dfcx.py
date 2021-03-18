@@ -19,9 +19,10 @@ logging.basicConfig(
 
 
 class DialogflowCX:
-    def __init__(self, creds_path, agent_id=None):
 
+    def __init__(self, creds_path, agent_id=None):
         self.creds = service_account.Credentials.from_service_account_file(creds_path)
+        # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
 
         if agent_id:
             self.agent_id = agent_id
@@ -41,7 +42,7 @@ class DialogflowCX:
         try:
             location = item_id.split('/')[3]
         except IndexError as err:
-            logging.error('IndexError - path too short? %s', item_id)
+            logging.error('IndexError - path too short: %s', item_id)
             raise err
 
         if location != 'global':
@@ -100,11 +101,14 @@ class DialogflowCX:
 
 
     def list_intents(self, agent_id):
+        '''provide a list of intents'''
         request = types.intent.ListIntentsRequest()
         request.parent = agent_id
 
         client_options = self._set_region(agent_id)
-        client = services.intents.IntentsClient(client_options=client_options)
+        client = services.intents.IntentsClient(
+            client_options=client_options,
+            credentials=self.creds )
         response = client.list_intents(request)
 
         intents = []
@@ -117,7 +121,8 @@ class DialogflowCX:
 
     def get_intent(self, intent_id):
         client_options = self._set_region(intent_id)
-        client = services.intents.IntentsClient(client_options=client_options)
+        client = services.intents.IntentsClient(
+            credentials=self.creds, client_options=client_options)
         response = client.get_intent(name=intent_id)
 
         return response
@@ -158,7 +163,8 @@ class DialogflowCX:
             setattr(intent, key, value)
 
         client_options = self._set_region(agent_id)
-        client = services.intents.IntentsClient(client_options=client_options)
+        client = services.intents.IntentsClient(
+            client_options=client_options, credentials=self.creds)
         response = client.create_intent(parent=agent_id, intent=intent)
 
         return response
@@ -172,18 +178,27 @@ class DialogflowCX:
           obj, The CX Intent object in proper format. This can also
               be extracted by using the get_intent() method.
         """
-
         if obj:
             intent = obj
             intent.name = intent_id
         else:
             intent = self.get_intent(intent_id)
 
-        client_options = self._set_region(intent_id)
-        client = services.intents.IntentsClient(client_options=client_options)
+        logging.info('dfcx_lib update intent %s', intent_id)
+
+        client = services.intents.IntentsClient(**self.api_options(intent_id))
         response = client.update_intent(intent=intent)
 
         return response
+
+    def api_options(self, id_item):
+        '''bundle API parameters'''
+        client_options = self._set_region(id_item)
+        return {
+            'client_options': client_options,
+            'credentials': self.creds 
+        }
+        
 
     def delete_intent(self, intent_id, obj=None):
         if obj:
