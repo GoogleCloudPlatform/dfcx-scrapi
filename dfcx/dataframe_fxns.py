@@ -192,7 +192,7 @@ class Dataframe_fxns:
                     mode, tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
                 logging.error('{0} mode parameter schema must be {1} \n'.format(
                     mode, tabulate(pSchema.transpose(), headers='keys', tablefmt='psql')))
-                
+
         else:
             raise ValueError('mode must be basic or advanced')
 
