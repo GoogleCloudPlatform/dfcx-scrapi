@@ -507,7 +507,7 @@ class Dataframe_fxns:
             i+=1
 
             if update_flag:
-                self.dfcx.create_entity_type(agent_id='projects/nj-pods-dev/locations/global/agents/f7d62eac-7622-40e4-a61a-fbfb55d77c99', obj=entityPB)
+                self.dfcx.create_entity_type(agent_id=agent_id, obj=new_entity)
                 if i % 179 == 0:
                     time.sleep(61)
 
