@@ -42,7 +42,7 @@ class Dataframe_fxns:
     def df2Sheets(self,gsheetName,worksheetName,df):
         scope = ['https://spreadsheets.google.com/feeds',
                                  'https://www.googleapis.com/auth/drive']
-        creds_gdrive = ServiceAccountCredentials.from_json_keyfile_name(self.creds, scope)
+        creds_gdrive = ServiceAccountCredentials.from_json_keyfile_name(self.creds_path, scope)
         client = gspread.authorize(creds_gdrive)
         g_sheets = client.open(gsheetName)
         worksheet = g_sheets.worksheet(worksheetName)
@@ -432,9 +432,10 @@ class Dataframe_fxns:
             i+=1
             self.progressBar(i,len(intents))
             if update_flag:
+                if i % 100 == 0:
+                    time.sleep(70)
                 self.dfcx.create_intent(agent_id=agent_id, obj=newIntent)
-                if i % 179 == 0:
-                    time.sleep(62)
+                
             
         
         return newIntents
