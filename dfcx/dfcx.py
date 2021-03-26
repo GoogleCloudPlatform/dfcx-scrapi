@@ -21,6 +21,7 @@ logging.basicConfig(
 class DialogflowCX:
 
     def __init__(self, creds_path, agent_id=None):
+        logging.info('creating agent from creds: [%s]', creds_path)
         self.creds = service_account.Credentials.from_service_account_file(creds_path)
         # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
 

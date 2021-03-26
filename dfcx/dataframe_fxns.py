@@ -148,7 +148,8 @@ class Dataframe_fxns:
 
 
     def bulk_update_intents_from_dataframe(self, agent_id, train_phrases_df, 
-                                           params_df=pd.DataFrame(), mode='basic', update_flag=False):
+                                           params_df=pd.DataFrame(), 
+                                           mode='basic', update_flag=False):
         """update an existing intents training phrases and parameters
 
         Args:
@@ -235,7 +236,7 @@ class Dataframe_fxns:
                 logging.error('FAIL to update - intent not found: [%s]', intent_name)
                 continue
 
-            logging.info('update intent %s', intent_name)
+            # logging.info('update intent %s', intent_name)
             new_intent = self.update_intent_from_dataframe(
                 intent_id=intents_map[intent_name],
                 train_phrases=tps,
@@ -245,5 +246,7 @@ class Dataframe_fxns:
             if update_flag:
                 logging.info('updating_intent %s', intent_name)
                 self.dfcx.update_intent(intent_id=new_intent.name, obj=new_intent)
+            else:
+                logging.info('(update_flag: false) would update: %s', intent_name)
 
         return modified_intents
