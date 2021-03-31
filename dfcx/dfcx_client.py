@@ -31,6 +31,7 @@ from google.cloud.dialogflowcx_v3beta1.types import session
 from google.protobuf import json_format  # type: ignore
 from proto.marshal.collections.repeated import RepeatedComposite
 
+DEFAULT_CREDS_PATH = 'creds/default-creds.json'
 
 logger = logging
 
@@ -60,6 +61,11 @@ class DialogflowClient:
         # so maybe the env is what is relied on
         # this env var gets changed OUTSIDE of here
         creds_path = creds_path or config['creds_path']
+        if creds_path:
+            logging.info('create agent client with custom creds %s \nconfig: \n%s', creds_path, config)
+        else:
+            creds_path = DEFAULT_CREDS_PATH
+
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
 
         # project_id = data['project_id']
@@ -70,6 +76,7 @@ class DialogflowClient:
         self.language_code = language_code or config['language_code']
         self.start_time = None
         self.qr = None
+        self.agent_env = {}  # empty
         self.restart()
 
 
@@ -92,7 +99,25 @@ class DialogflowClient:
             }
             # logger.info('client options %s', client_options)
             return client_options
+        
+        # custom_environment = self.agent_env.get('environment')
+        # if custom_environment:
+        #     api_endpoint = f'https://dialogflow.googleapis.com/v3/{agent_id}/environments/{custom_environment}'
+        #     client_options = {
+        #         'api_endpoint': api_endpoint
+        #     }
+        #     logging.info('using custom endpoint: %s', api_endpoint)
+        #     logging.info('agent_id %s', agent_id)
+        #     logging.info('location %s', location)
+        #     return client_options
+        # else
         return None
+
+
+    def set_agent_env(self, param, value):
+        '''setting changes related to the environment'''
+        logging.info('setting agent_env param:[%s] = value:[%s]', param, value)
+        self.agent_env[param] = value
 
 
     def checkpoint(self, msg=None, start=False):
@@ -133,9 +158,17 @@ class DialogflowClient:
         client_options = self._set_region()
         session_client = SessionsClient(client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
+        
+        # projects/*/locations/*/agents/*/environments/*/sessions/*
+
+        custom_environment = self.agent_env.get('environment')
+        if custom_environment:
+            session_path = f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
+        else:
+            session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
         # self.checkpoint('made client')
-        # logging.info('session_path %s', session_path)
+        logging.info('session_path %s', session_path)
 
         # set parameters separately with single query and an empty text
         # query_params = {'disable_webhook': True }
