@@ -4,23 +4,22 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
 from typing import Dict, List
-# from dfcx.dfcx import DialogflowCX
-
-# logging config
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 'https://www.googleapis.com/auth/dialogflow']
 
-class Operations:
-    def __init__(self, creds_path):
+class SapiBase:
+    '''Common base class for different SAPI objects'''
+
+    def __init__(self, creds_path, agent_path):
+        logging.info('create sapi_base \ncreds_path:%s \nagent_path: %s', creds_path, agent_path)
         self.creds = service_account.Credentials.from_service_account_file(
-            creds_path,scopes=SCOPES)
+            creds_path, scopes=SCOPES )
+        self.agent_path = agent_path
         self.creds.refresh(Request()) # used for REST API calls
         self.token = self.creds.token # used for REST API calls
+        self.client_options = self._set_region(agent_path)
+
 
     @staticmethod
     def _set_region(item_id):
@@ -47,7 +46,6 @@ class Operations:
         else:
             return None # explicit None return when not required
 
-# OPERATIONS FX
 
     def get_lro(self, lro: str) -> Dict[str,str]:
         """Used to retrieve the status of LROs for Dialogflow CX.
