@@ -127,8 +127,8 @@ class DialogflowClient:
         otherwise uses the agents continues conv with session_id
         """
 
-        if disable_webhook:
-            logging.info('disable_webhook: %s', disable_webhook)
+        # if disable_webhook:
+            # logging.info('disable_webhook: %s', disable_webhook)
 
         text = send_obj.get("text")
         send_params = send_obj.get("params")
@@ -249,7 +249,7 @@ class DialogflowClient:
             reply["json"] = self.to_json(qr)
 
         # self.checkpoint('<< formatted response')
-        logging.info('reply %s', reply)        
+        logging.debug('reply %s', reply)        
         return reply
 
 
