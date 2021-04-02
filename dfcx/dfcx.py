@@ -6,6 +6,7 @@ import subprocess
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
 from google.oauth2 import service_account
+from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 from typing import Dict, List
 
@@ -17,17 +18,20 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
+SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
+'https://www.googleapis.com/auth/dialogflow']
 
 class DialogflowCX:
-
     def __init__(self, creds_path, agent_id=None):
-        logging.info('creating agent from creds: [%s]', creds_path)
-        self.creds = service_account.Credentials.from_service_account_file(creds_path)
-        # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+        self.creds = service_account.Credentials.from_service_account_file(
+            creds_path, scopes=SCOPES)
+        self.creds.refresh(Request()) # used for REST API calls
+        self.token = self.creds.token # used for REST API calls
 
         if agent_id:
             self.agent_id = agent_id
             self.client_options = self._set_region(agent_id)
+
 
     @staticmethod
     def _set_region(item_id):
@@ -108,8 +112,8 @@ class DialogflowCX:
 
         client_options = self._set_region(agent_id)
         client = services.intents.IntentsClient(
-            client_options=client_options,
-            credentials=self.creds )
+            credentials=self.creds, 
+            client_options=client_options)
         response = client.list_intents(request)
 
         intents = []
@@ -219,6 +223,7 @@ class DialogflowCX:
 
         client_options = self._set_region(agent_id)
         client = services.entity_types.EntityTypesClient(
+            credentials=self.creds,
             client_options=client_options)
 
         response = client.list_entity_types(request)
@@ -232,7 +237,7 @@ class DialogflowCX:
 
     def get_entity_type(self, entity_id):
         client_options = self._set_region(entity_id)
-        client = services.entity_types.EntityTypesClient(
+        client = services.entity_types.EntityTypesClient(credentials = self.creds,
             client_options=client_options)
         response = client.get_entity_type(name=entity_id)
 
@@ -254,19 +259,19 @@ class DialogflowCX:
 #         entity_type = set_entity_type_attr(entity_type, kwargs)
 
         client_options = self._set_region(agent_id)
-        client = services.entity_types.EntityTypesClient(
+        client = services.entity_types.EntityTypesClient(credentials = self.creds,
             client_options=client_options)
         response = client.create_entity_type(
             parent=agent_id, entity_type=entity_type)
         return response
 
 
-    def delete_entity_type(self, entity_id, obj=None):
+    def delete_entity_type(self, entity_id, obj=None) -> None:
         if obj:
             entity_id = obj.name
         else:
             client_options = self._set_region(entity_id)
-            client = services.entity_types.EntityTypesClient(
+            client = services.entity_types.EntityTypesClient(credentials = self.creds,
                 client_options=client_options)
             client.delete_entity_type(name=entity_id)
 
@@ -280,7 +285,9 @@ class DialogflowCX:
         request.parent = agent_id
 
         client_options = self._set_region(agent_id)
-        client = services.flows.FlowsClient(client_options=client_options)
+        client = services.flows.FlowsClient(
+            credentials=self.creds,
+            client_options=client_options)
         response = client.list_flows(request)
 
         flows = []
@@ -292,7 +299,8 @@ class DialogflowCX:
 
     def get_flow(self, flow_id):
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(client_options=client_options)
+        client = services.flows.FlowsClient(credentials = self.creds,
+            client_options=client_options)
         response = client.get_flow(name=flow_id)
 
         return response
@@ -311,7 +319,8 @@ class DialogflowCX:
         mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(client_options=client_options)
+        client = services.flows.FlowsClient(credentials = self.creds,
+            client_options=client_options)
         response = client.update_flow(flow=flow, update_mask=mask)
 
         return response
@@ -453,7 +462,9 @@ class DialogflowCX:
         request.parent = flow_id
 
         client_options = self._set_region(flow_id)
-        client = services.pages.PagesClient(client_options=client_options)
+        client = services.pages.PagesClient(
+            credentials=self.creds,
+            client_options=client_options)
         response = client.list_pages(request)
 
         cx_pages = []
@@ -483,7 +494,9 @@ class DialogflowCX:
             setattr(page, key, value)
 
         client_options = self._set_region(flow_id)
-        client = services.pages.PagesClient(client_options=client_options)
+        client = services.pages.PagesClient(
+            credentials=self.creds,
+            client_options=client_options)
 
         response = client.create_page(parent=flow_id, page=page)
         return response
@@ -505,7 +518,9 @@ class DialogflowCX:
         mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(page_id)
-        client = services.pages.PagesClient(client_options=client_options)
+        client = services.pages.PagesClient(
+            credentials=self.creds,
+            client_options=client_options)
 
         # Call client function with page and mask as arguments
         response = client.update_page(page=page, update_mask=mask)
@@ -557,6 +572,7 @@ class DialogflowCX:
 
         client_options = self._set_region(flow_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
+            credentials=self.creds,
             client_options=client_options)
         response = client.list_transition_route_groups(request)
 
@@ -633,6 +649,7 @@ class DialogflowCX:
 
         client_options = self._set_region(agent_id)
         client = services.webhooks.WebhooksClient(
+            credentials=self.creds,
             client_options=client_options)
         response = client.list_webhooks(request)
 

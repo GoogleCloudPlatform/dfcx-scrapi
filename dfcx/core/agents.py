@@ -83,7 +83,7 @@ class Agents:
 
         return agents
 
-    def get_agent(self, agent_id):
+    def get_agent(self, agent_id: str) -> types.Agent:
         request = types.agent.GetAgentRequest()
         request.name = agent_id
 
@@ -139,7 +139,9 @@ class Agents:
             setattr(agent, key, value)
 
         client_options = self._set_region(parent)
-        client = services.agents.AgentsClient(client_options=client_options)
+        client = services.agents.AgentsClient(
+            credentials = self.creds,
+            client_options=client_options)
         response = client.create_agent(parent=parent, agent=agent)
 
         return response
@@ -249,7 +251,7 @@ class Agents:
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials=self.creds, 
+            credentials = self.creds, 
             client_options=client_options)
         response = client.export_agent(request)
 
@@ -278,7 +280,60 @@ class Agents:
         request.agent_uri = gcs_bucket_uri
 
         client_options = self._set_region(agent_id)
-        client = services.agents.AgentsClient(client_options=client_options)
+        client = services.agents.AgentsClient(
+            credentials = self.creds,
+            client_options=client_options)
         response = client.restore_agent(request)
 
         return response.operation.name
+
+    
+    def update_agent(
+        self, 
+        agent_id: str, 
+        obj: types.Agent=None, 
+        **kwargs) -> types.Agent:
+        """Updates a single Agent object based on provided kwargs.
+
+        Args:
+          agent_id: CX Agent ID string in the following format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+          obj: (Optional) The CX Agent object in proper format. This can also
+              be extracted by using the get_agent() method.
+        """
+
+        if obj:
+            agent = obj
+            agent.name = agent_id
+        else:
+            agent = self.get_agent(agent_id)
+
+        # set agent attributes to args
+        for key, value in kwargs.items():
+            setattr(agent, key, value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+
+        client_options = self._set_region(agent_id)
+        client = services.agents.AgentsClient(
+            credentials = self.creds,
+            client_options = client_options)
+        response = client.update_agent(agent=agent, update_mask=mask)
+
+        return response
+
+
+    def delete_agent(self, agent_id: str) -> str:
+        """Deletes the specified Dialogflow CX Agent.
+
+        Args:
+          agent_id: CX Agent ID string in the following format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+        """
+        client_options = self._set_region(agent_id)
+        client = services.agents.AgentsClient(
+            credentials = self.creds,
+            client_options = client_options)
+        client.delete_agent(name=agent_id)
+
+        return 'Agent \'{}\' successfully deleted.'.format(agent_id)
