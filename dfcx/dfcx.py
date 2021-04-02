@@ -5,7 +5,8 @@ import requests
 import subprocess
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.auth import credentials
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 from typing import Dict, List
 
@@ -17,25 +18,20 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
+SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
+'https://www.googleapis.com/auth/dialogflow']
 
 class DialogflowCX:
     def __init__(self, creds_path, agent_id=None):
-        # with open(creds_path) as json_file:
-        #     data = json.load(json_file)
-
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
-
-        self.agents = services.agents.AgentsClient()
-        self.intents = services.intents.IntentsClient()
-        self.entities = services.entity_types.EntityTypesClient()
-        self.pages = services.pages.PagesClient()
-        self.flows = services.flows.FlowsClient()
-        self.sessions = services.sessions.SessionsClient()
-        self.route_groups = services.transition_route_groups.TransitionRouteGroupsClient()
-        self.webhooks = services.webhooks.WebhooksClient()
+        self.creds = service_account.Credentials.from_service_account_file(
+            creds_path, scopes=SCOPES)
+        self.creds.refresh(Request()) # used for REST API calls
+        self.token = self.creds.token # used for REST API calls
 
         if agent_id:
             self.agent_id = agent_id
+            self.client_options = self._set_region(agent_id)
+
 
     @staticmethod
     def _set_region(item_id):
@@ -66,242 +62,6 @@ class DialogflowCX:
 # TODO (pmarlow@) break each set of Functions into its own Class so that we
 # can separate each Class into its own file to keep file line numbers within
 # Google standard for Python classes as they grow.
-
-# AGENT FX
-
-    def list_agents(self, location_id: str) -> List[types.Agent]:
-        """Get list of all CX agents in a given GCP project
-
-        Args:
-          location_id: The GCP Project/Location ID in the following format
-              `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
-        Returns:
-          agents: List of Agent objects
-        """
-        request = types.agent.ListAgentsRequest()
-        request.parent = location_id
-
-        client_options = self._set_region(location_id)
-        client = services.agents.AgentsClient(client_options=client_options)
-        response = client.list_agents(request)
-
-        agents = []
-        for page in response.pages:
-            for agent in page.agents:
-                agents.append(agent)
-
-        return agents
-
-    def get_agent(self, agent_id):
-        request = types.agent.GetAgentRequest()
-        request.name = agent_id
-        client_options = self._set_region(agent_id)
-        client = services.agents.AgentsClient(client_options=client_options)
-        response = client.get_agent(request)
-
-        return response
-
-    def create_agent(
-            self,
-            project_id: str,
-            display_name: str,
-            gcp_region: str = 'global',
-            obj: types.Agent = None,
-            **kwargs):
-        """Create a Dialogflow CX Agent with given display name.
-
-        By default the CX Agent will be created in the project that the user
-        is currently authenticated to
-        If the user provides an existing Agent object, create a new CX agent
-        based on this object.
-
-        Args:
-          project_id: GCP project id where the CX agent will be created
-          display_name: Human readable display name for the CX agent
-          gcp_region: GCP region to create CX agent. Defaults to 'global'
-          obj: (Optional) Agent object to create new agent from
-
-        Returns:
-          response
-        """
-
-        if obj:
-            agent = obj
-            parent = 'projects/{}/location/{}'.format(
-                agent.name.split('/')[1],
-                agent.name.split('/')[3])
-            agent.display_name = display_name
-        else:
-            agent = types.agent.Agent()
-            parent = 'projects/{}/locations/{}'.format(project_id, gcp_region)
-            agent.display_name = display_name
-
-        agent.default_language_code = 'en'
-        agent.time_zone = 'America/Chicago'
-
-        # set optional args as agent attributes
-        for key, value in kwargs.items():
-            setattr(agent, key, value)
-
-        client_options = self._set_region(parent)
-        client = services.agents.AgentsClient(client_options=client_options)
-        response = client.create_agent(parent=parent, agent=agent)
-
-        return response
-
-    def validate(self, agent_id: str) -> Dict:
-        """Initiates the Validation of the CX Agent or Flow.
-
-        This function will start the Validation feature for the given Agent
-        and then return the results as a Dict.
-
-        Args:
-          agent_id: CX Agent ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-
-        Returns:
-          results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
-        """
-        location = agent_id.split('/')[3]
-        if location != 'global':
-            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                location)
-        else:
-            base_url = 'https://dialogflow.googleapis.com/v3beta1'
-
-        url = '{0}/{1}/validationResult'.format(base_url, agent_id)
-
-        token = subprocess.run(['gcloud',
-                                'auth',
-                                'application-default',
-                                'print-access-token'],
-                               stdout=subprocess.PIPE,
-                               text=True).stdout
-
-        token = token.strip('\n')  # remove newline appended as part of stdout
-        headers = {"Authorization": "Bearer {}".format(token)}
-
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
-
-        return results.json()
-
-    def get_validation_result(
-            self,
-            agent_id: str,
-            flow_id: str = None) -> Dict:
-        """Extract Validation Results from CX Validation feature.
-
-        This function will get the LATEST validation result run for the given
-        CX Agent or CX Flow. If there has been no validation run on the Agent
-        or Flow, no result will be returned. Use `dfcx.validate` function to
-        run Validation on an Agent/Flow.
-
-        Passing in the Agent ID will provide ALL validation results for
-        ALL flows.
-        Passing in the Flow ID will provide validation results for only
-        that Flow ID.
-
-        Args:
-          agent_id: CX Agent ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-          flow_id: (Optional) CX Flow ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/flows/<FLOW ID>
-
-        Returns:
-          results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
-        """
-
-        if flow_id:
-            location = flow_id.split('/')[3]
-            if location != 'global':
-                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                    location)
-            else:
-                base_url = 'https://dialogflow.googleapis.com/v3beta1'
-
-            url = '{0}/{1}/validationResult'.format(base_url, flow_id)
-        else:
-            location = agent_id.split('/')[3]
-            if location != 'global':
-                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                    location)
-            else:
-                base_url = 'https://dialogflow.googleapis.com/v3beta1'
-
-            url = '{0}/{1}/validationResult'.format(base_url, agent_id)
-
-        token = subprocess.run(['gcloud',
-                                'auth',
-                                'application-default',
-                                'print-access-token'],
-                               stdout=subprocess.PIPE,
-                               text=True).stdout
-
-        token = token.strip('\n')  # remove newline appended as part of stdout
-        headers = {"Authorization": "Bearer {}".format(token)}
-
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
-
-        return results.json()
-
-    def export_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
-        """Exports the specified CX agent to Google Cloud Storage bucket.
-
-        Args:
-          agent_id: CX Agent ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-          gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
-            agent to in the following format:
-              `gs://<bucket-name>/<object-name>`
-
-        Returns:
-          response: A Long Running Operation (LRO) ID that can be used to
-            check the status of the export using dfcx.get_lro()
-        """
-
-        request = types.agent.ExportAgentRequest()
-        request.name = agent_id
-        request.agent_uri = gcs_bucket_uri
-
-        client_options = self._set_region(agent_id)
-        client = services.agents.AgentsClient(client_options=client_options)
-        response = client.export_agent(request)
-
-        return response.operation.name
-
-
-    def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
-        """Restores a CX agent from a gcs_bucket location. 
-        TODO(pmarlow@) Currently there is no way to restore back to default 
-        settings via the api. The feature request for this is logged. 
-
-        Args:
-          agent_id: CX Agent ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-          gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
-            agent to in the following format:
-              `gs://<bucket-name>/<object-name>`
-
-        Returns:
-          response: A Long Running Operation (LRO) ID that can be used to
-            check the status of the import using dfcx.get_lro()
-        """
-
-        request = types.RestoreAgentRequest()
-        request.name = agent_id
-        request.agent_uri = gcs_bucket_uri
-
-        client_options = self._set_region(agent_id)
-        client = services.agents.AgentsClient(client_options=client_options)
-        response = client.restore_agent(request)
-
-        return response.operation.name
 
 
 # OPERATIONS FX
@@ -350,7 +110,9 @@ class DialogflowCX:
         request.parent = agent_id
 
         client_options = self._set_region(agent_id)
-        client = services.intents.IntentsClient(client_options=client_options)
+        client = services.intents.IntentsClient(
+            credentials=self.creds, 
+            client_options=client_options)
         response = client.list_intents(request)
 
         intents = []
@@ -363,7 +125,8 @@ class DialogflowCX:
 
     def get_intent(self, intent_id):
         client_options = self._set_region(intent_id)
-        client = services.intents.IntentsClient(client_options=client_options)
+        client = services.intents.IntentsClient(credentials=self.creds,
+            client_options=client_options)
         response = client.get_intent(name=intent_id)
 
         return response
@@ -404,7 +167,8 @@ class DialogflowCX:
             setattr(intent, key, value)
 
         client_options = self._set_region(agent_id)
-        client = services.intents.IntentsClient(client_options=client_options)
+        client = services.intents.IntentsClient(credentials=self.creds,
+            client_options=client_options)
         response = client.create_intent(parent=agent_id, intent=intent)
 
         return response
@@ -449,6 +213,7 @@ class DialogflowCX:
 
         client_options = self._set_region(agent_id)
         client = services.entity_types.EntityTypesClient(
+            credentials=self.creds,
             client_options=client_options)
 
         response = client.list_entity_types(request)
@@ -462,7 +227,7 @@ class DialogflowCX:
 
     def get_entity_type(self, entity_id):
         client_options = self._set_region(entity_id)
-        client = services.entity_types.EntityTypesClient(
+        client = services.entity_types.EntityTypesClient(credentials = self.creds,
             client_options=client_options)
         response = client.get_entity_type(name=entity_id)
 
@@ -484,19 +249,19 @@ class DialogflowCX:
 #         entity_type = set_entity_type_attr(entity_type, kwargs)
 
         client_options = self._set_region(agent_id)
-        client = services.entity_types.EntityTypesClient(
+        client = services.entity_types.EntityTypesClient(credentials = self.creds,
             client_options=client_options)
         response = client.create_entity_type(
             parent=agent_id, entity_type=entity_type)
         return response
 
 
-    def delete_entity_type(self, entity_id, obj=None):
+    def delete_entity_type(self, entity_id, obj=None) -> None:
         if obj:
             entity_id = obj.name
         else:
             client_options = self._set_region(entity_id)
-            client = services.entity_types.EntityTypesClient(
+            client = services.entity_types.EntityTypesClient(credentials = self.creds,
                 client_options=client_options)
             client.delete_entity_type(name=entity_id)
 
@@ -510,7 +275,9 @@ class DialogflowCX:
         request.parent = agent_id
 
         client_options = self._set_region(agent_id)
-        client = services.flows.FlowsClient(client_options=client_options)
+        client = services.flows.FlowsClient(
+            credentials=self.creds,
+            client_options=client_options)
         response = client.list_flows(request)
 
         flows = []
@@ -522,7 +289,8 @@ class DialogflowCX:
 
     def get_flow(self, flow_id):
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(client_options=client_options)
+        client = services.flows.FlowsClient(credentials = self.creds,
+            client_options=client_options)
         response = client.get_flow(name=flow_id)
 
         return response
@@ -541,7 +309,8 @@ class DialogflowCX:
         mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(client_options=client_options)
+        client = services.flows.FlowsClient(credentials = self.creds,
+            client_options=client_options)
         response = client.update_flow(flow=flow, update_mask=mask)
 
         return response
@@ -683,7 +452,9 @@ class DialogflowCX:
         request.parent = flow_id
 
         client_options = self._set_region(flow_id)
-        client = services.pages.PagesClient(client_options=client_options)
+        client = services.pages.PagesClient(
+            credentials=self.creds,
+            client_options=client_options)
         response = client.list_pages(request)
 
         cx_pages = []
@@ -713,7 +484,9 @@ class DialogflowCX:
             setattr(page, key, value)
 
         client_options = self._set_region(flow_id)
-        client = services.pages.PagesClient(client_options=client_options)
+        client = services.pages.PagesClient(
+            credentials=self.creds,
+            client_options=client_options)
 
         response = client.create_page(parent=flow_id, page=page)
         return response
@@ -735,7 +508,9 @@ class DialogflowCX:
         mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(page_id)
-        client = services.pages.PagesClient(client_options=client_options)
+        client = services.pages.PagesClient(
+            credentials=self.creds,
+            client_options=client_options)
 
         # Call client function with page and mask as arguments
         response = client.update_page(page=page, update_mask=mask)
@@ -787,6 +562,7 @@ class DialogflowCX:
 
         client_options = self._set_region(flow_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
+            credentials=self.creds,
             client_options=client_options)
         response = client.list_transition_route_groups(request)
 
@@ -863,6 +639,7 @@ class DialogflowCX:
 
         client_options = self._set_region(agent_id)
         client = services.webhooks.WebhooksClient(
+            credentials=self.creds,
             client_options=client_options)
         response = client.list_webhooks(request)
 
