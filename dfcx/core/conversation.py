@@ -242,6 +242,13 @@ class DialogflowConversation(SapiBase):
 
             # print('texts', texts)
 
+            # reply['payload'] = payload
+            reply["text"] = "\n".join(texts)
+            reply["confidence"] = qr.intent_detection_confidence
+            reply["page_name"] = qr.current_page.display_name
+            reply["intent_name"] = qr.intent.display_name
+            reply["other_intents"] = self.format_other_intents(qr)
+
             # flatten params struct
             params = {}
             # print('parameters', json.dumps(qr.parameters))  ## not JSON
@@ -264,7 +271,8 @@ class DialogflowConversation(SapiBase):
                         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
                         message = template.format(type(err).__name__, err.args)
                         logging.error(message)
-                        return None
+                        logging.error('failed to extract params for: %s', text)
+                        # give up on params
 
                     # if isinstance(val, MapComposite):
                     #     # some type of protobuf array - for now we just flatten as a string with spaces
@@ -275,13 +283,8 @@ class DialogflowConversation(SapiBase):
                     #     logging.info('converted val to: %s', val)
                     params[param] = val
 
-            # reply['payload'] = payload
-            reply["text"] = "\n".join(texts)
             reply["params"] = params
-            reply["confidence"] = qr.intent_detection_confidence
-            reply["page_name"] = qr.current_page.display_name
-            reply["intent_name"] = qr.intent.display_name
-            reply["other_intents"] = self.format_other_intents(qr)
+
             if raw:
                 # self.qr = qr
                 reply["qr"] = qr
