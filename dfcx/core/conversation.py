@@ -28,8 +28,9 @@ from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
 
 
-from google.protobuf import json_format  # type: ignore
 from proto.marshal.collections.repeated import RepeatedComposite
+
+from .sapi_base import SapiBase
 
 DEFAULT_CREDS_PATH = 'creds/default-creds.json'
 
@@ -41,8 +42,11 @@ logging.basicConfig(
 MAX_RETRIES = 3  # JWT errors on CX API
 
 
-class DialogflowClient:
-    """wrapping client requests to a CX agent"""
+class DialogflowConversation(SapiBase):
+    """
+    wrapping client requests to a CX agent for a conversation 
+    with internally maintained session state
+    """
 
     def __init__(self, config=None, creds_path=None, agent_path=None, language_code="en"):
         """
@@ -162,7 +166,19 @@ class DialogflowClient:
         # projects/*/locations/*/agents/*/environments/*/sessions/*
 
         custom_environment = self.agent_env.get('environment')
+
+        #### currently it's not supported to query an experiment directly
+        # custom_experiment = self.agent_env.get('experiment')
+        # if custom_experiment:
+        #     if not custom_environment:
+        #         logging.error('ERROR cannot set experiment without environment! got experiment %s', custom_experiment)
+        #         # TODO - maybe later we can look for the relevant env?
+        #         # return None
+        #     else:
+        #         session_path = f"{self.agent_path}/environments/{custom_environment}/experiments/{custom_experiment}/sessions/{self.session_id}"
+
         if custom_environment:
+            # just the environment and NOT experiment (change to elif if experiment comes back)
             session_path = f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
         else:
             session_path = f"{self.agent_path}/sessions/{self.session_id}"
@@ -217,7 +233,7 @@ class DialogflowClient:
             texts = []
             for msg in qr.response_messages:
                 if msg.payload:
-                    reply['payload'] = self.extract_payload(msg)
+                    reply['payload'] = SapiBase.extract_payload(msg)
                 if (len(msg.text.text)) > 0:
                     text = msg.text.text[-1]  # this could be multiple lines too?
                     # print('text', text)
@@ -242,21 +258,6 @@ class DialogflowClient:
                         logging.info('converted val to: %s', val)
                     params[param] = val
 
-            # print('params', params)
-
-            # TODO - pluck some other fields - but these are methods, not values so cannot be json.dump'd
-            # fields = ['match', 'parameters', 'intent', 'current_page', 'intent_detection_confidence']
-            # result = dict((k, getattr(qr, k)) for k in fields if hasattr(qr, k) )
-
-            # add some more convenience fields to make result comparison easier
-            #     if len(texts) == 1:
-            #         result['text'] = texts[0]  # last text entry
-            #     else:
-            #         result['text'] = '\n'.join(texts)
-
-            # payload = qr.response_messages.payload
-            # logging.info('payload %s', payload)
-
             # reply['payload'] = payload
             reply["text"] = "\n".join(texts)
             reply["params"] = params
@@ -267,7 +268,7 @@ class DialogflowClient:
             if raw:
                 # self.qr = qr
                 reply["qr"] = qr
-                reply["json"] = self.to_json(qr)
+                reply["json"] = SapiBase.response_to_json(qr)
 
             # self.checkpoint('<< formatted response')
             logging.debug('reply %s', reply)
@@ -303,7 +304,7 @@ class DialogflowClient:
         texts = []
         for msg in qr.response_messages:
             if msg.payload:
-                reply['payload'] = self.extract_payload(msg)
+                reply['payload'] = SapiBase.extract_payload(msg)
             if (len(msg.text.text)) > 0:
                 text = msg.text.text[-1]  # this could be multiple lines too?
                 # print('text', text)
@@ -339,7 +340,7 @@ class DialogflowClient:
         if raw:
             # self.qr = qr
             reply["qr"] = qr
-            reply["json"] = self.to_json(qr)
+            reply["json"] = SapiBase.response_to_json(qr)
 
         # self.checkpoint('<< formatted response')
         try:
@@ -354,11 +355,6 @@ class DialogflowClient:
     # TODO - dfqr class that has convenience accessor methods for different properties
     # basically to unwind the protobut
 
-    def extract_payload(self, msg):
-        '''convert to json so we can get at the object'''
-        blobstr = json_format.MessageToJson(msg._pb)
-        blob = json.loads(blobstr)
-        return blob.get('payload') # deref for nesting
 
 
     def format_other_intents(self, qr):
@@ -376,12 +372,6 @@ class DialogflowClient:
         #             intents_map[alt['DisplayName']] = alt['Score']
         return items
 
-    @staticmethod
-    def to_json(pbuf):
-        '''extractor of private fields
-        '''
-        blob = json_format.MessageToJson(pbuf) # i think this returns JSON as a string
-        return blob
 
     def getpath(self, obj, xpath, default=None):
         '''get data at a pathed location out of object internals'''

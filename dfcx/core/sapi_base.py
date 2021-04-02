@@ -1,7 +1,15 @@
+'''
+base for other SAPI classes
+'''
+
 import logging
+import json
 import requests
+
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+
+from google.protobuf import json_format  # type: ignore
 
 from typing import Dict, List
 
@@ -45,6 +53,34 @@ class SapiBase:
 
         else:
             return None # explicit None return when not required
+
+
+    @staticmethod
+    def pbuf_to_dict(pbuf):
+        '''extractor of json from a protobuf'''
+        blobstr = json_format.MessageToJson(pbuf) # i think this returns JSON as a string
+        blob = json.loads(blobstr)
+        return blob
+
+
+    @staticmethod
+    def response_to_json(response):
+        '''response objects have a magical _pb field attached'''
+        # return SapiBase.pbuf_to_dict(response._pb)
+        return SapiBase.pbuf_to_dict(response._pb)
+
+
+    @staticmethod
+    def response_to_dict(response):
+        '''response objects have a magical _pb field attached'''
+        return SapiBase.pbuf_to_dict(response._pb)
+
+
+    @staticmethod
+    def extract_payload(msg):
+        '''convert to json so we can get at the object'''
+        blob = SapiBase.response_to_dict(msg)
+        return blob.get('payload') # deref for nesting
 
 
     def get_lro(self, lro: str) -> Dict[str,str]:
