@@ -45,7 +45,7 @@ MAX_RETRIES = 3  # JWT errors on CX API
 
 class DialogflowConversation(SapiBase):
     """
-    wrapping client requests to a CX agent for a conversation 
+    wrapping client requests to a CX agent for a conversation
     with internally maintained session state
     """
 
@@ -136,6 +136,7 @@ class DialogflowConversation(SapiBase):
         if duration > 2:
             if msg:
                 print("{:0.2f}s {}".format(duration, msg))
+
 
     # TODO - refactor options as a dict?
     def reply(self, send_obj, restart=False, raw=False, retries=0, disable_webhook=True):
@@ -293,7 +294,6 @@ class DialogflowConversation(SapiBase):
             # self.checkpoint('<< formatted response')
             logging.debug('reply %s', reply)
             return reply
-
 
 
         # CX throws a 429 error
