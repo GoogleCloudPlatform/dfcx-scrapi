@@ -106,6 +106,14 @@ class Dataframe_fxns:
         else:
             raise ValueError('mode must be basic or advanced')
 
+
+        # phrase_schema_user = train_phrases.dtypes.to_frame().astype({0:'string'})
+        # param_schema_user = params.dtypes.to_frame().astype({0:'string'})
+        # if (phrase_schema_user.equals(phrase_schema_master))==False:
+        #     raise ValueError('training phrase schema must be {} for {} mode'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql'), mode))
+        # if mode == 'advanced': 
+        #     if (param_schema_user.equals(param_schema_master))==False and len(params)>0:
+        #         raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
  
 
         original = self.dfcx.get_intent(intent_id=intent_id)
@@ -171,7 +179,8 @@ class Dataframe_fxns:
 
 
     def bulk_update_intents_from_dataframe(self, agent_id, train_phrases_df, 
-                                           params_df=pd.DataFrame(), mode='basic', update_flag=False):
+                                           params_df=pd.DataFrame(), 
+                                           mode='basic', update_flag=False):
         """update an existing intents training phrases and parameters
 
         Args:
@@ -186,7 +195,8 @@ class Dataframe_fxns:
             update_flag: True to update_flag the intents in the agent
 
         Returns:
-            new_intents: dictionary with intent display names as keys and the new intent protobufs as values
+            modified_intents: dictionary with intent display names as keys 
+                and the new intent protobufs as values
 
         """
         if mode == 'basic':
@@ -214,14 +224,28 @@ class Dataframe_fxns:
                     mode, tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
                 logging.error('{0} mode parameter schema must be {1} \n'.format(
                     mode, tabulate(pSchema.transpose(), headers='keys', tablefmt='psql')))
-                
+
         else:
             raise ValueError('mode must be basic or advanced')
 
+        # TODO - check if user provided DF is in the right shape
+        # phrase_schema_user = train_phrases_df.dtypes.to_frame().astype({0:'string'})
+        # param_schema_user = params_df.dtypes.to_frame().astype({0:'string'})
+
+        # if (phrase_schema_user.equals(phrase_schema_master))==False:
+        #     logging.error('training phrase schema must be\n {} \n'.format(
+        #         tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
+        #     logging.error('got schema \n {}'.format(
+        #         tabulate(phrase_schema_user.transpose(), headers='keys', tablefmt='psql')))
+        #     logging.error('df.head \n%s', train_phrases_df.head() )
+            # raise ValueError('wrong schema format \n%s' % phrase_schema_user)
+
+        # if mode =='advanced':
+        #     if (param_schema_user.equals(param_schema_master))==False and len(params_df)>0:
+        #         raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
  
 
         logging.info('updating agent_id %s', agent_id)
-
         intents_map = self.dffx.get_intents_map(agent_id=agent_id, reverse=True)
         intent_names = list(set(train_phrases_df['display_name']))
 
@@ -229,6 +253,13 @@ class Dataframe_fxns:
         new_intents = {}
         i = 0
         for intent_name in intent_names:
+            # logging.info('process intent_name: %s type: %s', intent_name, type(intent_name))
+
+            # easier way to compare for empty pd cell values?
+            if isinstance(intent_name, pd._libs.missing.NAType):
+                logging.warning('empty intent_name')
+                continue
+
             tps = train_phrases_df.copy()[train_phrases_df['display_name']==intent_name].drop(columns='display_name')
             params = pd.DataFrame()
             if mode == 'advanced':
@@ -238,8 +269,7 @@ class Dataframe_fxns:
                 logging.error('FAIL to update - intent not found: [%s]', intent_name)
                 continue
 
-            new_intents[intent_name] = intent_name
-            logging.info('update intent %s', intent_name)
+            # logging.info('update intent %s', intent_name)
             new_intent = self.update_intent_from_dataframe(
                 intent_id=intents_map[intent_name],
                 train_phrases=tps,
@@ -249,6 +279,7 @@ class Dataframe_fxns:
             i+=1
             self.progressBar(i,len(intent_names))
             if update_flag:
+                logging.info('updating_intent %s', intent_name)
                 self.dfcx.update_intent(intent_id=new_intent.name, obj=new_intent)
                 if i % 179 == 0:
                     time.sleep(62)

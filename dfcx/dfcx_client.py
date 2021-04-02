@@ -9,6 +9,8 @@ import logging
 import os
 import uuid
 import time
+import traceback
+
 # import sys
 # import pandas as pd
 # import pathlib
@@ -25,27 +27,17 @@ import time
 from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
 
-# from google.cloud.dialogflowcx_v3beta1 import types as CxTypes
-# import google.cloud.dialogflowcx_v3beta1.types as CxTypes
 
 from google.protobuf import json_format  # type: ignore
+from proto.marshal.collections.repeated import RepeatedComposite
 
-# import google.protobuf.json_format
-# import google.protobuf.message.Message
-
-# logger = logging.getLogger("dfcx")
-# formatter = logging.Formatter("[dfcx    ] %(message)s")
-# handler = logging.StreamHandler(stdout)
-# handler.setFormatter(formatter)
-# logger.addHandler(handler)
-# logger.propagate = False
 
 logger = logging
 
 logging.basicConfig(
     format='[dfcx] %(levelname)s:%(message)s', level=logging.INFO)
 
-MAX_RETRIES = 10  # JWT errors on CX API
+MAX_RETRIES = 3  # JWT errors on CX API
 
 
 class DialogflowClient:
@@ -128,7 +120,7 @@ class DialogflowClient:
         """
 
         # if disable_webhook:
-            # logging.info('disable_webhook: %s', disable_webhook)
+        #     logging.info('disable_webhook: %s', disable_webhook)
 
         text = send_obj.get("text")
         send_params = send_obj.get("params")
@@ -166,7 +158,7 @@ class DialogflowClient:
                 language_code=self.language_code,
             )
         else:
-            # logging.debug('text input %s', text)
+            logging.debug('text: %s', text)
             text_input = session.TextInput(text=text)
             query_input = session.QueryInput(
                 text=text_input,
@@ -182,9 +174,83 @@ class DialogflowClient:
         try:
             response = session_client.detect_intent(request=request)
             self.checkpoint('<< got response')
+            qr = response.query_result
+            logging.debug('dfcx>qr %s', qr)
+            self.qr = qr # for debugging
+            reply = {}
 
-        except Exception as err:
+            # flatten array of text responses
+            # seems like there should be a better interface to pull out the texts
+            texts = []
+            for msg in qr.response_messages:
+                if msg.payload:
+                    reply['payload'] = self.extract_payload(msg)
+                if (len(msg.text.text)) > 0:
+                    text = msg.text.text[-1]  # this could be multiple lines too?
+                    # print('text', text)
+                    texts.append(text)
+
+            # print('texts', texts)
+
+            # flatten params struct
+            params = {}
+            # print('parameters', json.dumps(qr.parameters))  ## not JSON
+            # serialisable
+            if qr.parameters:
+                for param in qr.parameters:
+                    # turn into key: value pairs
+                    val = qr.parameters[param]
+                    if isinstance(val, RepeatedComposite):
+                        # some type of protobuf array - for now we just flatten as a string with spaces
+                        # FIXME - how better to convert list types in params responses?
+                        logging.info('converting param: %s val: %s', param, val)
+                        # val = val[0]
+                        val = " ".join(val)
+                        logging.info('converted val to: %s', val)
+                    params[param] = val
+
+            # print('params', params)
+
+            # TODO - pluck some other fields - but these are methods, not values so cannot be json.dump'd
+            # fields = ['match', 'parameters', 'intent', 'current_page', 'intent_detection_confidence']
+            # result = dict((k, getattr(qr, k)) for k in fields if hasattr(qr, k) )
+
+            # add some more convenience fields to make result comparison easier
+            #     if len(texts) == 1:
+            #         result['text'] = texts[0]  # last text entry
+            #     else:
+            #         result['text'] = '\n'.join(texts)
+
+            # payload = qr.response_messages.payload
+            # logging.info('payload %s', payload)
+
+            # reply['payload'] = payload
+            reply["text"] = "\n".join(texts)
+            reply["params"] = params
+            reply["confidence"] = qr.intent_detection_confidence
+            reply["page_name"] = qr.current_page.display_name
+            reply["intent_name"] = qr.intent.display_name
+            reply["other_intents"] = self.format_other_intents(qr)
+            if raw:
+                # self.qr = qr
+                reply["qr"] = qr
+                reply["json"] = self.to_json(qr)
+
+            # self.checkpoint('<< formatted response')
+            logging.debug('reply %s', reply)
+            return reply
+
+        # CX throws a 429 error
+        except BaseException as err:
             logging.error("Exception on CX.detect %s", err)
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(err).__name__, err.args)
+            logging.error(message)
+
+            logging.error("text %s", text)
+            logging.error("query_params %s", query_params)
+            logging.error("query_input %s", query_input)
+            logging.error(traceback.print_exc())
             retries += 1
             if retries < MAX_RETRIES:
                 logging.error("retrying")
@@ -219,24 +285,18 @@ class DialogflowClient:
         if qr.parameters:
             for param in qr.parameters:
                 # turn into key: value pairs
-                params[param] = qr.parameters[param]
+                actual = qr.parameters[param]
+                if isinstance(actual, RepeatedComposite):
+                    actual = ' '.join(actual)
 
-        # print('params', params)
+                if not isinstance(actual, str) and not isinstance(actual, bool) and not isinstance(actual, int):
+                    # FIXME - still not an actual recognized type just stringify it
+                    logging.error('ERROR convert to string type for param %s | type: %s', param, type(actual))
+                    logging.info("converted: [before: %s |after: %s]", actual, str(actual))
+                    actual = str(actual)
 
-        # TODO - pluck some other fields - but these are methods, not values so cannot be json.dump'd
-        # fields = ['match', 'parameters', 'intent', 'current_page', 'intent_detection_confidence']
-        # result = dict((k, getattr(qr, k)) for k in fields if hasattr(qr, k) )
+                params[param] = actual
 
-        # add some more convenience fields to make result comparison easier
-        #     if len(texts) == 1:
-        #         result['text'] = texts[0]  # last text entry
-        #     else:
-        #         result['text'] = '\n'.join(texts)
-
-        # payload = qr.response_messages.payload
-        # logging.info('payload %s', payload)
-
-        # reply['payload'] = payload
         reply["text"] = "\n".join(texts)
         reply["params"] = params
         reply["confidence"] = qr.intent_detection_confidence
@@ -249,7 +309,12 @@ class DialogflowClient:
             reply["json"] = self.to_json(qr)
 
         # self.checkpoint('<< formatted response')
-        logging.debug('reply %s', reply)        
+        try:
+            logging.info('reply: \n%s', json.dumps(reply, indent=2))
+        except TypeError as err:
+            logging.error('cannot JSON reply %s', err)
+            logging.info('reply %s', reply)
+
         return reply
 
 
@@ -278,10 +343,11 @@ class DialogflowClient:
         #             intents_map[alt['DisplayName']] = alt['Score']
         return items
 
-    def to_json(self, qr):
+    @staticmethod
+    def to_json(pbuf):
         '''extractor of private fields
         '''
-        blob = json_format.MessageToJson(qr._pb) # i think this returns JSON as a string
+        blob = json_format.MessageToJson(pbuf) # i think this returns JSON as a string
         return blob
 
     def getpath(self, obj, xpath, default=None):

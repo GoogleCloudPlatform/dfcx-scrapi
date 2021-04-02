@@ -89,7 +89,7 @@ class Agents:
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials = self.creds, 
+            credentials = self.creds,
             client_options=client_options)
             
         response = client.get_agent(request)
