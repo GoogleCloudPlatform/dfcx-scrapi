@@ -29,6 +29,7 @@ from google.cloud.dialogflowcx_v3beta1.types import session
 
 
 from proto.marshal.collections.repeated import RepeatedComposite
+# from proto.marshal.collections.repeated import RepeatedComposite
 
 from .sapi_base import SapiBase
 
@@ -184,7 +185,7 @@ class DialogflowConversation(SapiBase):
             session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
         # self.checkpoint('made client')
-        logging.info('session_path %s', session_path)
+        # logging.info('session_path %s', session_path)
 
         # set parameters separately with single query and an empty text
         # query_params = {'disable_webhook': True }
@@ -249,13 +250,29 @@ class DialogflowConversation(SapiBase):
                 for param in qr.parameters:
                     # turn into key: value pairs
                     val = qr.parameters[param]
-                    if isinstance(val, RepeatedComposite):
-                        # some type of protobuf array - for now we just flatten as a string with spaces
-                        # FIXME - how better to convert list types in params responses?
-                        logging.info('converting param: %s val: %s', param, val)
-                        # val = val[0]
-                        val = " ".join(val)
-                        logging.info('converted val to: %s', val)
+                    try:
+                        if isinstance(val, RepeatedComposite):
+                            # some type of protobuf array - for now we just flatten as a string with spaces
+                            # FIXME - how better to convert list types in params responses?
+                            logging.info('converting param: %s val: %s', param, val)
+                            # val = val[0]
+                            val = " ".join(val)
+                            logging.info('converted val to: %s', val)
+
+                    except TypeError as err:
+                        logging.error("Exception on CX.detect %s", err)
+                        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        message = template.format(type(err).__name__, err.args)
+                        logging.error(message)
+                        return None
+
+                    # if isinstance(val, MapComposite):
+                    #     # some type of protobuf array - for now we just flatten as a string with spaces
+                    #     # FIXME - how better to convert list types in params responses?
+                    #     logging.info('converting param: %s val: %s', param, val)
+                    #     # val = val[0]
+                    #     val = " ".join(val)
+                    #     logging.info('converted val to: %s', val)
                     params[param] = val
 
             # reply['payload'] = payload
@@ -273,6 +290,8 @@ class DialogflowConversation(SapiBase):
             # self.checkpoint('<< formatted response')
             logging.debug('reply %s', reply)
             return reply
+
+
 
         # CX throws a 429 error
         except BaseException as err:
