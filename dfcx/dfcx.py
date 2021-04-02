@@ -125,7 +125,8 @@ class DialogflowCX:
 
     def get_intent(self, intent_id):
         client_options = self._set_region(intent_id)
-        client = services.intents.IntentsClient(client_options=client_options)
+        client = services.intents.IntentsClient(credentials=self.creds,
+            client_options=client_options)
         response = client.get_intent(name=intent_id)
 
         return response
@@ -166,7 +167,8 @@ class DialogflowCX:
             setattr(intent, key, value)
 
         client_options = self._set_region(agent_id)
-        client = services.intents.IntentsClient(client_options=client_options)
+        client = services.intents.IntentsClient(credentials=self.creds,
+            client_options=client_options)
         response = client.create_intent(parent=agent_id, intent=intent)
 
         return response
@@ -225,7 +227,7 @@ class DialogflowCX:
 
     def get_entity_type(self, entity_id):
         client_options = self._set_region(entity_id)
-        client = services.entity_types.EntityTypesClient(
+        client = services.entity_types.EntityTypesClient(credentials = self.creds,
             client_options=client_options)
         response = client.get_entity_type(name=entity_id)
 
@@ -247,7 +249,7 @@ class DialogflowCX:
 #         entity_type = set_entity_type_attr(entity_type, kwargs)
 
         client_options = self._set_region(agent_id)
-        client = services.entity_types.EntityTypesClient(
+        client = services.entity_types.EntityTypesClient(credentials = self.creds,
             client_options=client_options)
         response = client.create_entity_type(
             parent=agent_id, entity_type=entity_type)
@@ -259,7 +261,7 @@ class DialogflowCX:
             entity_id = obj.name
         else:
             client_options = self._set_region(entity_id)
-            client = services.entity_types.EntityTypesClient(
+            client = services.entity_types.EntityTypesClient(credentials = self.creds,
                 client_options=client_options)
             client.delete_entity_type(name=entity_id)
 
@@ -287,7 +289,8 @@ class DialogflowCX:
 
     def get_flow(self, flow_id):
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(client_options=client_options)
+        client = services.flows.FlowsClient(credentials = self.creds,
+            client_options=client_options)
         response = client.get_flow(name=flow_id)
 
         return response
@@ -306,7 +309,8 @@ class DialogflowCX:
         mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(client_options=client_options)
+        client = services.flows.FlowsClient(credentials = self.creds,
+            client_options=client_options)
         response = client.update_flow(flow=flow, update_mask=mask)
 
         return response
