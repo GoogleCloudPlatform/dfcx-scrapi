@@ -26,14 +26,11 @@ import traceback
 # from google.cloud.dialogflowcx_v3beta1.services.agents import AgentsClient
 from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
-
-
 from proto.marshal.collections.repeated import RepeatedComposite
 # from proto.marshal.collections.repeated import RepeatedComposite
 
 from .sapi_base import SapiBase
 
-DEFAULT_CREDS_PATH = 'creds/default-creds.json'
 
 logger = logging
 
@@ -57,20 +54,16 @@ class DialogflowConversation(SapiBase):
             creds: TODO - already loaded creds data
         agent_path = full path to project
         """
-        # TODO implement using already loaded creds not setting env path
-        # if creds_path:
-        #     with open(creds_path) as json_file:
-        #         creds = json.load(json_file)
+        logging.info('create conversation with creds_path: %s | agent_path: %s', 
+            creds_path, agent_path)
 
         # FIXME - the creds are not used anywhere else?
-        # so maybe the env is what is relied on
-        # this env var gets changed OUTSIDE of here
         creds_path = creds_path or config['creds_path']
-        if creds_path:
-            logging.info('create agent client with custom creds %s \nconfig: \n%s', creds_path, config)
-        else:
-            creds_path = DEFAULT_CREDS_PATH
+        if not creds_path:
+            raise KeyError('no creds give to create agent')
+        logging.info('creds_path %s', creds_path)
 
+        # FIX ME - remove this and use creds on every call instead
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
 
         # project_id = data['project_id']
@@ -297,6 +290,7 @@ class DialogflowConversation(SapiBase):
 
 
         # CX throws a 429 error
+        # TODO - more specific exception
         except BaseException as err:
             logging.error("Exception on CX.detect %s", err)
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -309,6 +303,7 @@ class DialogflowConversation(SapiBase):
             logging.error(traceback.print_exc())
             retries += 1
             if retries < MAX_RETRIES:
+                # TODO - increase back off / delay? not needed for 3 retries
                 logging.error("retrying")
                 self.reply(send_obj, restart=restart, raw=raw, retries=retries)
             else:
