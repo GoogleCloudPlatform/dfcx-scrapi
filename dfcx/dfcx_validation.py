@@ -135,7 +135,7 @@ class ValidationKit:
 
         for flow in validation_results['flowValidationResults']:
             temp = '/'.join(flow['name'].split('/')[:-1])
-            temp_df = pd.DataFrame(flow['validationMessages'])
+            temp_df = pd.DataFrame(flow.get('validationMessages',{}))
             temp_df.insert(0, 'flow', flows_map[temp])
 
             max_cols_new = max([len(x) for x in temp_df.resourceNames])
@@ -182,7 +182,9 @@ class ValidationKit:
         
         
         #Parse df
-        validation_df = validation_df[['flow','detail','resource1','resource2','resource3','resource4']]
+        resources = validation_df.columns
+        resources = [r for r in resources if 'resource' in r]
+        validation_df = validation_df[['flow','detail'] + resources]
         disambig_id,intents_list, tp_list,id_  = [], [], [], 0
         flows = []
         for index, row in validation_df.iterrows():
