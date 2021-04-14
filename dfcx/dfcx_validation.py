@@ -20,13 +20,11 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 
 class ValidationKit:
     
-    def __init__(self, creds, agent_id):
+    def __init__(self, creds):
         self.creds = service_account.Credentials.from_service_account_file(
             creds, scopes=SCOPES)
         self.creds.refresh(Request()) # used for REST API calls
         self.token = self.creds.token # used for REST API calls
-        
-        self.agent_id= agent_id
         self.dfcx = DialogflowCX(creds)
         self.dffx = DialogflowFunctions(creds)
         self.agents = Agents(creds_path=creds)
@@ -159,7 +157,7 @@ class ValidationKit:
         return df
 
         
-    def intent_disambg(self, refresh = False, flow = None):
+    def intent_disambg(self, agent_id, refresh = False, flow = None):
         '''Obtains the intent disambiguation tasks from the validation tool
             Args:
                 refresh: (optional) False means validation results are pulled as is. True means the validation tool is refreshed then results are pulled
@@ -173,9 +171,9 @@ class ValidationKit:
         '''
         
         if refresh:
-            validation = self.run_validation_result(self.agent_id)
+            validation = self.run_validation_result(agent_id)
         else:
-            validation = self.get_validation_result(agent_id=self.agent_id)
+            validation = self.get_validation_result(agent_id=agent_id)
             
         validation_df = self.validation_results_to_dataframe(validation)
         if flow:
@@ -208,7 +206,7 @@ class ValidationKit:
         extraction = pd.merge(extraction, intent_options, on=['disambig_id'],how='left')
         internal = extraction.copy()
         internal['intent_count'] = internal.apply(lambda x: len(x['intents']),axis=1)
-        external = extraction.groupby(['flow','disambig_id'])[['training_phrase','intents']].first().reset_index()
+        external = extraction.groupby(['flow','disambig_id']).agg({'training_phrase':'first','intents':'first', 'intent':'count'}).reset_index().rename(columns={'intent':'conflicting_tp_count'})
         external['intent_count'] = external.apply(lambda x: len(x['intents']),axis=1)
         
        
