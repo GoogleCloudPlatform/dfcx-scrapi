@@ -54,6 +54,7 @@ class DialogflowConversation(SapiBase):
             creds: TODO - already loaded creds data
         agent_path = full path to project
         """
+
         logging.info('create conversation with creds_path: %s | agent_path: %s', 
             creds_path, agent_path)
 
@@ -70,7 +71,10 @@ class DialogflowConversation(SapiBase):
         # self.project_id = f'projects/{project_id}/locations/global'
 
         # projects/*/locations/*/agents/*/
-        self.agent_path = agent_path or config['agent_path']
+        # TODO - use 'name' instead of path for fields
+        agent_path = agent_path or config['agent_path']
+        super().__init__(creds_path=creds_path, agent_path=agent_path)
+
         self.language_code = language_code or config['language_code']
         self.start_time = None
         self.qr = None
@@ -86,30 +90,30 @@ class DialogflowConversation(SapiBase):
         # print('restarted DFCX.client=>', self.agent_path)
 
 
-    def _set_region(self, agent_id=None):
-        '''non global agents require a special endpoint in client_options'''
-        agent_id = agent_id or self.agent_path
-        location = agent_id.split('/')[3]
-        if location != 'global':
-            api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
-            client_options = {
-                'api_endpoint': api_endpoint
-            }
-            # logger.info('client options %s', client_options)
-            return client_options
+    # def _set_region(self, agent_id=None):
+    #     '''non global agents require a special endpoint in client_options'''
+    #     agent_id = agent_id or self.agent_path
+    #     location = agent_id.split('/')[3]
+    #     if location != 'global':
+    #         api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
+    #         client_options = {
+    #             'api_endpoint': api_endpoint
+    #         }
+    #         # logger.info('client options %s', client_options)
+    #         return client_options
         
-        # custom_environment = self.agent_env.get('environment')
-        # if custom_environment:
-        #     api_endpoint = f'https://dialogflow.googleapis.com/v3/{agent_id}/environments/{custom_environment}'
-        #     client_options = {
-        #         'api_endpoint': api_endpoint
-        #     }
-        #     logging.info('using custom endpoint: %s', api_endpoint)
-        #     logging.info('agent_id %s', agent_id)
-        #     logging.info('location %s', location)
-        #     return client_options
-        # else
-        return None
+    #     # custom_environment = self.agent_env.get('environment')
+    #     # if custom_environment:
+    #     #     api_endpoint = f'https://dialogflow.googleapis.com/v3/{agent_id}/environments/{custom_environment}'
+    #     #     client_options = {
+    #     #         'api_endpoint': api_endpoint
+    #     #     }
+    #     #     logging.info('using custom endpoint: %s', api_endpoint)
+    #     #     logging.info('agent_id %s', agent_id)
+    #     #     logging.info('location %s', location)
+    #     #     return client_options
+    #     # else
+    #     return None
 
 
     def set_agent_env(self, param, value):
@@ -132,7 +136,7 @@ class DialogflowConversation(SapiBase):
 
 
     # TODO - refactor options as a dict?
-    def reply(self, send_obj, restart=False, raw=False, retries=0, disable_webhook=True):
+    def reply(self, send_obj, restart=False, raw=False, retries=0):
         """
         send_obj to bot and get reply
             text
@@ -154,12 +158,12 @@ class DialogflowConversation(SapiBase):
         if restart:
             self.restart()
 
-        client_options = self._set_region()
+        # FIXME - use SapiBase but needs a param of item eg self.agent_id ?
+        client_options = self._set_region(item_id=self.agent_path)
         session_client = SessionsClient(client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
         
         # projects/*/locations/*/agents/*/environments/*/sessions/*
-
         custom_environment = self.agent_env.get('environment')
 
         #### currently it's not supported to query an experiment directly
@@ -183,6 +187,7 @@ class DialogflowConversation(SapiBase):
 
         # set parameters separately with single query and an empty text
         # query_params = {'disable_webhook': True }
+        disable_webhook = self.agent_env.get('disable_webhook') or False
 
         if send_params:
             query_params = session.QueryParameters(
@@ -215,6 +220,10 @@ class DialogflowConversation(SapiBase):
                                               query_input=query_input,
                                               query_params=query_params)
 
+        logging.info('disable_webhook: %s', disable_webhook)
+        logging.info('query_params: %s', query_params)
+        logging.info('request %s', request)
+
         try:
             response = session_client.detect_intent(request=request)
             self.checkpoint('<< got response')
@@ -246,7 +255,7 @@ class DialogflowConversation(SapiBase):
             # flatten params struct
             params = {}
             # print('parameters', json.dumps(qr.parameters))  ## not JSON
-            # serialisable
+            # serialisable until it's not
             if qr.parameters:
                 for param in qr.parameters:
                     # turn into key: value pairs
@@ -266,6 +275,8 @@ class DialogflowConversation(SapiBase):
                         message = template.format(type(err).__name__, err.args)
                         logging.error(message)
                         logging.error('failed to extract params for: %s', text)
+                        
+
                         # give up on params
 
                     # if isinstance(val, MapComposite):
@@ -292,7 +303,7 @@ class DialogflowConversation(SapiBase):
         # CX throws a 429 error
         # TODO - more specific exception
         except BaseException as err:
-            logging.error("Exception on CX.detect %s", err)
+            logging.error("BaseException caught on CX.detect %s", err)
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(err).__name__, err.args)
             logging.error(message)
