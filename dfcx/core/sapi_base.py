@@ -1,26 +1,33 @@
+'''
+base for other SAPI classes
+'''
+
 import logging
+import json
 import requests
+
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
-from typing import Dict, List
-# from dfcx.dfcx import DialogflowCX
+from google.protobuf import json_format  # type: ignore
 
-# logging config
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+from typing import Dict, List
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 'https://www.googleapis.com/auth/dialogflow']
 
-class Operations:
-    def __init__(self, creds_path):
+class SapiBase:
+    '''Common base class for different SAPI objects'''
+
+    def __init__(self, creds_path, agent_path):
+        logging.info('create sapi_base \ncreds_path:%s \nagent_path: %s', creds_path, agent_path)
         self.creds = service_account.Credentials.from_service_account_file(
-            creds_path,scopes=SCOPES)
+            creds_path, scopes=SCOPES )
+        self.agent_path = agent_path
         self.creds.refresh(Request()) # used for REST API calls
         self.token = self.creds.token # used for REST API calls
+        self.client_options = self._set_region(agent_path)
+
 
     @staticmethod
     def _set_region(item_id):
@@ -47,7 +54,34 @@ class Operations:
         else:
             return None # explicit None return when not required
 
-# OPERATIONS FX
+
+    @staticmethod
+    def pbuf_to_dict(pbuf):
+        '''extractor of json from a protobuf'''
+        blobstr = json_format.MessageToJson(pbuf) # i think this returns JSON as a string
+        blob = json.loads(blobstr)
+        return blob
+
+
+    @staticmethod
+    def response_to_json(response):
+        '''response objects have a magical _pb field attached'''
+        # return SapiBase.pbuf_to_dict(response._pb)
+        return SapiBase.pbuf_to_dict(response._pb)
+
+
+    @staticmethod
+    def response_to_dict(response):
+        '''response objects have a magical _pb field attached'''
+        return SapiBase.pbuf_to_dict(response._pb)
+
+
+    @staticmethod
+    def extract_payload(msg):
+        '''convert to json so we can get at the object'''
+        blob = SapiBase.response_to_dict(msg)
+        return blob.get('payload') # deref for nesting
+
 
     def get_lro(self, lro: str) -> Dict[str,str]:
         """Used to retrieve the status of LROs for Dialogflow CX.

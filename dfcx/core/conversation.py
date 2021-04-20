@@ -26,10 +26,10 @@ import traceback
 # from google.cloud.dialogflowcx_v3beta1.services.agents import AgentsClient
 from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
-
-
-from google.protobuf import json_format  # type: ignore
 from proto.marshal.collections.repeated import RepeatedComposite
+# from proto.marshal.collections.repeated import RepeatedComposite
+
+from .sapi_base import SapiBase
 
 
 logger = logging
@@ -40,8 +40,11 @@ logging.basicConfig(
 MAX_RETRIES = 3  # JWT errors on CX API
 
 
-class DialogflowClient:
-    """wrapping client requests to a CX agent"""
+class DialogflowConversation(SapiBase):
+    """
+    wrapping client requests to a CX agent for a conversation
+    with internally maintained session state
+    """
 
     def __init__(self, config=None, creds_path=None, agent_path=None, language_code="en"):
         """
@@ -51,25 +54,31 @@ class DialogflowClient:
             creds: TODO - already loaded creds data
         agent_path = full path to project
         """
-        # TODO implement using already loaded creds not setting env path
-        # if creds_path:
-        #     with open(creds_path) as json_file:
-        #         creds = json.load(json_file)
+
+        logging.info('create conversation with creds_path: %s | agent_path: %s', 
+            creds_path, agent_path)
 
         # FIXME - the creds are not used anywhere else?
-        # so maybe the env is what is relied on
-        # this env var gets changed OUTSIDE of here
         creds_path = creds_path or config['creds_path']
+        if not creds_path:
+            raise KeyError('no creds give to create agent')
+        logging.info('creds_path %s', creds_path)
+
+        # FIX ME - remove this and use creds on every call instead
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
 
         # project_id = data['project_id']
         # self.project_id = f'projects/{project_id}/locations/global'
 
         # projects/*/locations/*/agents/*/
-        self.agent_path = agent_path or config['agent_path']
+        # TODO - use 'name' instead of path for fields
+        agent_path = agent_path or config['agent_path']
+        super().__init__(creds_path=creds_path, agent_path=agent_path)
+
         self.language_code = language_code or config['language_code']
         self.start_time = None
         self.qr = None
+        self.agent_env = {}  # empty
         self.restart()
 
 
@@ -81,18 +90,36 @@ class DialogflowClient:
         # print('restarted DFCX.client=>', self.agent_path)
 
 
-    def _set_region(self, agent_id=None):
-        '''non global agents require a special endpoint in client_options'''
-        agent_id = agent_id or self.agent_path
-        location = agent_id.split('/')[3]
-        if location != 'global':
-            api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
-            client_options = {
-                'api_endpoint': api_endpoint
-            }
-            # logger.info('client options %s', client_options)
-            return client_options
-        return None
+    # def _set_region(self, agent_id=None):
+    #     '''non global agents require a special endpoint in client_options'''
+    #     agent_id = agent_id or self.agent_path
+    #     location = agent_id.split('/')[3]
+    #     if location != 'global':
+    #         api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
+    #         client_options = {
+    #             'api_endpoint': api_endpoint
+    #         }
+    #         # logger.info('client options %s', client_options)
+    #         return client_options
+        
+    #     # custom_environment = self.agent_env.get('environment')
+    #     # if custom_environment:
+    #     #     api_endpoint = f'https://dialogflow.googleapis.com/v3/{agent_id}/environments/{custom_environment}'
+    #     #     client_options = {
+    #     #         'api_endpoint': api_endpoint
+    #     #     }
+    #     #     logging.info('using custom endpoint: %s', api_endpoint)
+    #     #     logging.info('agent_id %s', agent_id)
+    #     #     logging.info('location %s', location)
+    #     #     return client_options
+    #     # else
+    #     return None
+
+
+    def set_agent_env(self, param, value):
+        '''setting changes related to the environment'''
+        logging.info('setting agent_env param:[%s] = value:[%s]', param, value)
+        self.agent_env[param] = value
 
 
     def checkpoint(self, msg=None, start=False):
@@ -107,8 +134,9 @@ class DialogflowClient:
             if msg:
                 print("{:0.2f}s {}".format(duration, msg))
 
+
     # TODO - refactor options as a dict?
-    def reply(self, send_obj, restart=False, raw=False, retries=0, disable_webhook=True):
+    def reply(self, send_obj, restart=False, raw=False, retries=0):
         """
         send_obj to bot and get reply
             text
@@ -130,15 +158,36 @@ class DialogflowClient:
         if restart:
             self.restart()
 
-        client_options = self._set_region()
+        # FIXME - use SapiBase but needs a param of item eg self.agent_id ?
+        client_options = self._set_region(item_id=self.agent_path)
         session_client = SessionsClient(client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
+        
+        # projects/*/locations/*/agents/*/environments/*/sessions/*
+        custom_environment = self.agent_env.get('environment')
+
+        #### currently it's not supported to query an experiment directly
+        # custom_experiment = self.agent_env.get('experiment')
+        # if custom_experiment:
+        #     if not custom_environment:
+        #         logging.error('ERROR cannot set experiment without environment! got experiment %s', custom_experiment)
+        #         # TODO - maybe later we can look for the relevant env?
+        #         # return None
+        #     else:
+        #         session_path = f"{self.agent_path}/environments/{custom_environment}/experiments/{custom_experiment}/sessions/{self.session_id}"
+
+        if custom_environment:
+            # just the environment and NOT experiment (change to elif if experiment comes back)
+            session_path = f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
+        else:
+            session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
         # self.checkpoint('made client')
         # logging.info('session_path %s', session_path)
 
         # set parameters separately with single query and an empty text
         # query_params = {'disable_webhook': True }
+        disable_webhook = self.agent_env.get('disable_webhook') or False
 
         if send_params:
             query_params = session.QueryParameters(
@@ -171,6 +220,10 @@ class DialogflowClient:
                                               query_input=query_input,
                                               query_params=query_params)
 
+        logging.info('disable_webhook: %s', disable_webhook)
+        logging.info('query_params: %s', query_params)
+        logging.info('request %s', request)
+
         try:
             response = session_client.detect_intent(request=request)
             self.checkpoint('<< got response')
@@ -184,7 +237,7 @@ class DialogflowClient:
             texts = []
             for msg in qr.response_messages:
                 if msg.payload:
-                    reply['payload'] = self.extract_payload(msg)
+                    reply['payload'] = SapiBase.extract_payload(msg)
                 if (len(msg.text.text)) > 0:
                     text = msg.text.text[-1]  # this could be multiple lines too?
                     # print('text', text)
@@ -192,57 +245,65 @@ class DialogflowClient:
 
             # print('texts', texts)
 
-            # flatten params struct
-            params = {}
-            # print('parameters', json.dumps(qr.parameters))  ## not JSON
-            # serialisable
-            if qr.parameters:
-                for param in qr.parameters:
-                    # turn into key: value pairs
-                    val = qr.parameters[param]
-                    if isinstance(val, RepeatedComposite):
-                        # some type of protobuf array - for now we just flatten as a string with spaces
-                        # FIXME - how better to convert list types in params responses?
-                        logging.info('converting param: %s val: %s', param, val)
-                        # val = val[0]
-                        val = " ".join(val)
-                        logging.info('converted val to: %s', val)
-                    params[param] = val
-
-            # print('params', params)
-
-            # TODO - pluck some other fields - but these are methods, not values so cannot be json.dump'd
-            # fields = ['match', 'parameters', 'intent', 'current_page', 'intent_detection_confidence']
-            # result = dict((k, getattr(qr, k)) for k in fields if hasattr(qr, k) )
-
-            # add some more convenience fields to make result comparison easier
-            #     if len(texts) == 1:
-            #         result['text'] = texts[0]  # last text entry
-            #     else:
-            #         result['text'] = '\n'.join(texts)
-
-            # payload = qr.response_messages.payload
-            # logging.info('payload %s', payload)
-
             # reply['payload'] = payload
             reply["text"] = "\n".join(texts)
-            reply["params"] = params
             reply["confidence"] = qr.intent_detection_confidence
             reply["page_name"] = qr.current_page.display_name
             reply["intent_name"] = qr.intent.display_name
             reply["other_intents"] = self.format_other_intents(qr)
+
+            # flatten params struct
+            params = {}
+            # print('parameters', json.dumps(qr.parameters))  ## not JSON
+            # serialisable until it's not
+            if qr.parameters:
+                for param in qr.parameters:
+                    # turn into key: value pairs
+                    val = qr.parameters[param]
+                    try:
+                        if isinstance(val, RepeatedComposite):
+                            # some type of protobuf array - for now we just flatten as a string with spaces
+                            # FIXME - how better to convert list types in params responses?
+                            logging.info('converting param: %s val: %s', param, val)
+                            # val = val[0]
+                            val = " ".join(val)
+                            logging.info('converted val to: %s', val)
+
+                    except TypeError as err:
+                        logging.error("Exception on CX.detect %s", err)
+                        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        message = template.format(type(err).__name__, err.args)
+                        logging.error(message)
+                        logging.error('failed to extract params for: %s', text)
+                        
+
+                        # give up on params
+
+                    # if isinstance(val, MapComposite):
+                    #     # some type of protobuf array - for now we just flatten as a string with spaces
+                    #     # FIXME - how better to convert list types in params responses?
+                    #     logging.info('converting param: %s val: %s', param, val)
+                    #     # val = val[0]
+                    #     val = " ".join(val)
+                    #     logging.info('converted val to: %s', val)
+                    params[param] = val
+
+            reply["params"] = params
+
             if raw:
                 # self.qr = qr
                 reply["qr"] = qr
-                reply["json"] = self.to_json(qr)
+                reply["json"] = SapiBase.response_to_json(qr)
 
             # self.checkpoint('<< formatted response')
             logging.debug('reply %s', reply)
             return reply
 
+
         # CX throws a 429 error
+        # TODO - more specific exception
         except BaseException as err:
-            logging.error("Exception on CX.detect %s", err)
+            logging.error("BaseException caught on CX.detect %s", err)
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(err).__name__, err.args)
             logging.error(message)
@@ -253,6 +314,7 @@ class DialogflowClient:
             logging.error(traceback.print_exc())
             retries += 1
             if retries < MAX_RETRIES:
+                # TODO - increase back off / delay? not needed for 3 retries
                 logging.error("retrying")
                 self.reply(send_obj, restart=restart, raw=raw, retries=retries)
             else:
@@ -270,7 +332,7 @@ class DialogflowClient:
         texts = []
         for msg in qr.response_messages:
             if msg.payload:
-                reply['payload'] = self.extract_payload(msg)
+                reply['payload'] = SapiBase.extract_payload(msg)
             if (len(msg.text.text)) > 0:
                 text = msg.text.text[-1]  # this could be multiple lines too?
                 # print('text', text)
@@ -306,7 +368,7 @@ class DialogflowClient:
         if raw:
             # self.qr = qr
             reply["qr"] = qr
-            reply["json"] = self.to_json(qr)
+            reply["json"] = SapiBase.response_to_json(qr)
 
         # self.checkpoint('<< formatted response')
         try:
@@ -321,11 +383,6 @@ class DialogflowClient:
     # TODO - dfqr class that has convenience accessor methods for different properties
     # basically to unwind the protobut
 
-    def extract_payload(self, msg):
-        '''convert to json so we can get at the object'''
-        blobstr = json_format.MessageToJson(msg._pb)
-        blob = json.loads(blobstr)
-        return blob.get('payload') # deref for nesting
 
 
     def format_other_intents(self, qr):
@@ -343,12 +400,6 @@ class DialogflowClient:
         #             intents_map[alt['DisplayName']] = alt['Score']
         return items
 
-    @staticmethod
-    def to_json(pbuf):
-        '''extractor of private fields
-        '''
-        blob = json_format.MessageToJson(pbuf) # i think this returns JSON as a string
-        return blob
 
     def getpath(self, obj, xpath, default=None):
         '''get data at a pathed location out of object internals'''
