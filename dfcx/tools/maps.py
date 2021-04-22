@@ -21,7 +21,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
-class DialogflowFunctions:
+class Tools:
     def __init__(self, creds, agent_id=None):
 
         with open(creds) as json_file:
@@ -63,6 +63,7 @@ class DialogflowFunctions:
 
         return flows_dict
 
+
     def get_intents_map(self, agent_id, reverse=False):
         """ Exports Agent Intent Names and UUIDs into a user friendly dict.
 
@@ -84,6 +85,7 @@ class DialogflowFunctions:
                             for intent in self.dfcx.list_intents(agent_id)}
 
         return intents_dict
+
 
     def get_entities_map(self, agent_id, reverse=False):
         """ Exports Agent Entityt Names and UUIDs into a user friendly dict.
@@ -107,6 +109,7 @@ class DialogflowFunctions:
 
         return entities_dict
 
+
     def get_webhooks_map(self, agent_id, reverse=False):
         """ Exports Agent Webhook Names and UUIDs into a user friendly dict.
 
@@ -128,6 +131,7 @@ class DialogflowFunctions:
                              for webhook in self.dfcx.list_webhooks(agent_id)}
 
         return webhooks_dict
+
 
     def get_pages_map(self, flow_id, reverse=False):
         """ Exports Agent Page UUIDs and Names into a user friendly dict.
@@ -151,6 +155,7 @@ class DialogflowFunctions:
                           for page in self.dfcx.list_pages(flow_id)}
 
         return pages_dict
+
 
     def get_route_groups_map(self, flow_id, reverse=False):
         """ Exports Agent Route Group UUIDs and Names into a user friendly dict.

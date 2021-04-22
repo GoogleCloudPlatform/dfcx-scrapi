@@ -47,7 +47,6 @@ class Operations:
         else:
             return None # explicit None return when not required
 
-# OPERATIONS FX
 
     def get_lro(self, lro: str) -> Dict[str,str]:
         """Used to retrieve the status of LROs for Dialogflow CX.

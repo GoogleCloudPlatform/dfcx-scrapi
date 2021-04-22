@@ -18,7 +18,7 @@ logging.basicConfig(
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 'https://www.googleapis.com/auth/dialogflow']
 
-class RouteGroups:
+class TransitionRouteGroups:
     def __init__(self, creds_path: str, route_group_id: str=None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
@@ -55,7 +55,6 @@ class RouteGroups:
         else:
             return None # explicit None return when not required
 
- #ROUTE GROUPS FX
 
     def list_transition_route_groups(self, flow_id):
         request = types.transition_route_group.ListTransitionRouteGroupsRequest()
@@ -74,6 +73,7 @@ class RouteGroups:
 
         return cx_route_groups
 
+
     def get_transition_route_group(self, name):
         request = types.transition_route_group.GetTransitionRouteGroupRequest()
         request.name = name
@@ -83,6 +83,7 @@ class RouteGroups:
         response = client.get_transition_route_group(request)
 
         return response
+
 
     def create_transition_route_group(self, flow_id, obj, **kwargs):
         #         request = types.transition_route_group.CreateTransitionRouteGroupRequest()
@@ -105,6 +106,7 @@ class RouteGroups:
             parent=flow_id, transition_route_group=trg)
 
         return response
+
 
     def update_transition_route_group(self, rg_id, obj=None, **kwargs):
         # If route group object is given set route group to it

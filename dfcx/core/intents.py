@@ -55,6 +55,15 @@ class Intents:
         else:
             return None # explicit None return when not required
 
+    @staticmethod
+    def _set_api_options(self, id_item):
+        '''bundle API parameters'''
+        client_options = self._set_region(id_item)
+        return {
+            'client_options': client_options,
+            'credentials': self.creds 
+        }
+
         
     def list_intents(self, agent_id):
         '''provide a list of intents'''
@@ -125,6 +134,7 @@ class Intents:
 
         return response
 
+
     def update_intent(self, intent_id, obj=None, **kwargs):
         """ Updates a single Intent object based on provided args.
 
@@ -147,14 +157,6 @@ class Intents:
 
         return response
 
-    def api_options(self, id_item):
-        '''bundle API parameters'''
-        client_options = self._set_region(id_item)
-        return {
-            'client_options': client_options,
-            'credentials': self.creds 
-        }
-        
 
     def delete_intent(self, intent_id, obj=None):
         if obj:
@@ -163,6 +165,4 @@ class Intents:
             client_options = self._set_region(intent_id)
             client = services.intents.IntentsClient(
                 client_options=client_options)
-            client.delete_intent(name=intent_id)
-
-        
+            client.delete_intent(name=intent_id)  

@@ -54,6 +54,7 @@ class Flows:
         else:
             return None # explicit None return when not required
 
+
     def train_flow(self):
         """trains the specified flow.
 
@@ -73,9 +74,8 @@ class Flows:
                     credentials=self.creds)
         response = client.train_flow(request)
         return response
-    
-    
-    
+
+
     def list_flows(self, agent_id=None):
         agent_id = agent_id or self.agent_id # default value
         request = types.flow.ListFlowsRequest()
@@ -123,8 +123,7 @@ class Flows:
 
         return response
     
-    
-    def nlu_settings(self,flow_id, **kwargs):
+    def update_nlu_settings(self, flow_id, **kwargs):
         """updates flow to new NLU setting.
         Args:
             flow_id: flow id to update nlu settings for.
@@ -139,7 +138,6 @@ class Flows:
             setattr(currentSettings, key, value)
         self.update_flow(flow_id=flow_id, 
                          nlu_settings=currentSettings)
- 
 
 
     def export_flow(self,
@@ -192,6 +190,7 @@ class Flows:
         lro = r.json()
 
         return lro
+
 
     def import_flow(self, destination_agent_id: str, gcs_path: str,
                     import_option: str = 'FALLBACK') -> Dict[str, str]:
@@ -251,5 +250,3 @@ class Flows:
         request.force = force
         client = services.flows.FlowsClient()
         client.delete_flow(request)
-
-

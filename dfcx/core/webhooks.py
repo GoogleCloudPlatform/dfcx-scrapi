@@ -18,7 +18,7 @@ logging.basicConfig(
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 'https://www.googleapis.com/auth/dialogflow']
 
-class WebHooks:
+class Webhooks:
     def __init__(self, creds_path: str, webhook_id: str=None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
@@ -55,8 +55,6 @@ class WebHooks:
         else:
             return None # explicit None return when not required
     
-    # WEBHOOK FX
-
 
     def list_webhooks(self, agent_id):
         request = types.webhook.ListWebhooksRequest()
@@ -74,6 +72,7 @@ class WebHooks:
                 cx_webhooks.append(cx_webhook)
 
         return cx_webhooks
+
 
     def create_webhook(self, agent_id, obj=None, **kwargs):
         # if webhook object is given, set webhook to it

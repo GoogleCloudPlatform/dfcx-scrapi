@@ -54,7 +54,8 @@ class Pages:
 
         else:
             return None # explicit None return when not required
-        
+
+
     def list_pages(self, flow_id):
         request = types.page.ListPagesRequest()
         request.parent = flow_id
@@ -72,12 +73,14 @@ class Pages:
 
         return cx_pages
 
+
     def get_page(self, page_id):
         client_options = self._set_region(page_id)
         client = services.pages.PagesClient(client_options=client_options)
         response = client.get_page(name=page_id)
 
         return response
+
 
     def create_page(self, flow_id, obj=None, **kwargs):
         # if page object is given, set page to it
@@ -98,6 +101,7 @@ class Pages:
 
         response = client.create_page(parent=flow_id, page=page)
         return response
+
 
     def update_page(self, page_id, obj=None, **kwargs):
         # If page object is given set page to it
@@ -123,5 +127,3 @@ class Pages:
         # Call client function with page and mask as arguments
         response = client.update_page(page=page, update_mask=mask)
         return response
-
-   

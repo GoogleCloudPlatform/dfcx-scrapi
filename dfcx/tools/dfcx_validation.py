@@ -15,7 +15,6 @@ sys.path.append('..')
 from .dfcx_functions import DialogflowFunctions
 from .dataframe_fxns import Dataframe_fxns
 from .core.agents import Agents
-from .core.validations import Validations
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 'https://www.googleapis.com/auth/dialogflow']
@@ -28,12 +27,7 @@ class ValidationKit:
         self.creds.refresh(Request()) # used for REST API calls
         self.token = self.creds.token # used for REST API calls
         self.dffx = DialogflowFunctions(creds)
-        self.validations = Validations(creds)
         self.agents = Agents(creds)
-        
-       
-        
-    
                 
     def validation_results_to_dataframe(self, validation_results: Dict):
         """"Transform the Validation results into a dataframe. Note will not work if you call get_validation_result with a flow_id specified. For calling validate ensure lro is complete
@@ -89,9 +83,9 @@ class ValidationKit:
         '''
         
         if refresh:
-            validation = self.validations.run_validation_result(agent_id)
+            validation = self.agents.validate_agent(agent_id)
         else:
-            validation = self.validations.get_validation_result(agent_id=agent_id)
+            validation = self.agents.get_validation_result(agent_id=agent_id)
             
         validation_df = self.validation_results_to_dataframe(validation)
         if flow:

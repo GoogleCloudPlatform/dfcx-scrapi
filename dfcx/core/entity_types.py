@@ -18,7 +18,7 @@ logging.basicConfig(
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 'https://www.googleapis.com/auth/dialogflow']
 
-class Entities:
+class EntityTypes:
     def __init__(self, creds_path: str, entity_id: str=None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
@@ -54,8 +54,7 @@ class Entities:
 
         else:
             return None # explicit None return when not required
-        
-    # ENTITIES FX
+
 
     def list_entity_types(self, agent_id):
         request = types.entity_type.ListEntityTypesRequest()
@@ -75,6 +74,7 @@ class Entities:
 
         return entities
 
+
     def get_entity_type(self, entity_id):
         client_options = self._set_region(entity_id)
         client = services.entity_types.EntityTypesClient(credentials = self.creds,
@@ -82,6 +82,7 @@ class Entities:
         response = client.get_entity_type(name=entity_id)
 
         return response
+
 
     def create_entity_type(self, agent_id, obj=None, **kwargs):
         # If entity_type_obj is given set entity_type to it
@@ -114,4 +115,3 @@ class Entities:
             client = services.entity_types.EntityTypesClient(credentials = self.creds,
                 client_options=client_options)
             client.delete_entity_type(name=entity_id)
-
