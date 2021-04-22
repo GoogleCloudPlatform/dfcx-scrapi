@@ -10,10 +10,12 @@ import google.cloud.dialogflowcx_v3beta1.services as services
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
-from .dfcx import DialogflowCX
+sys.path.append('..')
+
 from .dfcx_functions import DialogflowFunctions
 from .dataframe_fxns import Dataframe_fxns
 from .core.agents import Agents
+from .core.validations import Validations
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 'https://www.googleapis.com/auth/dialogflow']
@@ -25,97 +27,13 @@ class ValidationKit:
             creds, scopes=SCOPES)
         self.creds.refresh(Request()) # used for REST API calls
         self.token = self.creds.token # used for REST API calls
-        self.dfcx = DialogflowCX(creds)
         self.dffx = DialogflowFunctions(creds)
-        self.agents = Agents(creds_path=creds)
+        self.validations = Validations(creds)
+        self.agents = Agents(creds)
         
        
         
-    def run_validation_result(self, agent_id: str) -> Dict:
-        """Initiates the Validation of the CX Agent or Flow.
-
-        This function will start the Validation feature for the given Agent
-        and then return the results as a Dict.
-
-        Args:
-          agent_id: CX Agent ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-
-        Returns:
-          results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
-        """
-        location = agent_id.split('/')[3]
-        if location != 'global':
-            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                location)
-        else:
-            base_url = 'https://dialogflow.googleapis.com/v3beta1'
-
-        url = '{0}/{1}/validationResult'.format(base_url, agent_id)
-        headers = {"Authorization": "Bearer {}".format(self.token)}
-
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
-
-        return results.json()
-
     
-    def get_validation_result(
-            self,
-            agent_id: str,
-            flow_id: str = None) -> Dict:
-        """Extract Validation Results from CX Validation feature.
-
-        This function will get the LATEST validation result run for the given
-        CX Agent or CX Flow. If there has been no validation run on the Agent
-        or Flow, no result will be returned. Use `dfcx.validate` function to
-        run Validation on an Agent/Flow.
-
-        Passing in the Agent ID will provide ALL validation results for
-        ALL flows.
-        Passing in the Flow ID will provide validation results for only
-        that Flow ID.
-
-        Args:
-          agent_id: CX Agent ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-          flow_id: (Optional) CX Flow ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/flows/<FLOW ID>
-
-        Returns:
-          results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
-        """
-
-        if flow_id:
-            location = flow_id.split('/')[3]
-            if location != 'global':
-                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                    location)
-            else:
-                base_url = 'https://dialogflow.googleapis.com/v3beta1'
-
-            url = '{0}/{1}/validationResult'.format(base_url, flow_id)
-        else:
-            location = agent_id.split('/')[3]
-            if location != 'global':
-                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                    location)
-            else:
-                base_url = 'https://dialogflow.googleapis.com/v3beta1'
-
-            url = '{0}/{1}/validationResult'.format(base_url, agent_id)
-
-        headers = {"Authorization": "Bearer {}".format(self.token)}
-
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
-
-        return results.json()
-
                 
     def validation_results_to_dataframe(self, validation_results: Dict):
         """"Transform the Validation results into a dataframe. Note will not work if you call get_validation_result with a flow_id specified. For calling validate ensure lro is complete
@@ -171,9 +89,9 @@ class ValidationKit:
         '''
         
         if refresh:
-            validation = self.run_validation_result(agent_id)
+            validation = self.validations.run_validation_result(agent_id)
         else:
-            validation = self.get_validation_result(agent_id=agent_id)
+            validation = self.validations.get_validation_result(agent_id=agent_id)
             
         validation_df = self.validation_results_to_dataframe(validation)
         if flow:

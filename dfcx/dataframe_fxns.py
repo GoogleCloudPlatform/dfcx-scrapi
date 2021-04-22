@@ -28,7 +28,6 @@ class Dataframe_fxns:
         self.dffx =  DialogflowFunctions(creds_path)
         self.creds_path = creds_path
 
-
     def gsheets2df(self,gsheetName, worksheetName):
         scope = ['https://spreadsheets.google.com/feeds',
                          'https://www.googleapis.com/auth/drive']
@@ -671,3 +670,23 @@ class Dataframe_fxns:
         if update_flag:
             self.dfcx.create_transition_route_group(flow_id=flow_id,obj=rg)
         return rg
+
+    def intent_to_df(self,intent_id):
+        i_obj = self.dfcx.get_intent(intent_id=intent_id)
+        tps = i_obj.training_phrases
+        tp_df = pd.DataFrame()
+        tp_id = 0
+        for tp in tps:
+            part_id = 0
+            for part in tp.parts:
+                tp_df = tp_df.append(pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id'], 
+                                                  data = [[i_obj.display_name, intent_id, tp_id, part_id, part.text, part.parameter_id, tp.repeat_count, tp.id]]))
+                part_id+=1
+            tp_id+=1
+
+        phrases = tp_df.copy()
+
+        phrase_lst = phrases.groupby(['tp_id'])['text'].apply(lambda x: ''.join(x)).reset_index().rename(columns={'text':'phrase'})
+        phrases = pd.merge(phrases, phrase_lst, on=['tp_id'],how='outer')
+        
+        return phrases
