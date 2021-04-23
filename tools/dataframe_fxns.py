@@ -4,14 +4,14 @@ from typing import List
 import time
 import json
 import logging
+import pandas as pd
 import os
 import google.cloud.dialogflowcx_v3beta1.types as types
 from oauth2client.service_account import ServiceAccountCredentials
 import gspread
 from gspread_dataframe import set_with_dataframe
 from tabulate import tabulate
-from .dfcx import *
-from .dfcx_functions import *
+from core import entity_types, intents, flows, pages, transition_route_groups
 
 
 # logging config
@@ -24,8 +24,11 @@ logging.basicConfig(
 class Dataframe_fxns:
     def __init__(self, creds_path: str):
         logging.info('create dfcx creds %s', creds_path)
-        self.dfcx = DialogflowCX(creds_path)
-        self.dffx = DialogflowFunctions(creds_path)
+        self.entities = entity_types.EntityTypes(creds_path)
+        self.intents = intents.Intents(creds_path)
+        self.flows = flows.Flows(creds_path)
+        self.pages = pages.Pages(creds_path)
+        self.route_groups = transition_route_groups.TransitionRouteGroups(creds_path)
         self.creds_path = creds_path
 
     def gsheets2df(self, gsheetName, worksheetName):
@@ -122,7 +125,7 @@ class Dataframe_fxns:
         #     if (param_schema_user.equals(param_schema_master))==False and len(params)>0:
         #         raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
 
-        original = self.dfcx.get_intent(intent_id=intent_id)
+        original = self.intents.get_intent(intent_id=intent_id)
         intent = {}
         intent['name'] = original.name
         intent['display_name'] = original.display_name
@@ -283,7 +286,7 @@ class Dataframe_fxns:
         #         raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
 
         logging.info('updating agent_id %s', agent_id)
-        intents_map = self.dffx.get_intents_map(
+        intents_map = self.intents.get_intents_map(
             agent_id=agent_id, reverse=True)
         intent_names = list(set(train_phrases_df['display_name']))
 
@@ -323,7 +326,7 @@ class Dataframe_fxns:
             self.progressBar(i, len(intent_names))
             if update_flag:
                 logging.info('updating_intent %s', intent_name)
-                self.dfcx.update_intent(
+                self.intents.update_intent(
                     intent_id=new_intent.name, obj=new_intent)
                 if i % 179 == 0:
                     time.sleep(62)
@@ -556,7 +559,7 @@ class Dataframe_fxns:
             if update_flag:
                 if i % 100 == 0:
                     time.sleep(70)
-                self.dfcx.create_intent(agent_id=agent_id, obj=newIntent)
+                self.intents.create_intent(agent_id=agent_id, obj=newIntent)
 
         return newIntents
 
@@ -629,7 +632,7 @@ class Dataframe_fxns:
             i += 1
 
             if update_flag:
-                self.dfcx.create_entity_type(agent_id=agent_id, obj=new_entity)
+                self.entities.create_entity_type(agent_id=agent_id, obj=new_entity)
                 if i % 179 == 0:
                     time.sleep(61)
 
@@ -739,18 +742,18 @@ class Dataframe_fxns:
                 rg: route group protobuf
         '''
         if 'intent' in route_group_df.columns:
-            intentsMap = self.dffx.get_intents_map(
+            intentsMap = self.intents.get_intents_map(
                 agent_id=agent_id, reverse=True)
             route_group_df['intent'] = route_group_df.apply(
                 lambda x: intentsMap[x['intent']], axis=1)
 
         if 'target_flow' in route_group_df.columns:
-            flowsMap = self.dffx.get_flows_map(agent_id=agent_id, reverse=True)
+            flowsMap = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
             route_group_df['target_flow'] = route_group_df.apply(
                 lambda x: flowsMap[x['target_flow']], axis=1)
 
         if 'target_page' in route_group_df.columns:
-            pageMap = self.dffx.get_pages_map(flow_id=flow_id, reverse=True)
+            pageMap = self.pages.get_pages_map(flow_id=flow_id, reverse=True)
             pageMap['End Flow'] = flow_id + '/pages/END_FLOW'
             route_group_df['target_page'] = route_group_df.apply(
                 lambda x: pageMap[x['target_page']], axis=1)
@@ -765,11 +768,11 @@ class Dataframe_fxns:
         rg.transition_routes = transition_routes
 
         if update_flag:
-            self.dfcx.create_transition_route_group(flow_id=flow_id, obj=rg)
+            self.route_groups.create_transition_route_group(flow_id=flow_id, obj=rg)
         return rg
 
     def intent_to_df(self, intent_id):
-        i_obj = self.dfcx.get_intent(intent_id=intent_id)
+        i_obj = self.intents.get_intent(intent_id=intent_id)
         tps = i_obj.training_phrases
         tp_df = pd.DataFrame()
         tp_id = 0
