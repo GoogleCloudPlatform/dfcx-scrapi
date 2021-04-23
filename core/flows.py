@@ -25,6 +25,7 @@ class Flows:
             creds_path, scopes=SCOPES)
         self.creds.refresh(Request())  # used for REST API calls
         self.token = self.creds.token  # used for REST API calls
+        self.agent_id = None
 
         if flow_id:
             self.flow_id = flow_id
@@ -166,16 +167,9 @@ class Flows:
             'flow_uri': '{}'.format(gcs_path),
             'data_format': data_format,
             'include_referenced_flows': ref_flows}
-        token = subprocess.run(['gcloud',
-                                'auth',
-                                'application-default',
-                                'print-access-token'],
-                               stdout=subprocess.PIPE,
-                               text=True).stdout
 
-        token = token.strip('\n')  # remove newline appended as part of stdout
         headers = {
-            'Authorization': 'Bearer {}'.format(token),
+            'Authorization': 'Bearer {}'.format(self.token),
             'Content-Type': 'application/json; charset=utf-8'}
 
         # Make REST call
@@ -211,17 +205,9 @@ class Flows:
         body = {
             'flow_uri': '{}'.format(gcs_path),
             'import_option': '{}'.format(import_option)}
-        token = subprocess.run(['gcloud',
-                                'auth',
-                                'application-default',
-                                'print-access-token'],
-                               stdout=subprocess.PIPE,
-                               text=True).stdout
-
-        token = token.strip('\n')  # remove newline appended as part of stdout
 
         headers = {
-            'Authorization': 'Bearer {}'.format(token),
+            'Authorization': 'Bearer {}'.format(self.token),
             'Content-Type': 'application/json; charset=utf-8'}
 
         # Make REST call
