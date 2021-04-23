@@ -1,6 +1,3 @@
-from .core.agents import Agents
-from .dataframe_fxns import Dataframe_fxns
-from .dfcx_functions import DialogflowFunctions
 import os
 import sys
 import re
@@ -8,16 +5,18 @@ import time
 import pandas as pd
 import numpy as np
 import requests
-from typing import Dict, List
-
-
 import google.cloud.dialogflowcx_v3beta1.types as types
 import google.cloud.dialogflowcx_v3beta1.services as services
+
+from typing import Dict, List
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+from core.agents import Agents
+from core.flows import Flows
+from tools.dataframe_fxns import Dataframe_fxns
+from tools.dfcx_functions import DialogflowFunctions
 
-sys.path.append('..')
-
+# sys.path.append('..')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
           'https://www.googleapis.com/auth/dialogflow']
@@ -32,6 +31,7 @@ class ValidationKit:
         self.token = self.creds.token  # used for REST API calls
         self.dffx = DialogflowFunctions(creds)
         self.agents = Agents(creds)
+        self.flows = Flows(creds)
 
     def validation_results_to_dataframe(self, validation_results: Dict):
         """"Transform the Validation results into a dataframe. Note will not work if you call get_validation_result with a flow_id specified. For calling validate ensure lro is complete
@@ -44,7 +44,7 @@ class ValidationKit:
 
         agent_id = '/'.join(validation_results['name'].split('/')[0:6])
 
-        flows_map = self.dffx.get_flows_map(agent_id)
+        flows_map = self.flows.get_flows_map(agent_id)
         max_cols_old = 0
         df = pd.DataFrame()
 
