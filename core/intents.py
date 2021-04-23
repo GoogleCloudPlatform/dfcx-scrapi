@@ -7,7 +7,6 @@ from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from typing import Dict, List
-# from dfcx.dfcx import DialogflowCX
 
 # logging config
 logging.basicConfig(
@@ -28,7 +27,7 @@ class Intents:
 
         if intent_id:
             self.intent_id = intent_id
-            self.client_options = self._set_region(agent_id)
+            self.client_options = self._set_region(self.intent_id)
 
     @staticmethod
     def _set_region(item_id):
@@ -150,7 +149,10 @@ class Intents:
 
         logging.info('dfcx_lib update intent %s', intent_id)
 
-        client = services.intents.IntentsClient(**self.api_options(intent_id))
+        client_options = self._set_region(intent_id)
+        client = services.intents.IntentsClient(
+            client_options=client_options, 
+            credentials=self.creds)
         response = client.update_intent(intent=intent)
 
         return response
