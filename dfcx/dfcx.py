@@ -695,6 +695,7 @@ class DialogflowCX:
         of the conversation."""
         client_options = self._set_region(agent)
         session_client = services.sessions.SessionsClient(
+            credentials=self.creds,
             client_options=client_options)
         session_path = "{}/sessions/{}".format(agent, session_id)
 
@@ -709,16 +710,33 @@ class DialogflowCX:
             response = session_client.detect_intent(request=request)
 
         for text in conversation:
-            text_input = types.session.TextInput(text=text)
-            query_input = types.session.QueryInput(
-                text=text_input, language_code='en')
-            request = types.session.DetectIntentRequest(
-                session=session_path, query_input=query_input
-            )
+            if 'dtmf' in text:
+                dtmf_payload = {"digits": text}
+                query_input = types.session.QueryInput(
+                    dtmf=dtmf_payload, language_code='en')
+                request = types.session.DetectIntentRequest(
+                    session=session_path, query_input=query_input
+                )
+
+            else:
+                text_input = types.session.TextInput(text=text)
+                query_input = types.session.QueryInput(
+                    text=text_input, language_code='en')
+                request = types.session.DetectIntentRequest(
+                    session=session_path, query_input=query_input
+                )
+
+            print('=' * 10, ' REQUEST ', '=' * 10)
+            print(request)
+
             response = session_client.detect_intent(request=request)
             qr = response.query_result
 
-            print("=" * 20)
+            # print('=' * 10, ' RESPONSE ', '=' * 10)
+            # print(qr)
+            # print('=' * 29, '\n')
+
+            print("=" * 10, ' SUMMARY ', '=' * 10)
             print("Query text: {}".format(qr.text))
             if "intent" in qr:
                 print("Triggered Intent: {}".format(qr.intent.display_name))
@@ -730,9 +748,10 @@ class DialogflowCX:
 
             print("Response Page: {}".format(qr.current_page.display_name))
 
-            for param in qr.parameters:
-                if param == "statusMessage":
-                    print("Status Message: {}".format(qr.parameters[param]))
+            if qr.parameters:
+                for param in qr.parameters:
+                    if param == "statusMessage":
+                        print("Status Message: {}".format(qr.parameters[param]))
 
             if response_text:
                 print(
@@ -745,6 +764,7 @@ class DialogflowCX:
                         )
                     )
                 )
+            print('\n')
 
     def detect_intent(
             self,
@@ -759,6 +779,7 @@ class DialogflowCX:
         of the conversation."""
         client_options = self._set_region(agent)
         session_client = services.sessions.SessionsClient(
+            credentials=self.creds,
             client_options=client_options)
         session_path = "{}/sessions/{}".format(agent, session_id)
 
@@ -778,7 +799,8 @@ class DialogflowCX:
         request = types.session.DetectIntentRequest(
             session=session_path, query_input=query_input
         )
-        response = session_client.detect_intent(request=request)
+        response = session_client.detect_intent( 
+            request=request)
         qr = response.query_result
 
         return qr
