@@ -11,10 +11,8 @@ import google.cloud.dialogflowcx_v3beta1.services as services
 from typing import Dict, List
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
-from core.agents import Agents
-from core.flows import Flows
+from core import agents, flows
 from tools.dataframe_fxns import Dataframe_fxns
-from tools.dfcx_functions import DialogflowFunctions
 
 # sys.path.append('..')
 
@@ -24,14 +22,13 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 
 class ValidationKit:
 
-    def __init__(self, creds):
+    def __init__(self, creds_path):
         self.creds = service_account.Credentials.from_service_account_file(
-            creds, scopes=SCOPES)
+            creds_path, scopes=SCOPES)
         self.creds.refresh(Request())  # used for REST API calls
         self.token = self.creds.token  # used for REST API calls
-        self.dffx = DialogflowFunctions(creds)
-        self.agents = Agents(creds)
-        self.flows = Flows(creds)
+        self.agents = agents.Agents(creds_path)
+        self.flows = flows.Flows(creds_path)
 
     def validation_results_to_dataframe(self, validation_results: Dict):
         """"Transform the Validation results into a dataframe. Note will not work if you call get_validation_result with a flow_id specified. For calling validate ensure lro is complete
