@@ -63,6 +63,28 @@ class Intents:
             'credentials': self.creds
         }
 
+    def get_intents_map(self, agent_id, reverse=False):
+        """ Exports Agent Intent Names and UUIDs into a user friendly dict.
+
+        Args:
+          - agent_id, the formatted CX Agent ID to use
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+
+        Returns:
+          - intents_map, Dictionary containing Intent UUIDs as keys and
+              intent.display_name as values
+          """
+
+        if reverse:
+            intents_dict = {intent.display_name: intent.name
+                            for intent in self.list_intents(agent_id)}
+
+        else:
+            intents_dict = {intent.name: intent.display_name
+                            for intent in self.list_intents(agent_id)}
+
+        return intents_dict
+
     def list_intents(self, agent_id):
         '''provide a list of intents'''
         request = types.intent.ListIntentsRequest()
@@ -151,7 +173,7 @@ class Intents:
 
         client_options = self._set_region(intent_id)
         client = services.intents.IntentsClient(
-            client_options=client_options, 
+            client_options=client_options,
             credentials=self.creds)
         response = client.update_intent(intent=intent)
 
