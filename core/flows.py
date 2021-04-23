@@ -54,6 +54,29 @@ class Flows:
         else:
             return None  # explicit None return when not required
 
+
+    def get_flows_map(self, agent_id, reverse=False):
+        """ Exports Agent Flow Names and UUIDs into a user friendly dict.
+
+        Args:
+            - agent_id, the formatted CX Agent ID to use
+            - reverse, (Optional) Boolean flag to swap key:value -> value:key
+
+        Returns:
+            - flows_map, Dictionary containing flow UUIDs as keys and
+                flow.display_name as values
+        """
+
+        if reverse:
+            flows_dict = {flow.display_name: flow.name
+                            for flow in self.list_flows(agent_id=agent_id)}
+
+        else:
+            flows_dict = {flow.name: flow.display_name
+                            for flow in self.list_flows(agent_id=agent_id)}
+
+        return flows_dict
+
     def train_flow(self):
         """trains the specified flow.
 
