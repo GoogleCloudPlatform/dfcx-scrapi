@@ -54,7 +54,6 @@ class Flows:
         else:
             return None  # explicit None return when not required
 
-
     def get_flows_map(self, agent_id, reverse=False):
         """ Exports Agent Flow Names and UUIDs into a user friendly dict.
 
@@ -69,11 +68,11 @@ class Flows:
 
         if reverse:
             flows_dict = {flow.display_name: flow.name
-                            for flow in self.list_flows(agent_id=agent_id)}
+                          for flow in self.list_flows(agent_id=agent_id)}
 
         else:
             flows_dict = {flow.name: flow.display_name
-                            for flow in self.list_flows(agent_id=agent_id)}
+                          for flow in self.list_flows(agent_id=agent_id)}
 
         return flows_dict
 
