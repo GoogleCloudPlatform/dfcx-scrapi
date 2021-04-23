@@ -110,52 +110,52 @@ class Static:
 
         return route
 
-        @staticmethod
-        def make_trigger_fulfillment(
-                self,
-                messages=None,
-                webhook_id=None,
-                webhook_tag=None):
-            """ Creates a single Fulfillment object for Dialogflow CX.
+    @staticmethod
+    def make_trigger_fulfillment(
+            self,
+            messages=None,
+            webhook_id=None,
+            webhook_tag=None):
+        """ Creates a single Fulfillment object for Dialogflow CX.
 
-            Fulfillments are used as part of Transition Routes to add Dialogue
-            messages back to the user, trigger webhooks, set parameter presets,
-            and enable IVR options where applicable.
+        Fulfillments are used as part of Transition Routes to add Dialogue
+        messages back to the user, trigger webhooks, set parameter presets,
+        and enable IVR options where applicable.
 
-            Note: if no args are provided, a blank Fulfillment object will be returned.
+        Note: if no args are provided, a blank Fulfillment object will be returned.
 
-            Args:
-              messages, (list): (Optional) The list of Dialogue messages to send back to the user
-              webhook_id, (str): (Optional) The UUID of the Dialogflow CX webhook to trigger
-                when the Fulfillment is triggered by the conversation.
-              webhook_tag, (str): (Required if webhook_id is provided) User defined tag
-                associated with
+        Args:
+            messages, (list): (Optional) The list of Dialogue messages to send back to the user
+            webhook_id, (str): (Optional) The UUID of the Dialogflow CX webhook to trigger
+            when the Fulfillment is triggered by the conversation.
+            webhook_tag, (str): (Required if webhook_id is provided) User defined tag
+            associated with
 
-            Returns:
-              Fulfillment object of type <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
-            """
-            fulfillment = types.fulfillment.Fulfillment()
+        Returns:
+            Fulfillment object of type <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
+        """
+        fulfillment = types.fulfillment.Fulfillment()
 
-            if messages:
-                response_message = types.response_message.ResponseMessage()
-                message_text = response_message.Text()
+        if messages:
+            response_message = types.response_message.ResponseMessage()
+            message_text = response_message.Text()
 
-                message_text.text = messages
-                response_message.text = message_text
-                fulfillment.messages = [response_message]
+            message_text.text = messages
+            response_message.text = message_text
+            fulfillment.messages = [response_message]
 
-            if webhook_id:
-                fulfillment.webhook = webhook_id
+        if webhook_id:
+            fulfillment.webhook = webhook_id
 
-                if not webhook_tag:
-                    print("webhook_tag is required when specifying webhook_id")
-                    return
+            if not webhook_tag:
+                print("webhook_tag is required when specifying webhook_id")
+                return
 
-                else:
-                    fulfillment.tag = webhook_tag
+            else:
+                fulfillment.tag = webhook_tag
 
-            print(fulfillment)
-            return fulfillment
+        print(fulfillment)
+        return fulfillment
 
     @staticmethod
     def set_entity_type_attr(self, entity_type, kwargs):
