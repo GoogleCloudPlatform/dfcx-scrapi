@@ -54,6 +54,28 @@ class Webhooks:
         else:
             return None  # explicit None return when not required
 
+    def get_webhooks_map(self, agent_id, reverse=False):
+        """ Exports Agent Webhook Names and UUIDs into a user friendly dict.
+
+        Args:
+          - agent_id, the formatted CX Agent ID to use
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+
+        Returns:
+          - webhooks_map, Dictionary containing Webhook UUIDs as keys and
+              webhook.display_name as values
+          """
+
+        if reverse:
+            webhooks_dict = {webhook.display_name: webhook.name
+                             for webhook in self.list_webhooks(agent_id)}
+
+        else:
+            webhooks_dict = {webhook.name: webhook.display_name
+                             for webhook in self.list_webhooks(agent_id)}
+
+        return webhooks_dict
+
     def list_webhooks(self, agent_id):
         request = types.webhook.ListWebhooksRequest()
         request.parent = agent_id
