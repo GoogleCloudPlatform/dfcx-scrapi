@@ -28,7 +28,8 @@ class Dataframe_fxns:
         self.intents = intents.Intents(creds_path)
         self.flows = flows.Flows(creds_path)
         self.pages = pages.Pages(creds_path)
-        self.route_groups = transition_route_groups.TransitionRouteGroups(creds_path)
+        self.route_groups = transition_route_groups.TransitionRouteGroups(
+            creds_path)
         self.creds_path = creds_path
 
     def gsheets2df(self, gsheetName, worksheetName):
@@ -632,7 +633,8 @@ class Dataframe_fxns:
             i += 1
 
             if update_flag:
-                self.entities.create_entity_type(agent_id=agent_id, obj=new_entity)
+                self.entities.create_entity_type(
+                    agent_id=agent_id, obj=new_entity)
                 if i % 179 == 0:
                     time.sleep(61)
 
@@ -748,7 +750,8 @@ class Dataframe_fxns:
                 lambda x: intentsMap[x['intent']], axis=1)
 
         if 'target_flow' in route_group_df.columns:
-            flowsMap = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
+            flowsMap = self.flows.get_flows_map(
+                agent_id=agent_id, reverse=True)
             route_group_df['target_flow'] = route_group_df.apply(
                 lambda x: flowsMap[x['target_flow']], axis=1)
 
@@ -768,7 +771,8 @@ class Dataframe_fxns:
         rg.transition_routes = transition_routes
 
         if update_flag:
-            self.route_groups.create_transition_route_group(flow_id=flow_id, obj=rg)
+            self.route_groups.create_transition_route_group(
+                flow_id=flow_id, obj=rg)
         return rg
 
     def intent_to_df(self, intent_id):

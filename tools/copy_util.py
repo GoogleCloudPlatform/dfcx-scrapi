@@ -28,10 +28,12 @@ class CopyUtil:
         self.flows = flows.Flows(creds)
         self.pages = pages.Pages(creds)
         self.webhooks = webhooks.Webhooks(creds)
-        self.route_groups = transition_route_groups.TransitionRouteGroups(creds)
+        self.route_groups = transition_route_groups.TransitionRouteGroups(
+            creds)
 
 
 # COPY FUNCTIONS
+
 
     def copy_intent_to_agent(
             self,
@@ -85,7 +87,7 @@ class CopyUtil:
                         intent_object.display_name))
             elif copy_option == 'update':
                 self.intents.update_intent(destination_intent_obj.name,
-                                        intent_object)
+                                           intent_object)
                 logging.info(
                     'Intent \'{}\' updated successfully'.format(
                         intent_object.display_name))
@@ -142,7 +144,8 @@ class CopyUtil:
           Success!
         """
 
-        destination_flows = self.flows.get_flows_map(destination_agent, reverse=True)
+        destination_flows = self.flows.get_flows_map(
+            destination_agent, reverse=True)
 
         for page in pages_list:
             try:
@@ -213,7 +216,8 @@ class CopyUtil:
                     resource_obj_dict['webhooks'].append(webhook)
 
         if 'route_groups' not in skip_list:
-            source_flows_map = self.flows.get_flows_map(source_agent, reverse=True)
+            source_flows_map = self.flows.get_flows_map(
+                source_agent, reverse=True)
             source_route_groups = self.route_groups.list_transition_route_groups(
                 source_flows_map['Default Start Flow'])
             for rg in source_route_groups:
@@ -467,11 +471,14 @@ class CopyUtil:
 
         if agent_type == 'destination':
             intents_map = self.intents.get_intents_map(agent_id, reverse=True)
-            entities_map = self.entities.get_entities_map(agent_id, reverse=True)
-            webhooks_map = self.webhooks.get_webhooks_map(agent_id, reverse=True)
+            entities_map = self.entities.get_entities_map(
+                agent_id, reverse=True)
+            webhooks_map = self.webhooks.get_webhooks_map(
+                agent_id, reverse=True)
             flows_map = self.flows.get_flows_map(agent_id, reverse=True)
             pages_map = self.pages.get_pages_map(flows_map[flow], reverse=True)
-            rgs_map = self.route_groups.get_route_groups_map(flows_map[flow], reverse=True)
+            rgs_map = self.route_groups.get_route_groups_map(
+                flows_map[flow], reverse=True)
 
             # For each page, recurse through the resources and look for
             # specific resource types that have been replaced with literal
@@ -614,7 +621,8 @@ class CopyUtil:
         elif agent_type == 'destination':
             final_trs = []
             intents_map = self.intents.get_intents_map(agent_id, reverse=True)
-            webhooks_map = self.webhooks.get_webhooks_map(agent_id, reverse=True)
+            webhooks_map = self.webhooks.get_webhooks_map(
+                agent_id, reverse=True)
             flows_map = self.flows.get_flows_map(agent_id, reverse=True)
             pages_map = self.pages.get_pages_map(flows_map[flow], reverse=True)
 
@@ -656,6 +664,7 @@ class CopyUtil:
 
 
 # PAGE FUNCTIONS
+
 
     def get_page_dependencies(self, obj_list):
         """ Pass in DFCX Page object(s) and retrieve all resource dependencies.
