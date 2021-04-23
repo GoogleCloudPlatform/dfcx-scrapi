@@ -7,7 +7,6 @@ from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from typing import Dict, List
-# from dfcx.dfcx import DialogflowCX
 
 # logging config
 logging.basicConfig(
