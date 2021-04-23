@@ -1,4 +1,5 @@
 import logging
+import pandas as pd
 import requests
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
@@ -7,6 +8,7 @@ from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from typing import Dict, List
+from core import flows, intents, webhooks
 
 # logging config
 logging.basicConfig(
@@ -24,6 +26,9 @@ class TransitionRouteGroups:
             creds_path, scopes=SCOPES)
         self.creds.refresh(Request())  # used for REST API calls
         self.token = self.creds.token  # used for REST API calls
+        self.flows = flows.Flows(creds_path)
+        self.intents = intents.Intents(creds_path)
+        self.webhooks = webhooks.Webhooks(creds_path)
 
         if route_group_id:
             self.route_group_id = route_group_id
@@ -149,3 +154,68 @@ class TransitionRouteGroups:
             transition_route_group=rg, update_mask=mask)
 
         return response
+
+    def route_groups_to_dataframe(self, agent_id):
+        """ This method extracts the Transition Route Groups from a given DFCX Agent
+        and returns key information about the Route Groups in a Pandas Dataframe
+
+        DFCX Route Groups exist as an Agent level resource, however they are
+        categorized by the Flow they are associated with. This method will
+        extract all Flows for the given agent, then use the Flow IDs to
+        extract all Route Groups per Flow. Once all Route Groups have been
+        extracted, the method will convert the DFCX object to a Pandas
+        Dataframe and return this to the user.
+
+        Args:
+          - agent_id, the Agent ID string in the following format:
+            projects/<project_id>/locations/<location_id>/agents/<agent_id>
+
+        Returns:
+          - df, a Pandas Dataframe
+        """
+
+        # The following dicts and lists are setup to use to map "user friendly"
+        # data labels before writing the Route Group object to a dataframe.
+        flows_dict = {
+            flow.display_name: flow.name for flow in self.flows.list_flows(agent_id)}
+
+        intent_dict = {intent.name.split('/')[-1]: intent.display_name
+                       for intent in self.intents.list_intents(agent_id)}
+
+        webhooks_dict = {webhook.name.split('/')[-1]: webhook.display_name
+                         for webhook in self.webhooks.list_webhooks(agent_id)}
+
+        route_groups_dict = {
+            flow: self.list_transition_route_groups(
+                flows_dict[flow]) for flow in flows_dict}
+
+        rows_list = []
+        for flow in route_groups_dict:
+            for route_group in route_groups_dict[flow]:
+                for route in route_group.transition_routes:
+                    temp_dict = {}
+
+                    temp_dict.update({'flow': flow})
+                    temp_dict.update(
+                        {'route_group_name': route_group.display_name})
+                    temp_dict.update(
+                        {'intent': intent_dict[route.intent.split('/')[-1]]})
+
+                    if route.trigger_fulfillment.webhook:
+                        temp_dict.update(
+                            {'webhook': webhooks_dict[route.trigger_fulfillment.webhook.split('/')[-1]]})
+
+                    temp_dict.update(
+                        {'webhook_tag': route.trigger_fulfillment.tag})
+
+                    if len(route.trigger_fulfillment.messages) > 0:
+                        if len(
+                                route.trigger_fulfillment.messages[0].text.text) > 0:
+                            temp_dict.update(
+                                {'fulfillment_message': route.trigger_fulfillment.messages[0].text.text[0]})
+
+                    rows_list.append(temp_dict)
+
+        df = pd.DataFrame(rows_list)
+
+        return df
