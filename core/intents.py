@@ -1,7 +1,9 @@
 import logging
+import pandas as pd
 import requests
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
+from collections import defaultdict
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
@@ -187,3 +189,35 @@ class Intents:
             client = services.intents.IntentsClient(
                 client_options=client_options)
             client.delete_intent(name=intent_id)
+
+def intents_to_dataframe(self, intents):
+        """
+        This functions takes an Intents object from the DFCX API and returns
+        a Pandas Dataframe
+        """
+        intent_dict = defaultdict(list)
+
+        for element in intents:
+            if 'training_phrases' in element:
+                for tp in element.training_phrases:
+                    s = []
+                    if len(tp.parts) > 1:
+                        for item in tp.parts:
+                            s.append(item.text)
+                        intent_dict[element.display_name].append(''.join(s))
+                    else:
+                        intent_dict[element.display_name].append(
+                            tp.parts[0].text)
+            else:
+                intent_dict[element.display_name].append('')
+
+        df = pd.DataFrame.from_dict(intent_dict, orient='index').transpose()
+        df = df.stack().to_frame().reset_index(level=1)
+        df = df.rename(
+            columns={
+                'level_1': 'intent',
+                0: 'tp'}).reset_index(
+            drop=True)
+        df = df.sort_values(['intent', 'tp'])
+
+        return df
