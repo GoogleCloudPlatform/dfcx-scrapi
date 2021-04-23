@@ -16,26 +16,26 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class TransitionRouteGroups:
-    def __init__(self, creds_path: str, route_group_id: str=None):
+    def __init__(self, creds_path: str, route_group_id: str = None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
+        self.creds.refresh(Request())  # used for REST API calls
+        self.token = self.creds.token  # used for REST API calls
 
         if route_group_id:
             self.route_group_id = route_group_id
             self.client_options = self._set_region(route_group_id)
-
 
     @staticmethod
     def _set_region(item_id):
         """different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like 
+            item_id: agent/flow/page - any type of long path id like
                 `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
@@ -53,8 +53,7 @@ class TransitionRouteGroups:
             return client_options
 
         else:
-            return None # explicit None return when not required
-
+            return None  # explicit None return when not required
 
     def list_transition_route_groups(self, flow_id):
         request = types.transition_route_group.ListTransitionRouteGroupsRequest()
@@ -73,7 +72,6 @@ class TransitionRouteGroups:
 
         return cx_route_groups
 
-
     def get_transition_route_group(self, name):
         request = types.transition_route_group.GetTransitionRouteGroupRequest()
         request.name = name
@@ -83,7 +81,6 @@ class TransitionRouteGroups:
         response = client.get_transition_route_group(request)
 
         return response
-
 
     def create_transition_route_group(self, flow_id, obj, **kwargs):
         #         request = types.transition_route_group.CreateTransitionRouteGroupRequest()
@@ -106,7 +103,6 @@ class TransitionRouteGroups:
             parent=flow_id, transition_route_group=trg)
 
         return response
-
 
     def update_transition_route_group(self, rg_id, obj=None, **kwargs):
         # If route group object is given set route group to it

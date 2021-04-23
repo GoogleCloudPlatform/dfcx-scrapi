@@ -16,26 +16,26 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class Pages:
-    def __init__(self, creds_path: str, page_id: str=None):
+    def __init__(self, creds_path: str, page_id: str = None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
+        self.creds.refresh(Request())  # used for REST API calls
+        self.token = self.creds.token  # used for REST API calls
 
         if page_id:
             self.page_id = page_id
             self.client_options = self._set_region(page_id)
-
 
     @staticmethod
     def _set_region(item_id):
         """different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like 
+            item_id: agent/flow/page - any type of long path id like
                 `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
@@ -53,8 +53,7 @@ class Pages:
             return client_options
 
         else:
-            return None # explicit None return when not required
-
+            return None  # explicit None return when not required
 
     def list_pages(self, flow_id):
         request = types.page.ListPagesRequest()
@@ -73,14 +72,12 @@ class Pages:
 
         return cx_pages
 
-
     def get_page(self, page_id):
         client_options = self._set_region(page_id)
         client = services.pages.PagesClient(client_options=client_options)
         response = client.get_page(name=page_id)
 
         return response
-
 
     def create_page(self, flow_id, obj=None, **kwargs):
         # if page object is given, set page to it
@@ -101,7 +98,6 @@ class Pages:
 
         response = client.create_page(parent=flow_id, page=page)
         return response
-
 
     def update_page(self, page_id, obj=None, **kwargs):
         # If page object is given set page to it

@@ -16,26 +16,26 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class Webhooks:
-    def __init__(self, creds_path: str, webhook_id: str=None):
+    def __init__(self, creds_path: str, webhook_id: str = None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
+        self.creds.refresh(Request())  # used for REST API calls
+        self.token = self.creds.token  # used for REST API calls
 
         if webhook_id:
             self.webhook_id = webhook_id
             self.client_options = self._set_region(webhook_id)
-
 
     @staticmethod
     def _set_region(item_id):
         """different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like 
+            item_id: agent/flow/page - any type of long path id like
                 `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
@@ -53,8 +53,7 @@ class Webhooks:
             return client_options
 
         else:
-            return None # explicit None return when not required
-    
+            return None  # explicit None return when not required
 
     def list_webhooks(self, agent_id):
         request = types.webhook.ListWebhooksRequest()
@@ -72,7 +71,6 @@ class Webhooks:
                 cx_webhooks.append(cx_webhook)
 
         return cx_webhooks
-
 
     def create_webhook(self, agent_id, obj=None, **kwargs):
         # if webhook object is given, set webhook to it

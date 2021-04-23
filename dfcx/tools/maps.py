@@ -41,6 +41,7 @@ class Tools:
 # TODO: (pmarlow@) move this to @staticmethod outside of main function.
 # perhaps move to the main dfcx.py file as a @staticmethod ?
 
+
     def get_flows_map(self, agent_id, reverse=False):
         """ Exports Agent Flow Names and UUIDs into a user friendly dict.
 
@@ -62,7 +63,6 @@ class Tools:
                           for flow in self.dfcx.list_flows(agent_id)}
 
         return flows_dict
-
 
     def get_intents_map(self, agent_id, reverse=False):
         """ Exports Agent Intent Names and UUIDs into a user friendly dict.
@@ -86,7 +86,6 @@ class Tools:
 
         return intents_dict
 
-
     def get_entities_map(self, agent_id, reverse=False):
         """ Exports Agent Entityt Names and UUIDs into a user friendly dict.
 
@@ -108,7 +107,6 @@ class Tools:
                              for entity in self.dfcx.list_entity_types(agent_id)}
 
         return entities_dict
-
 
     def get_webhooks_map(self, agent_id, reverse=False):
         """ Exports Agent Webhook Names and UUIDs into a user friendly dict.
@@ -132,7 +130,6 @@ class Tools:
 
         return webhooks_dict
 
-
     def get_pages_map(self, flow_id, reverse=False):
         """ Exports Agent Page UUIDs and Names into a user friendly dict.
 
@@ -155,7 +152,6 @@ class Tools:
                           for page in self.dfcx.list_pages(flow_id)}
 
         return pages_dict
-
 
     def get_route_groups_map(self, flow_id, reverse=False):
         """ Exports Agent Route Group UUIDs and Names into a user friendly dict.

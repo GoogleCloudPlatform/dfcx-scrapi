@@ -16,23 +16,23 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class Sessions:
-    def __init__(self, creds_path: str, session_id: str=None):
+    def __init__(self, creds_path: str, session_id: str = None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
+        self.creds.refresh(Request())  # used for REST API calls
+        self.token = self.creds.token  # used for REST API calls
         self.session_id = session_id
-        
 
     @staticmethod
     def _set_region(item_id):
         """different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like 
+            item_id: agent/flow/page - any type of long path id like
                 `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
@@ -50,8 +50,8 @@ class Sessions:
             return client_options
 
         else:
-            return None # explicit None return when not required
-        
+            return None  # explicit None return when not required
+
     # SESSION FX
     def run_conversation(
             self,

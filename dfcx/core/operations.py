@@ -13,21 +13,22 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class Operations:
     def __init__(self, creds):
         self.creds = service_account.Credentials.from_service_account_file(
-            creds,scopes=SCOPES)
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
+            creds, scopes=SCOPES)
+        self.creds.refresh(Request())  # used for REST API calls
+        self.token = self.creds.token  # used for REST API calls
 
     @staticmethod
     def _set_region(item_id):
         """different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like 
+            item_id: agent/flow/page - any type of long path id like
                 `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
@@ -45,10 +46,9 @@ class Operations:
             return client_options
 
         else:
-            return None # explicit None return when not required
+            return None  # explicit None return when not required
 
-
-    def get_lro(self, lro: str) -> Dict[str,str]:
+    def get_lro(self, lro: str) -> Dict[str, str]:
         """Used to retrieve the status of LROs for Dialogflow CX.
 
         Args:
@@ -57,7 +57,7 @@ class Operations:
 
         Returns:
           response: Response status and payload from LRO
-              
+
         """
 
         location = lro.split('/')[3]

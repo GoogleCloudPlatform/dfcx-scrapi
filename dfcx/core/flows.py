@@ -16,25 +16,25 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class Flows:
-    def __init__(self, creds_path: str, flow_id: str=None):
+    def __init__(self, creds_path: str, flow_id: str = None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
+        self.creds.refresh(Request())  # used for REST API calls
+        self.token = self.creds.token  # used for REST API calls
 
         if flow_id:
             self.flow_id = flow_id
-        
-        
+
     @staticmethod
     def _set_region(item_id):
         """different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like 
+            item_id: agent/flow/page - any type of long path id like
                 `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
@@ -52,8 +52,7 @@ class Flows:
             return client_options
 
         else:
-            return None # explicit None return when not required
-
+            return None  # explicit None return when not required
 
     def train_flow(self):
         """trains the specified flow.
@@ -61,23 +60,21 @@ class Flows:
         Args:
           flow_id: CX flow ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/flows/<FLOW ID>
-          
+
         Returns:
           response: A Long Running Operation (LRO) ID that can be used to
             check the status of the export using dfcx.get_lro()
         """
 
-
         request = types.flow.TrainFlowRequest()
-        request.name  = self.flow_id
+        request.name = self.flow_id
         client = services.flows.FlowsClient(
-                    credentials=self.creds)
+            credentials=self.creds)
         response = client.train_flow(request)
         return response
 
-
     def list_flows(self, agent_id=None):
-        agent_id = agent_id or self.agent_id # default value
+        agent_id = agent_id or self.agent_id  # default value
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
 
@@ -94,11 +91,10 @@ class Flows:
 
         return flows
 
-    
     def get_flow(self, flow_id):
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(credentials = self.creds,
-            client_options=client_options)
+        client = services.flows.FlowsClient(credentials=self.creds,
+                                            client_options=client_options)
         response = client.get_flow(name=flow_id)
 
         return response
@@ -117,12 +113,12 @@ class Flows:
         mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(credentials = self.creds,
-            client_options=client_options)
+        client = services.flows.FlowsClient(credentials=self.creds,
+                                            client_options=client_options)
         response = client.update_flow(flow=flow, update_mask=mask)
 
         return response
-    
+
     def update_nlu_settings(self, flow_id, **kwargs):
         """updates flow to new NLU setting.
         Args:
@@ -131,14 +127,13 @@ class Flows:
             classification_threshold: (Optional) threshold for the flow
             model_training_mode: (Optional) [0:unspecified, 1:automatic, 2:'manual]
         """
-        
+
         flow = self.get_flow(flow_id)
         currentSettings = flow.nlu_settings
         for key, value in kwargs.items():
             setattr(currentSettings, key, value)
-        self.update_flow(flow_id=flow_id, 
+        self.update_flow(flow_id=flow_id,
                          nlu_settings=currentSettings)
-
 
     def export_flow(self,
                     flow_id: str,
@@ -191,7 +186,6 @@ class Flows:
 
         return lro
 
-
     def import_flow(self, destination_agent_id: str, gcs_path: str,
                     import_option: str = 'FALLBACK') -> Dict[str, str]:
         """ Imports a DFCX Flow from GCS bucket to CX Agent.
@@ -238,8 +232,7 @@ class Flows:
 
         return lro
 
-
-    def delete_flow(self, flow_id: str, force: bool=False):
+    def delete_flow(self, flow_id: str, force: bool = False):
         """
         Args:
           flow_id: flow to delete

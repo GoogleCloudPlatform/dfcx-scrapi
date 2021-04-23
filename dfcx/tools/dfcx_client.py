@@ -43,7 +43,12 @@ MAX_RETRIES = 3  # JWT errors on CX API
 class DialogflowClient:
     """wrapping client requests to a CX agent"""
 
-    def __init__(self, config=None, creds_path=None, agent_path=None, language_code="en"):
+    def __init__(
+            self,
+            config=None,
+            creds_path=None,
+            agent_path=None,
+            language_code="en"):
         """
         one of:
             config: object with creds_path and agent_path
@@ -72,14 +77,12 @@ class DialogflowClient:
         self.qr = None
         self.restart()
 
-
     def restart(self):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
         self.turn_count = 0
         # logging.info('restarted agent: session: %s', self.session_id)
         # print('restarted DFCX.client=>', self.agent_path)
-
 
     def _set_region(self, agent_id=None):
         '''non global agents require a special endpoint in client_options'''
@@ -94,7 +97,6 @@ class DialogflowClient:
             return client_options
         return None
 
-
     def checkpoint(self, msg=None, start=False):
         '''print a checkpoint to time progress and debug bottleneck'''
         if start:
@@ -108,7 +110,13 @@ class DialogflowClient:
                 print("{:0.2f}s {}".format(duration, msg))
 
     # TODO - refactor options as a dict?
-    def reply(self, send_obj, restart=False, raw=False, retries=0, disable_webhook=True):
+    def reply(
+            self,
+            send_obj,
+            restart=False,
+            raw=False,
+            retries=0,
+            disable_webhook=True):
         """
         send_obj to bot and get reply
             text
@@ -176,17 +184,19 @@ class DialogflowClient:
             self.checkpoint('<< got response')
             qr = response.query_result
             logging.debug('dfcx>qr %s', qr)
-            self.qr = qr # for debugging
+            self.qr = qr  # for debugging
             reply = {}
 
             # flatten array of text responses
-            # seems like there should be a better interface to pull out the texts
+            # seems like there should be a better interface to pull out the
+            # texts
             texts = []
             for msg in qr.response_messages:
                 if msg.payload:
                     reply['payload'] = self.extract_payload(msg)
                 if (len(msg.text.text)) > 0:
-                    text = msg.text.text[-1]  # this could be multiple lines too?
+                    # this could be multiple lines too?
+                    text = msg.text.text[-1]
                     # print('text', text)
                     texts.append(text)
 
@@ -202,8 +212,10 @@ class DialogflowClient:
                     val = qr.parameters[param]
                     if isinstance(val, RepeatedComposite):
                         # some type of protobuf array - for now we just flatten as a string with spaces
-                        # FIXME - how better to convert list types in params responses?
-                        logging.info('converting param: %s val: %s', param, val)
+                        # FIXME - how better to convert list types in params
+                        # responses?
+                        logging.info(
+                            'converting param: %s val: %s', param, val)
                         # val = val[0]
                         val = " ".join(val)
                         logging.info('converted val to: %s', val)
@@ -262,7 +274,7 @@ class DialogflowClient:
 
         qr = response.query_result
         logging.debug('dfcx>qr %s', qr)
-        self.qr = qr # for debugging
+        self.qr = qr  # for debugging
         reply = {}
 
         # flatten array of text responses
@@ -289,10 +301,23 @@ class DialogflowClient:
                 if isinstance(actual, RepeatedComposite):
                     actual = ' '.join(actual)
 
-                if not isinstance(actual, str) and not isinstance(actual, bool) and not isinstance(actual, int):
-                    # FIXME - still not an actual recognized type just stringify it
-                    logging.error('ERROR convert to string type for param %s | type: %s', param, type(actual))
-                    logging.info("converted: [before: %s |after: %s]", actual, str(actual))
+                if not isinstance(
+                    actual,
+                    str) and not isinstance(
+                    actual,
+                    bool) and not isinstance(
+                    actual,
+                        int):
+                    # FIXME - still not an actual recognized type just
+                    # stringify it
+                    logging.error(
+                        'ERROR convert to string type for param %s | type: %s',
+                        param,
+                        type(actual))
+                    logging.info(
+                        "converted: [before: %s |after: %s]",
+                        actual,
+                        str(actual))
                     actual = str(actual)
 
                 params[param] = actual
@@ -317,7 +342,6 @@ class DialogflowClient:
 
         return reply
 
-
     # TODO - dfqr class that has convenience accessor methods for different properties
     # basically to unwind the protobut
 
@@ -325,8 +349,7 @@ class DialogflowClient:
         '''convert to json so we can get at the object'''
         blobstr = json_format.MessageToJson(msg._pb)
         blob = json.loads(blobstr)
-        return blob.get('payload') # deref for nesting
-
+        return blob.get('payload')  # deref for nesting
 
     def format_other_intents(self, qr):
         """unwind protobufs into more friendly dict"""
@@ -347,7 +370,8 @@ class DialogflowClient:
     def to_json(pbuf):
         '''extractor of private fields
         '''
-        blob = json_format.MessageToJson(pbuf) # i think this returns JSON as a string
+        blob = json_format.MessageToJson(
+            pbuf)  # i think this returns JSON as a string
         return blob
 
     def getpath(self, obj, xpath, default=None):

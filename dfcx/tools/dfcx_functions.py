@@ -41,6 +41,7 @@ class DialogflowFunctions:
 # TODO: (pmarlow@) move this to @staticmethod outside of main function.
 # perhaps move to the main dfcx.py file as a @staticmethod ?
 
+
     def get_flows_map(self, agent_id, reverse=False):
         """ Exports Agent Flow Names and UUIDs into a user friendly dict.
 
@@ -801,7 +802,6 @@ class DialogflowFunctions:
 
 # PAGE FUNCTIONS
 
-
     def get_page_dependencies(self, obj_list):
         """ Pass in DFCX Page object(s) and retrieve all resource dependencies.
 
@@ -873,6 +873,7 @@ class DialogflowFunctions:
 
 
 # DATAFRAME FUNCTIONS
+
 
     def route_groups_to_dataframe(self, agent_id=None):
         """ This method extracts the Transition Route Groups from a given DFCX Agent
@@ -974,10 +975,8 @@ class DialogflowFunctions:
 
         return df
 
-    
 
 # SPECIAL PURPOSE FUNCTIONS
-
 
     def find_list_parameters(self, agent_id):
         """ This method extracts Parameters set at a page level that are

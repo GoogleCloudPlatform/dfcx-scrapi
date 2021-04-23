@@ -16,26 +16,26 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class Intents:
-    def __init__(self, creds_path: str, intent_id: str=None):
+    def __init__(self, creds_path: str, intent_id: str = None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
+        self.creds.refresh(Request())  # used for REST API calls
+        self.token = self.creds.token  # used for REST API calls
 
         if intent_id:
             self.intent_id = intent_id
             self.client_options = self._set_region(agent_id)
-        
-        
+
     @staticmethod
     def _set_region(item_id):
         """different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like 
+            item_id: agent/flow/page - any type of long path id like
                 `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
@@ -53,7 +53,7 @@ class Intents:
             return client_options
 
         else:
-            return None # explicit None return when not required
+            return None  # explicit None return when not required
 
     @staticmethod
     def _set_api_options(self, id_item):
@@ -61,10 +61,9 @@ class Intents:
         client_options = self._set_region(id_item)
         return {
             'client_options': client_options,
-            'credentials': self.creds 
+            'credentials': self.creds
         }
 
-        
     def list_intents(self, agent_id):
         '''provide a list of intents'''
         request = types.intent.ListIntentsRequest()
@@ -72,7 +71,7 @@ class Intents:
 
         client_options = self._set_region(agent_id)
         client = services.intents.IntentsClient(
-            credentials=self.creds, 
+            credentials=self.creds,
             client_options=client_options)
         response = client.list_intents(request)
 
@@ -134,7 +133,6 @@ class Intents:
 
         return response
 
-
     def update_intent(self, intent_id, obj=None, **kwargs):
         """ Updates a single Intent object based on provided args.
 
@@ -157,7 +155,6 @@ class Intents:
 
         return response
 
-
     def delete_intent(self, intent_id, obj=None):
         if obj:
             intent_id = obj.name
@@ -165,4 +162,4 @@ class Intents:
             client_options = self._set_region(intent_id)
             client = services.intents.IntentsClient(
                 client_options=client_options)
-            client.delete_intent(name=intent_id)  
+            client.delete_intent(name=intent_id)

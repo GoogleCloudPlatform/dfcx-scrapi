@@ -16,41 +16,42 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class Static:
- 
+
     @staticmethod
     def make_generic(obj, obj_type, default, conditionals=dict()):
-            if isinstance(obj, obj_type):
-                return obj
+        if isinstance(obj, obj_type):
+            return obj
 
-            elif isinstance(obj, dict):
-                obj_ins = obj_type()
-                for key, value in obj.items():
-                    if key in conditionals.keys():
-                        func = conditionals[key]
-                        out = func(value)
-                        setattr(obj_ins, key, out)
-                    else:
-                        print(value)
-                        setattr(obj_ins, key, value)
-                return obj_ins
-
-            elif isinstance(obj, str):
-                dic = {
-                    'unspecified': 0,
-                    'map': 1,
-                    'list': 2,
-                    'regexp': 3,
-                    'default': 1}
-                t = dic.get(obj.lower())
-                if t:
-                    return obj_type(t)
+        elif isinstance(obj, dict):
+            obj_ins = obj_type()
+            for key, value in obj.items():
+                if key in conditionals.keys():
+                    func = conditionals[key]
+                    out = func(value)
+                    setattr(obj_ins, key, out)
                 else:
-                    return default
+                    print(value)
+                    setattr(obj_ins, key, value)
+            return obj_ins
+
+        elif isinstance(obj, str):
+            dic = {
+                'unspecified': 0,
+                'map': 1,
+                'list': 2,
+                'regexp': 3,
+                'default': 1}
+            t = dic.get(obj.lower())
+            if t:
+                return obj_type(t)
             else:
                 return default
+        else:
+            return default
 
     @staticmethod
     def make_seq(self, obj, obj_type, default, conditionals=dict()):
@@ -108,7 +109,6 @@ class Static:
                 setattr(route, key, value)
 
         return route
-    
 
         @staticmethod
         def make_trigger_fulfillment(
@@ -156,7 +156,6 @@ class Static:
 
             print(fulfillment)
             return fulfillment
-
 
     @staticmethod
     def set_entity_type_attr(self, entity_type, kwargs):
