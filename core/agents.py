@@ -16,26 +16,26 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class Agents:
-    def __init__(self, creds_path: str, agent_id: str=None):
+    def __init__(self, creds_path: str, agent_id: str = None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
+        self.creds.refresh(Request())  # used for REST API calls
+        self.token = self.creds.token  # used for REST API calls
 
         if agent_id:
             self.agent_id = agent_id
             self.client_options = self._set_region(agent_id)
-
 
     @staticmethod
     def _set_region(item_id):
         """different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like 
+            item_id: agent/flow/page - any type of long path id like
                 `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
@@ -53,7 +53,7 @@ class Agents:
             return client_options
 
         else:
-            return None # explicit None return when not required
+            return None  # explicit None return when not required
 
 # AGENT FX
 
@@ -71,7 +71,7 @@ class Agents:
 
         client_options = self._set_region(location_id)
         client = services.agents.AgentsClient(
-            credentials = self.creds,
+            credentials=self.creds,
             client_options=client_options)
 
         response = client.list_agents(request)
@@ -89,9 +89,9 @@ class Agents:
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials = self.creds,
+            credentials=self.creds,
             client_options=client_options)
-            
+
         response = client.get_agent(request)
 
         return response
@@ -140,13 +140,13 @@ class Agents:
 
         client_options = self._set_region(parent)
         client = services.agents.AgentsClient(
-            credentials = self.creds,
+            credentials=self.creds,
             client_options=client_options)
         response = client.create_agent(parent=parent, agent=agent)
 
         return response
 
-    def validate(self, agent_id: str) -> Dict:
+    def validate_agent(self, agent_id: str) -> Dict:
         """Initiates the Validation of the CX Agent or Flow.
 
         This function will start the Validation feature for the given Agent
@@ -251,17 +251,16 @@ class Agents:
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials = self.creds, 
+            credentials=self.creds,
             client_options=client_options)
         response = client.export_agent(request)
 
         return response.operation.name
 
-
     def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
-        """Restores a CX agent from a gcs_bucket location. 
-        TODO(pmarlow@) Currently there is no way to restore back to default 
-        settings via the api. The feature request for this is logged. 
+        """Restores a CX agent from a gcs_bucket location.
+        TODO(pmarlow@) Currently there is no way to restore back to default
+        settings via the api. The feature request for this is logged.
 
         Args:
           agent_id: CX Agent ID string in the following format
@@ -281,18 +280,17 @@ class Agents:
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials = self.creds,
+            credentials=self.creds,
             client_options=client_options)
         response = client.restore_agent(request)
 
         return response.operation.name
 
-    
     def update_agent(
-        self, 
-        agent_id: str, 
-        obj: types.Agent=None, 
-        **kwargs) -> types.Agent:
+            self,
+            agent_id: str,
+            obj: types.Agent = None,
+            **kwargs) -> types.Agent:
         """Updates a single Agent object based on provided kwargs.
 
         Args:
@@ -316,12 +314,11 @@ class Agents:
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials = self.creds,
-            client_options = client_options)
+            credentials=self.creds,
+            client_options=client_options)
         response = client.update_agent(agent=agent, update_mask=mask)
 
         return response
-
 
     def delete_agent(self, agent_id: str) -> str:
         """Deletes the specified Dialogflow CX Agent.
@@ -332,8 +329,8 @@ class Agents:
         """
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials = self.creds,
-            client_options = client_options)
+            credentials=self.creds,
+            client_options=client_options)
         client.delete_agent(name=agent_id)
 
         return 'Agent \'{}\' successfully deleted.'.format(agent_id)

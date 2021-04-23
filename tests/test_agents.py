@@ -1,8 +1,8 @@
 import pytest
 import time
 import google.cloud.dialogflowcx_v3beta1.types as types
-import dfcx.core.agents as agents
-import dfcx.core.operations as operations
+import core.agents as agents
+import core.operations as operations
 # from dfcx.core import agents, operations
 from datetime import datetime
 from typing import List, Dict

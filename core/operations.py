@@ -4,7 +4,6 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
 from typing import Dict, List
-# from dfcx.dfcx import DialogflowCX
 
 # logging config
 logging.basicConfig(
@@ -13,7 +12,8 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
+
 
 class Operations:
     def __init__(self, creds_path):
@@ -27,7 +27,7 @@ class Operations:
         """different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like 
+            item_id: agent/flow/page - any type of long path id like
                 `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
@@ -45,11 +45,9 @@ class Operations:
             return client_options
 
         else:
-            return None # explicit None return when not required
+            return None  # explicit None return when not required
 
-# OPERATIONS FX
-
-    def get_lro(self, lro: str) -> Dict[str,str]:
+    def get_lro(self, lro: str) -> Dict[str, str]:
         """Used to retrieve the status of LROs for Dialogflow CX.
 
         Args:
@@ -58,7 +56,7 @@ class Operations:
 
         Returns:
           response: Response status and payload from LRO
-              
+
         """
 
         location = lro.split('/')[3]
