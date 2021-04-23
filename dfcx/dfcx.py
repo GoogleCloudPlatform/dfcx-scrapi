@@ -124,13 +124,16 @@ class DialogflowCX:
 
         return intents
 
+
     def get_intent(self, intent_id):
         client_options = self._set_region(intent_id)
         client = services.intents.IntentsClient(
-            credentials=self.creds, client_options=client_options)
+            credentials=self.creds, 
+            client_options=client_options)
         response = client.get_intent(name=intent_id)
 
         return response
+
 
     def create_intent(self, agent_id, obj=None, **kwargs):
         # If intent_obj is given, set intent variable to it
