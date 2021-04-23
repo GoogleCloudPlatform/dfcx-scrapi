@@ -54,6 +54,29 @@ class Pages:
         else:
             return None  # explicit None return when not required
 
+    def get_pages_map(self, flow_id, reverse=False):
+        """ Exports Agent Page UUIDs and Names into a user friendly dict.
+
+        Args:
+          - flow_id, the formatted CX Agent Flow ID to use
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+
+        Returns:
+          - webhooks_map, Dictionary containing Webhook UUIDs as keys and
+              webhook.display_name as values. If Optional reverse=True, the
+              output will return page_name:ID mapping instead of ID:page_name
+          """
+
+        if reverse:
+            pages_dict = {page.display_name: page.name
+                          for page in self.list_pages(flow_id)}
+
+        else:
+            pages_dict = {page.name: page.display_name
+                          for page in self.list_pages(flow_id)}
+
+        return pages_dict
+
     def list_pages(self, flow_id):
         request = types.page.ListPagesRequest()
         request.parent = flow_id
