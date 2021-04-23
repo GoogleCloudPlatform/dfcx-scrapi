@@ -54,6 +54,28 @@ class EntityTypes:
         else:
             return None  # explicit None return when not required
 
+    def get_entities_map(self, agent_id, reverse=False):
+        """ Exports Agent Entityt Names and UUIDs into a user friendly dict.
+
+        Args:
+          - agent_id, the formatted CX Agent ID to use
+          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+
+        Returns:
+          - intents_map, Dictionary containing Entity UUIDs as keys and
+              intent.display_name as values
+          """
+
+        if reverse:
+            entities_dict = {entity.display_name: entity.name
+                             for entity in self.list_entity_types(agent_id)}
+
+        else:
+            entities_dict = {entity.name: entity.display_name
+                             for entity in self.list_entity_types(agent_id)}
+
+        return entities_dict
+
     def list_entity_types(self, agent_id):
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
