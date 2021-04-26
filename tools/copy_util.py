@@ -12,7 +12,7 @@ import google.cloud.dialogflowcx_v3beta1.types as types
 
 from collections import defaultdict
 from typing import Dict, List
-from core import intents, entity_types, flows, pages, webhooks, transition_route_groups
+from ..core import intents, entity_types, flows, pages, webhooks, transition_route_groups
 
 # logging config
 logging.basicConfig(
