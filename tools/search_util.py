@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import google.cloud.dialogflowcx_v3beta1.types as types
 
-from core import entity_types, flows, intents, pages
+from ..core import entity_types, flows, intents, pages
 
 # logging config
 logging.basicConfig(

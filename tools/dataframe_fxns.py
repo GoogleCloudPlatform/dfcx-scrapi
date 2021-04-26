@@ -11,7 +11,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import gspread
 from gspread_dataframe import set_with_dataframe
 from tabulate import tabulate
-from core import entity_types, intents, flows, pages, transition_route_groups
+from ..core import entity_types, intents, flows, pages, transition_route_groups
 
 
 # logging config
