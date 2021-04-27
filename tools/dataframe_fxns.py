@@ -192,7 +192,7 @@ class Dataframe_fxns:
 
     def bulk_update_intents_from_dataframe(self, agent_id, train_phrases_df,
                                            params_df=pd.DataFrame(),
-                                           mode='basic', update_flag=False):
+                                           mode='basic', update_flag=False, rate_limiter=5):
         """update an existing intents training phrases and parameters
 
         Args:
@@ -205,6 +205,7 @@ class Dataframe_fxns:
                 basic: build assuming one row is one training phrase no entities
                 advanced: build keeping track of training phrases and parts with the training_phrase and parts column.
             update_flag: True to update_flag the intents in the agent
+            rate_limiter: seconds to sleep between operations. 
 
         Returns:
             modified_intents: dictionary with intent display names as keys
@@ -329,8 +330,7 @@ class Dataframe_fxns:
                 logging.info('updating_intent %s', intent_name)
                 self.intents.update_intent(
                     intent_id=new_intent.name, obj=new_intent)
-                if i % 179 == 0:
-                    time.sleep(62)
+                time.sleep(rate_limiter)
 
         return new_intents
 
@@ -463,7 +463,7 @@ class Dataframe_fxns:
             train_phrases_df,
             params_df=pd.DataFrame(),
             mode='basic',
-            update_flag=False):
+            update_flag=False, rate_limiter=5):
         """create intents
 
         Args:
@@ -558,8 +558,7 @@ class Dataframe_fxns:
             i += 1
             self.progressBar(i, len(intents))
             if update_flag:
-                if i % 100 == 0:
-                    time.sleep(70)
+                time.sleep(rate_limiter)
                 self.intents.create_intent(agent_id=agent_id, obj=newIntent)
 
         return newIntents
@@ -598,7 +597,7 @@ class Dataframe_fxns:
         return entity_pb
 
     def bulk_create_entity_from_dataframe(
-            self, agent_id, entities_df, update_flag=False):
+            self, agent_id, entities_df, update_flag=False, rate_limiter=5):
         """create entities
 
         Args:
@@ -606,6 +605,7 @@ class Dataframe_fxns:
              entities_df: dataframe of bulk entities
                 required columns: display_name, value, synonyms
             update_flag: True to update_flag the entiites in the agent
+            rate_limiter: seconds to sleep between operations. 
 
         Returns:
             new_entities: dictionary with entity display names as keys and the new entity protobufs as values
@@ -635,8 +635,7 @@ class Dataframe_fxns:
             if update_flag:
                 self.entities.create_entity_type(
                     agent_id=agent_id, obj=new_entity)
-                if i % 179 == 0:
-                    time.sleep(61)
+                time.sleep(rate_limiter)
 
             self.progressBar(i,
                              len(list(set(entities_df['display_name']))),
@@ -658,6 +657,7 @@ class Dataframe_fxns:
                     custom_payload: a singular payload or list of payloads ex. [{}, {}]
                     fullfillment_text: = list of text ["yo", "hi"]
                     parameter_presets: = dictionary of parameter presets ex. {"param1":"value","param2":"othervalues"}
+                    rate_limiter: seconds to sleep between operations. 
 
             Returns:
                 transitionRoute: transition route protobuf
