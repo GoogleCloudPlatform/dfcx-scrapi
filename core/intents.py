@@ -190,9 +190,8 @@ class Intents:
                 client_options=client_options)
             client.delete_intent(name=intent_id)
 
-
-    @staticmethod
-    def intents_to_dataframe(intents):
+    # FIXME - this can be a static method
+    def intents_to_dataframe(self, intents):
         """
         This functions takes an Intents object from the DFCX API and returns
         a Pandas Dataframe

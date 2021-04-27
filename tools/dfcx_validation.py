@@ -2,6 +2,10 @@ import os
 import sys
 import re
 import time
+
+from unipath import Path
+
+
 import pandas as pd
 import numpy as np
 import requests
@@ -11,10 +15,12 @@ import google.cloud.dialogflowcx_v3beta1.services as services
 from typing import Dict, List
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
-from core import agents, flows
-from tools.dataframe_fxns import Dataframe_fxns
 
-# sys.path.append('..')
+
+from ..core import agents, flows
+
+
+
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
           'https://www.googleapis.com/auth/dialogflow']
