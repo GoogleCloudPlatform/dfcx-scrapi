@@ -29,8 +29,8 @@ from google.cloud.dialogflowcx_v3beta1.types import session
 from proto.marshal.collections.repeated import RepeatedComposite
 # from proto.marshal.collections.repeated import RepeatedComposite
 
-from .sapi_base import SapiBase
 
+from .sapi_base import SapiBase
 
 logger = logging
 

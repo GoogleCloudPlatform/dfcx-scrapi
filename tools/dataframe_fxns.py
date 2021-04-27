@@ -687,6 +687,7 @@ class Dataframe_fxns:
 
         fulfillment_text = route_dict.get('fullfillment_text', None)
         if fulfillment_text:
+            # FIXME ast is not defined
             fulfillment_text = ast.literal_eval(fulfillment_text)
 
         # custom payloads and text

@@ -21,6 +21,10 @@ class SapiBase:
 
     def __init__(self, creds_path, agent_path):
         logging.info('create sapi_base \ncreds_path:%s \nagent_path: %s', creds_path, agent_path)
+        # TODO - decide on creds or creds_path 
+        # currently a lot of other classes still expect the raw path
+        # and then handle creds internally eg Intents
+        self.creds_path = creds_path
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES )
         self.agent_path = agent_path
@@ -83,30 +87,31 @@ class SapiBase:
         return blob.get('payload') # deref for nesting
 
 
-    def get_lro(self, lro: str) -> Dict[str,str]:
-        """Used to retrieve the status of LROs for Dialogflow CX.
 
-        Args:
-          lro: The Long Running Operation(LRO) ID in the following format
-              'projects/<project-name>/locations/<locat>/operations/<operation-uuid>'
+    # def get_lro(self, lro: str) -> Dict[str,str]:
+    #     """Used to retrieve the status of LROs for Dialogflow CX.
 
-        Returns:
-          response: Response status and payload from LRO
-              
-        """
+    #     Args:
+    #       lro: The Long Running Operation(LRO) ID in the following format
+    #           'projects/<project-name>/locations/<locat>/operations/<operation-uuid>'
 
-        location = lro.split('/')[3]
-        if location != 'global':
-            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                location)
-        else:
-            base_url = 'https://dialogflow.googleapis.com/v3beta1'
+    #     Returns:
+    #       response: Response status and payload from LRO
 
-        url = '{0}/{1}'.format(base_url, lro)
-        headers = {"Authorization": "Bearer {}".format(self.token)}
+    #     """
 
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
+    #     location = lro.split('/')[3]
+    #     if location != 'global':
+    #         base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
+    #             location)
+    #     else:
+    #         base_url = 'https://dialogflow.googleapis.com/v3beta1'
 
-        return results.json()
+    #     url = '{0}/{1}'.format(base_url, lro)
+    #     headers = {"Authorization": "Bearer {}".format(self.token)}
+
+    #     # Make REST call
+    #     results = requests.get(url, headers=headers)
+    #     results.raise_for_status()
+
+    #     return results.json()
