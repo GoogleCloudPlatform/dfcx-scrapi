@@ -11,7 +11,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import gspread
 from gspread_dataframe import set_with_dataframe
 from tabulate import tabulate
-from core import entity_types, intents, flows, pages, transition_route_groups
+from ..core import entity_types, intents, flows, pages, transition_route_groups
 
 
 # logging config
@@ -687,6 +687,7 @@ class Dataframe_fxns:
 
         fulfillment_text = route_dict.get('fullfillment_text', None)
         if fulfillment_text:
+            # FIXME ast is not defined
             fulfillment_text = ast.literal_eval(fulfillment_text)
 
         # custom payloads and text

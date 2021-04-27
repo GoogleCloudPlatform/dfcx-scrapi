@@ -1,3 +1,6 @@
+# defautl file for whitespace fixes if not defined at cmdline
+f ?= dfcx.py
+
 # for google cloud shell
 python-setup:
 	sudo apt-get install python3-venv
@@ -14,8 +17,6 @@ pfreeze:
 test:
 	pytest
 
-# defautl file for whitespace fixes if not defined at cmdline
-f ?= dfcx.py
 
 # just fix selected whitespace
 autofix-min-whitespace:

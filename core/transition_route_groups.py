@@ -8,7 +8,7 @@ from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from typing import Dict, List
-from core import flows, intents, webhooks
+from ..core import flows, intents, webhooks
 
 # logging config
 logging.basicConfig(
