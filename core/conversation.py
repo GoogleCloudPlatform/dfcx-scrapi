@@ -38,7 +38,7 @@ logging.basicConfig(
     format='[dfcx] %(levelname)s:%(message)s', level=logging.INFO)
 
 MAX_RETRIES = 3  # JWT errors on CX API
-
+DEBUG_LEVEL = 'info'  # silly for request/response
 
 class DialogflowConversation(SapiBase):
     """
@@ -183,9 +183,9 @@ class DialogflowConversation(SapiBase):
                                               query_input=query_input,
                                               query_params=query_params)
 
-        logging.info('disable_webhook: %s', disable_webhook)
-        logging.info('query_params: %s', query_params)
-        logging.info('request %s', request)
+        logging.debug('disable_webhook: %s', disable_webhook)
+        logging.debug('query_params: %s', query_params)
+        logging.debug('request %s', request)
 
         try:
             response = session_client.detect_intent(request=request)
@@ -266,7 +266,6 @@ class DialogflowConversation(SapiBase):
                 #     logging.info('converted val to: %s', val)
                 params[param] = val
 
-        # reply['payload'] = payload
         reply["text"] = "\n".join(texts)
         reply["confidence"] = qr.intent_detection_confidence
         reply["page_name"] = qr.current_page.display_name
@@ -277,9 +276,11 @@ class DialogflowConversation(SapiBase):
         # if raw:
             # self.qr = qr
             # reply["qr"] = qr
-        blob = SapiBase.response_to_json(qr)
-        logging.info('response: %s', json.dumps(blob, indent=2))
-        # logging.info('response: %s', blob)
+
+        if DEBUG_LEVEL == 'silly':
+            blob = SapiBase.response_to_json(qr)
+            logging.info('response: %s', json.dumps(blob, indent=2)) # do NOT deploy
+            # logging.debug('response: %s', blob)
 
         # self.checkpoint('<< formatted response')
         logging.debug('reply %s', reply)
