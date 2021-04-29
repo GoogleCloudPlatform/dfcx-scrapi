@@ -38,7 +38,7 @@ logging.basicConfig(
     format='[dfcx] %(levelname)s:%(message)s', level=logging.INFO)
 
 MAX_RETRIES = 3  # JWT errors on CX API
-
+DEBUG_LEVEL = 'info'  # silly for request/response
 
 class DialogflowConversation(SapiBase):
     """
@@ -88,32 +88,6 @@ class DialogflowConversation(SapiBase):
         self.turn_count = 0
         # logging.info('restarted agent: session: %s', self.session_id)
         # print('restarted DFCX.client=>', self.agent_path)
-
-
-    # def _set_region(self, agent_id=None):
-    #     '''non global agents require a special endpoint in client_options'''
-    #     agent_id = agent_id or self.agent_path
-    #     location = agent_id.split('/')[3]
-    #     if location != 'global':
-    #         api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
-    #         client_options = {
-    #             'api_endpoint': api_endpoint
-    #         }
-    #         # logger.info('client options %s', client_options)
-    #         return client_options
-        
-    #     # custom_environment = self.agent_env.get('environment')
-    #     # if custom_environment:
-    #     #     api_endpoint = f'https://dialogflow.googleapis.com/v3/{agent_id}/environments/{custom_environment}'
-    #     #     client_options = {
-    #     #         'api_endpoint': api_endpoint
-    #     #     }
-    #     #     logging.info('using custom endpoint: %s', api_endpoint)
-    #     #     logging.info('agent_id %s', agent_id)
-    #     #     logging.info('location %s', location)
-    #     #     return client_options
-    #     # else
-    #     return None
 
 
     def set_agent_env(self, param, value):
@@ -166,18 +140,9 @@ class DialogflowConversation(SapiBase):
         # projects/*/locations/*/agents/*/environments/*/sessions/*
         custom_environment = self.agent_env.get('environment')
 
-        #### currently it's not supported to query an experiment directly
-        # custom_experiment = self.agent_env.get('experiment')
-        # if custom_experiment:
-        #     if not custom_environment:
-        #         logging.error('ERROR cannot set experiment without environment! got experiment %s', custom_experiment)
-        #         # TODO - maybe later we can look for the relevant env?
-        #         # return None
-        #     else:
-        #         session_path = f"{self.agent_path}/environments/{custom_environment}/experiments/{custom_experiment}/sessions/{self.session_id}"
-
         if custom_environment:
             # just the environment and NOT experiment (change to elif if experiment comes back)
+            logging.info('req using env: %s', custom_environment)
             session_path = f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
         else:
             session_path = f"{self.agent_path}/sessions/{self.session_id}"
@@ -185,8 +150,6 @@ class DialogflowConversation(SapiBase):
         # self.checkpoint('made client')
         # logging.info('session_path %s', session_path)
 
-        # set parameters separately with single query and an empty text
-        # query_params = {'disable_webhook': True }
         disable_webhook = self.agent_env.get('disable_webhook') or False
 
         if send_params:
@@ -221,84 +184,11 @@ class DialogflowConversation(SapiBase):
                                               query_params=query_params)
 
         logging.info('disable_webhook: %s', disable_webhook)
-        logging.info('query_params: %s', query_params)
-        logging.info('request %s', request)
+        logging.debug('query_params: %s', query_params)
+        logging.debug('request %s', request)
 
         try:
             response = session_client.detect_intent(request=request)
-            self.checkpoint('<< got response')
-            qr = response.query_result
-            logging.debug('dfcx>qr %s', qr)
-            self.qr = qr # for debugging
-            reply = {}
-
-            # flatten array of text responses
-            # seems like there should be a better interface to pull out the texts
-            texts = []
-            for msg in qr.response_messages:
-                if msg.payload:
-                    reply['payload'] = SapiBase.extract_payload(msg)
-                if (len(msg.text.text)) > 0:
-                    text = msg.text.text[-1]  # this could be multiple lines too?
-                    # print('text', text)
-                    texts.append(text)
-
-            # print('texts', texts)
-
-            # reply['payload'] = payload
-            reply["text"] = "\n".join(texts)
-            reply["confidence"] = qr.intent_detection_confidence
-            reply["page_name"] = qr.current_page.display_name
-            reply["intent_name"] = qr.intent.display_name
-            reply["other_intents"] = self.format_other_intents(qr)
-
-            # flatten params struct
-            params = {}
-            # print('parameters', json.dumps(qr.parameters))  ## not JSON
-            # serialisable until it's not
-            if qr.parameters:
-                for param in qr.parameters:
-                    # turn into key: value pairs
-                    val = qr.parameters[param]
-                    try:
-                        if isinstance(val, RepeatedComposite):
-                            # some type of protobuf array - for now we just flatten as a string with spaces
-                            # FIXME - how better to convert list types in params responses?
-                            logging.info('converting param: %s val: %s', param, val)
-                            # val = val[0]
-                            val = " ".join(val)
-                            logging.info('converted val to: %s', val)
-
-                    except TypeError as err:
-                        logging.error("Exception on CX.detect %s", err)
-                        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-                        message = template.format(type(err).__name__, err.args)
-                        logging.error(message)
-                        logging.error('failed to extract params for: %s', text)
-                        
-
-                        # give up on params
-
-                    # if isinstance(val, MapComposite):
-                    #     # some type of protobuf array - for now we just flatten as a string with spaces
-                    #     # FIXME - how better to convert list types in params responses?
-                    #     logging.info('converting param: %s val: %s', param, val)
-                    #     # val = val[0]
-                    #     val = " ".join(val)
-                    #     logging.info('converted val to: %s', val)
-                    params[param] = val
-
-            reply["params"] = params
-
-            if raw:
-                # self.qr = qr
-                reply["qr"] = qr
-                reply["json"] = SapiBase.response_to_json(qr)
-
-            # self.checkpoint('<< formatted response')
-            logging.debug('reply %s', reply)
-            return reply
-
 
         # CX throws a 429 error
         # TODO - more specific exception
@@ -322,6 +212,9 @@ class DialogflowConversation(SapiBase):
                 raise err
                 # return None ## try next one
 
+        # format reply
+
+        self.checkpoint('<< got response')
         qr = response.query_result
         logging.debug('dfcx>qr %s', qr)
         self.qr = qr # for debugging
@@ -338,46 +231,61 @@ class DialogflowConversation(SapiBase):
                 # print('text', text)
                 texts.append(text)
 
-        # print('texts', texts)
-
         # flatten params struct
         params = {}
         # print('parameters', json.dumps(qr.parameters))  ## not JSON
-        # serialisable
+        # serialisable until it's not
         if qr.parameters:
             for param in qr.parameters:
                 # turn into key: value pairs
-                actual = qr.parameters[param]
-                if isinstance(actual, RepeatedComposite):
-                    actual = ' '.join(actual)
+                val = qr.parameters[param]
+                try:
+                    if isinstance(val, RepeatedComposite):
+                        # some type of protobuf array - for now we just flatten as a string with spaces
+                        # FIXME - how better to convert list types in params responses?
+                        logging.info('converting param: %s val: %s', param, val)
+                        # val = val[0]
+                        val = " ".join(val)
+                        logging.info('converted val to: %s', val)
 
-                if not isinstance(actual, str) and not isinstance(actual, bool) and not isinstance(actual, int):
-                    # FIXME - still not an actual recognized type just stringify it
-                    logging.error('ERROR convert to string type for param %s | type: %s', param, type(actual))
-                    logging.info("converted: [before: %s |after: %s]", actual, str(actual))
-                    actual = str(actual)
+                except TypeError as err:
+                    logging.error("Exception on CX.detect %s", err)
+                    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                    message = template.format(type(err).__name__, err.args)
+                    logging.error(message)
+                    logging.error('failed to extract params for: %s', text)
 
-                params[param] = actual
+                # give up on params
+
+                # if isinstance(val, MapComposite):
+                #     # some type of protobuf array - for now we just flatten as a string with spaces
+                #     # FIXME - how better to convert list types in params responses?
+                #     logging.info('converting param: %s val: %s', param, val)
+                #     # val = val[0]
+                #     val = " ".join(val)
+                #     logging.info('converted val to: %s', val)
+                params[param] = val
 
         reply["text"] = "\n".join(texts)
-        reply["params"] = params
         reply["confidence"] = qr.intent_detection_confidence
         reply["page_name"] = qr.current_page.display_name
         reply["intent_name"] = qr.intent.display_name
         reply["other_intents"] = self.format_other_intents(qr)
-        if raw:
+        reply["params"] = params
+
+        # if raw:
             # self.qr = qr
-            reply["qr"] = qr
-            reply["json"] = SapiBase.response_to_json(qr)
+            # reply["qr"] = qr
+
+        if DEBUG_LEVEL == 'silly':
+            blob = SapiBase.response_to_json(qr)
+            logging.info('response: %s', json.dumps(blob, indent=2)) # do NOT deploy
+            # logging.debug('response: %s', blob)
 
         # self.checkpoint('<< formatted response')
-        try:
-            logging.info('reply: \n%s', json.dumps(reply, indent=2))
-        except TypeError as err:
-            logging.error('cannot JSON reply %s', err)
-            logging.info('reply %s', reply)
-
+        logging.debug('reply %s', reply)
         return reply
+
 
 
     # TODO - dfqr class that has convenience accessor methods for different properties
