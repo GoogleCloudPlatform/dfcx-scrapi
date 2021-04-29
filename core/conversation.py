@@ -183,7 +183,7 @@ class DialogflowConversation(SapiBase):
                                               query_input=query_input,
                                               query_params=query_params)
 
-        logging.debug('disable_webhook: %s', disable_webhook)
+        logging.info('disable_webhook: %s', disable_webhook)
         logging.debug('query_params: %s', query_params)
         logging.debug('request %s', request)
 
