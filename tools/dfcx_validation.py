@@ -52,25 +52,26 @@ class ValidationKit:
         df = pd.DataFrame()
 
         for flow in validation_results['flowValidationResults']:
-            temp = '/'.join(flow['name'].split('/')[:-1])
-            temp_df = pd.DataFrame(flow.get('validationMessages', {}))
-            temp_df.insert(0, 'flow', flows_map[temp])
+            if bool(flow):
+                temp = '/'.join(flow['name'].split('/')[:-1])
+                temp_df = pd.DataFrame(flow.get('validationMessages', {}))
+                temp_df.insert(0, 'flow', flows_map[temp])
 
-            max_cols_new = max([len(x) for x in temp_df.resourceNames])
+                max_cols_new = max([len(x) for x in temp_df.resourceNames])
 
-            if max_cols_new > max_cols_old:
-                for i in range(1, max_cols_new + 1):
-                    temp_df['resource{}'.format(i)] = None
-                max_cols_old = max_cols_new
+                if max_cols_new > max_cols_old:
+                    for i in range(1, max_cols_new + 1):
+                        temp_df['resource{}'.format(i)] = None
+                    max_cols_old = max_cols_new
 
-            for index in temp_df.index:
-                i = 1
-                for d in temp_df['resourceNames'][index]:
-                    temp_df['resource{}'.format(i)][index] = d['displayName']
-                    i += 1
+                for index in temp_df.index:
+                    i = 1
+                    for d in temp_df['resourceNames'][index]:
+                        temp_df['resource{}'.format(i)][index] = d['displayName']
+                        i += 1
 
-            df = df.append(temp_df)
-            max_cols_old = 0
+                df = df.append(temp_df)
+                max_cols_old = 0
 
         return df
 
