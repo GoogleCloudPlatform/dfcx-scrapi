@@ -52,9 +52,11 @@ class ValidationKit:
         df = pd.DataFrame()
 
         for flow in validation_results['flowValidationResults']:
-            if bool(flow):
-                temp = '/'.join(flow['name'].split('/')[:-1])
-                temp_df = pd.DataFrame(flow.get('validationMessages', {}))
+  
+            temp = '/'.join(flow['name'].split('/')[:-1])
+            vm = flow.get('validationMessages', {})
+            if bool(vm):
+                temp_df = pd.DataFrame(vm)
                 temp_df.insert(0, 'flow', flows_map[temp])
 
                 max_cols_new = max([len(x) for x in temp_df.resourceNames])
