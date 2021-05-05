@@ -1,3 +1,9 @@
 google-cloud-dialogflow-cx
+google-auth
+google-oauth
 pandas
+tabulate
+gspread
+gspread_dataframe
+numpy
 
