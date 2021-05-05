@@ -64,6 +64,9 @@ class Intents:
             'client_options': client_options,
             'credentials': self.creds
         }
+    
+    
+   
 
     def get_intents_map(self, agent_id, reverse=False):
         """ Exports Agent Intent Names and UUIDs into a user friendly dict.
@@ -190,35 +193,26 @@ class Intents:
                 client_options=client_options)
             client.delete_intent(name=intent_id)
 
-    # FIXME - this can be a static method
-    def intents_to_dataframe(self, intents):
-        """
-        This functions takes an Intents object from the DFCX API and returns
-        a Pandas Dataframe
-        """
-        intent_dict = defaultdict(list)
+    
+    def intent_to_df(self, obj):
+        tps = obj.training_phrases
+        if len(tps)>0:
+            tp_df = pd.DataFrame()
+            tp_id = 0
+            for tp in tps:
+                part_id = 0
+                for part in tp.parts:
+                    tp_df = tp_df.append(pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id'], 
+                                                      data = [[obj.display_name, obj.name, tp_id, part_id, part.text, part.parameter_id, tp.repeat_count, tp.id]]))
+                    part_id+=1
+                tp_id+=1
 
-        for element in intents:
-            if 'training_phrases' in element:
-                for tp in element.training_phrases:
-                    s = []
-                    if len(tp.parts) > 1:
-                        for item in tp.parts:
-                            s.append(item.text)
-                        intent_dict[element.display_name].append(''.join(s))
-                    else:
-                        intent_dict[element.display_name].append(
-                            tp.parts[0].text)
-            else:
-                intent_dict[element.display_name].append('')
+            phrases = tp_df.copy()
+            phrase_lst = phrases.groupby(['tp_id'])['text'].apply(lambda x: ''.join(x)).reset_index().rename(columns={'text':'phrase'})
+            phrases = pd.merge(phrases, phrase_lst, on=['tp_id'],how='outer')
+            return phrases
+        else:
+            return pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id', 'phrase'], 
+                                                      data = [[obj.display_name, obj.name, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]])
 
-        df = pd.DataFrame.from_dict(intent_dict, orient='index').transpose()
-        df = df.stack().to_frame().reset_index(level=1)
-        df = df.rename(
-            columns={
-                'level_1': 'intent',
-                0: 'tp'}).reset_index(
-            drop=True)
-        df = df.sort_values(['intent', 'tp'])
-
-        return df
+        
