@@ -5,7 +5,6 @@ import time
 import json
 import logging
 import pandas as pd
-import os
 import google.cloud.dialogflowcx_v3beta1.types as types
 from oauth2client.service_account import ServiceAccountCredentials
 import gspread
