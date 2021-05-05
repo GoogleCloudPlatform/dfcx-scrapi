@@ -1,12 +1,7 @@
 import copy
 import json
 import logging
-import os
-import sys
 import pandas as pd
-import pathlib
-import requests
-import subprocess
 import time
 import google.cloud.dialogflowcx_v3beta1.types as types
 
