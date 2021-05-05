@@ -7,6 +7,7 @@ from collections import defaultdict
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
+import numpy as np
 
 from typing import Dict, List
 
