@@ -220,13 +220,15 @@ class Intents:
                 return phrases
             
             elif mode=='advanced':
-                 if len(params) > 0:
+                if len(params) > 0:
                     param_df = pd.DataFrame()
                     for param in params:
                         param_df = param_df.append(pd.DataFrame(columns = ['display_name', 'id', 'entity_type'], 
                                                                data=[[obj.display_name, param.id, param.entity_type]]))
             
                     return {'phrases': phrases, 'parameters': param_df}
+                else: 
+                    return {'phrases': phrases, 'parameters': pd.DataFrame(columns = ['display_name', 'id', 'entity_type'])}
             else:
                 raise ValueError('mode must be basic or advanced')
             

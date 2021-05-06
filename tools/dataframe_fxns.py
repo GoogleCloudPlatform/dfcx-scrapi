@@ -137,9 +137,7 @@ class Dataframe_fxns:
         # training phrases
         if mode == 'advanced':
             trainingPhrases = []
-            for tp in range(
-                0, int(
-                    train_phrases['training_phrase'].astype(int).max() + 1)):
+            for tp in list(set(train_phrases['training_phrase'])):
                 tpParts = train_phrases[train_phrases['training_phrase'].astype(
                     int) == int(tp)]
                 parts = []
@@ -403,9 +401,7 @@ class Dataframe_fxns:
         # training phrases
         if mode == 'advanced':
             trainingPhrases = []
-            for tp in range(
-                0, int(
-                    train_phrases['training_phrase'].astype(int).max() + 1)):
+            for tp in list(set(train_phrases['training_phrase'])):
                 tpParts = train_phrases[train_phrases['training_phrase'].astype(
                     int) == int(tp)]
                 parts = []
