@@ -195,8 +195,9 @@ class Intents:
             client.delete_intent(name=intent_id)
 
     
-    def intent_to_df(self, obj):
+    def intent_to_df(self, obj, mode='basic'):
         tps = obj.training_phrases
+        params = obj.parameters
         if len(tps)>0:
             tp_df = pd.DataFrame()
             tp_id = 0
@@ -207,11 +208,28 @@ class Intents:
                                                       data = [[obj.display_name, obj.name, tp_id, part_id, part.text, part.parameter_id, tp.repeat_count, tp.id]]))
                     part_id+=1
                 tp_id+=1
+                
+           
+            
 
             phrases = tp_df.copy()
             phrase_lst = phrases.groupby(['tp_id'])['text'].apply(lambda x: ''.join(x)).reset_index().rename(columns={'text':'phrase'})
             phrases = pd.merge(phrases, phrase_lst, on=['tp_id'],how='outer')
-            return phrases
+            
+            if mode=='basic':
+                return phrases
+            
+            elif mode=='advanced':
+                 if len(params) > 0:
+                    param_df = pd.DataFrame()
+                    for param in params:
+                        param_df = param_df.append(pd.DataFrame(columns = ['display_name', 'id', 'entity_type'], 
+                                                               data=[[obj.display_name, param.id, param.entity_type]]))
+            
+                    return {'phrases': phrases, 'parameters': param_df}
+            else:
+                raise ValueError('mode must be basic or advanced')
+            
         else:
             return pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id', 'phrase'], 
                                                       data = [[obj.display_name, obj.name, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]])
