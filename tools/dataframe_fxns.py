@@ -284,7 +284,7 @@ class Dataframe_fxns:
         #     if (param_schema_user.equals(param_schema_master))==False and len(params_df)>0:
         #         raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
 
-        logging.info('updating agent_id %s', agent_id)
+#         logging.info('updating agent_id %s', agent_id)
         intents_map = self.intents.get_intents_map(
             agent_id=agent_id, reverse=True)
         intent_names = list(set(train_phrases_df['display_name']))
@@ -324,7 +324,7 @@ class Dataframe_fxns:
             i += 1
             self.progressBar(i, len(intent_names))
             if update_flag:
-                logging.info('updating_intent %s', intent_name)
+#                 logging.info('updating_intent %s', intent_name)
                 self.intents.update_intent(
                     intent_id=new_intent.name, obj=new_intent)
                 time.sleep(rate_limiter)
