@@ -190,7 +190,7 @@ class Intents:
         else:
             intent = self.get_intent(intent_id)
 
-        logging.info('dfcx_lib update intent %s', intent_id)
+#         logging.info('dfcx_lib update intent %s', intent_id)
 
         client_options = self._set_region(intent_id)
         client = services.intents.IntentsClient(
