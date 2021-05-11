@@ -111,7 +111,11 @@ class Pages:
 
     def get_page(self, page_id):
         client_options = self._set_region(page_id)
-        client = services.pages.PagesClient(client_options=client_options)
+        client = services.pages.PagesClient(
+            credentials=self.creds,
+            client_options=client_options)
+        
+        
         response = client.get_page(name=page_id)
 
         return response
