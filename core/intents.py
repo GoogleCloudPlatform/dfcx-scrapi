@@ -209,7 +209,12 @@ class Intents:
                 client_options=client_options)
             client.delete_intent(name=intent_id)
 
-    
+    # TODO: (drescher@): build a dedicated converter function
+    # MOVE this up to the top with other statics
+    # @staticmethod
+    # def intent_proto_to_dataframe():
+
+    # TODO: (drescher@): make the below method the bulk version
     def intent_to_df(self, intents, mode='basic'):
         """ intents to dataframe
 
