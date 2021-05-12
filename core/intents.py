@@ -210,45 +210,82 @@ class Intents:
             client.delete_intent(name=intent_id)
 
     
-    def intent_to_df(self, obj, mode='basic'):
-        tps = obj.training_phrases
-        params = obj.parameters
-        if len(tps)>0:
-            tp_df = pd.DataFrame()
-            tp_id = 0
-            for tp in tps:
-                part_id = 0
-                for part in tp.parts:
-                    tp_df = tp_df.append(pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id'], 
-                                                      data = [[obj.display_name, obj.name, tp_id, part_id, part.text, part.parameter_id, tp.repeat_count, tp.id]]))
-                    part_id+=1
-                tp_id+=1
+    def intent_to_df(self, intents, mode='basic'):
+        """ intents to dataframe
+
+        Args:
+          intents, list of intents
+          mode: (Optional) basic returns display name and training phrase as plain text. Advanced returns training phrase and parameters df broken out by parts. 
+        """
+        if mode == 'basic':
+            intent_dict = defaultdict(list)
+            for element in intents:
+                if 'training_phrases' in element:
+                    for tp in element.training_phrases:
+                        s = []
+                        if len(tp.parts) > 1:
+                            for item in tp.parts:
+                                s.append(item.text)
+                            intent_dict[element.display_name].append(''.join(s))
+                        else:
+                            intent_dict[element.display_name].append(
+                                tp.parts[0].text)
+                else:
+                    intent_dict[element.display_name].append('')
+
+            df = pd.DataFrame.from_dict(intent_dict, orient='index').transpose()
+            df = df.stack().to_frame().reset_index(level=1)
+            df = df.rename(
+                columns={
+                    'level_1': 'intent',
+                    0: 'tp'}).reset_index(
+                drop=True)
+            df = df.sort_values(['intent', 'tp'])
+            return df
+            
+        elif mode =='advanced':
+            master_phrases = pd.DataFrame()
+            master_parameters = pd.DataFrame()
+            for obj in intents:
+                tps = obj.training_phrases
+                params = obj.parameters
+                if len(tps)>0:
+                    tp_df = pd.DataFrame()
+                    tp_id = 0
+                    for tp in tps:
+                        part_id = 0
+                        for part in tp.parts:
+                            tp_df = tp_df.append(pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id'], 
+                                                              data = [[obj.display_name, obj.name, tp_id, part_id, part.text, part.parameter_id, tp.repeat_count, tp.id]]))
+                            part_id+=1
+                        tp_id+=1
+
+
+                    phrases = tp_df.copy()
+                    phrase_lst = phrases.groupby(['tp_id'])['text'].apply(lambda x: ''.join(x)).reset_index().rename(columns={'text':'phrase'})
+                    phrases = pd.merge(phrases, phrase_lst, on=['tp_id'],how='outer')
+
+
+                    if len(params) > 0:
+                        param_df = pd.DataFrame()
+                        for param in params:
+                            param_df = param_df.append(pd.DataFrame(columns = ['display_name', 'id', 'entity_type'], 
+                                                                   data=[[obj.display_name, param.id, param.entity_type]]))
+                        master_phrases = master_phrases.append(phrases)
+                        master_parameters = master_parameters.append(param_df)
+                        
+                    else: 
+                        master_phrases = master_phrases.append(phrases)
+                        master_parameters = master_parameters.append(pd.DataFrame(columns = ['display_name', 'id', 'entity_type']))
+                        
+                else:
+                    return pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id', 'phrase'], 
+                                                              data = [[obj.display_name, obj.name, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]])
                 
-           
-            
-
-            phrases = tp_df.copy()
-            phrase_lst = phrases.groupby(['tp_id'])['text'].apply(lambda x: ''.join(x)).reset_index().rename(columns={'text':'phrase'})
-            phrases = pd.merge(phrases, phrase_lst, on=['tp_id'],how='outer')
-            
-            if mode=='basic':
-                return phrases
-            
-            elif mode=='advanced':
-                if len(params) > 0:
-                    param_df = pd.DataFrame()
-                    for param in params:
-                        param_df = param_df.append(pd.DataFrame(columns = ['display_name', 'id', 'entity_type'], 
-                                                               data=[[obj.display_name, param.id, param.entity_type]]))
-            
-                    return {'phrases': phrases, 'parameters': param_df}
-                else: 
-                    return {'phrases': phrases, 'parameters': pd.DataFrame(columns = ['display_name', 'id', 'entity_type'])}
-            else:
-                raise ValueError('mode must be basic or advanced')
-            
-        else:
-            return pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id', 'phrase'], 
-                                                      data = [[obj.display_name, obj.name, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]])
-
+            return {'phrases': master_phrases, 'parameters': master_parameters}
         
+        else:
+            raise ValueError('Mode types: [basic, advanced]')
+        
+        
+
