@@ -241,6 +241,7 @@ class Intents:
                     0: 'tp'}).reset_index(
                 drop=True)
             df = df.sort_values(['intent', 'tp'])
+            return df
             
         elif mode =='advanced':
             master_phrases = pd.DataFrame()
