@@ -412,6 +412,8 @@ class Dataframe_fxns:
         intent['is_fallback'] = meta.get('is_fallback', False)
         intent['labels'] = meta.get('labels', {})
         intent['description'] = meta.get('description', '')
+        
+    
 
         # training phrases
         if mode == 'advanced':
@@ -464,7 +466,7 @@ class Dataframe_fxns:
 
         jsonIntent = json.dumps(intent)
         intent_pb = types.Intent.from_json(jsonIntent)
-
+        
         return intent_pb
 
     def bulk_create_intent_from_dataframe(
@@ -473,7 +475,7 @@ class Dataframe_fxns:
             train_phrases_df,
             params_df=pd.DataFrame(),
             mode='basic',
-            update_flag=False, rate_limiter=5):
+            update_flag=False, rate_limiter=5, meta={}):
         """create intents
 
         Args:
@@ -558,12 +560,13 @@ class Dataframe_fxns:
                 train_phrases_df['display_name'] == instance].drop(
                 columns='display_name')
             params = pd.DataFrame()
-            if mode == 'advanced':
+            if mode == 'advanced':        
                 params = params_df.copy()[
                     params_df['display_name'] == instance].drop(
                     columns='display_name')
+                
             newIntent = self.create_intent_from_dataframe(
-                display_name=instance, train_phrases=tps, params=params, mode=mode)
+                display_name=instance, train_phrases=tps, params=params, meta=meta, mode=mode)
             newIntents[instance] = newIntent
             i += 1
             self.progressBar(i, len(intents))
