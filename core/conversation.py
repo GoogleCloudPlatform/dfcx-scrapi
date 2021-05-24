@@ -1,11 +1,14 @@
 """
+wrapper of DfCx agent
+tracks session internally
+
 Copyright 2021 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,12 +16,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-"""
-client of DfCx agent
-tracks session internally
-"""
-
-# import copy
 import json
 import logging
 import os
@@ -26,24 +23,9 @@ import uuid
 import time
 import traceback
 
-# import sys
-# import pandas as pd
-# import pathlib
-# from collections import defaultdict
-# from sys import stdout
-
-# from profilehooks import profile
-
-# from dfcx_api import Agents, Intents
-# from ipynb.fs.full.dfcx import DialogflowCX
-# from dfcx.dfcx import DialogflowCX
-# from dfcx import DialogflowCX
-# from google.cloud.dialogflowcx_v3beta1.services.agents import AgentsClient
 from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
 from proto.marshal.collections.repeated import RepeatedComposite
-# from proto.marshal.collections.repeated import RepeatedComposite
-
 
 from .sapi_base import SapiBase
 
@@ -54,6 +36,7 @@ logging.basicConfig(
 
 MAX_RETRIES = 3  # JWT errors on CX API
 DEBUG_LEVEL = 'info'  # silly for request/response
+
 
 class DialogflowConversation(SapiBase):
     """
@@ -70,10 +53,9 @@ class DialogflowConversation(SapiBase):
         agent_path = full path to project
         """
 
-        logging.info('create conversation with creds_path: %s | agent_path: %s', 
-            creds_path, agent_path)
+        logging.info('create conversation with creds_path: %s | agent_path: %s',
+                     creds_path, agent_path)
 
-        # FIXME - the creds are not used anywhere else?
         creds_path = creds_path or config['creds_path']
         if not creds_path:
             raise KeyError('no creds give to create agent')
@@ -82,10 +64,7 @@ class DialogflowConversation(SapiBase):
         # FIX ME - remove this and use creds on every call instead
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
 
-        # project_id = data['project_id']
-        # self.project_id = f'projects/{project_id}/locations/global'
-
-        # projects/*/locations/*/agents/*/
+        # format: projects/*/locations/*/agents/*/
         # TODO - use 'name' instead of path for fields
         agent_path = agent_path or config['agent_path']
         super().__init__(creds_path=creds_path, agent_path=agent_path)
@@ -93,9 +72,10 @@ class DialogflowConversation(SapiBase):
         self.language_code = language_code or config['language_code']
         self.start_time = None
         self.qr = None
+        self.session_id = None
+        self.turn_count = None
         self.agent_env = {}  # empty
         self.restart()
-
 
     def restart(self):
         """starts a new session/conversation for this agent"""
@@ -104,15 +84,13 @@ class DialogflowConversation(SapiBase):
         # logging.info('restarted agent: session: %s', self.session_id)
         # print('restarted DFCX.client=>', self.agent_path)
 
-
     def set_agent_env(self, param, value):
-        '''setting changes related to the environment'''
+        """setting changes related to the environment"""
         logging.info('setting agent_env param:[%s] = value:[%s]', param, value)
         self.agent_env[param] = value
 
-
     def checkpoint(self, msg=None, start=False):
-        '''print a checkpoint to time progress and debug bottleneck'''
+        """print a checkpoint to time progress and debug bottleneck"""
         if start:
             start_time = time.perf_counter()
             self.start_time = start_time
@@ -122,7 +100,6 @@ class DialogflowConversation(SapiBase):
         if duration > 2:
             if msg:
                 print("{:0.2f}s {}".format(duration, msg))
-
 
     # TODO - refactor options as a dict?
     def reply(self, send_obj, restart=False, raw=False, retries=0):
@@ -151,7 +128,7 @@ class DialogflowConversation(SapiBase):
         client_options = self._set_region(item_id=self.agent_path)
         session_client = SessionsClient(client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
-        
+
         # projects/*/locations/*/agents/*/environments/*/sessions/*
         custom_environment = self.agent_env.get('environment')
 
@@ -159,11 +136,6 @@ class DialogflowConversation(SapiBase):
             # just the environment and NOT experiment (change to elif if experiment comes back)
             logging.info('req using env: %s', custom_environment)
             session_path = f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
-        else:
-            session_path = f"{self.agent_path}/sessions/{self.session_id}"
-
-        # self.checkpoint('made client')
-        # logging.info('session_path %s', session_path)
 
         disable_webhook = self.agent_env.get('disable_webhook') or False
 
@@ -202,6 +174,7 @@ class DialogflowConversation(SapiBase):
         logging.debug('query_params: %s', query_params)
         logging.debug('request %s', request)
 
+        response = None
         try:
             response = session_client.detect_intent(request=request)
 
@@ -232,7 +205,7 @@ class DialogflowConversation(SapiBase):
         self.checkpoint('<< got response')
         qr = response.query_result
         logging.debug('dfcx>qr %s', qr)
-        self.qr = qr # for debugging
+        self.qr = qr  # for debugging
         reply = {}
 
         # flatten array of text responses
@@ -289,24 +262,20 @@ class DialogflowConversation(SapiBase):
         reply["params"] = params
 
         # if raw:
-            # self.qr = qr
-            # reply["qr"] = qr
+        # self.qr = qr
+        # reply["qr"] = qr
 
         if DEBUG_LEVEL == 'silly':
             blob = SapiBase.response_to_json(qr)
-            logging.info('response: %s', json.dumps(blob, indent=2)) # do NOT deploy
+            logging.info('response: %s', json.dumps(blob, indent=2))  # do NOT deploy
             # logging.debug('response: %s', blob)
 
         # self.checkpoint('<< formatted response')
         logging.debug('reply %s', reply)
         return reply
 
-
-
     # TODO - dfqr class that has convenience accessor methods for different properties
     # basically to unwind the protobut
-
-
 
     def format_other_intents(self, qr):
         """unwind protobufs into more friendly dict"""
@@ -320,12 +289,12 @@ class DialogflowConversation(SapiBase):
                 "rank": rank,
             })
             rank += 1
-        #             intents_map[alt['DisplayName']] = alt['Score']
-        return items
-
+        # intents_map[alt['DisplayName']] = alt['Score']
+        if self:  # keep as instance method and silence linter
+            return items
 
     def getpath(self, obj, xpath, default=None):
-        '''get data at a pathed location out of object internals'''
+        """get data at a pathed location out of object internals"""
         elem = obj
         try:
             for xpitem in xpath.strip("/").split("/"):
@@ -339,4 +308,5 @@ class DialogflowConversation(SapiBase):
             return default
 
         logging.info("OK getpath: %s", xpath)
-        return elem
+        if self:
+            return elem

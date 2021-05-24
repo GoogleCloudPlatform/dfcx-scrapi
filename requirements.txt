@@ -6,4 +6,4 @@ tabulate
 gspread
 gspread_dataframe
 numpy
-
+requests

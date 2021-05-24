@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import logging
-import requests
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
-from google.protobuf import field_mask_pb2
 
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -141,7 +138,7 @@ class EntityTypes:
 
     def delete_entity_type(self, entity_id, obj=None) -> None:
         if obj:
-            entity_id = obj.name
+            _entity_id = obj.name
         else:
             client_options = self._set_region(entity_id)
             client = services.entity_types.EntityTypesClient(
