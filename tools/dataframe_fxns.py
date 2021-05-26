@@ -699,9 +699,9 @@ class Dataframe_fxns:
                 custy_payloads.append({'payload': cp})
 
         fulfillment_text = route_dict.get('fullfillment_text', None)
-        if fulfillment_text:
+#         if fulfillment_text:
             # FIXME ast is not defined
-            fulfillment_text = ast.literal_eval(fulfillment_text)
+#             fulfillment_text = ast.literal_eval(fulfillment_text)
 
         # custom payloads and text
         payload = {"messages":
