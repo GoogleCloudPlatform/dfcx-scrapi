@@ -17,17 +17,8 @@ limitations under the License.
 
 import json
 import logging
-import requests
-
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
-
-from typing import Dict, List
-# from dfcx.dfcx import DialogflowCX
 
 from google.cloud.dialogflowcx_v3beta1.services.experiments import ExperimentsClient
-import google.cloud.dialogflowcx_v3beta1.types as types
-from google.cloud.dialogflowcx_v3beta1 import services
 
 from .sapi_base import SapiBase
 
@@ -43,7 +34,7 @@ import google.cloud.dialogflowcx_v3beta1.types as types
 log = logging.info
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
+          'https://www.googleapis.com/auth/dialogflow']
 
 
 class SapiExperiments(SapiBase):
@@ -55,7 +46,6 @@ class SapiExperiments(SapiBase):
         logging.info('created %s', self.agent_path)
 
     # def list_environments(self):
-
 
     def list_experiments(self, environment_id=None):
         '''list out experiments'''
@@ -75,7 +65,7 @@ class SapiExperiments(SapiBase):
             credentials=self.creds)
         response = client.list_experiments(request)
         blob = SapiBase.response_to_dict(response)
-        
+
         if len(blob) < 1:
             logging.warning('no experiments found for environment: %s', environment_id)
             return None
@@ -103,5 +93,5 @@ class SapiExperiments(SapiBase):
         # for ex in blob['experiments']:
         # logging.info('experiments %s', experiments)
         # logging.info('ex_names %s', ex_names)
-        logging.info('results %s', json.dumps(results, indent=2) )
+        logging.info('results %s', json.dumps(results, indent=2))
         return experiments
