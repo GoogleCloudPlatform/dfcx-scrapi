@@ -65,13 +65,12 @@ class DialogflowConversation(SapiBase):
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
 
         # format: projects/*/locations/*/agents/*/
-        # TODO - use 'name' instead of path for fields
         agent_path = agent_path or config['agent_path']
         super().__init__(creds_path=creds_path, agent_path=agent_path)
 
         self.language_code = language_code or config['language_code']
         self.start_time = None
-        self.qr = None
+        self.query_result = None
         self.session_id = None
         self.turn_count = None
         self.agent_env = {}  # empty
@@ -101,13 +100,13 @@ class DialogflowConversation(SapiBase):
             if msg:
                 print("{:0.2f}s {}".format(duration, msg))
 
-    # TODO - refactor options as a dict?
     def reply(self, send_obj, restart=False, raw=False, retries=0):
         """
-        send_obj to bot and get reply
-            text
-            params
-            dtmf
+        args:
+            send_obj  {text, params, dtmf}
+            restart: boolean
+            raw: boolean
+            retries: used for recurse calling this func if API fails
 
         Pass restart=True to start a new conv with a new session_id
         otherwise uses the agents continues conv with session_id
@@ -135,7 +134,8 @@ class DialogflowConversation(SapiBase):
         if custom_environment:
             # just the environment and NOT experiment (change to elif if experiment comes back)
             logging.info('req using env: %s', custom_environment)
-            session_path = f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
+            session_path = \
+                f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
 
         disable_webhook = self.agent_env.get('disable_webhook') or False
 
@@ -203,15 +203,15 @@ class DialogflowConversation(SapiBase):
         # format reply
 
         self.checkpoint('<< got response')
-        qr = response.query_result
-        logging.debug('dfcx>qr %s', qr)
-        self.qr = qr  # for debugging
+        query_result = response.query_result
+        logging.debug('dfcx>qr %s', query_result)
+        self.query_result = query_result  # for debugging
         reply = {}
 
         # flatten array of text responses
         # seems like there should be a better interface to pull out the texts
         texts = []
-        for msg in qr.response_messages:
+        for msg in query_result.response_messages:
             if msg.payload:
                 reply['payload'] = SapiBase.extract_payload(msg)
             if (len(msg.text.text)) > 0:
@@ -223,18 +223,15 @@ class DialogflowConversation(SapiBase):
         params = {}
         # print('parameters', json.dumps(qr.parameters))  ## not JSON
         # serialisable until it's not
-        if qr.parameters:
-            for param in qr.parameters:
+        if query_result.parameters:
+            for param in query_result.parameters:
                 # turn into key: value pairs
-                val = qr.parameters[param]
+                val = query_result.parameters[param]
                 try:
                     if isinstance(val, RepeatedComposite):
-                        # some type of protobuf array - for now we just flatten as a string with spaces
-                        # FIXME - how better to convert list types in params responses?
+                        # protobuf array - we just flatten as a string with spaces
                         logging.info('converting param: %s val: %s', param, val)
-                        # val = val[0]
                         val = " ".join(val)
-                        logging.info('converted val to: %s', val)
 
                 except TypeError as err:
                     logging.error("Exception on CX.detect %s", err)
@@ -243,22 +240,13 @@ class DialogflowConversation(SapiBase):
                     logging.error(message)
                     logging.error('failed to extract params for: %s', text)
 
-                # give up on params
-
-                # if isinstance(val, MapComposite):
-                #     # some type of protobuf array - for now we just flatten as a string with spaces
-                #     # FIXME - how better to convert list types in params responses?
-                #     logging.info('converting param: %s val: %s', param, val)
-                #     # val = val[0]
-                #     val = " ".join(val)
-                #     logging.info('converted val to: %s', val)
                 params[param] = val
 
         reply["text"] = "\n".join(texts)
-        reply["confidence"] = qr.intent_detection_confidence
-        reply["page_name"] = qr.current_page.display_name
-        reply["intent_name"] = qr.intent.display_name
-        reply["other_intents"] = self.format_other_intents(qr)
+        reply["confidence"] = query_result.intent_detection_confidence
+        reply["page_name"] = query_result.current_page.display_name
+        reply["intent_name"] = query_result.intent.display_name
+        reply["other_intents"] = self.format_other_intents(query_result)
         reply["params"] = params
 
         # if raw:
@@ -266,7 +254,7 @@ class DialogflowConversation(SapiBase):
         # reply["qr"] = qr
 
         if DEBUG_LEVEL == 'silly':
-            blob = SapiBase.response_to_json(qr)
+            blob = SapiBase.response_to_json(query_result)
             logging.info('response: %s', json.dumps(blob, indent=2))  # do NOT deploy
             # logging.debug('response: %s', blob)
 
@@ -277,9 +265,9 @@ class DialogflowConversation(SapiBase):
     # TODO - dfqr class that has convenience accessor methods for different properties
     # basically to unwind the protobut
 
-    def format_other_intents(self, qr):
+    def format_other_intents(self, query_result):
         """unwind protobufs into more friendly dict"""
-        other_intents = qr.diagnostic_info.get("Alternative Matched Intents")
+        other_intents = query_result.diagnostic_info.get("Alternative Matched Intents")
         items = []
         rank = 0
         for alt in other_intents:

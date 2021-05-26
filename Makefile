@@ -17,6 +17,8 @@ pfreeze:
 test:
 	pytest
 
+lint:
+	make pylint core/*
 
 # just fix selected whitespace
 autofix-min-whitespace:
