@@ -13,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+from collections import defaultdict
 import logging
+import numpy as np
 import pandas as pd
-import requests
+
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from collections import defaultdict
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
-from google.protobuf import field_mask_pb2
-import numpy as np
 
-from typing import Dict, List
+
 
 # logging config
 logging.basicConfig(
@@ -37,6 +37,11 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 
 
 class Intents:
+    '''Class to deal with intents
+
+    Args:
+    creds_path: file path to credentials
+    intent_id: global intent id to work with'''
     def __init__(self, creds_path: str, intent_id: str = None):
         self.creds = service_account.Credentials.from_service_account_file(
             creds_path, scopes=SCOPES)
@@ -73,91 +78,112 @@ class Intents:
             return None  # explicit None return when not required
 
     @staticmethod
-    def _set_api_options(self, id_item):
-        '''bundle API parameters'''
-        client_options = self._set_region(id_item)
-        return {
-            'client_options': client_options,
-            'credentials': self.creds
-        }
-    
-    
-   
-    @staticmethod
     def intent_proto_to_dataframe(obj, mode='basic'):
         """ intents to dataframe
 
         Args:
           obj, intent protobuf object
-          mode: (Optional) basic returns display name and training phrase as plain text. Advanced returns training phrase and parameters df broken out by parts. 
+          mode: (Optional) basic returns display name and training phrase as plain text.
+          Advanced returns training phrase and parameters df broken out by parts.
         """
         if mode == 'basic':
             intent_dict = defaultdict(list)
             if 'training_phrases' in obj:
-                for tp in obj.training_phrases:
-                    s = []
-                    if len(tp.parts) > 1:
-                        for item in tp.parts:
-                            s.append(item.text)
-                        intent_dict[obj.display_name].append(''.join(s))
+                for train_phrase in obj.training_phrases:
+                    item_list = []
+                    if len(train_phrase.parts) > 1:
+                        for item in train_phrase.parts:
+                            item_list.append(item.text)
+                        intent_dict[obj.display_name].append(''.join(item_list))
                     else:
                         intent_dict[obj.display_name].append(
-                            tp.parts[0].text)
+                            train_phrase.parts[0].text)
             else:
                 intent_dict[obj.display_name].append('')
 
-            df = pd.DataFrame.from_dict(intent_dict, orient='index').transpose()
-            df = df.stack().to_frame().reset_index(level=1)
-            df = df.rename(
+            data_frame = pd.DataFrame.from_dict(intent_dict, orient='index').transpose()
+            data_frame = data_frame.stack().to_frame().reset_index(
+                level=1)
+            data_frame = data_frame.rename(
                 columns={
                     'level_1': 'intent',
                     0: 'tp'}).reset_index(
                 drop=True)
-            df = df.sort_values(['intent', 'tp'])
-            return df
-            
-            
+            data_frame = data_frame.sort_values(['intent', 'tp'])
+            return data_frame
+
+
         elif mode =='advanced':
-        
-            tps = obj.training_phrases
+
+            train_phrases = obj.training_phrases
             params = obj.parameters
-            if len(tps)>0:
+            if len(train_phrases)>0:
                 tp_df = pd.DataFrame()
                 tp_id = 0
-                for tp in tps:
+                for train_phrase in train_phrases:
                     part_id = 0
-                    for part in tp.parts:
-                        tp_df = tp_df.append(pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id'], 
-                                                          data = [[obj.display_name, obj.name, tp_id, part_id, part.text, part.parameter_id, tp.repeat_count, tp.id]]))
+                    for part in train_phrase.parts:
+                        tp_df = tp_df.append(pd.DataFrame(columns=
+                        ['display_name', 'name','tp_id', 'part_id',
+                        'text', 'parameter_id', 'repeat_count', 'id'],
+                                                          data = [[obj.display_name,
+                                                          obj.name, tp_id,
+                                                          part_id, part.text,
+                                                          part.parameter_id,
+                                                          train_phrase.repeat_count,
+                                                          train_phrase.id]]))
                         part_id+=1
                     tp_id+=1
 
 
                 phrases = tp_df.copy()
-                phrase_lst = phrases.groupby(['tp_id'])['text'].apply(lambda x: ''.join(x)).reset_index().rename(columns={'text':'phrase'})
+                phrase_lst = phrases.groupby(
+                    ['tp_id'])['text'].apply(
+                        lambda x: ''.join(x)).reset_index().rename(
+                    columns={'text':'phrase'})
+
                 phrases = pd.merge(phrases, phrase_lst, on=['tp_id'],how='outer')
 
 
                 if len(params) > 0:
                     param_df = pd.DataFrame()
                     for param in params:
-                        param_df = param_df.append(pd.DataFrame(columns = ['display_name', 'id', 'entity_type'], 
-                                                               data=[[obj.display_name, param.id, param.entity_type]]))
+                        param_df = param_df.append(pd.DataFrame(
+                            columns = ['display_name', 'id', 'entity_type'],
+                                                               data=[[obj.display_name,
+                                                               param.id, param.entity_type]]))
                     return {'phrases': phrases, 'parameters': param_df}
-                
-                else: 
-                    return {'phrases': phrases, 'parameters': pd.DataFrame(columns = ['display_name', 'id', 'entity_type'])}
+
+                else:
+                    return {'phrases': phrases,
+                    'parameters': pd.DataFrame(columns =
+                    ['display_name', 'id', 'entity_type'])}
 
             else:
-                return {'phrases': pd.DataFrame(columns=['display_name', 'name','tp_id', 'part_id', 'text', 'parameter_id', 'repeat_count', 'id', 'phrase'], 
-                                                          data = [[obj.display_name, obj.name, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]]), 
-                        'parameters': pd.DataFrame(columns = ['display_name', 'id', 'entity_type'])}
-                
-           
-        
+                return {'phrases': pd.DataFrame(columns=
+                ['display_name', 'name','tp_id', 'part_id',
+                 'text', 'parameter_id', 'repeat_count', 'id',
+                  'phrase'],
+                            data =
+                            [[obj.display_name, obj.name,
+                             np.nan, np.nan, np.nan, np.nan,
+                              np.nan, np.nan, np.nan]]),
+                        'parameters': pd.DataFrame(columns =
+                        ['display_name', 'id', 'entity_type'])}
+
+
+
         else:
             raise ValueError('Mode types: [basic, advanced]')
-            
+
+
+    def _set_api_options(self, id_item):
+        '''bundle API parameters'''
+        client_options = self._set_region(id_item)
+        return {
+            'client_options': client_options,
+            'credentials': self.creds}
+
 
     def get_intents_map(self, agent_id, reverse=False):
         """ Exports Agent Intent Names and UUIDs into a user friendly dict.
@@ -182,7 +208,11 @@ class Intents:
         return intents_dict
 
     def list_intents(self, agent_id):
-        '''provide a list of intents'''
+        '''provide a list of intents
+
+        Args:
+          agent_id, the CX agent id to pull the intents from
+        '''
         request = types.intent.ListIntentsRequest()
         request.parent = agent_id
 
@@ -221,22 +251,22 @@ class Intents:
             if key == 'training_phrases':
                 assert isinstance(kwargs[key], list)
                 training_phrases = []
-                for x in kwargs[key]:
-                    if isinstance(x, dict):
-                        tp = types.intent.Intent.TrainingPhrase()
+                for arg in kwargs[key]:
+                    if isinstance(arg, dict):
+                        train_phrase = types.intent.Intent.TrainingPhrase()
                         parts = []
-                        for y in x['parts']:
-                            if isinstance(y, dict):
+                        for part_i in arg['parts']:
+                            if isinstance(part_i, dict):
                                 part = types.intent.Intent.TrainingPhrase.Part()
-                                part.text = y['text']
-                                part.parameter_id = y.get('parameter_id')
+                                part.text = part_i['text']
+                                part.parameter_id = part_i.get('parameter_id')
                                 parts.append(part)
                             else:
                                 print("Wrong object in parts list")
                                 return
-                        tp.parts = parts
-                        tp.repeat_count = x.get("repeat_count")
-                        training_phrases.append(tp)
+                        train_phrase.parts = parts
+                        train_phrase.repeat_count = arg.get("repeat_count")
+                        training_phrases.append(train_phrase)
                     else:
                         print("Wrong object in training phrases list")
                         return
@@ -250,9 +280,8 @@ class Intents:
 
         return response
 
-    def update_intent(self, intent_id, obj=None, **kwargs):
+    def update_intent(self, intent_id, obj=None):
         """ Updates a single Intent object based on provided args.
-
         Args:
           intent_id, the destination Intent ID. Must be formatted properly
               for Intent IDs in CX.
@@ -276,6 +305,11 @@ class Intents:
         return response
 
     def delete_intent(self, intent_id, obj=None):
+        """ deletes an intent
+
+        Args:
+          intent_id, intent to delete
+        """
         if obj:
             intent_id = obj.name
         else:
@@ -284,25 +318,26 @@ class Intents:
                 client_options=client_options)
             client.delete_intent(name=intent_id)
 
-  
-    
-   
+
+
+
     def bulk_intent_to_df(self, agent_id, mode='basic'):
         """ intents to dataframe
 
         Args:
           agent_id, agent to pull list of intents
-          mode: (Optional) basic returns display name and training phrase as plain text. Advanced returns training phrase and parameters df broken out by parts. 
+          mode: (Optional) basic returns display name and training phrase as plain text.
+          Advanced returns training phrase and parameters df broken out by parts.
         """
         intents = self.list_intents(agent_id)
         if mode == 'basic':
-            mf = pd.DataFrame()
+            main_frame = pd.DataFrame()
             for obj in intents:
-                df = self.intent_proto_to_dataframe(obj, mode=mode)
-                mf = mf.append(df)
-            mf = mf.sort_values(['intent', 'tp'])
-            return mf
-            
+                data_frame = self.intent_proto_to_dataframe(obj, mode=mode)
+                main_frame = main_frame.append(data_frame)
+            main_frame = main_frame.sort_values(['intent', 'tp'])
+            return main_frame
+
         elif mode =='advanced':
             master_phrases = pd.DataFrame()
             master_parameters = pd.DataFrame()
@@ -311,9 +346,7 @@ class Intents:
                 master_phrases = master_phrases.append(output['phrases'])
                 master_parameters = master_parameters.append(output['parameters'])
             return {'phrases': master_phrases, 'parameters': master_parameters}
-        
+
         else:
             raise ValueError('Mode types: [basic, advanced]')
         
-        
-

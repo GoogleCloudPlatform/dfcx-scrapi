@@ -686,70 +686,68 @@ class DataframeFunctions:
 
             Returns:
                 transitionRoute: transition route protobuf
-        """
+        '''
 
-    transitionRoute = types.TransitionRoute()
+        transitionRoute = types.TransitionRoute()
 
-    route_dict = route_df.to_dict()
-    transitionRoute.intent = route_dict.get('intent', None)
-    transitionRoute.condition = route_dict.get('condition', None)
-    transitionRoute.target_page = route_dict.get('target_page', None)
-    transitionRoute.target_flow = route_dict.get('target_flow', None)
+        route_dict = route_df.to_dict()
+        transitionRoute.intent = route_dict.get('intent', None)
+        transitionRoute.condition = route_dict.get('condition', None)
+        transitionRoute.target_page = route_dict.get('target_page', None)
+        transitionRoute.target_flow = route_dict.get('target_flow', None)
 
-    # fulfillment
-    fulfillment = types.Fulfillment()
-    fulfillment.webhook = route_dict.get('webhook', None)
-    fulfillment.tag = route_dict.get('webhook_tag', None)
+        # fulfillment
+        fulfillment = types.Fulfillment()
+        fulfillment.webhook = route_dict.get('webhook', None)
+        fulfillment.tag = route_dict.get('webhook_tag', None)
 
-    customPayload = route_dict.get('custom_payload', None)
-    custy_payloads = []
-    if customPayload:
-      customPayload = json.loads(customPayload)
-      if ~isinstance(customPayload, list):
-        customPayload = [customPayload]
-      for cp in customPayload:
-        custy_payloads.append({'payload': cp})
+        customPayload = route_dict.get('custom_payload', None)
+        custy_payloads = []
+        if customPayload:
+            customPayload = json.loads(customPayload)
+            if ~isinstance(customPayload, list):
+                customPayload = [customPayload]
+            for cp in customPayload:
+                custy_payloads.append({'payload': cp})
 
-    fulfillment_text = route_dict.get('fulfillment_text', None)
-    if fulfillment_text:
-      # FIXME ast is not defined
-      fulfillment_text = ast.literal_eval(fulfillment_text)
+        fulfillment_text = route_dict.get('fullfillment_text', None)
+#         if fulfillment_text:
+            # FIXME ast is not defined
+#             fulfillment_text = ast.literal_eval(fulfillment_text)
 
-    # custom payloads and text
-    payload = {
-        'messages': custy_payloads + [{
-            'text': {
-                'text': fulfillment_text
-            }
-        }]
-    }
+        # custom payloads and text
+        payload = {"messages":
+                   custy_payloads +
+                   [{'text': {'text': fulfillment_text}}]
+                   }
 
-    payload_json = json.dumps(payload)
-    payload_json = json.dumps(payload)
-    fulfillment = types.Fulfillment.from_json(payload_json)
+        payload_json = json.dumps(payload)
+        payload_json = json.dumps(payload)
+        fulfillment = types.Fulfillment.from_json(payload_json)
 
-    #parameter - presets
-    set_param_actions = []
-    parameter_presets = route_dict.get('parameter_presets', None)
-    if parameter_presets:
-      parameter_presets = json.loads(parameter_presets)
-      for param in parameter_presets.keys():
-        set_param_action = types.Fulfillment.SetParameterAction()
-        set_param_action.parameter = param
-        set_param_action.value = parameter_presets[param]
-        set_param_actions.append(set_param_action)
-    fulfillment.set_parameter_actions = set_param_actions
-    transitionRoute.trigger_fulfillment = fulfillment
+        #parameter - presets
+        set_param_actions = []
+        parameter_presets = route_dict.get('parameter_presets', None)
+        if parameter_presets:
+            parameter_presets = json.loads(parameter_presets)
+            for param in parameter_presets.keys():
+                set_param_action = types.Fulfillment.SetParameterAction()
+                set_param_action.parameter = param
+                set_param_action.value = parameter_presets[param]
+                set_param_actions.append(set_param_action)
+        fulfillment.set_parameter_actions = set_param_actions
+        transitionRoute.trigger_fulfillment = fulfillment
 
-    return transitionRoute
+        return transitionRoute
 
-  def bulk_create_route_group_from_dataframe(self,
-                                             display_name,
-                                             agent_id,
-                                             flow_id,
-                                             route_group_df,
-                                             update_flag=False):
-    """
+    def bulk_create_route_group_from_dataframe(
+            self,
+            display_name,
+            agent_id,
+            flow_id,
+            route_group_df,
+            update_flag=False):
+        '''
          create transition route - no support for end_session yet just end flow.
 
             Args:
