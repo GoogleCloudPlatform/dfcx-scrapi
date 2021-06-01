@@ -21,6 +21,7 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
+from .sapi_base import authorize
 from typing import Dict, List
 
 # logging config
@@ -34,12 +35,9 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 
 
 class Sessions:
-    def __init__(self, creds_path: str, session_id: str = None):
-        self.creds = service_account.Credentials.from_service_account_file(
-            creds_path, scopes=SCOPES)
-        self.creds.refresh(Request())  # used for REST API calls
-        self.token = self.creds.token  # used for REST API calls
-        self.session_id = session_id
+    def __init__(self, creds_info, creds_type: str = 'path', session_id: str = None):
+        self.creds, self.token = authorize(creds_info, creds_type)
+
 
     @staticmethod
     def _set_region(item_id):

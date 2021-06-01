@@ -22,6 +22,7 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
+from .sapi_base import authorize
 from typing import Dict, List
 from . import flows, intents, webhooks
 
@@ -36,14 +37,11 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 
 
 class TransitionRouteGroups:
-    def __init__(self, creds_path: str, route_group_id: str = None):
-        self.creds = service_account.Credentials.from_service_account_file(
-            creds_path, scopes=SCOPES)
-        self.creds.refresh(Request())  # used for REST API calls
-        self.token = self.creds.token  # used for REST API calls
-        self.flows = flows.Flows(creds_path)
-        self.intents = intents.Intents(creds_path)
-        self.webhooks = webhooks.Webhooks(creds_path)
+    def __init__(self, creds_info, creds_type: str = 'path', route_group_id: str = None):
+        self.creds, self.token = authorize(creds_info, creds_type)
+        self.flows = flows.Flows(creds_info, creds_type)
+        self.intents = intents.Intents(creds_info, creds_type)
+        self.webhooks = webhooks.Webhooks(creds_info, creds_type)
 
         if route_group_id:
             self.route_group_id = route_group_id

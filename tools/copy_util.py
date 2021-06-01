@@ -32,14 +32,14 @@ logging.basicConfig(
 
 
 class CopyUtil:
-    def __init__(self, creds, agent_id=None):
-        self.intents = intents.Intents(creds)
-        self.entities = entity_types.EntityTypes(creds)
-        self.flows = flows.Flows(creds)
-        self.pages = pages.Pages(creds)
-        self.webhooks = webhooks.Webhooks(creds)
+    def __init__(self, creds_info, creds_type: str = 'path', agent_id=None):
+        self.intents = intents.Intents(creds_info, creds_type)
+        self.entities = entity_types.EntityTypes(creds_info, creds_type)
+        self.flows = flows.Flows(creds_info, creds_type)
+        self.pages = pages.Pages(creds_info, creds_type)
+        self.webhooks = webhooks.Webhooks(creds_info, creds_type)
         self.route_groups = transition_route_groups.TransitionRouteGroups(
-            creds)
+            creds_info, creds_type)
 
 
 # COPY FUNCTIONS

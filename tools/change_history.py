@@ -34,13 +34,9 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 'https://www.googleapis.com/auth/dialogflow']
 
 class ChangeHistory:
-    def __init__(self, creds_path: str):
-        self.creds_path = creds_path
-        creds = service_account.Credentials.from_service_account_file(
-                    creds_path, scopes=SCOPES)
-        creds.refresh(Request()) # used for REST API calls
-        self.token = creds.token # used for REST API calls
-        logging.info('create dfcx creds %s', self.creds_path)
+    def __init__(self, creds_info, creds_type: str = 'path', intent_id: str = None):
+        self.creds, self.token = authorize(creds_info, creds_type)
+        logging.info('create dfcx creds %s' creds_type)
 
 
     def get_change_history(self, agent_id):

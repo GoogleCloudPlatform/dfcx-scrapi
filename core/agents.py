@@ -22,6 +22,7 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
+from .sapi_base import authorize
 from typing import Dict, List
 # from dfcx.dfcx import DialogflowCX
 
@@ -36,11 +37,9 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 
 
 class Agents:
-    def __init__(self, creds_path: str, agent_id: str = None):
-        self.creds = service_account.Credentials.from_service_account_file(
-            creds_path, scopes=SCOPES)
-        self.creds.refresh(Request())  # used for REST API calls
-        self.token = self.creds.token  # used for REST API calls
+    
+    def __init__(self, creds_info, creds_type: str = 'path', agent_id: str = None):
+        self.creds, self.token = authorize(creds_info, creds_type)
 
         if agent_id:
             self.agent_id = agent_id

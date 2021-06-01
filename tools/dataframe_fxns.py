@@ -25,8 +25,12 @@ from oauth2client.service_account import ServiceAccountCredentials
 import gspread
 from gspread_dataframe import set_with_dataframe
 from tabulate import tabulate
+
+from ..core.sapi_base import authorize
 from ..core import entity_types, intents, flows, pages, transition_route_groups
 
+g_drive_scope = ['https://spreadsheets.google.com/feeds',
+                 'https://www.googleapis.com/auth/drive']
 
 # logging config
 logging.basicConfig(
@@ -36,33 +40,30 @@ logging.basicConfig(
 
 
 class Dataframe_fxns:
-    def __init__(self, creds_path: str):
-        logging.info('create dfcx creds %s', creds_path)
-        self.entities = entity_types.EntityTypes(creds_path)
-        self.intents = intents.Intents(creds_path)
-        self.flows = flows.Flows(creds_path)
-        self.pages = pages.Pages(creds_path)
+    def __init__(self, creds_info, creds_type: str = 'path'):
+        logging.info('create dfcx creds %s', creds_type)
+        
+        self.entities = entity_types.EntityTypes(creds_info, creds_type)
+        self.intents = intents.Intents(creds_info, creds_type)
+        self.flows = flows.Flows(creds_info, creds_type)
+        self.pages = pages.Pages(creds_info, creds_type)
         self.route_groups = transition_route_groups.TransitionRouteGroups(
-            creds_path)
-        self.creds_path = creds_path
+            creds_info, creds_type)
+        
+        self.creds_gdrive, self.token_gdrive = authorize(creds_info, creds_type, scope=g_drive_scope)
+     
 
     def gsheets2df(self, gsheetName, worksheetName):
-        scope = ['https://spreadsheets.google.com/feeds',
-                 'https://www.googleapis.com/auth/drive']
-        creds_gdrive = ServiceAccountCredentials.from_json_keyfile_name(
-            self.creds_path, scope)
-        client = gspread.authorize(creds_gdrive)
+      
+        client = gspread.authorize(self.creds_gdrive)
         g_sheets = client.open(gsheetName)
         sheet = g_sheets.worksheet(worksheetName)
         dataPull = sheet.get_all_values()
         return pd.DataFrame(columns=dataPull[0], data=dataPull[1:])
 
     def df2Sheets(self, gsheetName, worksheetName, df):
-        scope = ['https://spreadsheets.google.com/feeds',
-                 'https://www.googleapis.com/auth/drive']
-        creds_gdrive = ServiceAccountCredentials.from_json_keyfile_name(
-            self.creds_path, scope)
-        client = gspread.authorize(creds_gdrive)
+        
+        client = gspread.authorize(self.creds_gdrive)
         g_sheets = client.open(gsheetName)
         worksheet = g_sheets.worksheet(worksheetName)
         set_with_dataframe(worksheet, df)

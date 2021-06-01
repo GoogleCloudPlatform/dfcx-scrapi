@@ -24,7 +24,7 @@ import google.cloud.dialogflowcx_v3beta1.types as types
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
-
+from .sapi_base import authorize
 
 # logging config
 logging.basicConfig(
@@ -42,11 +42,8 @@ class Intents:
     Args:
     creds_path: file path to credentials
     intent_id: global intent id to work with'''
-    def __init__(self, creds_path: str, intent_id: str = None):
-        self.creds = service_account.Credentials.from_service_account_file(
-            creds_path, scopes=SCOPES)
-        self.creds.refresh(Request())  # used for REST API calls
-        self.token = self.creds.token  # used for REST API calls
+    def __init__(self, creds_info, creds_type: str = 'path', intent_id: str = None):
+        self.creds, self.token = authorize(creds_info, creds_type)
 
         if intent_id:
             self.intent_id = intent_id

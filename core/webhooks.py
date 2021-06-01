@@ -21,6 +21,7 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
+from .sapi_base import authorize
 from typing import Dict, List
 
 # logging config
@@ -34,12 +35,10 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 
 
 class Webhooks:
-    def __init__(self, creds_path: str, webhook_id: str = None):
-        self.creds = service_account.Credentials.from_service_account_file(
-            creds_path, scopes=SCOPES)
-        self.creds.refresh(Request())  # used for REST API calls
-        self.token = self.creds.token  # used for REST API calls
-
+    
+    def __init__(self, creds_info, creds_type: str = 'path', webhook_id: str = None):
+        self.creds, self.token = authorize(creds_info, creds_type)
+        
         if webhook_id:
             self.webhook_id = webhook_id
             self.client_options = self._set_region(webhook_id)

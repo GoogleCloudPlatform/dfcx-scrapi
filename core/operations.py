@@ -18,6 +18,7 @@ import requests
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
+from .sapi_base import authorize
 from typing import Dict, List
 
 # logging config
@@ -31,11 +32,9 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 
 
 class Operations:
-    def __init__(self, creds_path):
-        self.creds = service_account.Credentials.from_service_account_file(
-            creds_path,scopes=SCOPES)
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
+    def __init__(self, creds_info, creds_type: str = 'path'):
+        self.creds, self.token = authorize(creds_info, creds_type)
+
 
     @staticmethod
     def _set_region(item_id):
