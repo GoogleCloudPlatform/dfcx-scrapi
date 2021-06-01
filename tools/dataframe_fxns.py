@@ -169,7 +169,7 @@ class DataframeFunctions:
         tp_parts = train_phrases[train_phrases['training_phrase'].astype(int) ==
                                  int(tp)]
         parts = []
-        for index, row in tp_parts.iterrows():
+        for _, row in tp_parts.iterrows():
           part = {'text': row['text'], 'parameter_id': row['parameter_id']}
           parts.append(part)
 
@@ -178,7 +178,7 @@ class DataframeFunctions:
 
       intent['training_phrases'] = training_phrases
       parameters = []
-      for index, row in params.iterrows():
+      for _, row in params.iterrows():
         parameter = {
             'id': row['id'],
             'entity_type': row['entity_type'],
@@ -187,7 +187,7 @@ class DataframeFunctions:
         }
         parameters.append(parameter)
 
-      if len(parameters) > 0:
+      if parameters:
         intent['parameters'] = parameters
 
     elif mode == 'basic':
@@ -201,8 +201,8 @@ class DataframeFunctions:
     else:
       raise ValueError('mode must be basic or advanced')
 
-    jsonIntent = json.dumps(intent)
-    intent_pb = types.Intent.from_json(jsonIntent)
+    json_intent = json.dumps(intent)
+    intent_pb = types.Intent.from_json(json_intent)
     return intent_pb
 
   def bulk_update_intents_from_dataframe(self,
@@ -212,27 +212,26 @@ class DataframeFunctions:
                                          mode='basic',
                                          update_flag=False,
                                          rate_limiter=5):
-    """update an existing intents training phrases and parameters
+    """Update existing Intent, TPs and Parameters from a Dataframe.
 
-        Args:
-            agent_id: name parameter of the agent to update_flag - full path to
-              agent
-            train_phrases_df: dataframe of bulk training phrases
-                required columns: text, display_name in advanced mode have
-                  training_phrase and parts column to track the build
-            params_df(optional): dataframe of bulk parameters
-            mode: basic|advanced
-                basic: build assuming one row is one training phrase no entities
-                advanced: build keeping track of training phrases and parts with
-                  the training_phrase and parts column.
-            update_flag: True to update_flag the intents in the agent
-            rate_limiter: seconds to sleep between operations.
+    Args:
+      agent_id: name parameter of the agent to update_flag - full path to
+        agent
+      train_phrases_df: dataframe of bulk training phrases required columns:
+        text, display_name in advanced mode have training_phrase and parts
+        column to track the build
+      params_df(optional): dataframe of bulk parameters
+      mode: basic|advanced
+        basic, build assuming one row is one training phrase no entities
+        advanced, build keeping track of training phrases and parts with the
+          training_phrase and parts column.
+      update_flag: True to update_flag the intents in the agent
+      rate_limiter: seconds to sleep between operations.
 
-        Returns:
-            modified_intents: dictionary with intent display names as keys
-                and the new intent protobufs as values
-
-        """
+    Returns:
+      modified_intents: dictionary with intent display names as keys and the new
+        intent protobufs as values
+    """
     if mode == 'basic':
       try:
         train_phrases_df = train_phrases_df[['display_name', 'text']]
@@ -241,13 +240,13 @@ class DataframeFunctions:
             'text': 'string'
         })
       except BaseException:
-        tpSchema = pd.DataFrame(
+        tp_schema = pd.DataFrame(
             index=['display_name', 'text', 'parameter_id'],
             columns=[0],
             data=['string', 'string', 'string']).astype({0: 'string'})
         logging.error('{0} mode train_phrases schema must be {1} \n'.format(
             mode,
-            tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
+            tabulate(tp_schema.transpose(), headers='keys', tablefmt='psql')))
 
     elif mode == 'advanced':
       try:
@@ -261,7 +260,7 @@ class DataframeFunctions:
             'text': 'string',
             'parameter_id': 'string'
         })
-        if len(params_df) > 0:
+        if params_df > 0:
           params_df = params_df[['display_name', 'id', 'entity_type']]
           params_df = params_df.astype({
               'display_name': 'string',
@@ -269,7 +268,7 @@ class DataframeFunctions:
               'entity_type': 'string'
           })
       except BaseException:
-        tpSchema = pd.DataFrame(
+        tp_schema = pd.DataFrame(
             index=[
                 'display_name', 'training_phrase', 'part', 'text',
                 'parameter_id'
@@ -277,45 +276,49 @@ class DataframeFunctions:
             columns=[0],
             data=['string', 'int32', 'int32', 'string',
                   'string']).astype({0: 'string'})
-        pSchema = pd.DataFrame(
+        p_schema = pd.DataFrame(
             index=['display_name', 'id', 'entity_type'],
             columns=[0],
             data=['string', 'string', 'string']).astype({0: 'string'})
         logging.error('{0} mode train_phrases schema must be {1} \n'.format(
             mode,
-            tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
+            tabulate(tp_schema.transpose(), headers='keys', tablefmt='psql')))
         logging.error('{0} mode parameter schema must be {1} \n'.format(
             mode,
-            tabulate(pSchema.transpose(), headers='keys', tablefmt='psql')))
+            tabulate(p_schema.transpose(), headers='keys', tablefmt='psql')))
 
     else:
       raise ValueError('mode must be basic or advanced')
 
-    # TODO - check if user provided DF is in the right shape
-    # phrase_schema_user = train_phrases_df.dtypes.to_frame().astype({0:'string'})
+    # TODO(drescher@) - check if user provided DF is in the right shape
+    # phrase_schema_user = train_phrases_df.dtypes.to_frame().astype(
+    # {0:'string'})
     # param_schema_user = params_df.dtypes.to_frame().astype({0:'string'})
 
     # if (phrase_schema_user.equals(phrase_schema_master))==False:
     #     logging.error('training phrase schema must be\n {} \n'.format(
-    #         tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
+    #         tabulate(phrase_schema_master.transpose(), headers='keys',
+    # tablefmt='psql')))
     #     logging.error('got schema \n {}'.format(
-    #         tabulate(phrase_schema_user.transpose(), headers='keys', tablefmt='psql')))
+    #         tabulate(phrase_schema_user.transpose(), headers='keys',
+    # tablefmt='psql')))
     #     logging.error('df.head \n%s', train_phrases_df.head() )
     # raise ValueError('wrong schema format \n%s' % phrase_schema_user)
 
     # if mode =='advanced':
-    #     if (param_schema_user.equals(param_schema_master))==False and len(params_df)>0:
-    #         raise ValueError('parameter schema must be {}'.format(tabulate(phrase_schema_master.transpose(), headers='keys', tablefmt='psql')))
+    #     if (param_schema_user.equals(param_schema_master))==False and
+    # len(params_df)>0:
+    #         raise ValueError('parameter schema must be {}'.format(
+    # tabulate(phrase_schema_master.transpose(), headers='keys',
+    # tablefmt='psql')))
 
-
-#         logging.info('updating agent_id %s', agent_id)
+    #         logging.info('updating agent_id %s', agent_id)
     intents_map = self.intents.get_intents_map(agent_id=agent_id, reverse=True)
     intent_names = list(set(train_phrases_df['display_name']))
 
     new_intents = {}
     i = 0
     for intent_name in intent_names:
-      # logging.info('process intent_name: %s type: %s', intent_name, type(intent_name))
 
       # easier way to compare for empty pd cell values?
       if isinstance(intent_name, pd._libs.missing.NAType):
@@ -355,32 +358,33 @@ class DataframeFunctions:
                                    params=pd.DataFrame(),
                                    meta={},
                                    mode='basic'):
-    """create an intent
+    """Create an intent from a DataFrame.
 
-        Args:
-            display_name: display_name parameter of the intent to create
-            train_phrases: dataframe of training phrases in advanced have
+    Args:
+      display_name: display_name parameter of the intent to create
+      train_phrases: dataframe of training phrases in advanced have
               training_phrase and parts column to track the build
-            params(optional): dataframe of parameters
-            mode: basic - build assuming one row is one training phrase no
+      params(optional): dataframe of parameters
+      meta: dictionary
+      mode: basic - build assuming one row is one training phrase no
               entities, advance - build keeping track of training phrases and
               parts with the training_phrase and parts column.
 
-        Returns:
-            intent_pb: the new intents protobuf object
-        """
+    Returns:
+      intent_pb: the new intents protobuf object
+    """
     if mode == 'basic':
       try:
         train_phrases = train_phrases[['text']]
         train_phrases = train_phrases.astype({'text': 'string'})
       except BaseException:
-        tpSchema = pd.DataFrame(
+        tp_schema = pd.DataFrame(
             index=['text', 'parameter_id'],
             columns=[0],
             data=['string', 'string']).astype({0: 'string'})
         logging.error('{0} mode train_phrases schema must be {1} \n'.format(
             mode,
-            tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
+            tabulate(tp_schema.transpose(), headers='keys', tablefmt='psql')))
 
     elif mode == 'advanced':
       try:
@@ -393,23 +397,23 @@ class DataframeFunctions:
             'text': 'string',
             'parameter_id': 'string'
         })
-        if len(params) > 0:
+        if params:
           params = params[['id', 'entity_type']]
           params = params.astype({'id': 'string', 'entity_type': 'string'})
       except BaseException:
-        tpSchema = pd.DataFrame(
+        tp_schema = pd.DataFrame(
             index=['training_phrase', 'part', 'text', 'parameter_id'],
             columns=[0],
             data=['int32', 'int32', 'string', 'string']).astype({0: 'string'})
-        pSchema = pd.DataFrame(
+        p_schema = pd.DataFrame(
             index=['id', 'entity_type'], columns=[0],
             data=['string', 'string']).astype({0: 'string'})
         logging.error('{0} mode train_phrases schema must be {1} \n'.format(
             mode,
-            tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
+            tabulate(tp_schema.transpose(), headers='keys', tablefmt='psql')))
         logging.error('{0} mode parameter schema must be {1} \n'.format(
             mode,
-            tabulate(pSchema.transpose(), headers='keys', tablefmt='psql')))
+            tabulate(p_schema.transpose(), headers='keys', tablefmt='psql')))
 
     else:
       raise ValueError('mode must be basic or advanced')
@@ -423,21 +427,21 @@ class DataframeFunctions:
 
     # training phrases
     if mode == 'advanced':
-      trainingPhrases = []
+      training_phrases = []
       for tp in list(set(train_phrases['training_phrase'])):
-        tpParts = train_phrases[train_phrases['training_phrase'].astype(int) ==
-                                int(tp)]
+        tp_parts = train_phrases[train_phrases['training_phrase'].astype(int) ==
+                                 int(tp)]
         parts = []
-        for _index, row in tpParts.iterrows():
+        for _, row in tp_parts.iterrows():
           part = {'text': row['text'], 'parameter_id': row['parameter_id']}
           parts.append(part)
 
-        trainingPhrase = {'parts': parts, 'repeat_count': 1, 'id': ''}
-        trainingPhrases.append(trainingPhrase)
+        training_phrase = {'parts': parts, 'repeat_count': 1, 'id': ''}
+        training_phrases.append(training_phrase)
 
-      intent['training_phrases'] = trainingPhrases
+      intent['training_phrases'] = training_phrases
       parameters = []
-      for _index, row in params.iterrows():
+      for _, row in params.iterrows():
         parameter = {
             'id': row['id'],
             'entity_type': row['entity_type'],
@@ -446,22 +450,22 @@ class DataframeFunctions:
         }
         parameters.append(parameter)
 
-      if len(parameters) > 0:
+      if parameters:
         intent['parameters'] = parameters
 
     elif mode == 'basic':
-      trainingPhrases = []
+      training_phrases = []
       for _, row in train_phrases.iterrows():
         part = {'text': row['text'], 'parameter_id': None}
         parts = [part]
-        trainingPhrase = {'parts': parts, 'repeat_count': 1, 'id': ''}
-        trainingPhrases.append(trainingPhrase)
-      intent['training_phrases'] = trainingPhrases
+        training_phrase = {'parts': parts, 'repeat_count': 1, 'id': ''}
+        training_phrases.append(training_phrase)
+      intent['training_phrases'] = training_phrases
     else:
       raise ValueError('mode must be basic or advanced')
 
-    jsonIntent = json.dumps(intent)
-    intent_pb = types.Intent.from_json(jsonIntent)
+    json_intent = json.dumps(intent)
+    intent_pb = types.Intent.from_json(json_intent)
 
     return intent_pb
 
@@ -473,26 +477,27 @@ class DataframeFunctions:
                                         update_flag=False,
                                         rate_limiter=5,
                                         meta={}):
-    """create intents
+    """Create Intents in DFCX from a DataFrame.
 
-        Args:
-            agent_id: name parameter of the agent to update_flag - full path to
-              agent
-            train_phrases_df: dataframe of bulk training phrases
-                required columns: text, display_name in advanced mode have
-                  training_phrase and parts column to track the build
-            params_df(optional): dataframe of bulk parameters
-            mode: basic|advanced
-                basic: build assuming one row is one training phrase no entities
-                advanced: build keeping track of training phrases and parts with
-                  the training_phrase and parts column.
-            update_flag: True to update_flag the intents in the agent
+    Args:
+      agent_id: name parameter of the agent to update_flag - full path to agent
+      train_phrases_df: dataframe of bulk training phrases required columns of
+        text, display_name in advanced mode have training_phrase and parts
+        column to track the build
+      params_df(optional): dataframe of bulk parameters
+      mode: basic|advanced
+        basic - build assuming one row is one training phrase no entities
+        advanced - build keeping track of training phrases and parts with the
+          training_phrase and parts column.
+      update_flag: True to update_flag the intents in the agent
+      rate_limiter: number of seconds to wait between calls
+      meta: dictionary
 
-        Returns:
-            new_intents: dictionary with intent display names as keys and the
-            new intent protobufs as values
+    Returns:
+      new_intents: dictionary with intent display names as keys and the new
+        intent protobufs as values
 
-        """
+    """
     # remove any unnecessary columns
     if mode == 'basic':
       try:
@@ -502,13 +507,13 @@ class DataframeFunctions:
             'text': 'string'
         })
       except BaseException:
-        tpSchema = pd.DataFrame(
+        tp_schema = pd.DataFrame(
             index=['display_name', 'text', 'parameter_id'],
             columns=[0],
             data=['string', 'string', 'string']).astype({0: 'string'})
         raise ValueError('{0} mode train_phrases schema must be {1}'.format(
             mode,
-            tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql')))
+            tabulate(tp_schema.transpose(), headers='keys', tablefmt='psql')))
 
     elif mode == 'advanced':
       try:
@@ -526,7 +531,7 @@ class DataframeFunctions:
             'text': 'string',
             'parameter_id': 'string'
         })
-        if len(params_df) > 0:
+        if params_df:
           params_df = params_df[['display_name', 'id', 'entity_type']]
           params_df = params_df.astype({
               'display_name': 'string',
@@ -534,7 +539,7 @@ class DataframeFunctions:
               'entity_type': 'string'
           })
       except BaseException:
-        tpSchema = pd.DataFrame(
+        tp_schema = pd.DataFrame(
             index=[
                 'display_name', 'training_phrase', 'part', 'text',
                 'parameter_id'
@@ -542,7 +547,7 @@ class DataframeFunctions:
             columns=[0],
             data=['string', 'int32', 'int32', 'string',
                   'string']).astype({0: 'string'})
-        pSchema = pd.DataFrame(
+        p_schema = pd.DataFrame(
             index=['display_name', 'id', 'entity_type'],
             columns=[0],
             data=['string', 'string', 'string']).astype({0: 'string'})
@@ -550,14 +555,16 @@ class DataframeFunctions:
             '{0} mode train_phrases schema must be {1} \n parameter schema must be {2}'
             .format(
                 mode,
-                tabulate(tpSchema.transpose(), headers='keys', tablefmt='psql'),
-                tabulate(pSchema.transpose(), headers='keys', tablefmt='psql')))
+                tabulate(tp_schema.transpose(),
+                         headers='keys', tablefmt='psql'),
+                tabulate(p_schema.transpose(),
+                         headers='keys', tablefmt='psql')))
 
     else:
       raise ValueError('mode must be basic or advanced')
 
     intents = list(set(train_phrases_df['display_name']))
-    newIntents = {}
+    new_intents = {}
     i = 0
     for instance in intents:
       tps = train_phrases_df.copy()[train_phrases_df['display_name'] ==
@@ -567,52 +574,53 @@ class DataframeFunctions:
         params = params_df.copy()[params_df['display_name'] == instance].drop(
             columns='display_name')
 
-      newIntent = self.create_intent_from_dataframe(
+      new_intent = self.create_intent_from_dataframe(
           display_name=instance,
           train_phrases=tps,
           params=params,
           meta=meta,
           mode=mode)
-      newIntents[instance] = newIntent
+      new_intents[instance] = new_intent
       i += 1
       self.progress_bar(i, len(intents))
       if update_flag:
         time.sleep(rate_limiter)
-        self.intents.create_intent(agent_id=agent_id, obj=newIntent)
+        self.intents.create_intent(agent_id=agent_id, obj=new_intent)
 
-    return newIntents
+    return new_intents
 
   def create_entity_from_dataframe(self, display_name, entity_df, meta={}):
-    """create an entity
+    """Create an entity.
 
-        Args:
-            display_name: display_name parameter of the entity to update
-            entity_df: dataframe values and synonyms .
+    Args:
+      display_name: display_name parameter of the entity to update
+      entity_df: dataframe values and synonyms
+      meta: dictionary
 
-        Returns:
-            entity_pb: the new entity protobuf object
-        """
+    Returns:
+      entity_pb: the new entity protobuf object
+    """
 
-  entityObj = {}
-  entityObj['display_name'] = display_name
-  entityObj['kind'] = meta.get('kind', 1)
-  entityObj['auto_expansion_mode'] = meta.get('auto_expansion_mode', 0)
-  entityObj['excluded_phrases'] = meta.get('excluded_phrases', [])
-  entityObj['enable_fuzzy_extraction'] = meta.get('enable_fuzzy_extraction',
-                                                  False)
+    entity_obj = {}
+    entity_obj['display_name'] = display_name
+    entity_obj['kind'] = meta.get('kind', 1)
+    entity_obj['auto_expansion_mode'] = meta.get('auto_expansion_mode', 0)
+    entity_obj['excluded_phrases'] = meta.get('excluded_phrases', [])
+    entity_obj['enable_fuzzy_extraction'] = meta.get('enable_fuzzy_extraction',
+                                                     False)
 
-  values = []
-  for _, row in entity_df.iterrows():
-    value = row['value']
-    synonyms = json.loads(row['synonyms'])
+    values = []
+    for _, row in entity_df.iterrows():
+      value = row['value']
+      synonyms = json.loads(row['synonyms'])
 
-    part = {'value': value, 'synonyms': synonyms}
-    values.append(part)
+      part = {'value': value, 'synonyms': synonyms}
+      values.append(part)
 
-  entityObj['entities'] = values
-  entity_pb = types.EntityType.from_json(json.dumps(entityObj))
+    entity_obj['entities'] = values
+    entity_pb = types.EntityType.from_json(json.dumps(entity_obj))
 
-  return entity_pb
+    return entity_pb
 
   def bulk_create_entity_from_dataframe(self,
                                         agent_id,
@@ -621,18 +629,17 @@ class DataframeFunctions:
                                         rate_limiter=5):
     """Bulk create entities from a dataframe.
 
-      Args:
-          agent_id: name parameter of the agent to update_flag - full path to
-            agent
-           entities_df: dataframe of bulk entities
-              required columns: display_name, value, synonyms
-          update_flag: True to update_flag the entities in the agent
-          rate_limiter: seconds to sleep between operations.
+    Args:
+      agent_id: name parameter of the agent to update_flag - full path to agent
+      entities_df: dataframe of bulk entities;
+        required columns: display_name, value, synonyms
+      update_flag: True to update_flag the entities in the agent
+      rate_limiter: seconds to sleep between operations.
 
-      Returns:
-          new_entities: dictionary with entity display names as keys and the
-            new entity protobufs as values
-      """
+    Returns:
+      new_entities: dictionary with entity display names as keys and the new
+        entity protobufs as values
+    """
 
     if 'meta' in entities_df.columns:
       meta = entities_df.copy()[['display_name',
@@ -640,16 +647,16 @@ class DataframeFunctions:
 
     i, custom_entities = 0, {}
     for e in list(set(entities_df['display_name'])):
-      oneEntity = entities_df[entities_df['display_name'] == e]
+      one_entity = entities_df[entities_df['display_name'] == e]
       if 'meta' in locals():
         meta_ = meta[meta['display_name'] == e]['meta'].iloc[0]
         meta_ = json.loads(meta_)
         new_entity = self.create_entity_from_dataframe(
-            display_name=e, entity_df=oneEntity, meta=meta)
+            display_name=e, entity_df=one_entity, meta=meta)
 
       else:
         new_entity = self.create_entity_from_dataframe(
-            display_name=e, entity_df=oneEntity)
+            display_name=e, entity_df=one_entity)
 
       custom_entities[e] = new_entity
       i += 1
@@ -663,13 +670,11 @@ class DataframeFunctions:
     return custom_entities
 
   def create_transition_route_from_dataframe(self, route_df):
-    """
-        create transition route
+    """Create transition route.
 
-            Args:
-                route_df: dataframe with a singular routes data. Should only be
-                  one row
-                    intent: intent id
+      Args:
+        route_df: dataframe with a singular routes data. Should only be one row
+        intent: intent id
                     condition: string condition. ex.
                       $session.params.dtmf_diy_opt_in = 1 AND
                       $session.params.dtmf_2_techinternet = 2
@@ -710,7 +715,7 @@ class DataframeFunctions:
             for cp in customPayload:
                 custy_payloads.append({'payload': cp})
 
-        fulfillment_text = route_dict.get('fullfillment_text', None)
+        fulfillment_text = route_dict.get('fulfillment_text', None)
 #         if fulfillment_text:
             # FIXME ast is not defined
 #             fulfillment_text = ast.literal_eval(fulfillment_text)
@@ -773,7 +778,7 @@ class DataframeFunctions:
 
             Returns:
                 rg: route group protobuf
-        """
+    """
     if 'intent' in route_group_df.columns:
       intentsMap = self.intents.get_intents_map(agent_id=agent_id, reverse=True)
       route_group_df['intent'] = route_group_df.apply(
