@@ -22,7 +22,12 @@ import google.cloud.dialogflowcx_v3beta1.types as types
 
 from collections import defaultdict
 from typing import Dict, List
-from ..core import intents, entity_types, flows, pages, webhooks, transition_route_groups
+from dfcx_sapi.core.intents import Intents
+from dfcx_sapi.core.entity_types import EntityTypes
+from dfcx_sapi.core.flows import Flows
+from dfcx_sapi.core.pages import Pages
+from dfcx_sapi.core.webhooks import Webhooks
+from dfcx_sapi.core.transition_route_groups import TransitionRouteGroups
 
 # logging config
 logging.basicConfig(
@@ -32,7 +37,17 @@ logging.basicConfig(
 
 
 class CopyUtil:
-    def __init__(self, creds_info, creds_type: str = 'path', agent_id=None):
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                creds = None,
+                scope=False,
+                webhook_id: str = None):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         creds=creds,
+                         scope=scope)
+    
+    # TODO: pmarlow@ knows what to do!!
         self.intents = intents.Intents(creds_info, creds_type)
         self.entities = entity_types.EntityTypes(creds_info, creds_type)
         self.flows = flows.Flows(creds_info, creds_type)

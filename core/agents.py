@@ -22,9 +22,8 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
-from .sapi_base import authorize
+from dfcx_sapi.core.sapi_base import SapiBase
 from typing import Dict, List
-# from dfcx.dfcx import DialogflowCX
 
 # logging config
 logging.basicConfig(
@@ -32,14 +31,15 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-          'https://www.googleapis.com/auth/dialogflow']
 
-
-class Agents:
-    
-    def __init__(self, creds_info, creds_type: str = 'path', agent_id: str = None):
-        self.creds, self.token = authorize(creds_info, creds_type)
+class Agents(SapiBase):
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                scope=False,
+                agent_id: str = None):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         scope=scope)
 
         if agent_id:
             self.agent_id = agent_id

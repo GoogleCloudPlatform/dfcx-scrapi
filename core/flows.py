@@ -21,7 +21,7 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
-from .sapi_base import authorize
+from dfcx_sapi.core.sapi_base import SapiBase
 from typing import Dict, List
 
 # logging config
@@ -30,41 +30,23 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-          'https://www.googleapis.com/auth/dialogflow']
 
-
-class Flows:
-    def __init__(self, creds_info, creds_type: str = 'path', flow_id: str = None):
-        self.creds, self.token = authorize(creds_info, creds_type)
+class Flows(SapiBase):
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                creds = None,
+                scope=False,
+                flow_id: str = None):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         creds=creds,
+                         scope=scope)
 
         if flow_id:
             self.flow_id = flow_id
 
-    @staticmethod
-    def _set_region(item_id):
-        """different regions have different API endpoints
+        self.agent_id = None
 
-        Args:
-            item_id: agent/flow/page - any type of long path id like
-                `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
-
-        Returns:
-            client_options: use when instantiating other library client objects
-        """
-        try:
-            location = item_id.split('/')[3]
-        except IndexError as err:
-            logging.error('IndexError - path too short? %s', item_id)
-            raise err
-
-        if location != 'global':
-            api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
-            client_options = {'api_endpoint': api_endpoint}
-            return client_options
-
-        else:
-            return None  # explicit None return when not required
 
     def get_flows_map(self, agent_id, reverse=False):
         """ Exports Agent Flow Names and UUIDs into a user friendly dict.
