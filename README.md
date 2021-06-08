@@ -5,8 +5,7 @@
   </a>
 
   <h3 align="center">Python Dialogflow CX Scripting API (SAPI)</h3>
-
-  <h4 align="center">
+  <p align="center">
     A high level scripting API for bot builders, developers, and maintainers.<br>
     <a href="https://screencast.googleplex.com/cast/NjQ4MTA4Nzc4ODIyMDQxNnwzODc1MzY1Zi0yNA">Generic Demo</a>
     ·
@@ -16,7 +15,7 @@
     <br>
 
     
-  </h4>
+  </p>
 </div>
 
 <!-- TABLE OF CONTENTS -->
