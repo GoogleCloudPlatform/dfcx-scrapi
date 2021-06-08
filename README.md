@@ -1,13 +1,13 @@
 <!-- PROJECT LOGO -->
 <br />
-<p align="center">
+<div align="center">
   <a href="https://github.com/othneildrew/Best-README-Template">
     <img src="images/logo.png" alt="Scrappy, the SAPI mascot!" width="200">
   </a>
 
   <h3 align="center">Python Dialogflow CX Scripting API (SAPI)</h3>
 
-  <p align="center">
+  <h4 align="center">
     A high level scripting API for bot builders, developers, and maintainers.</br>
     <a href="https://screencast.googleplex.com/cast/NjQ4MTA4Nzc4ODIyMDQxNnwzODc1MzY1Zi0yNA">Generic Demo</a>
     ·
@@ -17,8 +17,8 @@
     <br/>
 
     
-  </p>
-</p>
+  </h4>
+</div>
 
 <!-- TABLE OF CONTENTS -->
 <details open="open">
@@ -162,7 +162,7 @@ Distributed under the Apache 2.0 License. See [LICENSE](LICENSE.txt) for more in
 # Contact
 Patrick Marlow - pmarlow@google.com  - [@kmaphoenix](https://github.com/kmaphoenix)  
 David "DC" Collier - dcollier@google.com  - [@DCsan](https://github.com/dcsan)  
-Henry Drescher - drescher@google.com  
+Henry Drescher - drescher@google.com  - [@Hgithubacct](https://github.com/Hgithubacct)  
 
 Project Link: [go/dfcx-sapi](go/dfcx-sapi)
 
