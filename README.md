@@ -1,8 +1,6 @@
 <!-- PROJECT LOGO -->
 <div align="center">
-  <a href="https://github.com/othneildrew/Best-README-Template">
     <img src="images/logo.png" alt="Scrappy, the SAPI mascot!" width="200">
-  </a>
 
   <h3 align="center">Python Dialogflow CX Scripting API (SAPI)</h3>
   <p align="center">
@@ -13,8 +11,6 @@
     <!-- ·
     <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a> -->
     <br>
-
-    
   </p>
 </div>
 
