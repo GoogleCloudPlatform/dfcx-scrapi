@@ -24,23 +24,24 @@ from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import set_with_dataframe
 from google.auth.transport.requests import Request
 
+from dfcx_sapi.core.sapi_base import SapiBase
+from typing import Dict, List
+
 # logging config
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
 
-class ChangeHistory:
-    def __init__(self, creds_path: str):
-        self.creds_path = creds_path
-        creds = service_account.Credentials.from_service_account_file(
-                    creds_path, scopes=SCOPES)
-        creds.refresh(Request()) # used for REST API calls
-        self.token = creds.token # used for REST API calls
-        logging.info('create dfcx creds %s', self.creds_path)
+class ChangeHistory(SapiBase):
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                scope=False,
+                webhook_id: str = None):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         scope=scope)
 
 
     def get_change_history(self, agent_id):

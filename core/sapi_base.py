@@ -28,25 +28,35 @@ from google.protobuf import json_format  # type: ignore
 
 from typing import Dict, List
 
-SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-'https://www.googleapis.com/auth/dialogflow']
 
 class SapiBase:
-    '''Common base class for different SAPI objects'''
+    global_scopes = ['https://www.googleapis.com/auth/cloud-platform',
+                    'https://www.googleapis.com/auth/dialogflow']
 
-    def __init__(self, creds_path, agent_path):
-        logging.info('create sapi_base \ncreds_path:%s \nagent_path: %s', creds_path, agent_path)
-        # TODO - decide on creds or creds_path 
-        # currently a lot of other classes still expect the raw path
-        # and then handle creds internally eg Intents
-        self.creds_path = creds_path
-        self.creds = service_account.Credentials.from_service_account_file(
-            creds_path, scopes=SCOPES )
-        self.agent_path = agent_path
-        self.creds.refresh(Request()) # used for REST API calls
-        self.token = self.creds.token # used for REST API calls
-        self.client_options = self._set_region(agent_path)
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                creds=None,
+                scope=False):
 
+        self.scopes = SapiBase.global_scopes
+        if scope:
+            self.scopes += scope
+
+        if creds:
+            self.creds = creds
+        
+        elif creds_path:
+            self.creds = service_account.Credentials.from_service_account_file(
+                creds_path, scopes=self.scopes)
+        elif creds_dict:
+            self.creds = service_account.Credentials.from_service_account_info(
+                creds_dict, scopes=self.scopes)
+        else:
+            raise ValueError('creds_type must be of [creds_path, creds_dict]')
+
+        self.creds.refresh(Request())
+        self.token = self.creds.token 
+        
 
     @staticmethod
     def _set_region(item_id):
@@ -100,33 +110,3 @@ class SapiBase:
         '''convert to json so we can get at the object'''
         blob = SapiBase.response_to_dict(msg)
         return blob.get('payload') # deref for nesting
-
-
-
-    # def get_lro(self, lro: str) -> Dict[str,str]:
-    #     """Used to retrieve the status of LROs for Dialogflow CX.
-
-    #     Args:
-    #       lro: The Long Running Operation(LRO) ID in the following format
-    #           'projects/<project-name>/locations/<locat>/operations/<operation-uuid>'
-
-    #     Returns:
-    #       response: Response status and payload from LRO
-
-    #     """
-
-    #     location = lro.split('/')[3]
-    #     if location != 'global':
-    #         base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-    #             location)
-    #     else:
-    #         base_url = 'https://dialogflow.googleapis.com/v3beta1'
-
-    #     url = '{0}/{1}'.format(base_url, lro)
-    #     headers = {"Authorization": "Bearer {}".format(self.token)}
-
-    #     # Make REST call
-    #     results = requests.get(url, headers=headers)
-    #     results.raise_for_status()
-
-    #     return results.json()

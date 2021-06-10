@@ -29,6 +29,17 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 from tabulate import tabulate
 
+from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_sapi.core.intents import Intents
+from dfcx_sapi.core.entity_types import EntityTypes
+from dfcx_sapi.core.flows import Flows
+from dfcx_sapi.core.pages import Pages
+from dfcx_sapi.core.transition_route_groups import TransitionRouteGroups
+
+
+g_drive_scope = ['https://spreadsheets.google.com/feeds',
+                 'https://www.googleapis.com/auth/drive']
+
 # logging config
 logging.basicConfig(
     level=logging.INFO,

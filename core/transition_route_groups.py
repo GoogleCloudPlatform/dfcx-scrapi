@@ -22,8 +22,11 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
+from dfcx_sapi.core.flows import Flows
+from dfcx_sapi.core.intents import Intents
+from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_sapi.core.webhooks import Webhooks
 from typing import Dict, List
-from . import flows, intents, webhooks
 
 # logging config
 logging.basicConfig(
@@ -31,48 +34,27 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-          'https://www.googleapis.com/auth/dialogflow']
+
+class TransitionRouteGroups(SapiBase):
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                creds=None,
+                scope=False,
+                route_group_id: str = None):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         creds=creds,
+                         scope=scope)
 
 
-class TransitionRouteGroups:
-    def __init__(self, creds_path: str, route_group_id: str = None):
-        self.creds = service_account.Credentials.from_service_account_file(
-            creds_path, scopes=SCOPES)
-        self.creds.refresh(Request())  # used for REST API calls
-        self.token = self.creds.token  # used for REST API calls
-        self.flows = flows.Flows(creds_path)
-        self.intents = intents.Intents(creds_path)
-        self.webhooks = webhooks.Webhooks(creds_path)
+        self.flows = Flows(creds=self.creds)
+        self.intents = Intents(creds=self.creds)
+        self.webhooks = Webhooks(creds=self.creds)
 
         if route_group_id:
             self.route_group_id = route_group_id
             self.client_options = self._set_region(route_group_id)
 
-    @staticmethod
-    def _set_region(item_id):
-        """different regions have different API endpoints
-
-        Args:
-            item_id: agent/flow/page - any type of long path id like
-                `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
-
-        Returns:
-            client_options: use when instantiating other library client objects
-        """
-        try:
-            location = item_id.split('/')[3]
-        except IndexError as err:
-            logging.error('IndexError - path too short? %s', item_id)
-            raise err
-
-        if location != 'global':
-            api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
-            client_options = {'api_endpoint': api_endpoint}
-            return client_options
-
-        else:
-            return None  # explicit None return when not required
 
     def get_route_groups_map(self, flow_id, reverse=False):
         """ Exports Agent Route Group UUIDs and Names into a user friendly dict.

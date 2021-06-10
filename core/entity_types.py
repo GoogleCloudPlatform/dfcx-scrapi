@@ -19,6 +19,8 @@ import google.cloud.dialogflowcx_v3beta1.types as types
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
+from dfcx_sapi.core.sapi_base import SapiBase
+from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -26,45 +28,22 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-          'https://www.googleapis.com/auth/dialogflow']
 
-
-class EntityTypes:
-    def __init__(self, creds_path: str, entity_id: str = None):
-        self.creds = service_account.Credentials.from_service_account_file(
-            creds_path, scopes=SCOPES)
-        self.creds.refresh(Request())  # used for REST API calls
-        self.token = self.creds.token  # used for REST API calls
+class EntityTypes(SapiBase):
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                creds=None,
+                scope=False,
+                entity_id: str = None):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         creds=creds,
+                         scope=scope)
 
         if entity_id:
             self.entity_id = entity_id
             self.client_options = self._set_region(entity_id)
 
-    @staticmethod
-    def _set_region(item_id):
-        """different regions have different API endpoints
-
-        Args:
-            item_id: agent/flow/page - any type of long path id like
-                `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
-
-        Returns:
-            client_options: use when instantiating other library client objects
-        """
-        try:
-            location = item_id.split('/')[3]
-        except IndexError as err:
-            logging.error('IndexError - path too short? %s', item_id)
-            raise err
-
-        if location != 'global':
-            api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
-            client_options = {'api_endpoint': api_endpoint}
-            return client_options
-
-        else:
-            return None  # explicit None return when not required
 
     def get_entities_map(self, agent_id, reverse=False):
         """ Exports Agent Entityt Names and UUIDs into a user friendly dict.

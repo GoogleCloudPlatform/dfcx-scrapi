@@ -28,11 +28,13 @@ logging.basicConfig(
 
 
 class SearchUtil:
-    def __init__(self, creds_path, agent_id=None):
-        self.intents = intents.Intents(creds_path)
-        self.entities = entity_types.EntityTypes(creds_path)
-        self.flows = flows.Flows(creds_path)
-        self.pages = pages.Pages(creds_path)
+
+    def __init__(self, creds_info, creds_type: str = 'path', agent_id: str = None):
+        
+        self.intents = intents.Intents( creds_info, creds_type)
+        self.entities = entity_types.EntityTypes( creds_info, creds_type)
+        self.flows = flows.Flows( creds_info, creds_type)
+        self.pages = pages.Pages( creds_info, creds_type)
 
     def find_list_parameters(self, agent_id):
         """ This method extracts Parameters set at a page level that are
