@@ -14,36 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import re
-import time
-from typing import Dict, List
-
+from typing import Dict
 import pandas as pd
-import numpy as np
-import requests
-import google.cloud.dialogflowcx_v3beta1.types as types
-import google.cloud.dialogflowcx_v3beta1.services as services
 
-
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
-
-from ..core.sapi_base import authorize
-from ..core import agents, flows
-
-
-
+from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_sapi.core.agents import Agents
+from dfcx_sapi.core.flows import Flows
 
 SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
           'https://www.googleapis.com/auth/dialogflow']
 
 
-class ValidationKit:
+class ValidationKit(SapiBase):
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                creds = None,
+                scope=False):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         creds=creds,
+                         scope=scope)
 
-    def __init__(self, creds_info, creds_type: str = 'path'):
-        self.creds, self.token = authorize(creds_info, creds_type)
 
-        self.agents = agents.Agents(creds_info, creds_type)
-        self.flows = flows.Flows(creds_info, creds_type)
+        self.agents = Agents(creds=self.creds)
+        self.flows = Flows(creds=self.creds)
 
     def validation_results_to_dataframe(self, validation_results: Dict):
         """"Transform the Validation results into a dataframe. Note will not work if you call get_validation_result with a flow_id specified. For calling validate ensure lro is complete
@@ -86,7 +80,7 @@ class ValidationKit:
 
         return df
 
-    def intent_disambg(self, agent_id, refresh=False, flow=None):
+    def intent_disambiguation(self, agent_id, refresh=False, flow=None):
         '''Obtains the intent disambiguation tasks from the validation tool
             Args:
                 refresh: (optional) False means validation results are pulled as is. True means the validation tool is refreshed then results are pulled
@@ -114,7 +108,7 @@ class ValidationKit:
         validation_df = validation_df[['flow', 'detail'] + resources]
         disambig_id, intents_list, tp_list, id_ = [], [], [], 0
         flows = []
-        for index, row in validation_df.iterrows():
+        for _, row in validation_df.iterrows():
             deets, flow = row['detail'], row['flow']
             if bool(
                 re.search(
