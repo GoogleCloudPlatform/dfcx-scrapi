@@ -20,7 +20,8 @@ import logging
 
 from google.cloud.dialogflowcx_v3beta1.services.experiments import ExperimentsClient
 
-from .sapi_base import SapiBase
+from dfcx_sapi.core.sapi_base import SapiBase
+from typing import Dict
 
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
@@ -40,12 +41,18 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
 class SapiExperiments(SapiBase):
     '''Wrapper for working with Experiments'''
 
-    def __init__(self, creds_path, agent_path=None):
-        '''constructor'''
-        super().__init__(creds_path, agent_path)
-        logging.info('created %s', self.agent_path)
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                creds=None,
+                scope=False,
+                agent_path: str = None):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         creds=creds,
+                         scope=scope,
+                         agent_path=agent_path)
 
-    # def list_environments(self):
+        logging.info('created %s', self.agent_path)
 
     def list_experiments(self, environment_id=None):
         '''list out experiments'''
@@ -60,8 +67,9 @@ class SapiExperiments(SapiBase):
         # ex
         request = types.experiment.ListExperimentsRequest()
         request.parent = environment_path
+        client_options = self._set_region(environment_id)
         client = services.experiments.ExperimentsClient(
-            client_options=self.client_options,
+            client_options=client_options,
             credentials=self.creds)
         response = client.list_experiments(request)
         blob = SapiBase.response_to_dict(response)
