@@ -13,12 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import logging
 import pandas as pd
 import time
-import google.cloud.dialogflowcx_v3beta1.types as types
 
-from ..core import entity_types, flows, intents, pages
+from typing import Dict
+
+from dfcx_sapi.core.entity_types import EntityTypes
+from dfcx_sapi.core.flows import Flows
+from dfcx_sapi.core.intents import Intents
+from dfcx_sapi.core.pages import Pages
+from dfcx_sapi.core.sapi_base import SapiBase
 
 # logging config
 logging.basicConfig(
@@ -27,14 +33,25 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
-class SearchUtil:
+class SearchUtil(SapiBase):
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                creds=None,
+                scope=False,
+                agent_id: str = None):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         creds=creds,
+                         scope=scope)
 
-    def __init__(self, creds_info, creds_type: str = 'path', agent_id: str = None):
+        if agent_id:
+            self.agent_id = agent_id
+            self.client_options = self._set_region(agent_id)
         
-        self.intents = intents.Intents( creds_info, creds_type)
-        self.entities = entity_types.EntityTypes( creds_info, creds_type)
-        self.flows = flows.Flows( creds_info, creds_type)
-        self.pages = pages.Pages( creds_info, creds_type)
+        self.intents = Intents(creds=self.creds)
+        self.entities = EntityTypes(creds=self.creds)
+        self.flows = Flows(creds=self.creds)
+        self.pages = Pages(creds=self.creds)
 
     def find_list_parameters(self, agent_id):
         """ This method extracts Parameters set at a page level that are
