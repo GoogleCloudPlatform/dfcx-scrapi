@@ -14,15 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import logging
-import requests
-import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
-from google.protobuf import field_mask_pb2
 
 from typing import Dict, List
-# from dfcx.dfcx import DialogflowCX
 
 # logging config
 logging.basicConfig(
@@ -34,7 +28,7 @@ SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
           'https://www.googleapis.com/auth/dialogflow']
 
 
-class Static:
+class MakerUtil:
 
     @staticmethod
     def make_generic(obj, obj_type, default, conditionals=dict()):
