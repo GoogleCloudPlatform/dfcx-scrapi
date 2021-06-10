@@ -47,7 +47,6 @@ class CopyUtil(SapiBase):
                          creds=creds,
                          scope=scope)
     
-    # TODO: pmarlow@ knows what to do!!
         self.intents = Intents(creds=self.creds)
         self.entities = EntityTypes(creds=self.creds)
         self.flows = Flows(creds=self.creds)
