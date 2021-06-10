@@ -35,10 +35,12 @@ logging.basicConfig(
 class Agents(SapiBase):
     def __init__(self, creds_path: str = None,
                 creds_dict: Dict = None,
+                creds=None,
                 scope=False,
                 agent_id: str = None):
         super().__init__(creds_path=creds_path,
                          creds_dict=creds_dict,
+                         creds=creds,
                          scope=scope)
 
         if agent_id:
