@@ -19,7 +19,6 @@ base for other SAPI classes
 
 import logging
 import json
-import requests
 
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
@@ -36,7 +35,8 @@ class SapiBase:
     def __init__(self, creds_path: str = None,
                 creds_dict: Dict = None,
                 creds=None,
-                scope=False):
+                scope=False,
+                agent_path=None):
 
         self.scopes = SapiBase.global_scopes
         if scope:
@@ -55,8 +55,11 @@ class SapiBase:
             raise ValueError('creds_type must be of [creds_path, creds_dict]')
 
         self.creds.refresh(Request())
-        self.token = self.creds.token 
-        
+        self.token = self.creds.token
+
+        if agent_path:
+            self.agent_path = agent_path
+
 
     @staticmethod
     def _set_region(item_id):

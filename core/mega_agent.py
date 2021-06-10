@@ -20,21 +20,31 @@ manages creds and agent ids in one place
 '''
 
 import logging
+from typing import Dict
 
-from .sapi_base import SapiBase
-from .intents import Intents
-from .flows import Flows
-from .pages import Pages
+from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_sapi.core.intents import Intents
+from dfcx_sapi.core.flows import Flows
+from dfcx_sapi.core.pages import Pages
 
 class MegaAgent(SapiBase):
-    '''Common base class for different SAPI objects'''
+    def __init__(self, creds_path: str = None,
+                creds_dict: Dict = None,
+                creds=None,
+                scope=False,
+                agent_path=None):
+        super().__init__(creds_path=creds_path,
+                         creds_dict=creds_dict,
+                         creds=creds,
+                         scope=scope)
 
-    def __init__(self, creds_path=None, agent_path=None, _language_code="en"):
-        super().__init__(creds_path=creds_path, agent_path=agent_path)
-        self.intents_tracker = Intents(creds_path=self.creds_path)
-        self.flows_tracker = Flows(creds_path=self.creds_path)
-        self.pages_tracker = Pages(creds_path=self.creds_path)
+        self.intents_tracker = Intents(creds=self.creds)
+        self.flows_tracker = Flows(creds=self.creds)
+        self.pages_tracker = Pages(creds=self.creds)
         # TODO - tracker for phrases per intent
+
+        if agent_path:
+            self.agent_path = agent_path
 
     def list_intents(self):
         '''list intents for instantiated agent'''
@@ -56,26 +66,18 @@ class MegaAgent(SapiBase):
 
     def all_pages(self):
         '''all pages for every flow'''
-        flows = self.list_flows()
+        flows = self.flows_tracker.list_flows()
         pages = []
         for flow in flows:
-            pages += self.list_pages(flow.name)
+            pages += self.pages_tracker.list_pages(flow.name)
         return pages
-
-    # def count_phrases(self):
-    #     '''just count the phrases for stats'''
-    #     intents = self.list_intents()
-    #     df = self.intents_tracker.intents_to_dataframe(intents)
-    #     logging.info('intents[0] %s', intents[0])
-    #     logging.info('len(intents) %s', len(intents))
-    #     return len(intents)
 
     def stats(self):
         '''snapshot of an agents state'''
         info = {
             # 'phrases': self.count_phrases(),
-            'flows': len(self.list_flows()),
-            'intents': len(self.list_intents()),
+            'flows': len(self.flows_tracker.list_flows()),
+            'intents': len(self.intents_tracker.list_intents(self.agent_path)),
             'pages': len(self.all_pages() )
         }
         return info
