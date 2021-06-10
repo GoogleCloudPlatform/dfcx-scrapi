@@ -15,7 +15,6 @@ limitations under the License.
 """
 import copy
 from dfcx_sapi.core.sapi_base import SapiBase
-import json
 import logging
 import pandas as pd
 import time
