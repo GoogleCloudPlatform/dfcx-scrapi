@@ -150,14 +150,6 @@ class Intents(SapiBase):
             raise ValueError('Mode types: [basic, advanced]')
 
 
-    def _set_api_options(self, id_item):
-        '''bundle API parameters'''
-        client_options = self._set_region(id_item)
-        return {
-            'client_options': client_options,
-            'credentials': self.creds}
-
-
     def get_intents_map(self, agent_id, reverse=False):
         """ Exports Agent Intent Names and UUIDs into a user friendly dict.
 

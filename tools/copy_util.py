@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import copy
+from dfcx_sapi.core.sapi_base import SapiBase
 import json
 import logging
 import pandas as pd
@@ -26,6 +27,7 @@ from dfcx_sapi.core.intents import Intents
 from dfcx_sapi.core.entity_types import EntityTypes
 from dfcx_sapi.core.flows import Flows
 from dfcx_sapi.core.pages import Pages
+from dfcx_sapi.core.sapi_base import SapiBase
 from dfcx_sapi.core.webhooks import Webhooks
 from dfcx_sapi.core.transition_route_groups import TransitionRouteGroups
 
@@ -36,25 +38,24 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
-class CopyUtil:
+class CopyUtil(SapiBase):
     def __init__(self, creds_path: str = None,
                 creds_dict: Dict = None,
                 creds = None,
-                scope=False,
-                webhook_id: str = None):
+                scope=False):
         super().__init__(creds_path=creds_path,
                          creds_dict=creds_dict,
                          creds=creds,
                          scope=scope)
     
     # TODO: pmarlow@ knows what to do!!
-        self.intents = intents.Intents(creds_info, creds_type)
-        self.entities = entity_types.EntityTypes(creds_info, creds_type)
-        self.flows = flows.Flows(creds_info, creds_type)
-        self.pages = pages.Pages(creds_info, creds_type)
-        self.webhooks = webhooks.Webhooks(creds_info, creds_type)
-        self.route_groups = transition_route_groups.TransitionRouteGroups(
-            creds_info, creds_type)
+        self.intents = Intents(creds=self.creds)
+        self.entities = EntityTypes(creds=self.creds)
+        self.flows = Flows(creds=self.creds)
+        self.pages = Pages(creds=self.creds)
+        self.webhooks = Webhooks(creds=self.creds)
+        self.route_groups = TransitionRouteGroups(
+            creds=self.creds)
 
 
 # COPY FUNCTIONS

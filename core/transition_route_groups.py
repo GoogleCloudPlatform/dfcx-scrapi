@@ -38,10 +38,12 @@ logging.basicConfig(
 class TransitionRouteGroups(SapiBase):
     def __init__(self, creds_path: str = None,
                 creds_dict: Dict = None,
+                creds=None,
                 scope=False,
                 route_group_id: str = None):
         super().__init__(creds_path=creds_path,
                          creds_dict=creds_dict,
+                         creds=creds,
                          scope=scope)
 
 
