@@ -15,7 +15,6 @@ limitations under the License.
 """
 import copy
 from dfcx_sapi.core.sapi_base import SapiBase
-import json
 import logging
 import pandas as pd
 import time
@@ -48,7 +47,6 @@ class CopyUtil(SapiBase):
                          creds=creds,
                          scope=scope)
     
-    # TODO: pmarlow@ knows what to do!!
         self.intents = Intents(creds=self.creds)
         self.entities = EntityTypes(creds=self.creds)
         self.flows = Flows(creds=self.creds)

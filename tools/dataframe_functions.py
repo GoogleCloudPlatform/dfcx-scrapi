@@ -47,7 +47,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
-class DataframeFunctions:
+class DataframeFunctions(SapiBase):
   """Class that supports dataframe functions in DFCX."""
 
   def __init__(self, creds_path: str):
@@ -682,113 +682,109 @@ class DataframeFunctions:
 
   def create_transition_route_from_dataframe(self, route_df):
     """Create transition route.
+    
+    Args:
+      route_df: dataframe with a singular routes data. Should only be one row
+        intent: intent id 
+        condition: string condition. ex. 
+          $session.params.dtmf_diy_opt_in = 1 AND
+          $session.params.dtmf_2_techinternet = 2
+        target_page: page id
+        target_flow: flow id
+        webhook: webhook id
+        webhook_tag: string webhook tag
+        custom_payload: a singular payload or list of payloads ex. [{}, {}]
+        fulfillment_text: = list of text ["yo", "hi"]
+        parameter_presets: = dictionary of parameter presets ex.
+          {"param1":"value","param2":"othervalues"}
+        rate_limiter: seconds to sleep between operations.
+        
+    Returns:
+      transitionRoute: transition route protobuf
+    """
+    
+    transition_route = types.TransitionRoute()
 
-      Args:
-        route_df: dataframe with a singular routes data. Should only be one row
-        intent: intent id
-                    condition: string condition. ex.
-                      $session.params.dtmf_diy_opt_in = 1 AND
-                      $session.params.dtmf_2_techinternet = 2
-                    target_page: page id
-                    target_flow: flow id
-                    webhook: webhook id
-                    webhook_tag: string webhook tag
-                    custom_payload: a singular payload or list of payloads ex.
-                      [{}, {}]
-                    fulfillment_text: = list of text ["yo", "hi"]
-                    parameter_presets: = dictionary of parameter presets ex.
-                      {"param1":"value","param2":"othervalues"}
-                    rate_limiter: seconds to sleep between operations.
+    route_dict = route_df.to_dict()
+    transition_route.intent = route_dict.get('intent', None)
+    transition_route.condition = route_dict.get('condition', None)
+    transition_route.target_page = route_dict.get('target_page', None)
+    transition_route.target_flow = route_dict.get('target_flow', None)
 
-            Returns:
-                transitionRoute: transition route protobuf
-        '''
+    # fulfillment
+    fulfillment = types.Fulfillment()
+    fulfillment.webhook = route_dict.get('webhook', None)
+    fulfillment.tag = route_dict.get('webhook_tag', None)
 
-        transitionRoute = types.TransitionRoute()
+    customPayload = route_dict.get('custom_payload', None)
+    custy_payloads = []
+    if customPayload:
+        customPayload = json.loads(customPayload)
+        if ~isinstance(customPayload, list):
+            customPayload = [customPayload]
+        for cp in customPayload:
+            custy_payloads.append({'payload': cp})
 
-        route_dict = route_df.to_dict()
-        transitionRoute.intent = route_dict.get('intent', None)
-        transitionRoute.condition = route_dict.get('condition', None)
-        transitionRoute.target_page = route_dict.get('target_page', None)
-        transitionRoute.target_flow = route_dict.get('target_flow', None)
-
-        # fulfillment
-        fulfillment = types.Fulfillment()
-        fulfillment.webhook = route_dict.get('webhook', None)
-        fulfillment.tag = route_dict.get('webhook_tag', None)
-
-        customPayload = route_dict.get('custom_payload', None)
-        custy_payloads = []
-        if customPayload:
-            customPayload = json.loads(customPayload)
-            if ~isinstance(customPayload, list):
-                customPayload = [customPayload]
-            for cp in customPayload:
-                custy_payloads.append({'payload': cp})
-
-        fulfillment_text = route_dict.get('fulfillment_text', None)
+    fulfillment_text = route_dict.get('fulfillment_text', None)
 #         if fulfillment_text:
-            # FIXME ast is not defined
+        # FIXME ast is not defined
 #             fulfillment_text = ast.literal_eval(fulfillment_text)
 
-        # custom payloads and text
-        payload = {"messages":
-                   custy_payloads +
-                   [{'text': {'text': fulfillment_text}}]
-                   }
+    # custom payloads and text
+    payload = {"messages":
+                custy_payloads +
+                [{'text': {'text': fulfillment_text}}]
+                }
 
-        payload_json = json.dumps(payload)
-        payload_json = json.dumps(payload)
-        fulfillment = types.Fulfillment.from_json(payload_json)
+    payload_json = json.dumps(payload)
+    payload_json = json.dumps(payload)
+    fulfillment = types.Fulfillment.from_json(payload_json)
 
-        #parameter - presets
-        set_param_actions = []
-        parameter_presets = route_dict.get('parameter_presets', None)
-        if parameter_presets:
-            parameter_presets = json.loads(parameter_presets)
-            for param in parameter_presets.keys():
-                set_param_action = types.Fulfillment.SetParameterAction()
-                set_param_action.parameter = param
-                set_param_action.value = parameter_presets[param]
-                set_param_actions.append(set_param_action)
-        fulfillment.set_parameter_actions = set_param_actions
-        transitionRoute.trigger_fulfillment = fulfillment
+    #parameter - presets
+    set_param_actions = []
+    parameter_presets = route_dict.get('parameter_presets', None)
+    if parameter_presets:
+        parameter_presets = json.loads(parameter_presets)
+        for param in parameter_presets.keys():
+            set_param_action = types.Fulfillment.SetParameterAction()
+            set_param_action.parameter = param
+            set_param_action.value = parameter_presets[param]
+            set_param_actions.append(set_param_action)
+    fulfillment.set_parameter_actions = set_param_actions
+    transition_route.trigger_fulfillment = fulfillment
 
-        return transitionRoute
+    return transition_route
 
-    def bulk_create_route_group_from_dataframe(
-            self,
-            display_name,
-            agent_id,
-            flow_id,
-            route_group_df,
-            update_flag=False):
-        '''
-         create transition route - no support for end_session yet just end flow.
-
-            Args:
-                display_name: name for the route group
-                agent_id: agent id of target agent
-                flow_id: flow id where to create route group
-                route_group_df: dataframe with a routes data
-                    intent: intent id
-                    condition: string condition. ex.
-                      $session.params.dtmf_diy_opt_in = 1 AND
-                      $session.params.dtmf_2_techinternet = 2
-                    target_page: page id
-                    target_flow: flow id
-                    webhook: webhook id
-                    webhook_tag: string webhook tag
-                    custom_payload: a singular payload or list of payloads ex.
-                      [{}, {}]
-                    fulfillment_text: = list of text ["yo", "hi"]
-                    parameter_presets: = dictionary of parameter presets ex.
-                      {"param1":"value","param2":"othervalues"}
-                update_flag: True to create the route group in the provided flow
-                  id
-
-            Returns:
-                rg: route group protobuf
+  def bulk_create_route_group_from_dataframe(
+          self,
+          display_name,
+          agent_id,
+          flow_id,
+          route_group_df,
+          update_flag=False):
+    """create transition route - no support for end_session / just end flow.
+    
+    Args:
+      display_name: name for the route group
+      agent_id: agent id of target agent
+      flow_id: flow id where to create route group
+      route_group_df: dataframe with a routes data
+        intent: intent id
+        condition: string condition. ex.
+          $session.params.dtmf_diy_opt_in = 1 AND
+          $session.params.dtmf_2_techinternet = 2
+        target_page: page id
+        target_flow: flow id
+        webhook: webhook id
+        webhook_tag: string webhook tag
+        custom_payload: a singular payload or list of payloads ex. [{}, {}]
+        fulfillment_text: = list of text ["yo", "hi"]
+        parameter_presets: = dictionary of parameter presets ex.
+          {"param1":"value","param2":"othervalues"}
+          update_flag: True to create the route group in the provided flow id
+          
+    Returns:
+      rg: route group protobuf
     """
     if 'intent' in route_group_df.columns:
       intentsMap = self.intents.get_intents_map(agent_id=agent_id, reverse=True)

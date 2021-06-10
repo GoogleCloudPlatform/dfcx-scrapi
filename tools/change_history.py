@@ -14,15 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import gspread
 import logging
 import numpy as np
 import pandas as pd
 import requests
-from google.oauth2 import service_account
-from oauth2client.service_account import ServiceAccountCredentials
-from gspread_dataframe import set_with_dataframe
-from google.auth.transport.requests import Request
 
 from dfcx_sapi.core.sapi_base import SapiBase
 from typing import Dict, List
