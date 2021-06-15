@@ -276,7 +276,7 @@ class Agents(SapiBase):
 
     def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
         """Restores a CX agent from a gcs_bucket location.
-        TODO(pmarlow@) Currently there is no way to restore back to default
+        Currently there is no way to restore back to default
         settings via the api. The feature request for this is logged.
 
         Args:

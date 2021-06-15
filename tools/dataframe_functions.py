@@ -301,7 +301,7 @@ class DataframeFunctions(SapiBase):
     else:
       raise ValueError('mode must be basic or advanced')
 
-    # TODO(drescher@) - check if user provided DF is in the right shape
+    # TODO - check if user provided DF is in the right shape
     # phrase_schema_user = train_phrases_df.dtypes.to_frame().astype(
     # {0:'string'})
     # param_schema_user = params_df.dtypes.to_frame().astype({0:'string'})
