@@ -248,8 +248,8 @@ class CopyUtil(SapiBase):
                 if rg.name in resource_dict['route_groups']:
                     resource_obj_dict['route_groups'].append(rg)
 
-        # TODO (pmarlow@): Add more descriptive Error Handling messages
-        # TODO (pmarlow@): Need to identify strategy for dedupe logic / Design
+        # TODO Add more descriptive Error Handling messages
+        # TODO Need to identify strategy for dedupe logic / Design
         # Doc
         """ Notes
             - We don't have timestamp to determine when a resource was created so we can't use 'latest'
