@@ -16,25 +16,26 @@ limitations under the License.
 import pytest
 import time
 import google.cloud.dialogflowcx_v3beta1.types as types
-import core.agents as agents
-import core.operations as operations
-# from dfcx.core import agents, operations
+from dfcx_sapi.core.agents import Agents
+from dfcx_sapi.core.operations import Operations
 from datetime import datetime
 from typing import List, Dict
 
-# TODO (pmarlow@) Create SA for Gitlab CICD and configure as ENV VAR
-CREDS_PATH = '/home/pmarlow/engineering/creds/nj-pods-dev-pmarlow.json'
+# TODO Create SA for Gitlab CICD and configure as ENV VAR
+
 DEV = True # Set flag to disable some tests while in development
 
 today_time = datetime.now().strftime("%d%m%Y_%H%M%S")
 AGENT_NAME = 'DFCX SAPI - TEMP TEST AGENT {}'.format(today_time)
+CREDS_PATH = None
 
 @pytest.fixture(name='cx_vars', scope='class')
 def cx_vars_fixture():
+
     class CxVars:
         def __init__(self, CREDS_PATH):
-            self.agents = agents.Agents(CREDS_PATH)
-            self.ops = operations.Operations(CREDS_PATH)
+            self.agents = Agents(CREDS_PATH)
+            self.ops = Operations(CREDS_PATH)
             self.gcs_bucket_uri = 'gs://dfcx_scrapi/api_test_agent.json'
 
     return CxVars(CREDS_PATH)
@@ -93,33 +94,7 @@ class TestAgents:
 
         assert isinstance(agents[0], types.Agent)
 
-    # TODO (pmarlow@)
+    # TODO
     # def test_validate
 
     # def test_get_validation_result
-
-
-
-
-# What do we really care about right now for testing?
-# Maybe not check for content, but check for length
-# should this export 10 intents? Are we getting 10 intents back?
-# make sure we don't touch the agent
-
-# order of operations for test
-# - resetting agents to a known state
-
-# Check out BEFORE ALL in pytest
-# utility functions like "agent reset"
-
-# spin up new agent
-# run all tests
-# tear down agent
-# report results
-
-# Put this in Gitlab and run it on a commit hook (pre/post?)
-# setup CICD in Gitlab
-
-# creds.EXAMPLE ?
-# rename file
-# gitlab SA for automated testing?
