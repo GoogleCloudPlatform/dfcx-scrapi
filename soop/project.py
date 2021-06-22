@@ -86,7 +86,11 @@ class Project(SapiBase):
           lro_list: List of all LROs to reference backend job status
         """
 
+        logging.info('='*10 + ' Fetching all Agent IDs ' + '='*10)
         all_agents = self.list_agents()
+        logging.info('Received %s Agent IDs' % len(all_agents))
+
+        logging.info('='*10 + ' Strating Agent Backups ' + '='*10)
 
         lro_list = []
         for agent in all_agents:
@@ -103,5 +107,7 @@ class Project(SapiBase):
             lro_list.append(self.agents.export_agent(agent.name, temp_gcs_uri))
 
             time.sleep(1)
+
+        logging.info('='*10 + ' Agent Backup Job Complete ' + '='*10)
 
         return lro_list
