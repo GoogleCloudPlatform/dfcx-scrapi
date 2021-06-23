@@ -34,7 +34,7 @@ before_script:
     - python -V  # Print out python version for debugging
     - python -m venv venv
     - source venv/bin/activate
-    - cp config.yaml.example config.yaml
+    # - cp config.yaml.example config.yaml
 
 # Job to run if there's nothing to lint or test.
 noop:
