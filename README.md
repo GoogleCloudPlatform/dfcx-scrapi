@@ -70,18 +70,22 @@ With DFCX SAPI, you can perform many bot building and maintenance actions at sca
 
 <!-- GETTING STARTED -->
 # Getting Started
-## Prerequisites
-- Install Requirements  
-`pip install -r requirements.txt`
+## Environment Setup
+Set up Google Cloud Platform credentials and install dependencies.
+```sh
+gcloud auth login
+gcloud auth application-default login
+gcloud config set project <project name>
+```
+```sh
+python3 -m venv venv
+source ./venv/bin/activate
+pip install -r requirements.txt
+```
 
-- Authentication  
+## Authentication  
 In order to use the functions and API calls to Dialogflow CX, you will need a Service Account that has appropriate access to your GCP project.  
 For more information on view the official docs for [Creating and Managing GCP Service Accounts](https://cloud.google.com/iam/docs/creating-managing-service-accounts).
-
-## Installation
-1. Set up your GCP Service Account
-2. Clone the repo  
-`git clone git@gitlab.com:google-pso/ais/verizon/dfcx_sapi.git`
 
 <!-- USAGE EXAMPLES -->
 # Usage
