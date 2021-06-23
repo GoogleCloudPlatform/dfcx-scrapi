@@ -1,0 +1,88 @@
+# Only run pipelines for MRs and master.
+workflow:
+    rules:
+        - if: $CI_MERGE_REQUEST_IID
+        - if: $CI_COMMIT_TAG
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+        - when: never
+
+stages:
+    - lint
+    # - test
+
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+image: python:3.7.9
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# Pip's cache doesn't store the python packages
+# https://pip.pypa.io/en/stable/reference/pip_install/#caching
+#
+# If you want to also cache the installed packages, you have to install
+# them in a virtualenv and cache it as well.
+cache:
+    key: ${CI_JOB_NAME}
+    paths:
+        - .cache/pip
+        - venv/
+
+before_script:
+    - python -V  # Print out python version for debugging
+    - python -m venv venv
+    - source venv/bin/activate
+    - cp config.yaml.example config.yaml
+
+# Job to run if there's nothing to lint or test.
+noop:
+    image: alpine:3.7
+    stage: lint
+    rules:
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+          when: never
+        - if: $CI_MERGE_REQUEST_IID
+          changes:
+            - '**/*.{py}'
+            - tests/**/*
+          when: never
+        - when: on_success
+    cache: {}
+    before_script: []
+    script: echo 'noop'
+
+linting:
+    stage: lint
+    rules:
+        - changes:
+            - '**/*.{py}'
+            - tests/license/license_check.sh
+          when: on_success
+        - when: never
+    script:
+        - tests/license/license_check.sh
+        - pip install pylint==2.8.3
+        - pylint --jobs=0 $(git ls-files '*.py')
+
+# Run unit tests. Always runs unit tests on the default branch.
+#
+# If this is a merge request, only run tests if certain files were modified.
+# Tests need to always be run on the default branch to update the test coverage
+# metric in GitLab.
+# unit_test:
+#     stage: test
+#     rules:
+#         - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+#           when: on_success
+#         - if: $CI_MERGE_REQUEST_IID
+#           changes:
+#             - '**/*.{py}'
+#             - tests/**/*
+#           when: on_success
+#         - when: never
+#     script:
+#         - pip install -r requirements.txt
+#         - pytest -n auto tests/unit --cov=src
+#     coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
