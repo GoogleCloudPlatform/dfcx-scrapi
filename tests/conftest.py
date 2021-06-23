@@ -2,7 +2,6 @@
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
-
 import pytest
 
 def pytest_addoption(parser):
