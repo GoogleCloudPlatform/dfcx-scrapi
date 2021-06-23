@@ -1,0 +1,12 @@
+# Copyright 2021 Google LLC. This software is provided as-is, without warranty
+# or representation for any use or purpose. Your use of it is subject to your
+# agreement with Google.
+#
+# Config file for variables that shouldn't be added to version control.
+
+# Deployment environment (development, test, staging, production)
+environment: 'development'
+
+# GCP project metadata
+
+project_id: 'nj-pods-dev'
