@@ -62,6 +62,7 @@ linting:
           when: on_success
         - when: never
     script:
+        - chmod +x tests/license/license_check.sh
         - tests/license/license_check.sh
         - pip install pylint==2.8.3
         - pylint --jobs=0 $(git ls-files '*.py')
