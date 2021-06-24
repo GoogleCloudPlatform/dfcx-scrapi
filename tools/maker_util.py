@@ -10,15 +10,17 @@ from typing import Dict, List
 # logging config
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
-SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-          'https://www.googleapis.com/auth/dialogflow']
+SCOPES = [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/dialogflow",
+]
 
 
 class MakerUtil:
-
     @staticmethod
     def make_generic(obj, obj_type, default, conditionals=dict()):
         if isinstance(obj, obj_type):
@@ -38,11 +40,12 @@ class MakerUtil:
 
         elif isinstance(obj, str):
             dic = {
-                'unspecified': 0,
-                'map': 1,
-                'list': 2,
-                'regexp': 3,
-                'default': 1}
+                "unspecified": 0,
+                "map": 1,
+                "list": 2,
+                "regexp": 3,
+                "default": 1,
+            }
             t = dic.get(obj.lower())
             if t:
                 return obj_type(t)
@@ -61,7 +64,7 @@ class MakerUtil:
 
     @staticmethod
     def make_transition_route(self, obj=None, **kwargs):
-        """ Creates a single Transition Route object for Dialogflow CX.
+        """Creates a single Transition Route object for Dialogflow CX.
 
         Transition routes are used to navigate a user from page to page, or
         page to flow in Dialogflow CX. Routes can be part of a Page object or
@@ -86,7 +89,7 @@ class MakerUtil:
 
         Returns:
           Route object of type <google.cloud.dialogflowcx_v3beta1.types.page.TransitionRoute>
-          """
+        """
 
         if obj:
             route = obj
@@ -100,7 +103,7 @@ class MakerUtil:
 
         # Set route attributes to args
         for key, value in kwargs.items():
-            if key == 'trigger_fulfillment':
+            if key == "trigger_fulfillment":
                 tf = self.make_trigger_fulfillment(value)
                 setattr(route, key, tf)
             else:
@@ -110,11 +113,9 @@ class MakerUtil:
 
     @staticmethod
     def make_trigger_fulfillment(
-            self,
-            messages=None,
-            webhook_id=None,
-            webhook_tag=None):
-        """ Creates a single Fulfillment object for Dialogflow CX.
+        self, messages=None, webhook_id=None, webhook_tag=None
+    ):
+        """Creates a single Fulfillment object for Dialogflow CX.
 
         Fulfillments are used as part of Transition Routes to add Dialogue
         messages back to the user, trigger webhooks, set parameter presets,
@@ -158,7 +159,7 @@ class MakerUtil:
     @staticmethod
     def set_entity_type_attr(self, entity_type, kwargs):
         for key, value in kwargs.items():
-            if key == 'kind':
+            if key == "kind":
                 kind = types.entity_type.EntityType.Kind
                 obj = self.make_generic(value, kind, kind(0))
                 setattr(entity_type, key, obj)

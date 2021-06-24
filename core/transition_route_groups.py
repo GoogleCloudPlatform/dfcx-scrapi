@@ -20,21 +20,26 @@ from typing import Dict, List
 # logging config
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 class TransitionRouteGroups(SapiBase):
-    def __init__(self, creds_path: str = None,
-                creds_dict: Dict = None,
-                creds=None,
-                scope=False,
-                route_group_id: str = None):
-        super().__init__(creds_path=creds_path,
-                         creds_dict=creds_dict,
-                         creds=creds,
-                         scope=scope)
-
+    def __init__(
+        self,
+        creds_path: str = None,
+        creds_dict: Dict = None,
+        creds=None,
+        scope=False,
+        route_group_id: str = None,
+    ):
+        super().__init__(
+            creds_path=creds_path,
+            creds_dict=creds_dict,
+            creds=creds,
+            scope=scope,
+        )
 
         self.flows = Flows(creds=self.creds)
         self.intents = Intents(creds=self.creds)
@@ -44,9 +49,8 @@ class TransitionRouteGroups(SapiBase):
             self.route_group_id = route_group_id
             self.client_options = self._set_region(route_group_id)
 
-
     def get_route_groups_map(self, flow_id, reverse=False):
-        """ Exports Agent Route Group UUIDs and Names into a user friendly dict.
+        """Exports Agent Route Group UUIDs and Names into a user friendly dict.
 
         Args:
           - flow_id, the formatted CX Agent Flow ID to use
@@ -56,26 +60,32 @@ class TransitionRouteGroups(SapiBase):
           - webhooks_map, Dictionary containing Webhook UUIDs as keys and
               webhook.display_name as values. If Optional reverse=True, the
               output will return page_name:ID mapping instead of ID:page_name
-          """
+        """
 
         if reverse:
-            pages_dict = {page.display_name: page.name
-                          for page in self.list_transition_route_groups(flow_id)}
+            pages_dict = {
+                page.display_name: page.name
+                for page in self.list_transition_route_groups(flow_id)
+            }
 
         else:
-            pages_dict = {page.name: page.display_name
-                          for page in self.list_transition_route_groups(flow_id)}
+            pages_dict = {
+                page.name: page.display_name
+                for page in self.list_transition_route_groups(flow_id)
+            }
 
         return pages_dict
 
     def list_transition_route_groups(self, flow_id):
-        request = types.transition_route_group.ListTransitionRouteGroupsRequest()
+        request = (
+            types.transition_route_group.ListTransitionRouteGroupsRequest()
+        )
         request.parent = flow_id
 
         client_options = self._set_region(flow_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
         response = client.list_transition_route_groups(request)
 
         cx_route_groups = []
@@ -90,7 +100,8 @@ class TransitionRouteGroups(SapiBase):
         request.name = name
         client_options = self._set_region(name)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
-            client_options=client_options)
+            client_options=client_options
+        )
         response = client.get_transition_route_group(request)
 
         return response
@@ -101,7 +112,7 @@ class TransitionRouteGroups(SapiBase):
         # if rg object is given, set rg to it
         if obj:
             trg = obj
-            trg.name = ''
+            trg.name = ""
         else:
             trg = types.transition_route_group.TransitionRouteGroup()
 
@@ -111,9 +122,11 @@ class TransitionRouteGroups(SapiBase):
 
         client_options = self._set_region(flow_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
-            client_options=client_options)
+            client_options=client_options
+        )
         response = client.create_transition_route_group(
-            parent=flow_id, transition_route_group=trg)
+            parent=flow_id, transition_route_group=trg
+        )
 
         return response
 
@@ -135,14 +148,16 @@ class TransitionRouteGroups(SapiBase):
 
         client_options = self._set_region(rg_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
-            client_options=client_options)
+            client_options=client_options
+        )
         response = client.update_transition_route_group(
-            transition_route_group=rg, update_mask=mask)
+            transition_route_group=rg, update_mask=mask
+        )
 
         return response
 
     def route_groups_to_dataframe(self, agent_id):
-        """ This method extracts the Transition Route Groups from a given DFCX Agent
+        """This method extracts the Transition Route Groups from a given DFCX Agent
         and returns key information about the Route Groups in a Pandas Dataframe
 
         DFCX Route Groups exist as an Agent level resource, however they are
@@ -163,17 +178,24 @@ class TransitionRouteGroups(SapiBase):
         # The following dicts and lists are setup to use to map "user friendly"
         # data labels before writing the Route Group object to a dataframe.
         flows_dict = {
-            flow.display_name: flow.name for flow in self.flows.list_flows(agent_id)}
+            flow.display_name: flow.name
+            for flow in self.flows.list_flows(agent_id)
+        }
 
-        intent_dict = {intent.name.split('/')[-1]: intent.display_name
-                       for intent in self.intents.list_intents(agent_id)}
+        intent_dict = {
+            intent.name.split("/")[-1]: intent.display_name
+            for intent in self.intents.list_intents(agent_id)
+        }
 
-        webhooks_dict = {webhook.name.split('/')[-1]: webhook.display_name
-                         for webhook in self.webhooks.list_webhooks(agent_id)}
+        webhooks_dict = {
+            webhook.name.split("/")[-1]: webhook.display_name
+            for webhook in self.webhooks.list_webhooks(agent_id)
+        }
 
         route_groups_dict = {
-            flow: self.list_transition_route_groups(
-                flows_dict[flow]) for flow in flows_dict}
+            flow: self.list_transition_route_groups(flows_dict[flow])
+            for flow in flows_dict
+        }
 
         rows_list = []
         for flow in route_groups_dict:
@@ -181,24 +203,43 @@ class TransitionRouteGroups(SapiBase):
                 for route in route_group.transition_routes:
                     temp_dict = {}
 
-                    temp_dict.update({'flow': flow})
+                    temp_dict.update({"flow": flow})
                     temp_dict.update(
-                        {'route_group_name': route_group.display_name})
+                        {"route_group_name": route_group.display_name}
+                    )
                     temp_dict.update(
-                        {'intent': intent_dict[route.intent.split('/')[-1]]})
+                        {"intent": intent_dict[route.intent.split("/")[-1]]}
+                    )
 
                     if route.trigger_fulfillment.webhook:
                         temp_dict.update(
-                            {'webhook': webhooks_dict[route.trigger_fulfillment.webhook.split('/')[-1]]})
+                            {
+                                "webhook": webhooks_dict[
+                                    route.trigger_fulfillment.webhook.split(
+                                        "/"
+                                    )[-1]
+                                ]
+                            }
+                        )
 
                     temp_dict.update(
-                        {'webhook_tag': route.trigger_fulfillment.tag})
+                        {"webhook_tag": route.trigger_fulfillment.tag}
+                    )
 
                     if len(route.trigger_fulfillment.messages) > 0:
-                        if len(
-                                route.trigger_fulfillment.messages[0].text.text) > 0:
+                        if (
+                            len(route.trigger_fulfillment.messages[0].text.text)
+                            > 0
+                        ):
                             temp_dict.update(
-                                {'fulfillment_message': route.trigger_fulfillment.messages[0].text.text[0]})
+                                {
+                                    "fulfillment_message": route.trigger_fulfillment.messages[
+                                        0
+                                    ].text.text[
+                                        0
+                                    ]
+                                }
+                            )
 
                     rows_list.append(temp_dict)
 

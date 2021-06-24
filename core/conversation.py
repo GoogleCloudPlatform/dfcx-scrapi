@@ -20,10 +20,11 @@ from .sapi_base import SapiBase
 logger = logging
 
 logging.basicConfig(
-    format='[dfcx] %(levelname)s:%(message)s', level=logging.INFO)
+    format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO
+)
 
 MAX_RETRIES = 3  # JWT errors on CX API
-DEBUG_LEVEL = 'info'  # silly for request/response
+DEBUG_LEVEL = "info"  # silly for request/response
 
 
 class DialogflowConversation(SapiBase):
@@ -32,7 +33,9 @@ class DialogflowConversation(SapiBase):
     with internally maintained session state
     """
 
-    def __init__(self, config=None, creds_path=None, agent_path=None, language_code="en"):
+    def __init__(
+        self, config=None, creds_path=None, agent_path=None, language_code="en"
+    ):
         """
         one of:
             config: object with creds_path and agent_path
@@ -41,22 +44,25 @@ class DialogflowConversation(SapiBase):
         agent_path = full path to project
         """
 
-        logging.info('create conversation with creds_path: %s | agent_path: %s',
-                     creds_path, agent_path)
+        logging.info(
+            "create conversation with creds_path: %s | agent_path: %s",
+            creds_path,
+            agent_path,
+        )
 
-        creds_path = creds_path or config['creds_path']
+        creds_path = creds_path or config["creds_path"]
         if not creds_path:
-            raise KeyError('no creds give to create agent')
-        logging.info('creds_path %s', creds_path)
+            raise KeyError("no creds give to create agent")
+        logging.info("creds_path %s", creds_path)
 
         # FIX ME - remove this and use creds on every call instead
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
 
         # format: projects/*/locations/*/agents/*/
-        agent_path = agent_path or config['agent_path']
+        agent_path = agent_path or config["agent_path"]
         super().__init__(creds_path=creds_path, agent_path=agent_path)
 
-        self.language_code = language_code or config['language_code']
+        self.language_code = language_code or config["language_code"]
         self.start_time = None
         self.query_result = None
         self.session_id = None
@@ -73,7 +79,7 @@ class DialogflowConversation(SapiBase):
 
     def set_agent_env(self, param, value):
         """setting changes related to the environment"""
-        logging.info('setting agent_env param:[%s] = value:[%s]', param, value)
+        logging.info("setting agent_env param:[%s] = value:[%s]", param, value)
         self.agent_env[param] = value
 
     def checkpoint(self, msg=None, start=False):
@@ -117,20 +123,18 @@ class DialogflowConversation(SapiBase):
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
         # projects/*/locations/*/agents/*/environments/*/sessions/*
-        custom_environment = self.agent_env.get('environment')
+        custom_environment = self.agent_env.get("environment")
 
         if custom_environment:
             # just the environment and NOT experiment (change to elif if experiment comes back)
-            logging.info('req using env: %s', custom_environment)
-            session_path = \
-                f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
+            logging.info("req using env: %s", custom_environment)
+            session_path = f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
 
-        disable_webhook = self.agent_env.get('disable_webhook') or False
+        disable_webhook = self.agent_env.get("disable_webhook") or False
 
         if send_params:
             query_params = session.QueryParameters(
-                disable_webhook=disable_webhook,
-                parameters=send_params
+                disable_webhook=disable_webhook, parameters=send_params
             )
         else:
             query_params = session.QueryParameters(
@@ -145,7 +149,7 @@ class DialogflowConversation(SapiBase):
                 language_code=self.language_code,
             )
         else:
-            logging.debug('text: %s', text)
+            logging.debug("text: %s", text)
             text_input = session.TextInput(text=text)
             query_input = session.QueryInput(
                 text=text_input,
@@ -154,13 +158,15 @@ class DialogflowConversation(SapiBase):
 
         # self.checkpoint('<< prepared request')
 
-        request = session.DetectIntentRequest(session=session_path,
-                                              query_input=query_input,
-                                              query_params=query_params)
+        request = session.DetectIntentRequest(
+            session=session_path,
+            query_input=query_input,
+            query_params=query_params,
+        )
 
-        logging.info('disable_webhook: %s', disable_webhook)
-        logging.debug('query_params: %s', query_params)
-        logging.debug('request %s', request)
+        logging.info("disable_webhook: %s", disable_webhook)
+        logging.debug("query_params: %s", query_params)
+        logging.debug("request %s", request)
 
         response = None
         try:
@@ -190,9 +196,9 @@ class DialogflowConversation(SapiBase):
 
         # format reply
 
-        self.checkpoint('<< got response')
+        self.checkpoint("<< got response")
         query_result = response.query_result
-        logging.debug('dfcx>qr %s', query_result)
+        logging.debug("dfcx>qr %s", query_result)
         self.query_result = query_result  # for debugging
         reply = {}
 
@@ -201,7 +207,7 @@ class DialogflowConversation(SapiBase):
         texts = []
         for msg in query_result.response_messages:
             if msg.payload:
-                reply['payload'] = SapiBase.extract_payload(msg)
+                reply["payload"] = SapiBase.extract_payload(msg)
             if (len(msg.text.text)) > 0:
                 text = msg.text.text[-1]  # this could be multiple lines too?
                 # print('text', text)
@@ -218,15 +224,17 @@ class DialogflowConversation(SapiBase):
                 try:
                     if isinstance(val, RepeatedComposite):
                         # protobuf array - we just flatten as a string with spaces
-                        logging.info('converting param: %s val: %s', param, val)
+                        logging.info("converting param: %s val: %s", param, val)
                         val = " ".join(val)
 
                 except TypeError as err:
                     logging.error("Exception on CX.detect %s", err)
-                    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                    template = (
+                        "An exception of type {0} occurred. Arguments:\n{1!r}"
+                    )
                     message = template.format(type(err).__name__, err.args)
                     logging.error(message)
-                    logging.error('failed to extract params for: %s', text)
+                    logging.error("failed to extract params for: %s", text)
 
                 params[param] = val
 
@@ -239,15 +247,17 @@ class DialogflowConversation(SapiBase):
 
         # if raw:
         # self.qr = qr
-        # reply["qr"] = qr
+        # reply['qr'] = qr
 
-        if DEBUG_LEVEL == 'silly':
+        if DEBUG_LEVEL == "silly":
             blob = SapiBase.response_to_json(query_result)
-            logging.info('response: %s', json.dumps(blob, indent=2))  # do NOT deploy
+            logging.info(
+                "response: %s", json.dumps(blob, indent=2)
+            )  # do NOT deploy
             # logging.debug('response: %s', blob)
 
         # self.checkpoint('<< formatted response')
-        logging.debug('reply %s', reply)
+        logging.debug("reply %s", reply)
         return reply
 
     # TODO - dfqr class that has convenience accessor methods for different properties
@@ -255,15 +265,19 @@ class DialogflowConversation(SapiBase):
 
     def format_other_intents(self, query_result):
         """unwind protobufs into more friendly dict"""
-        other_intents = query_result.diagnostic_info.get("Alternative Matched Intents")
+        other_intents = query_result.diagnostic_info.get(
+            "Alternative Matched Intents"
+        )
         items = []
         rank = 0
         for alt in other_intents:
-            items.append({
-                "name": alt.get("DisplayName"),
-                "score": alt.get("Score"),
-                "rank": rank,
-            })
+            items.append(
+                {
+                    "name": alt.get("DisplayName"),
+                    "score": alt.get("Score"),
+                    "rank": rank,
+                }
+            )
             rank += 1
         # intents_map[alt['DisplayName']] = alt['Score']
         if self:  # keep as instance method and silence linter
