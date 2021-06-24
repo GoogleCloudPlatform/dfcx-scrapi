@@ -1,17 +1,17 @@
+"""Agent Resource functions."""
+
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
+from typing import Dict, List
 import requests
 from google.cloud.dialogflowcx_v3beta1 import services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -19,8 +19,9 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-
 class Agents(SapiBase):
+    """Core Class for CX Agent Resource functions."""
+
     def __init__(self, creds_path: str = None,
                 creds_dict: Dict = None,
                 creds=None,
@@ -89,6 +90,7 @@ class Agents(SapiBase):
         return agents
 
     def get_agent(self, agent_id: str) -> types.Agent:
+        """Retrieves a single CX agent resource object."""
         request = types.agent.GetAgentRequest()
         request.name = agent_id
 
@@ -173,7 +175,7 @@ class Agents(SapiBase):
             base_url = 'https://dialogflow.googleapis.com/v3beta1'
 
         url = '{0}/{1}/validationResult'.format(base_url, agent_id)
-        headers = {"Authorization": "Bearer {}".format(self.token)}
+        headers = {'Authorization': 'Bearer {}'.format(self.token)}
 
         # Make REST call
         results = requests.get(url, headers=headers)
@@ -201,7 +203,8 @@ class Agents(SapiBase):
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
           flow_id: (Optional) CX Flow ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/flows/<FLOW ID>
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/
+              flows/<FLOW ID>
 
         Returns:
           results: Dictionary of Validation results for the entire Agent
@@ -227,7 +230,7 @@ class Agents(SapiBase):
 
             url = '{0}/{1}/validationResult'.format(base_url, agent_id)
 
-        headers = {"Authorization": "Bearer {}".format(self.token)}
+        headers = {'Authorization': 'Bearer {}'.format(self.token)}
 
         # Make REST call
         results = requests.get(url, headers=headers)
