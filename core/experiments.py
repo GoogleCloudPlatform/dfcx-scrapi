@@ -1,24 +1,13 @@
-"""
-Copyright 2021 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-'''wrapper for Experiments'''
+# Copyright 2021 Google LLC. This software is provided as-is, without warranty
+# or representation for any use or purpose. Your use of it is subject to your
+# agreement with Google.
 
 import json
 import logging
 
-from google.cloud.dialogflowcx_v3beta1.services.experiments import ExperimentsClient
+from google.cloud.dialogflowcx_v3beta1.services.experiments import (
+    ExperimentsClient,
+)
 
 from dfcx_sapi.core.sapi_base import SapiBase
 from typing import Dict
@@ -34,31 +23,38 @@ import google.cloud.dialogflowcx_v3beta1.types as types
 
 log = logging.info
 
-SCOPES = ['https://www.googleapis.com/auth/cloud-platform',
-          'https://www.googleapis.com/auth/dialogflow']
+SCOPES = [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/dialogflow",
+]
 
 
 class SapiExperiments(SapiBase):
-    '''Wrapper for working with Experiments'''
+    """Wrapper for working with Experiments"""
 
-    def __init__(self, creds_path: str = None,
-                creds_dict: Dict = None,
-                creds=None,
-                scope=False,
-                agent_path: str = None):
-        super().__init__(creds_path=creds_path,
-                         creds_dict=creds_dict,
-                         creds=creds,
-                         scope=scope,
-                         agent_path=agent_path)
+    def __init__(
+        self,
+        creds_path: str = None,
+        creds_dict: Dict = None,
+        creds=None,
+        scope=False,
+        agent_path: str = None,
+    ):
+        super().__init__(
+            creds_path=creds_path,
+            creds_dict=creds_dict,
+            creds=creds,
+            scope=scope,
+            agent_path=agent_path,
+        )
 
-        logging.info('created %s', self.agent_path)
+        logging.info("created %s", self.agent_path)
 
     def list_experiments(self, environment_id=None):
-        '''list out experiments'''
+        """list out experiments"""
         # projects/verizon-custom-ccai-external/locations/global/agents/f727a856-bbba-45ce-9d91-4e437cd448ba/environments/ec44091d-0171-4729-9c8b-5eca321dc8bc
-        environment_path = f'{self.agent_path}/environments/{environment_id}'
-        logging.info('environment_path %s', environment_path)
+        environment_path = f"{self.agent_path}/environments/{environment_id}"
+        logging.info("environment_path %s", environment_path)
         # request = types.experiment.ListExperimentsRequest(
         #     parent=environment_path
         # )
@@ -69,24 +65,27 @@ class SapiExperiments(SapiBase):
         request.parent = environment_path
         client_options = self._set_region(environment_id)
         client = services.experiments.ExperimentsClient(
-            client_options=client_options,
-            credentials=self.creds)
+            client_options=client_options, credentials=self.creds
+        )
         response = client.list_experiments(request)
         blob = SapiBase.response_to_dict(response)
 
         if len(blob) < 1:
-            logging.warning('no experiments found for environment: %s', environment_id)
+            logging.warning(
+                "no experiments found for environment: %s", environment_id
+            )
             return None
 
-        experiments: list = blob['experiments']
+        experiments: list = blob["experiments"]
 
         results = [
             {
-                'environment_id': environment_id,
-                'experiment_id': ex['name'].split('/').pop(),
-                'displayName': ex['displayName'],
-                'name': ex['name'],
-            } for ex in experiments
+                "environment_id": environment_id,
+                "experiment_id": ex["name"].split("/").pop(),
+                "displayName": ex["displayName"],
+                "name": ex["name"],
+            }
+            for ex in experiments
         ]
 
         # ex_names = [exid['name'] for exid in experiments]
@@ -101,5 +100,5 @@ class SapiExperiments(SapiBase):
         # for ex in blob['experiments']:
         # logging.info('experiments %s', experiments)
         # logging.info('ex_names %s', ex_names)
-        logging.info('results %s', json.dumps(results, indent=2))
+        logging.info("results %s", json.dumps(results, indent=2))
         return experiments

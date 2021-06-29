@@ -1,18 +1,7 @@
-"""
-Copyright 2021 Google LLC
+# Copyright 2021 Google LLC. This software is provided as-is, without warranty
+# or representation for any use or purpose. Your use of it is subject to your
+# agreement with Google.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 import logging
 import requests
 import google.cloud.dialogflowcx_v3beta1.services as services
@@ -27,29 +16,34 @@ from typing import Dict, List
 # logging config
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 class Flows(SapiBase):
-    def __init__(self, creds_path: str = None,
-                creds_dict: Dict = None,
-                creds = None,
-                scope=False,
-                flow_id: str = None):
-        super().__init__(creds_path=creds_path,
-                         creds_dict=creds_dict,
-                         creds=creds,
-                         scope=scope)
+    def __init__(
+        self,
+        creds_path: str = None,
+        creds_dict: Dict = None,
+        creds=None,
+        scope=False,
+        flow_id: str = None,
+    ):
+        super().__init__(
+            creds_path=creds_path,
+            creds_dict=creds_dict,
+            creds=creds,
+            scope=scope,
+        )
 
         if flow_id:
             self.flow_id = flow_id
 
         self.agent_id = None
 
-
     def get_flows_map(self, agent_id, reverse=False):
-        """ Exports Agent Flow Names and UUIDs into a user friendly dict.
+        """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
             - agent_id, the formatted CX Agent ID to use
@@ -61,12 +55,16 @@ class Flows(SapiBase):
         """
 
         if reverse:
-            flows_dict = {flow.display_name: flow.name
-                          for flow in self.list_flows(agent_id=agent_id)}
+            flows_dict = {
+                flow.display_name: flow.name
+                for flow in self.list_flows(agent_id=agent_id)
+            }
 
         else:
-            flows_dict = {flow.name: flow.display_name
-                          for flow in self.list_flows(agent_id=agent_id)}
+            flows_dict = {
+                flow.name: flow.display_name
+                for flow in self.list_flows(agent_id=agent_id)
+            }
 
         return flows_dict
 
@@ -84,8 +82,7 @@ class Flows(SapiBase):
 
         request = types.flow.TrainFlowRequest()
         request.name = self.flow_id
-        client = services.flows.FlowsClient(
-            credentials=self.creds)
+        client = services.flows.FlowsClient(credentials=self.creds)
         response = client.train_flow(request)
         return response
 
@@ -96,8 +93,8 @@ class Flows(SapiBase):
 
         client_options = self._set_region(agent_id)
         client = services.flows.FlowsClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
         response = client.list_flows(request)
 
         flows = []
@@ -109,8 +106,9 @@ class Flows(SapiBase):
 
     def get_flow(self, flow_id):
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(credentials=self.creds,
-                                            client_options=client_options)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options
+        )
         response = client.get_flow(name=flow_id)
 
         return response
@@ -129,8 +127,9 @@ class Flows(SapiBase):
         mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(flow_id)
-        client = services.flows.FlowsClient(credentials=self.creds,
-                                            client_options=client_options)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options
+        )
         response = client.update_flow(flow=flow, update_mask=mask)
 
         return response
@@ -148,16 +147,16 @@ class Flows(SapiBase):
         currentSettings = flow.nlu_settings
         for key, value in kwargs.items():
             setattr(currentSettings, key, value)
-        self.update_flow(flow_id=flow_id,
-                         nlu_settings=currentSettings)
+        self.update_flow(flow_id=flow_id, nlu_settings=currentSettings)
 
-    def export_flow(self,
-                    flow_id: str,
-                    gcs_path: str,
-                    data_format: str = 'BLOB',
-                    ref_flows: bool = True) -> Dict[str,
-                                                    str]:
-        """ Exports DFCX Flow(s) into GCS bucket.
+    def export_flow(
+        self,
+        flow_id: str,
+        gcs_path: str,
+        data_format: str = "BLOB",
+        ref_flows: bool = True,
+    ) -> Dict[str, str]:
+        """Exports DFCX Flow(s) into GCS bucket.
 
         Args:
           flow_id, the formatted CX Flow ID to export
@@ -170,22 +169,25 @@ class Flows(SapiBase):
               used to retrieve status of LRO from dfcx.get_lro
         """
 
-        location = flow_id.split('/')[3]
-        if location != 'global':
-            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                location)
+        location = flow_id.split("/")[3]
+        if location != "global":
+            base_url = "https://{}-dialogflow.googleapis.com/v3beta1".format(
+                location
+            )
         else:
-            base_url = 'https://dialogflow.googleapis.com/v3beta1'
-        url = '{0}/{1}:export'.format(base_url, flow_id)
+            base_url = "https://dialogflow.googleapis.com/v3beta1"
+        url = "{0}/{1}:export".format(base_url, flow_id)
 
         body = {
-            'flow_uri': '{}'.format(gcs_path),
-            'data_format': data_format,
-            'include_referenced_flows': ref_flows}
+            "flow_uri": "{}".format(gcs_path),
+            "data_format": data_format,
+            "include_referenced_flows": ref_flows,
+        }
 
         headers = {
-            'Authorization': 'Bearer {}'.format(self.token),
-            'Content-Type': 'application/json; charset=utf-8'}
+            "Authorization": "Bearer {}".format(self.token),
+            "Content-Type": "application/json; charset=utf-8",
+        }
 
         # Make REST call
         r = requests.post(url, json=body, headers=headers)
@@ -195,9 +197,13 @@ class Flows(SapiBase):
 
         return lro
 
-    def import_flow(self, destination_agent_id: str, gcs_path: str,
-                    import_option: str = 'FALLBACK') -> Dict[str, str]:
-        """ Imports a DFCX Flow from GCS bucket to CX Agent.
+    def import_flow(
+        self,
+        destination_agent_id: str,
+        gcs_path: str,
+        import_option: str = "FALLBACK",
+    ) -> Dict[str, str]:
+        """Imports a DFCX Flow from GCS bucket to CX Agent.
 
         Args:
           agent_id, the DFCX formatted Agent ID
@@ -209,21 +215,24 @@ class Flows(SapiBase):
               used to retrieve status of LRO from dfcx.get_lro
         """
 
-        location = destination_agent_id.split('/')[3]
-        if location != 'global':
-            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                location)
+        location = destination_agent_id.split("/")[3]
+        if location != "global":
+            base_url = "https://{}-dialogflow.googleapis.com/v3beta1".format(
+                location
+            )
         else:
-            base_url = 'https://dialogflow.googleapis.com/v3beta1'
-        url = '{0}/{1}/flows:import'.format(base_url, destination_agent_id)
+            base_url = "https://dialogflow.googleapis.com/v3beta1"
+        url = "{0}/{1}/flows:import".format(base_url, destination_agent_id)
 
         body = {
-            'flow_uri': '{}'.format(gcs_path),
-            'import_option': '{}'.format(import_option)}
+            "flow_uri": "{}".format(gcs_path),
+            "import_option": "{}".format(import_option),
+        }
 
         headers = {
-            'Authorization': 'Bearer {}'.format(self.token),
-            'Content-Type': 'application/json; charset=utf-8'}
+            "Authorization": "Bearer {}".format(self.token),
+            "Content-Type": "application/json; charset=utf-8",
+        }
 
         # Make REST call
         r = requests.post(url, json=body, headers=headers)

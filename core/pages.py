@@ -1,18 +1,7 @@
-"""
-Copyright 2021 Google LLC
+# Copyright 2021 Google LLC. This software is provided as-is, without warranty
+# or representation for any use or purpose. Your use of it is subject to your
+# agreement with Google.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 import logging
 import requests
 import google.cloud.dialogflowcx_v3beta1.services as services
@@ -27,28 +16,33 @@ from typing import Dict, List
 # logging config
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 class Pages(SapiBase):
-    def __init__(self, creds_path: str = None,
-                creds_dict: Dict = None,
-                scope=False,
-                creds=None,
-                page_id: str = None):
-        super().__init__(creds_path=creds_path,
-                         creds_dict=creds_dict,
-                         creds=creds,
-                         scope=scope)
+    def __init__(
+        self,
+        creds_path: str = None,
+        creds_dict: Dict = None,
+        scope=False,
+        creds=None,
+        page_id: str = None,
+    ):
+        super().__init__(
+            creds_path=creds_path,
+            creds_dict=creds_dict,
+            creds=creds,
+            scope=scope,
+        )
 
         if page_id:
             self.page_id = page_id
             self.client_options = self._set_region(page_id)
 
-
     def get_pages_map(self, flow_id, reverse=False):
-        """ Exports Agent Page UUIDs and Names into a user friendly dict.
+        """Exports Agent Page UUIDs and Names into a user friendly dict.
 
         Args:
           - flow_id, the formatted CX Agent Flow ID to use
@@ -58,15 +52,19 @@ class Pages(SapiBase):
           - webhooks_map, Dictionary containing Webhook UUIDs as keys and
               webhook.display_name as values. If Optional reverse=True, the
               output will return page_name:ID mapping instead of ID:page_name
-          """
+        """
 
         if reverse:
-            pages_dict = {page.display_name: page.name
-                          for page in self.list_pages(flow_id)}
+            pages_dict = {
+                page.display_name: page.name
+                for page in self.list_pages(flow_id)
+            }
 
         else:
-            pages_dict = {page.name: page.display_name
-                          for page in self.list_pages(flow_id)}
+            pages_dict = {
+                page.name: page.display_name
+                for page in self.list_pages(flow_id)
+            }
 
         return pages_dict
 
@@ -76,8 +74,8 @@ class Pages(SapiBase):
 
         client_options = self._set_region(flow_id)
         client = services.pages.PagesClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
         response = client.list_pages(request)
 
         cx_pages = []
@@ -90,10 +88,9 @@ class Pages(SapiBase):
     def get_page(self, page_id):
         client_options = self._set_region(page_id)
         client = services.pages.PagesClient(
-            credentials=self.creds,
-            client_options=client_options)
-        
-        
+            credentials=self.creds, client_options=client_options
+        )
+
         response = client.get_page(name=page_id)
 
         return response
@@ -102,7 +99,7 @@ class Pages(SapiBase):
         # if page object is given, set page to it
         if obj:
             page = obj
-            page.name = ''
+            page.name = ""
         else:
             page = types.page.Page()
 
@@ -112,8 +109,8 @@ class Pages(SapiBase):
 
         client_options = self._set_region(flow_id)
         client = services.pages.PagesClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
 
         response = client.create_page(parent=flow_id, page=page)
         return response
@@ -136,8 +133,8 @@ class Pages(SapiBase):
 
         client_options = self._set_region(page_id)
         client = services.pages.PagesClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
 
         # Call client function with page and mask as arguments
         response = client.update_page(page=page, update_mask=mask)

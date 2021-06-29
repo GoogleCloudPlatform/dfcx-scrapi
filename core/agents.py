@@ -1,47 +1,43 @@
-"""
-Copyright 2021 Google LLC
+"""Agent Resource functions."""
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright 2021 Google LLC. This software is provided as-is, without warranty
+# or representation for any use or purpose. Your use of it is subject to your
+# agreement with Google.
 
 import logging
+from typing import Dict, List
 import requests
 from google.cloud.dialogflowcx_v3beta1 import services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 class Agents(SapiBase):
-    def __init__(self, creds_path: str = None,
-                creds_dict: Dict = None,
-                creds=None,
-                scope=False,
-                agent_id: str = None):
-        super().__init__(creds_path=creds_path,
-                         creds_dict=creds_dict,
-                         creds=creds,
-                         scope=scope)
+    """Core Class for CX Agent Resource functions."""
+
+    def __init__(
+        self,
+        creds_path: str = None,
+        creds_dict: Dict = None,
+        creds=None,
+        scope=False,
+        agent_id: str = None,
+    ):
+        super().__init__(
+            creds_path=creds_path,
+            creds_dict=creds_dict,
+            creds=creds,
+            scope=scope,
+        )
 
         if agent_id:
             self.agent_id = agent_id
@@ -59,20 +55,20 @@ class Agents(SapiBase):
             client_options: use when instantiating other library client objects
         """
         try:
-            location = item_id.split('/')[3]
+            location = item_id.split("/")[3]
         except IndexError as err:
-            logging.error('IndexError - path too short? %s', item_id)
+            logging.error("IndexError - path too short? %s", item_id)
             raise err
 
-        if location != 'global':
-            api_endpoint = '{}-dialogflow.googleapis.com:443'.format(location)
-            client_options = {'api_endpoint': api_endpoint}
+        if location != "global":
+            api_endpoint = "{}-dialogflow.googleapis.com:443".format(location)
+            client_options = {"api_endpoint": api_endpoint}
             return client_options
 
         else:
             return None  # explicit None return when not required
 
-# AGENT FX
+    # AGENT FX
 
     def list_agents(self, location_id: str) -> List[types.Agent]:
         """Get list of all CX agents in a given GCP project
@@ -88,8 +84,8 @@ class Agents(SapiBase):
 
         client_options = self._set_region(location_id)
         client = services.agents.AgentsClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
 
         response = client.list_agents(request)
 
@@ -101,25 +97,27 @@ class Agents(SapiBase):
         return agents
 
     def get_agent(self, agent_id: str) -> types.Agent:
+        """Retrieves a single CX agent resource object."""
         request = types.agent.GetAgentRequest()
         request.name = agent_id
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
 
         response = client.get_agent(request)
 
         return response
 
     def create_agent(
-            self,
-            project_id: str,
-            display_name: str,
-            gcp_region: str = 'global',
-            obj: types.Agent = None,
-            **kwargs):
+        self,
+        project_id: str,
+        display_name: str,
+        gcp_region: str = "global",
+        obj: types.Agent = None,
+        **kwargs,
+    ):
         """Create a Dialogflow CX Agent with given display name.
 
         By default the CX Agent will be created in the project that the user
@@ -139,17 +137,17 @@ class Agents(SapiBase):
 
         if obj:
             agent = obj
-            parent = 'projects/{}/location/{}'.format(
-                agent.name.split('/')[1],
-                agent.name.split('/')[3])
+            parent = "projects/{}/location/{}".format(
+                agent.name.split("/")[1], agent.name.split("/")[3]
+            )
             agent.display_name = display_name
         else:
             agent = types.agent.Agent()
-            parent = 'projects/{}/locations/{}'.format(project_id, gcp_region)
+            parent = "projects/{}/locations/{}".format(project_id, gcp_region)
             agent.display_name = display_name
 
-        agent.default_language_code = 'en'
-        agent.time_zone = 'America/Chicago'
+        agent.default_language_code = "en"
+        agent.time_zone = "America/Chicago"
 
         # set optional args as agent attributes
         for key, value in kwargs.items():
@@ -157,8 +155,8 @@ class Agents(SapiBase):
 
         client_options = self._set_region(parent)
         client = services.agents.AgentsClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
         response = client.create_agent(parent=parent, agent=agent)
 
         return response
@@ -177,14 +175,15 @@ class Agents(SapiBase):
           results: Dictionary of Validation results for the entire Agent
             or for the specified Flow.
         """
-        location = agent_id.split('/')[3]
-        if location != 'global':
-            base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                location)
+        location = agent_id.split("/")[3]
+        if location != "global":
+            base_url = "https://{}-dialogflow.googleapis.com/v3beta1".format(
+                location
+            )
         else:
-            base_url = 'https://dialogflow.googleapis.com/v3beta1'
+            base_url = "https://dialogflow.googleapis.com/v3beta1"
 
-        url = '{0}/{1}/validationResult'.format(base_url, agent_id)
+        url = "{0}/{1}/validationResult".format(base_url, agent_id)
         headers = {"Authorization": "Bearer {}".format(self.token)}
 
         # Make REST call
@@ -193,10 +192,7 @@ class Agents(SapiBase):
 
         return results.json()
 
-    def get_validation_result(
-            self,
-            agent_id: str,
-            flow_id: str = None) -> Dict:
+    def get_validation_result(self, agent_id: str, flow_id: str = None) -> Dict:
         """Extract Validation Results from CX Validation feature.
 
         This function will get the LATEST validation result run for the given
@@ -213,7 +209,8 @@ class Agents(SapiBase):
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
           flow_id: (Optional) CX Flow ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/flows/<FLOW ID>
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/
+              flows/<FLOW ID>
 
         Returns:
           results: Dictionary of Validation results for the entire Agent
@@ -221,23 +218,29 @@ class Agents(SapiBase):
         """
 
         if flow_id:
-            location = flow_id.split('/')[3]
-            if location != 'global':
-                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                    location)
+            location = flow_id.split("/")[3]
+            if location != "global":
+                base_url = (
+                    "https://{}-dialogflow.googleapis.com/v3beta1".format(
+                        location
+                    )
+                )
             else:
-                base_url = 'https://dialogflow.googleapis.com/v3beta1'
+                base_url = "https://dialogflow.googleapis.com/v3beta1"
 
-            url = '{0}/{1}/validationResult'.format(base_url, flow_id)
+            url = "{0}/{1}/validationResult".format(base_url, flow_id)
         else:
-            location = agent_id.split('/')[3]
-            if location != 'global':
-                base_url = 'https://{}-dialogflow.googleapis.com/v3beta1'.format(
-                    location)
+            location = agent_id.split("/")[3]
+            if location != "global":
+                base_url = (
+                    "https://{}-dialogflow.googleapis.com/v3beta1".format(
+                        location
+                    )
+                )
             else:
-                base_url = 'https://dialogflow.googleapis.com/v3beta1'
+                base_url = "https://dialogflow.googleapis.com/v3beta1"
 
-            url = '{0}/{1}/validationResult'.format(base_url, agent_id)
+            url = "{0}/{1}/validationResult".format(base_url, agent_id)
 
         headers = {"Authorization": "Bearer {}".format(self.token)}
 
@@ -268,8 +271,8 @@ class Agents(SapiBase):
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
         response = client.export_agent(request)
 
         return response.operation.name
@@ -297,17 +300,15 @@ class Agents(SapiBase):
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
         response = client.restore_agent(request)
 
         return response.operation.name
 
     def update_agent(
-            self,
-            agent_id: str,
-            obj: types.Agent = None,
-            **kwargs) -> types.Agent:
+        self, agent_id: str, obj: types.Agent = None, **kwargs
+    ) -> types.Agent:
         """Updates a single Agent object based on provided kwargs.
 
         Args:
@@ -331,8 +332,8 @@ class Agents(SapiBase):
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
         response = client.update_agent(agent=agent, update_mask=mask)
 
         return response
@@ -346,8 +347,8 @@ class Agents(SapiBase):
         """
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials=self.creds,
-            client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
         client.delete_agent(name=agent_id)
 
-        return 'Agent \'{}\' successfully deleted.'.format(agent_id)
+        return "Agent '{}' successfully deleted.".format(agent_id)
