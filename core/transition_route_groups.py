@@ -3,6 +3,7 @@
 # agreement with Google.
 
 import logging
+from google.auth import credentials
 import pandas as pd
 import requests
 import google.cloud.dialogflowcx_v3beta1.services as services
@@ -100,6 +101,7 @@ class TransitionRouteGroups(SapiBase):
         request.name = name
         client_options = self._set_region(name)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
+            credentials=self.creds,
             client_options=client_options
         )
         response = client.get_transition_route_group(request)
@@ -122,6 +124,7 @@ class TransitionRouteGroups(SapiBase):
 
         client_options = self._set_region(flow_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
+            credentials=self.creds,
             client_options=client_options
         )
         response = client.create_transition_route_group(
@@ -148,6 +151,7 @@ class TransitionRouteGroups(SapiBase):
 
         client_options = self._set_region(rg_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
+            credentials=self.creds,
             client_options=client_options
         )
         response = client.update_transition_route_group(
