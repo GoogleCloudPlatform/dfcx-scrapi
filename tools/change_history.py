@@ -53,7 +53,7 @@ class ChangeHistory(SapiBase):
         for log in res["changelogs"]:
             logs.append(log)
 
-        next_token = res["nextPageToken"]
+        next_token = res.get("nextPageToken",None)
 
         while next_token is not None:
             results = requests.get(
