@@ -31,6 +31,7 @@ class Intents(SapiBase):
         creds=None,
         scope=False,
         intent_id: str = None,
+        agent_id: str = None
     ):
         super().__init__(
             creds_path=creds_path,
@@ -42,6 +43,9 @@ class Intents(SapiBase):
         if intent_id:
             self.intent_id = intent_id
             self.client_options = self._set_region(self.intent_id)
+
+        if agent_id:
+            self.agent_id = agent_id
 
     @staticmethod
     def intent_proto_to_dataframe(obj, mode="basic"):
@@ -330,7 +334,7 @@ class Intents(SapiBase):
             )
             client.delete_intent(name=intent_id)
 
-    def bulk_intent_to_df(self, agent_id, mode="basic"):
+    def bulk_intent_to_df(self, agent_id=None, mode="basic"):
         """intents to dataframe
 
         Args:
@@ -338,6 +342,10 @@ class Intents(SapiBase):
           mode: (Optional) basic returns display name and training phrase as plain text.
           Advanced returns training phrase and parameters df broken out by parts.
         """
+
+        if not agent_id:
+            agent_id = self.agent_id
+
         intents = self.list_intents(agent_id)
         if mode == "basic":
             main_frame = pd.DataFrame()

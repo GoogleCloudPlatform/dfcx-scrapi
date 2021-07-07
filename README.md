@@ -103,10 +103,10 @@ agent_path = '<FULL_DFCX_AGENT_ID_PATH>'
 # 'projects/<project_id>/locations/<location_id>/agents/<agent_id>'
 
 # Instantiate your class object and pass in your credentials
-i = Intents(creds_path)
+i = Intents(creds_path, agent_id=agent_path)
 
 # Retrieve all Intents and Training Phrases from an Agent and push to a Pandas DataFrame
-df_intents = i.list_intents(agent_path)
+df = i.bulk_intent_to_df()
 ```
 
 _For more examples, please refer to [Examples](examples/) or [Tools](tools/)._
