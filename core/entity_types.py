@@ -1,15 +1,15 @@
+"""Entity Types Resource functions."""
+
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
+from typing import Dict
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -17,9 +17,8 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-
-
 class EntityTypes(SapiBase):
+    """Core Class for CX Entity Type Resource functions."""
     def __init__(
         self,
         creds_path: str = None,
@@ -39,7 +38,7 @@ class EntityTypes(SapiBase):
             self.entity_id = entity_id
             self.client_options = self._set_region(entity_id)
 
-    def get_entities_map(self, agent_id, reverse=False):
+    def get_entities_map(self, agent_id: str, reverse=False):
         """Exports Agent Entityt Names and UUIDs into a user friendly dict.
 
         Args:
@@ -66,6 +65,14 @@ class EntityTypes(SapiBase):
         return entities_dict
 
     def list_entity_types(self, agent_id):
+        """Returns a list of Entity Type objects.
+
+        Args:
+          - agent_id, the formatted CX Agent ID to use
+
+        Returns:
+          - entities, List of Entity Type objects
+        """
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
 
@@ -83,7 +90,15 @@ class EntityTypes(SapiBase):
 
         return entities
 
-    def get_entity_type(self, entity_id):
+    def get_entity_type(self, entity_id: str):
+        """Returns a single Entity Type object.
+
+        Args:
+          - entity_id, the formatted CX Entity ID to get
+
+        Returns:
+          - response, the single Entity Type object
+        """
         client_options = self._set_region(entity_id)
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
@@ -92,7 +107,15 @@ class EntityTypes(SapiBase):
 
         return response
 
-    def create_entity_type(self, agent_id, obj=None, **kwargs):
+    def create_entity_type(self, agent_id, obj=None, **kwargs) -> types.EntityType:
+        """Creates a single Entity Type object resource.
+
+        Args:
+          - agent_id, the formatted CX Agent ID to create the object on
+
+        Returns:
+          - response, copy of the Entity Type object created
+        """
         # If entity_type_obj is given set entity_type to it
         if obj:
             entity_type = obj
@@ -117,6 +140,14 @@ class EntityTypes(SapiBase):
         return response
 
     def delete_entity_type(self, entity_id, obj=None) -> None:
+        """Deletes a single Entity Type resouce object.
+
+        Args:
+          entity_id, the formatted CX Entity ID to delete
+
+        Returns:
+          - None
+        """
         if obj:
             _entity_id = obj.name
         else:
