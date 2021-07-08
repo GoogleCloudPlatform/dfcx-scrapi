@@ -153,12 +153,14 @@ class Flows(SapiBase):
 
         Returns:
           response, a copy of the updated Flow object
-      """
+        """
 
         if obj:
             flow = obj
             flow.name = flow_id
         else:
+            if not flow_id:
+                flow_id = self.flow_id
             flow = self.get_flow(flow_id)
 
         # set flow attributes to args
@@ -283,7 +285,7 @@ class Flows(SapiBase):
 
         return lro
 
-    def delete_flow(self, flow_id: str, force: bool = False) -> None:
+    def delete_flow(self, flow_id: str = None, force: bool = False) -> None:
         """Deletes a single CX Flow Object resources.
 
         Args:
@@ -291,6 +293,9 @@ class Flows(SapiBase):
           force: False means a flow will not be deleted if a route to the flow exists,
             True means the flow will be deleted and all
         """
+        if not flow_id:
+            flow_id = self.flow_id
+
         request = types.DeleteFlowRequest()
         request.name = flow_id
         request.force = force
