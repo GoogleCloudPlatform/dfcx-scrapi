@@ -43,7 +43,7 @@ class Flows(SapiBase):
         if flow_id:
             self.flow_id = flow_id
 
-        self.agent_id = None
+        self.agent_id = agent_id
 
     def get_flows_map(self, agent_id:str = None, reverse=False):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
