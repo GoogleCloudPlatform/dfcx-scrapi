@@ -246,7 +246,6 @@ class Intents(SapiBase):
         response = client.list_intents(request)
 
         intents = []
-        # pager through the response, not CX 'pages'
         for page in response.pages:
             for intent in page.intents:
                 intents.append(intent)
@@ -293,7 +292,6 @@ class Intents(SapiBase):
         else:
             intent = types.intent.Intent()
 
-        # Set optional arguments as intent attributes
         for key, value in kwargs.items():
             if key == "training_phrases":
                 assert isinstance(kwargs[key], list)
