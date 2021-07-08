@@ -1,17 +1,17 @@
+"""Flow Resource functions."""
+
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
+from typing import Dict
 import requests
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -22,6 +22,8 @@ logging.basicConfig(
 
 
 class Flows(SapiBase):
+    """Core Class for CX Flow Resource functions."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -144,10 +146,10 @@ class Flows(SapiBase):
         """
 
         flow = self.get_flow(flow_id)
-        currentSettings = flow.nlu_settings
+        current_settings = flow.nlu_settings
         for key, value in kwargs.items():
-            setattr(currentSettings, key, value)
-        self.update_flow(flow_id=flow_id, nlu_settings=currentSettings)
+            setattr(current_settings, key, value)
+        self.update_flow(flow_id=flow_id, nlu_settings=current_settings)
 
     def export_flow(
         self,
@@ -190,10 +192,10 @@ class Flows(SapiBase):
         }
 
         # Make REST call
-        r = requests.post(url, json=body, headers=headers)
-        r.raise_for_status()
+        response = requests.post(url, json=body, headers=headers)
+        response.raise_for_status()
 
-        lro = r.json()
+        lro = response.json()
 
         return lro
 
@@ -235,21 +237,28 @@ class Flows(SapiBase):
         }
 
         # Make REST call
-        r = requests.post(url, json=body, headers=headers)
-        r.raise_for_status()
+        response = requests.post(url, json=body, headers=headers)
+        response.raise_for_status()
 
-        lro = r.json()
+        lro = response.json()
 
         return lro
 
-    def delete_flow(self, flow_id: str, force: bool = False):
-        """
+    def delete_flow(self, flow_id: str, force: bool = False) -> None:
+        """Deletes a single CX Flow Object resources.
+
         Args:
           flow_id: flow to delete
-          force: False means a flow will not be deleted if a route to the flow exists, True means the flow will be deleted and all
+          force: False means a flow will not be deleted if a route to the flow exists,
+            True means the flow will be deleted and all
         """
         request = types.DeleteFlowRequest()
         request.name = flow_id
         request.force = force
-        client = services.flows.FlowsClient()
+
+        client_options = self._set_region(flow_id)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options
+        )
+
         client.delete_flow(request)
