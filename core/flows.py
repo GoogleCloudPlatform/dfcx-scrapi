@@ -31,6 +31,7 @@ class Flows(SapiBase):
         creds=None,
         scope=False,
         flow_id: str = None,
+        agent_id: str = None
     ):
         super().__init__(
             creds_path=creds_path,
