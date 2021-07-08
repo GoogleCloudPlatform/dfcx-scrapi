@@ -1,19 +1,19 @@
+"""Intent Resource functions."""
+
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 from collections import defaultdict
 import logging
+from typing import Dict
 import numpy as np
 import pandas as pd
 
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -24,6 +24,8 @@ logging.basicConfig(
 
 
 class Intents(SapiBase):
+    """Core Class for CX Intent Resource functions."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -48,7 +50,7 @@ class Intents(SapiBase):
             self.agent_id = agent_id
 
     @staticmethod
-    def intent_proto_to_dataframe(obj, mode="basic"):
+    def intent_proto_to_dataframe(obj: types.Intent, mode="basic"):
         """intents to dataframe
 
         Args:
@@ -124,7 +126,7 @@ class Intents(SapiBase):
                 phrases = tp_df.copy()
                 phrase_lst = (
                     phrases.groupby(["tp_id"])["text"]
-                    .apply(lambda x: "".join(x))
+                    .apply(lambda x: "".join(x)) # pylint: disable=W0108
                     .reset_index()
                     .rename(columns={"text": "phrase"})
                 )
@@ -194,7 +196,7 @@ class Intents(SapiBase):
         else:
             raise ValueError("Mode types: [basic, advanced]")
 
-    def get_intents_map(self, agent_id, reverse=False):
+    def get_intents_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Intent Names and UUIDs into a user friendly dict.
 
         Args:
@@ -205,6 +207,8 @@ class Intents(SapiBase):
           - intents_map, Dictionary containing Intent UUIDs as keys and
               intent.display_name as values
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         if reverse:
             intents_dict = {
@@ -220,12 +224,18 @@ class Intents(SapiBase):
 
         return intents_dict
 
-    def list_intents(self, agent_id):
-        """provide a list of intents
+    def list_intents(self, agent_id: str = None):
+        """Exports List of all intents in specific CX Agent.
 
         Args:
           agent_id, the CX agent id to pull the intents from
+
+        Returns:
+          intents, List of Intent objects
         """
+        if not agent_id:
+            agent_id = self.agent_id
+
         request = types.intent.ListIntentsRequest()
         request.parent = agent_id
 
@@ -243,7 +253,18 @@ class Intents(SapiBase):
 
         return intents
 
-    def get_intent(self, intent_id):
+    def get_intent(self, intent_id: str = None):
+        """Get a single Intent object based on specific CX Intent ID.
+
+        Args:
+          intent_id, the properly formatted CX Intent ID
+
+        Returns:
+          response, a single Intent object
+        """
+        if not intent_id:
+            intent_id = self.intent_id
+
         client_options = self._set_region(intent_id)
         client = services.intents.IntentsClient(
             credentials=self.creds, client_options=client_options
@@ -252,8 +273,20 @@ class Intents(SapiBase):
 
         return response
 
-    def create_intent(self, agent_id, obj=None, **kwargs):
-        # If intent_obj is given, set intent variable to it
+    def create_intent(self, agent_id: str = None, obj=None, **kwargs):
+        """Creats a single CX Intent object.
+
+        Args:
+          agent_id, the properly formatted CX Agent ID where you want to create
+            the Intent object
+          obj, (Optional) a predefined CX Intent Object
+
+        Returns:
+          resopnse, a copy of the successfully created CX Intent Object
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
         if obj:
             intent = obj
             intent.name = ""
@@ -295,7 +328,7 @@ class Intents(SapiBase):
 
         return response
 
-    def update_intent(self, intent_id, obj=None):
+    def update_intent(self, intent_id: str = None, obj=None):
         """Updates a single Intent object based on provided args.
         Args:
           intent_id, the destination Intent ID. Must be formatted properly
@@ -307,9 +340,9 @@ class Intents(SapiBase):
             intent = obj
             intent.name = intent_id
         else:
+            if not intent_id:
+                intent_id = self.intent_id
             intent = self.get_intent(intent_id)
-
-        #         logging.info('dfcx_lib update intent %s', intent_id)
 
         client_options = self._set_region(intent_id)
         client = services.intents.IntentsClient(
