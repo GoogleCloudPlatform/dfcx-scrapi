@@ -44,7 +44,7 @@ class Flows(SapiBase):
 
         self.agent_id = None
 
-    def get_flows_map(self, agent_id, reverse=False):
+    def get_flows_map(self, agent_id:str = None, reverse=False):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
@@ -52,9 +52,11 @@ class Flows(SapiBase):
             - reverse, (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-            - flows_map, Dictionary containing flow UUIDs as keys and
+            - flows_dict, Dictionary containing flow UUIDs as keys and
                 flow.display_name as values
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         if reverse:
             flows_dict = {
@@ -70,7 +72,8 @@ class Flows(SapiBase):
 
         return flows_dict
 
-    def train_flow(self):
+
+    def train_flow(self, flow_id: str = None):
         """trains the specified flow.
 
         Args:
@@ -81,6 +84,8 @@ class Flows(SapiBase):
           response: A Long Running Operation (LRO) ID that can be used to
             check the status of the export using dfcx.get_lro()
         """
+        if not flow_id:
+            flow_id = self.flow_id
 
         request = types.flow.TrainFlowRequest()
         request.name = self.flow_id
@@ -88,7 +93,20 @@ class Flows(SapiBase):
         response = client.train_flow(request)
         return response
 
+
     def list_flows(self, agent_id=None):
+        """Get a List of all Flows in the current Agent.
+
+        Args:
+          agent_id, CX Agent ID string in the proper format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+
+        Returns:
+          flows, a List of Flow objects
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
         agent_id = agent_id or self.agent_id  # default value
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
@@ -106,7 +124,18 @@ class Flows(SapiBase):
 
         return flows
 
-    def get_flow(self, flow_id):
+
+    def get_flow(self, flow_id: str = None):
+        """Get a single CX Flow object.
+
+        Args:
+          flow_id, CX Flow ID in the proper format
+
+        Returns:
+          response, a single CX Flow object"""
+        if not flow_id:
+            flow_id = self.flow_id
+
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
             credentials=self.creds, client_options=client_options
@@ -115,7 +144,17 @@ class Flows(SapiBase):
 
         return response
 
-    def update_flow(self, flow_id, obj=None, **kwargs):
+    def update_flow(self, flow_id: str = None, obj: types.Flow = None, **kwargs):
+        """Update a single specific CX Flow object.
+
+        Args:
+          flow_id, CX Flow ID in the proper format
+          obj, (Optional) a single CX Flow object of types.Flow
+
+        Returns:
+          response, a copy of the updated Flow object
+      """
+
         if obj:
             flow = obj
             flow.name = flow_id
