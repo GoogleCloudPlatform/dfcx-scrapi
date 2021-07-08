@@ -1,17 +1,16 @@
+"""Page Resource functions."""
+
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
-import requests
+from typing import Dict, List
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -20,8 +19,9 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-
 class Pages(SapiBase):
+    """Core Class for CX Page Resource functions."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -29,6 +29,7 @@ class Pages(SapiBase):
         scope=False,
         creds=None,
         page_id: str = None,
+        flow_id: str = None
     ):
         super().__init__(
             creds_path=creds_path,
@@ -41,7 +42,10 @@ class Pages(SapiBase):
             self.page_id = page_id
             self.client_options = self._set_region(page_id)
 
-    def get_pages_map(self, flow_id, reverse=False):
+        if flow_id:
+            self.flow_id = flow_id
+
+    def get_pages_map(self, flow_id: str = None, reverse=False) -> Dict[str,str]:
         """Exports Agent Page UUIDs and Names into a user friendly dict.
 
         Args:
@@ -53,6 +57,8 @@ class Pages(SapiBase):
               webhook.display_name as values. If Optional reverse=True, the
               output will return page_name:ID mapping instead of ID:page_name
         """
+        if not flow_id:
+            flow_id = self.flow_id
 
         if reverse:
             pages_dict = {
@@ -68,7 +74,15 @@ class Pages(SapiBase):
 
         return pages_dict
 
-    def list_pages(self, flow_id):
+    def list_pages(self, flow_id: str = None) -> List[types.Page]:
+        """Get a List of all pages for the specified Flow ID.
+
+        Args:
+          flow_id, the properly formatted Flow ID string
+
+        Returns:
+          cx_pages, A List of CX Page objects for the specific Flow ID
+        """
         request = types.page.ListPagesRequest()
         request.parent = flow_id
 
@@ -85,7 +99,18 @@ class Pages(SapiBase):
 
         return cx_pages
 
-    def get_page(self, page_id):
+    def get_page(self, page_id: str = None) -> types.Page:
+        """Get a single CX Page object based on the provided Page ID.
+
+        Args:
+          page_id, a properly formatted CX Page ID
+
+        Returns:
+          response, a single CX Page Object of types.Page
+        """
+        if not page_id:
+            page_id = self.page_id
+
         client_options = self._set_region(page_id)
         client = services.pages.PagesClient(
             credentials=self.creds, client_options=client_options
@@ -95,15 +120,25 @@ class Pages(SapiBase):
 
         return response
 
-    def create_page(self, flow_id, obj=None, **kwargs):
-        # if page object is given, set page to it
+    def create_page(self, flow_id: str = None, obj: types.Page = None, **kwargs) -> types.Page:
+        """Create a single CX Page object in the specified Flow ID.
+
+        Args:
+          flow_id, the CX Flow ID where the Page object will be created
+          obj, (Optional) a CX Page object of types.Page
+
+        Returns:
+          response, a copy of the successful Page object that was created
+        """
+        if not flow_id:
+            flow_id = self.flow_id
+
         if obj:
             page = obj
             page.name = ""
         else:
             page = types.page.Page()
 
-        # set optional arguments to page attributes
         for key, value in kwargs.items():
             setattr(page, key, value)
 
@@ -113,19 +148,27 @@ class Pages(SapiBase):
         )
 
         response = client.create_page(parent=flow_id, page=page)
+
         return response
 
-    def update_page(self, page_id, obj=None, **kwargs):
-        # If page object is given set page to it
+    def update_page(self, page_id: str = None, obj: types.Page = None, **kwargs) -> types.Page:
+        """Update a single CX Page object.
+
+        Args:
+          page_id, the CX Page ID to update
+          obj, (Optional) a CX Page object of types.Page
+
+        Returns:
+          response, a copy of the successful Page object that was created
+        """
         if obj:
-            # Set page variable to page object
             page = obj
-            # Set name attribute to the name of the updated page
             page.name = page_id
         else:
+            if not page_id:
+                page_id = self.page_id
             page = self.get_page(page_id)
 
-        # Set page attributes to arguments
         for key, value in kwargs.items():
             setattr(page, key, value)
         paths = kwargs.keys()
@@ -136,6 +179,6 @@ class Pages(SapiBase):
             credentials=self.creds, client_options=client_options
         )
 
-        # Call client function with page and mask as arguments
         response = client.update_page(page=page, update_mask=mask)
+
         return response
