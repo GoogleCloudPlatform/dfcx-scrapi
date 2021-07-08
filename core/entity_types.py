@@ -26,6 +26,7 @@ class EntityTypes(SapiBase):
         creds=None,
         scope=False,
         entity_id: str = None,
+        agent_id: str = None
     ):
         super().__init__(
             creds_path=creds_path,
@@ -38,7 +39,10 @@ class EntityTypes(SapiBase):
             self.entity_id = entity_id
             self.client_options = self._set_region(entity_id)
 
-    def get_entities_map(self, agent_id: str, reverse=False):
+        if agent_id:
+            self.agent_id = agent_id
+
+    def get_entities_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Entityt Names and UUIDs into a user friendly dict.
 
         Args:
@@ -49,6 +53,8 @@ class EntityTypes(SapiBase):
           - intents_map, Dictionary containing Entity UUIDs as keys and
               intent.display_name as values
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         if reverse:
             entities_dict = {
@@ -64,7 +70,7 @@ class EntityTypes(SapiBase):
 
         return entities_dict
 
-    def list_entity_types(self, agent_id):
+    def list_entity_types(self, agent_id: str = None):
         """Returns a list of Entity Type objects.
 
         Args:
@@ -73,6 +79,9 @@ class EntityTypes(SapiBase):
         Returns:
           - entities, List of Entity Type objects
         """
+        if not agent_id:
+            agent_id = self.agent_id
+
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
 
@@ -90,7 +99,7 @@ class EntityTypes(SapiBase):
 
         return entities
 
-    def get_entity_type(self, entity_id: str):
+    def get_entity_type(self, entity_id: str = None):
         """Returns a single Entity Type object.
 
         Args:
@@ -99,6 +108,9 @@ class EntityTypes(SapiBase):
         Returns:
           - response, the single Entity Type object
         """
+        if not entity_id:
+            entity_id = self.entity_id
+
         client_options = self._set_region(entity_id)
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
@@ -107,7 +119,7 @@ class EntityTypes(SapiBase):
 
         return response
 
-    def create_entity_type(self, agent_id, obj=None, **kwargs) -> types.EntityType:
+    def create_entity_type(self, agent_id: str = None, obj=None, **kwargs) -> types.EntityType:
         """Creates a single Entity Type object resource.
 
         Args:
@@ -116,6 +128,9 @@ class EntityTypes(SapiBase):
         Returns:
           - response, copy of the Entity Type object created
         """
+        if not agent_id:
+            agent_id = self.agent_id
+
         # If entity_type_obj is given set entity_type to it
         if obj:
             entity_type = obj
@@ -139,7 +154,7 @@ class EntityTypes(SapiBase):
         )
         return response
 
-    def delete_entity_type(self, entity_id, obj=None) -> None:
+    def delete_entity_type(self, entity_id: str = None, obj=None) -> None:
         """Deletes a single Entity Type resouce object.
 
         Args:
@@ -148,6 +163,9 @@ class EntityTypes(SapiBase):
         Returns:
           - None
         """
+        if not entity_id:
+            entity_id = self.entity_id
+
         if obj:
             _entity_id = obj.name
         else:
