@@ -1,14 +1,12 @@
+"""Operations Resource functions."""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
+from typing import Dict
 import requests
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
-
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -17,10 +15,15 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-
 class Operations(SapiBase):
+    """Core class for Operations functions, primarily used to
+      extract LRO information on long running jobs for CX.
+    """
     def __init__(
-        self, creds_path: str = None, creds_dict: Dict = None, scope=False
+        self,
+        creds_path: str = None,
+        creds_dict: Dict = None,
+        scope=False
     ):
         super().__init__(
             creds_path=creds_path, creds_dict=creds_dict, scope=scope
