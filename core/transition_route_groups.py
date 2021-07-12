@@ -26,6 +26,7 @@ logging.basicConfig(
 
 class TransitionRouteGroups(SapiBase):
     """Core Class for CX Transition Route Group functions."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -34,7 +35,7 @@ class TransitionRouteGroups(SapiBase):
         scope=False,
         route_group_id: str = None,
         flow_id: str = None,
-        agent_id: str = None
+        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -86,7 +87,6 @@ class TransitionRouteGroups(SapiBase):
 
         return pages_dict
 
-
     def list_transition_route_groups(self, flow_id: str = None):
         """Exports List of all Route Groups in the specified CX Flow ID.
 
@@ -117,7 +117,6 @@ class TransitionRouteGroups(SapiBase):
 
         return cx_route_groups
 
-
     def get_transition_route_group(self, route_group_id):
         """Get a single Transition Route Group object.
 
@@ -131,18 +130,18 @@ class TransitionRouteGroups(SapiBase):
         request.name = route_group_id
         client_options = self._set_region(route_group_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
-            credentials=self.creds,
-            client_options=client_options
+            credentials=self.creds, client_options=client_options
         )
         response = client.get_transition_route_group(request)
 
         return response
 
-
-    def create_transition_route_group(self,
-      flow_id: str = None,
-      obj: types.TransitionRouteGroup = None,
-      **kwargs):
+    def create_transition_route_group(
+        self,
+        flow_id: str = None,
+        obj: types.TransitionRouteGroup = None,
+        **kwargs,
+    ):
         """Create a single Transition Route Group resource.
 
         Args:
@@ -168,8 +167,7 @@ class TransitionRouteGroups(SapiBase):
 
         client_options = self._set_region(flow_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
-            credentials=self.creds,
-            client_options=client_options
+            credentials=self.creds, client_options=client_options
         )
         response = client.create_transition_route_group(
             parent=flow_id, transition_route_group=trg
@@ -177,10 +175,12 @@ class TransitionRouteGroups(SapiBase):
 
         return response
 
-    def update_transition_route_group(self,
-      route_group_id: str = None,
-      obj: types.TransitionRouteGroup = None,
-      **kwargs):
+    def update_transition_route_group(
+        self,
+        route_group_id: str = None,
+        obj: types.TransitionRouteGroup = None,
+        **kwargs,
+    ):
         """Update a single Route Group resource.
 
         Args:
@@ -204,8 +204,7 @@ class TransitionRouteGroups(SapiBase):
 
         client_options = self._set_region(route_group_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
-            credentials=self.creds,
-            client_options=client_options
+            credentials=self.creds, client_options=client_options
         )
         response = client.update_transition_route_group(
             transition_route_group=route_group, update_mask=mask
@@ -214,8 +213,8 @@ class TransitionRouteGroups(SapiBase):
         return response
 
     def route_groups_to_dataframe(self, agent_id: str = None):
-        """This method extracts the Transition Route Groups from a given DFCX Agent
-        and returns key information about the Route Groups in a Pandas Dataframe
+        """Extracts the Transition Route Groups from a given Agent and
+         returns key information about the Route Groups in a Pandas Dataframe
 
         DFCX Route Groups exist as an Agent level resource, however they are
         categorized by the Flow they are associated with. This method will
@@ -283,19 +282,15 @@ class TransitionRouteGroups(SapiBase):
                         {"webhook_tag": route.trigger_fulfillment.tag}
                     )
 
-                    if len(route.trigger_fulfillment.messages) > 0:
-                        if (
-                            len(route.trigger_fulfillment.messages[0].text.text)
-                            > 0
-                        ):
-                            temp_dict.update(
-                                {
-                                    "fulfillment_message": route.trigger_fulfillment.messages[
-                                        0
-                                    ].text.text[
-                                        0
-                                    ]
-                                }
+                    messages_length = len(route.trigger_fulfillment.messages)
+                    text_length = len(
+                        route.trigger_fulfillment.messages[0].text.text)
+
+                    if messages_length > 0 and text_length > 0:
+                        temp_dict.update(
+                            {"fulfillment_message":
+                            route.trigger_fulfillment.messages[0].text.text[0]
+                            }
                             )
 
                     rows_list.append(temp_dict)

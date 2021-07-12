@@ -19,6 +19,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+
 class Pages(SapiBase):
     """Core Class for CX Page Resource functions."""
 
@@ -29,7 +30,7 @@ class Pages(SapiBase):
         scope=False,
         creds=None,
         page_id: str = None,
-        flow_id: str = None
+        flow_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -45,7 +46,9 @@ class Pages(SapiBase):
         if flow_id:
             self.flow_id = flow_id
 
-    def get_pages_map(self, flow_id: str = None, reverse=False) -> Dict[str,str]:
+    def get_pages_map(
+        self, flow_id: str = None, reverse=False
+    ) -> Dict[str, str]:
         """Exports Agent Page UUIDs and Names into a user friendly dict.
 
         Args:
@@ -120,7 +123,9 @@ class Pages(SapiBase):
 
         return response
 
-    def create_page(self, flow_id: str = None, obj: types.Page = None, **kwargs) -> types.Page:
+    def create_page(
+        self, flow_id: str = None, obj: types.Page = None, **kwargs
+    ) -> types.Page:
         """Create a single CX Page object in the specified Flow ID.
 
         Args:
@@ -151,7 +156,9 @@ class Pages(SapiBase):
 
         return response
 
-    def update_page(self, page_id: str = None, obj: types.Page = None, **kwargs) -> types.Page:
+    def update_page(
+        self, page_id: str = None, obj: types.Page = None, **kwargs
+    ) -> types.Page:
         """Update a single CX Page object.
 
         Args:

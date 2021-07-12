@@ -20,6 +20,7 @@ logging.basicConfig(
 
 class Sessions(SapiBase):
     """Core Class for CX Session Resource functions."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -99,7 +100,11 @@ class Sessions(SapiBase):
             print("=" * 20)
             print("Query text: {}".format(query_result.text))
             if "intent" in query_result:
-                print("Triggered Intent: {}".format(query_result.intent.display_name))
+                print(
+                    "Triggered Intent: {}".format(
+                        query_result.intent.display_name
+                    )
+                )
 
             if "intent_detection_confidence" in query_result:
                 print(
@@ -108,26 +113,31 @@ class Sessions(SapiBase):
                     )
                 )
 
-            print("Response Page: {}".format(query_result.current_page.display_name))
+            print(
+                "Response Page: {}".format(
+                    query_result.current_page.display_name
+                )
+            )
 
             for param in query_result.parameters:
                 if param == "statusMessage":
-                    print("Status Message: {}".format(query_result.parameters[param]))
+                    print(
+                        "Status Message: {}".format(
+                            query_result.parameters[param]
+                        )
+                    )
 
             if response_text:
-                print(
-                    "Response Text: {}\n".format(
-                        " ".join(
-                            [
-                                " ".join(response_message.text.text)
-                                for response_message in query_result.response_messages
+                print("Response Text: {}\n".format(" ".join(
+                    [
+                        " ".join(response_message.text.text)
+                        for response_message in query_result.response_messages
                             ]
                         )
                     )
                 )
 
-    def detect_intent(
-        self, agent_id, session_id, text, parameters=None):
+    def detect_intent(self, agent_id, session_id, text, parameters=None):
         """Returns the result of detect intent with texts as inputs.
 
         Using the same `session_id` between requests allows continuation
@@ -164,7 +174,9 @@ class Sessions(SapiBase):
 
         return query_result
 
-    def preset_parameters(self, agent_id: str = None, session_id: str = None, parameters=None):
+    def preset_parameters(
+        self, agent_id: str = None, session_id: str = None, parameters=None
+    ):
         """Used to set session parameters before a conversation starts.
 
         agent_id, the Agent ID of the CX Agent to have the conversation with.

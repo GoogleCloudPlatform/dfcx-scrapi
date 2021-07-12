@@ -15,15 +15,14 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+
 class Operations(SapiBase):
     """Core class for Operations functions, primarily used to
-      extract LRO information on long running jobs for CX.
+    extract LRO information on long running jobs for CX.
     """
+
     def __init__(
-        self,
-        creds_path: str = None,
-        creds_dict: Dict = None,
-        scope=False
+        self, creds_path: str = None, creds_dict: Dict = None, scope=False
     ):
         super().__init__(
             creds_path=creds_path, creds_dict=creds_dict, scope=scope
@@ -34,7 +33,8 @@ class Operations(SapiBase):
 
         Args:
           lro: The Long Running Operation(LRO) ID in the following format
-              'projects/<project-name>/locations/<locat>/operations/<operation-uuid>'
+              'projects/<project-name>/locations/<locat>/operations/
+                <operation-uuid>'
 
         Returns:
           response: Response status and payload from LRO

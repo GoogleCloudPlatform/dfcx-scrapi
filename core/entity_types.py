@@ -17,8 +17,11 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+
 class EntityTypes(SapiBase):
     """Core Class for CX Entity Type Resource functions."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -26,7 +29,7 @@ class EntityTypes(SapiBase):
         creds=None,
         scope=False,
         entity_id: str = None,
-        agent_id: str = None
+        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -119,10 +122,9 @@ class EntityTypes(SapiBase):
 
         return response
 
-    def create_entity_type(self,
-      agent_id: str = None,
-      obj: types.EntityType = None,
-      **kwargs) -> types.EntityType:
+    def create_entity_type(
+        self, agent_id: str = None, obj: types.EntityType = None, **kwargs
+    ) -> types.EntityType:
         """Creates a single Entity Type object resource.
 
         Args:

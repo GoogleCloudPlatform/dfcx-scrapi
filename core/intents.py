@@ -33,7 +33,7 @@ class Intents(SapiBase):
         creds=None,
         scope=False,
         intent_id: str = None,
-        agent_id: str = None
+        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -55,8 +55,10 @@ class Intents(SapiBase):
 
         Args:
           obj, intent protobuf object
-          mode: (Optional) basic returns display name and training phrase as plain text.
-          Advanced returns training phrase and parameters df broken out by parts.
+          mode: (Optional) basic returns display name and training phrase as
+            plain text.
+          Advanced returns training phrase and parameters df broken out by
+            parts.
         """
         if mode == "basic":
             intent_dict = defaultdict(list)
@@ -82,6 +84,7 @@ class Intents(SapiBase):
                 columns={"level_1": "intent", 0: "tp"}
             ).reset_index(drop=True)
             data_frame = data_frame.sort_values(["intent", "tp"])
+
             return data_frame
 
         elif mode == "advanced":
@@ -126,7 +129,7 @@ class Intents(SapiBase):
                 phrases = tp_df.copy()
                 phrase_lst = (
                     phrases.groupby(["tp_id"])["text"]
-                    .apply(lambda x: "".join(x)) # pylint: disable=W0108
+                    .apply(lambda x: "".join(x))  # pylint: disable=W0108
                     .reset_index()
                     .rename(columns={"text": "phrase"})
                 )
@@ -308,13 +311,13 @@ class Intents(SapiBase):
                                 parts.append(part)
                             else:
                                 print("Wrong object in parts list")
-                                return
+                                break
                         train_phrase.parts = parts
                         train_phrase.repeat_count = arg.get("repeat_count")
                         training_phrases.append(train_phrase)
                     else:
                         print("Wrong object in training phrases list")
-                        return
+                        break
                 setattr(intent, key, training_phrases)
             setattr(intent, key, value)
 
@@ -370,8 +373,10 @@ class Intents(SapiBase):
 
         Args:
           agent_id, agent to pull list of intents
-          mode: (Optional) basic returns display name and training phrase as plain text.
-          Advanced returns training phrase and parameters df broken out by parts.
+          mode: (Optional) basic returns display name and training phrase as
+            plain text.
+          Advanced returns training phrase and parameters df broken out by
+            parts.
         """
 
         if not agent_id:

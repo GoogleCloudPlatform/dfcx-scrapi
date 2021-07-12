@@ -31,7 +31,7 @@ class Flows(SapiBase):
         creds=None,
         scope=False,
         flow_id: str = None,
-        agent_id: str = None
+        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -45,7 +45,7 @@ class Flows(SapiBase):
 
         self.agent_id = agent_id
 
-    def get_flows_map(self, agent_id:str = None, reverse=False):
+    def get_flows_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
@@ -73,13 +73,13 @@ class Flows(SapiBase):
 
         return flows_dict
 
-
     def train_flow(self, flow_id: str = None):
         """trains the specified flow.
 
         Args:
           flow_id: CX flow ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/flows/<FLOW ID>
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/
+              flows/<FLOW ID>
 
         Returns:
           response: A Long Running Operation (LRO) ID that can be used to
@@ -93,7 +93,6 @@ class Flows(SapiBase):
         client = services.flows.FlowsClient(credentials=self.creds)
         response = client.train_flow(request)
         return response
-
 
     def list_flows(self, agent_id=None):
         """Get a List of all Flows in the current Agent.
@@ -125,7 +124,6 @@ class Flows(SapiBase):
 
         return flows
 
-
     def get_flow(self, flow_id: str = None):
         """Get a single CX Flow object.
 
@@ -145,7 +143,9 @@ class Flows(SapiBase):
 
         return response
 
-    def update_flow(self, flow_id: str = None, obj: types.Flow = None, **kwargs):
+    def update_flow(
+        self, flow_id: str = None, obj: types.Flow = None, **kwargs
+    ):
         """Update a single specific CX Flow object.
 
         Args:
@@ -182,9 +182,11 @@ class Flows(SapiBase):
         """updates flow to new NLU setting.
         Args:
             flow_id: flow id to update nlu settings for.
-            model_type: (Optional) [0:unspecified, 1:MODEL_TYPE_STANDARD, 2:Custom, 3:Advanced]
+            model_type: (Optional) [0:unspecified, 1:MODEL_TYPE_STANDARD,
+              2:Custom, 3:Advanced]
             classification_threshold: (Optional) threshold for the flow
-            model_training_mode: (Optional) [0:unspecified, 1:automatic, 2:'manual]
+            model_training_mode: (Optional) [0:unspecified, 1:automatic,
+              2:'manual]
         """
 
         flow = self.get_flow(flow_id)
@@ -206,11 +208,12 @@ class Flows(SapiBase):
           flow_id, the formatted CX Flow ID to export
           gcs_path, the full GCS Bucket and File name path
           data_format, (Optional) One of 'BLOB' or 'JSON'. Defaults to 'BLOB'.
-          ref_flows, (Optional) Bool to include referenced flows connected to primary flow
+          ref_flows, (Optional) Bool to include referenced flows connected to
+            primary flow
 
         Returns:
-          lro, Dict with value containing a Long Running Operation UUID that can be
-              used to retrieve status of LRO from dfcx.get_lro
+          lro, Dict with value containing a Long Running Operation UUID that
+            can be used to retrieve status of LRO from dfcx.get_lro
         """
 
         location = flow_id.split("/")[3]
@@ -255,8 +258,8 @@ class Flows(SapiBase):
           import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'FALLBACK'
 
         Returns:
-          lro, Dict with value containing a Long Running Operation UUID that can be
-              used to retrieve status of LRO from dfcx.get_lro
+          lro, Dict with value containing a Long Running Operation UUID that
+            can be used to retrieve status of LRO from dfcx.get_lro
         """
 
         location = destination_agent_id.split("/")[3]
@@ -291,8 +294,8 @@ class Flows(SapiBase):
 
         Args:
           flow_id: flow to delete
-          force: False means a flow will not be deleted if a route to the flow exists,
-            True means the flow will be deleted and all
+          force: False means a flow will not be deleted if a route to the flow
+            exists, True means the flow will be deleted and all
         """
         if not flow_id:
             flow_id = self.flow_id

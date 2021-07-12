@@ -22,6 +22,7 @@ logging.basicConfig(
 
 class Webhooks(SapiBase):
     """Core Class for CX Webhook Resource functions."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -29,7 +30,7 @@ class Webhooks(SapiBase):
         creds=None,
         scope=False,
         webhook_id: str = None,
-        agent_id: str = None
+        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -101,10 +102,9 @@ class Webhooks(SapiBase):
 
         return cx_webhooks
 
-    def create_webhook(self,
-      agent_id: str = None,
-      obj: types.Webhook = None,
-      **kwargs):
+    def create_webhook(
+        self, agent_id: str = None, obj: types.Webhook = None, **kwargs
+    ):
         """Create a single webhook resource on a given CX Agent.
 
         Args:

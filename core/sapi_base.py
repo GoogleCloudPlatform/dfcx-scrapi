@@ -13,9 +13,9 @@ from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
 
 
-
 class SapiBase:
     """Core Class for managing Auth and other shared functions."""
+
     global_scopes = [
         "https://www.googleapis.com/auth/cloud-platform",
         "https://www.googleapis.com/auth/dialogflow",
@@ -91,12 +91,12 @@ class SapiBase:
     @staticmethod
     def cx_object_to_json(cx_object):
         """response objects have a magical _pb field attached"""
-        return SapiBase.pbuf_to_dict(cx_object._pb) #pylint: disable=W0212
+        return SapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
 
     @staticmethod
     def cx_object_to_dict(cx_object):
         """response objects have a magical _pb field attached"""
-        return SapiBase.pbuf_to_dict(cx_object._pb) #pylint: disable=W0212
+        return SapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
 
     @staticmethod
     def extract_payload(msg):

@@ -126,9 +126,12 @@ class DialogflowConversation(SapiBase):
         custom_environment = self.agent_env.get("environment")
 
         if custom_environment:
-            # just the environment and NOT experiment (change to elif if experiment comes back)
+            # just the environment and NOT experiment
+            # (change to elif if experiment comes back)
             logging.info("req using env: %s", custom_environment)
-            session_path = f"{self.agent_path}/environments/{custom_environment}/sessions/{self.session_id}"
+            session_path = "{}/environments/{}/sessions/{}".format(
+                self.agent_path, custom_environment, self.session_id
+            )
 
         disable_webhook = self.agent_env.get("disable_webhook") or False
 
@@ -223,7 +226,8 @@ class DialogflowConversation(SapiBase):
                 val = query_result.parameters[param]
                 try:
                     if isinstance(val, RepeatedComposite):
-                        # protobuf array - we just flatten as a string with spaces
+                        # protobuf array - we just flatten as a string with
+                        # spaces
                         logging.info("converting param: %s val: %s", param, val)
                         val = " ".join(val)
 
@@ -250,7 +254,7 @@ class DialogflowConversation(SapiBase):
         # reply['qr'] = qr
 
         if DEBUG_LEVEL == "silly":
-            blob = SapiBase.response_to_json(query_result)
+            blob = SapiBase.cx_object_to_json(query_result)
             logging.info(
                 "response: %s", json.dumps(blob, indent=2)
             )  # do NOT deploy
@@ -259,9 +263,6 @@ class DialogflowConversation(SapiBase):
         # self.checkpoint('<< formatted response')
         logging.debug("reply %s", reply)
         return reply
-
-    # TODO - dfqr class that has convenience accessor methods for different properties
-    # basically to unwind the protobut
 
     def format_other_intents(self, query_result):
         """unwind protobufs into more friendly dict"""
@@ -283,6 +284,8 @@ class DialogflowConversation(SapiBase):
         if self:  # keep as instance method and silence linter
             return items
 
+        return None
+
     def getpath(self, obj, xpath, default=None):
         """get data at a pathed location out of object internals"""
         elem = obj
@@ -300,3 +303,5 @@ class DialogflowConversation(SapiBase):
         logging.info("OK getpath: %s", xpath)
         if self:
             return elem
+
+        return None
