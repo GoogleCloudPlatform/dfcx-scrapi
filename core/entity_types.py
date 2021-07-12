@@ -167,7 +167,7 @@ class EntityTypes(SapiBase):
             entity_id = self.entity_id
 
         if obj:
-            _entity_id = obj.name
+            entity_id = obj.name
         else:
             client_options = self._set_region(entity_id)
             client = services.entity_types.EntityTypesClient(
