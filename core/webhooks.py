@@ -1,17 +1,16 @@
+"""Webhook Resource functions."""
+
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
-import requests
+from typing import Dict
+
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
-from google.protobuf import field_mask_pb2
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -22,6 +21,7 @@ logging.basicConfig(
 
 
 class Webhooks(SapiBase):
+    """Core Class for CX Webhook Resource functions."""
     def __init__(
         self,
         creds_path: str = None,
@@ -29,6 +29,7 @@ class Webhooks(SapiBase):
         creds=None,
         scope=False,
         webhook_id: str = None,
+        agent_id: str = None
     ):
         super().__init__(
             creds_path=creds_path,
@@ -41,7 +42,10 @@ class Webhooks(SapiBase):
             self.webhook_id = webhook_id
             self.client_options = self._set_region(webhook_id)
 
-    def get_webhooks_map(self, agent_id, reverse=False):
+        if agent_id:
+            self.agent_id = agent_id
+
+    def get_webhooks_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Webhook Names and UUIDs into a user friendly dict.
 
         Args:
@@ -52,6 +56,8 @@ class Webhooks(SapiBase):
           - webhooks_map, Dictionary containing Webhook UUIDs as keys and
               webhook.display_name as values
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         if reverse:
             webhooks_dict = {
@@ -67,7 +73,18 @@ class Webhooks(SapiBase):
 
         return webhooks_dict
 
-    def list_webhooks(self, agent_id):
+    def list_webhooks(self, agent_id: str = None):
+        """List all Webhooks in the specified CX Agent.
+
+        Args:
+          agent_id, the formated CX Agent ID to use
+
+        Returns:
+          cx_webhooks, List of webhook objects
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
         request = types.webhook.ListWebhooksRequest()
         request.parent = agent_id
 
@@ -84,8 +101,23 @@ class Webhooks(SapiBase):
 
         return cx_webhooks
 
-    def create_webhook(self, agent_id, obj=None, **kwargs):
-        # if webhook object is given, set webhook to it
+    def create_webhook(self,
+      agent_id: str = None,
+      obj: types.Webhook = None,
+      **kwargs):
+        """Create a single webhook resource on a given CX Agent.
+
+        Args:
+          agent_id, the formatted CX Agent ID to create the webhook on
+          obj, (Optional) the Webhook object of type
+            types.Webhook that you want to create the webhook from
+
+        Returns:
+          response, a copy of the successfully created webhook object
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
         if obj:
             webhook = obj
             webhook.name = ""
