@@ -1,22 +1,20 @@
+"""CX Transition Route Group Resource functions."""
+
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
-from google.auth import credentials
+from typing import Dict
 import pandas as pd
-import requests
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from dfcx_sapi.core.flows import Flows
 from dfcx_sapi.core.intents import Intents
 from dfcx_sapi.core.sapi_base import SapiBase
 from dfcx_sapi.core.webhooks import Webhooks
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -27,6 +25,7 @@ logging.basicConfig(
 
 
 class TransitionRouteGroups(SapiBase):
+    """Core Class for CX Transition Route Group functions."""
     def __init__(
         self,
         creds_path: str = None,
@@ -34,6 +33,8 @@ class TransitionRouteGroups(SapiBase):
         creds=None,
         scope=False,
         route_group_id: str = None,
+        flow_id: str = None,
+        agent_id: str = None
     ):
         super().__init__(
             creds_path=creds_path,
@@ -50,7 +51,13 @@ class TransitionRouteGroups(SapiBase):
             self.route_group_id = route_group_id
             self.client_options = self._set_region(route_group_id)
 
-    def get_route_groups_map(self, flow_id, reverse=False):
+        if flow_id:
+            self.flow_id = flow_id
+
+        if agent_id:
+            self.agent_id = agent_id
+
+    def get_route_groups_map(self, flow_id: str = None, reverse=False):
         """Exports Agent Route Group UUIDs and Names into a user friendly dict.
 
         Args:
@@ -62,6 +69,8 @@ class TransitionRouteGroups(SapiBase):
               webhook.display_name as values. If Optional reverse=True, the
               output will return page_name:ID mapping instead of ID:page_name
         """
+        if not flow_id:
+            flow_id = self.flow_id
 
         if reverse:
             pages_dict = {
@@ -77,7 +86,19 @@ class TransitionRouteGroups(SapiBase):
 
         return pages_dict
 
-    def list_transition_route_groups(self, flow_id):
+
+    def list_transition_route_groups(self, flow_id: str = None):
+        """Exports List of all Route Groups in the specified CX Flow ID.
+
+        Args:
+          flow_id, The formatted CX Flow ID to list the route groups from
+
+        Returns:
+          cx_route_groups, List of Route Group objects
+        """
+        if not flow_id:
+            flow_id = self.flow_id
+
         request = (
             types.transition_route_group.ListTransitionRouteGroupsRequest()
         )
@@ -96,10 +117,19 @@ class TransitionRouteGroups(SapiBase):
 
         return cx_route_groups
 
-    def get_transition_route_group(self, name):
+
+    def get_transition_route_group(self, route_group_id):
+        """Get a single Transition Route Group object.
+
+        Args:
+          route_group_id, the formatted CX Route Group ID to retrieve.
+
+        Returns:
+          response, a single Route Group object
+        """
         request = types.transition_route_group.GetTransitionRouteGroupRequest()
-        request.name = name
-        client_options = self._set_region(name)
+        request.name = route_group_id
+        client_options = self._set_region(route_group_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
             credentials=self.creds,
             client_options=client_options
@@ -108,17 +138,31 @@ class TransitionRouteGroups(SapiBase):
 
         return response
 
-    def create_transition_route_group(self, flow_id, obj, **kwargs):
-        #         request = types.transition_route_group.CreateTransitionRouteGroupRequest()
 
-        # if rg object is given, set rg to it
+    def create_transition_route_group(self,
+      flow_id: str = None,
+      obj: types.TransitionRouteGroup = None,
+      **kwargs):
+        """Create a single Transition Route Group resource.
+
+        Args:
+          flow_id, the formatted CX Flow ID to create the route group in
+          obj, (Optional) the Transition Route Group object of type
+            types.TransitionRouteGroup that you want the new route group
+            to be built from.
+
+        Returns:
+          response, a copy of the successfully created Route Group object
+        """
+        if not flow_id:
+            flow_id = self.flow_id
+
         if obj:
             trg = obj
             trg.name = ""
         else:
             trg = types.transition_route_group.TransitionRouteGroup()
 
-        # set optional args to rg attributes
         for key, value in kwargs.items():
             setattr(trg, key, value)
 
@@ -133,34 +177,43 @@ class TransitionRouteGroups(SapiBase):
 
         return response
 
-    def update_transition_route_group(self, rg_id, obj=None, **kwargs):
-        # If route group object is given set route group to it
-        if obj:
-            # Set rg variable to rg object
-            rg = obj
-            # Set name attribute to the name of the updated page
-            rg.name = rg_id
-        else:
-            rg = self.get_transition_route_group(rg_id)
+    def update_transition_route_group(self,
+      route_group_id: str = None,
+      obj: types.TransitionRouteGroup = None,
+      **kwargs):
+        """Update a single Route Group resource.
 
-        # Set rg attributes to arguments
+        Args:
+          route_group_id, the formatted CX Route Group ID to update.
+          obj, (Optional) the Transition Route Group object of type
+            types.TransitionRouteGroup that you want to update.
+
+        Returns:
+          response, a copy of the successfully updated Route Group object
+        """
+        if obj:
+            route_group = obj
+            route_group.name = route_group_id
+        else:
+            route_group = self.get_transition_route_group(route_group_id)
+
         for key, value in kwargs.items():
-            setattr(rg, key, value)
+            setattr(route_group, key, value)
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
 
-        client_options = self._set_region(rg_id)
+        client_options = self._set_region(route_group_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
             credentials=self.creds,
             client_options=client_options
         )
         response = client.update_transition_route_group(
-            transition_route_group=rg, update_mask=mask
+            transition_route_group=route_group, update_mask=mask
         )
 
         return response
 
-    def route_groups_to_dataframe(self, agent_id):
+    def route_groups_to_dataframe(self, agent_id: str = None):
         """This method extracts the Transition Route Groups from a given DFCX Agent
         and returns key information about the Route Groups in a Pandas Dataframe
 
@@ -176,11 +229,11 @@ class TransitionRouteGroups(SapiBase):
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
 
         Returns:
-          - df, a Pandas Dataframe
+          - final_dataframe, a Pandas Dataframe
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
-        # The following dicts and lists are setup to use to map "user friendly"
-        # data labels before writing the Route Group object to a dataframe.
         flows_dict = {
             flow.display_name: flow.name
             for flow in self.flows.list_flows(agent_id)
@@ -247,6 +300,6 @@ class TransitionRouteGroups(SapiBase):
 
                     rows_list.append(temp_dict)
 
-        df = pd.DataFrame(rows_list)
+        final_dataframe = pd.DataFrame(rows_list)
 
-        return df
+        return final_dataframe
