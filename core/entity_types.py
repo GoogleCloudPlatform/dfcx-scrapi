@@ -119,7 +119,10 @@ class EntityTypes(SapiBase):
 
         return response
 
-    def create_entity_type(self, agent_id: str = None, obj=None, **kwargs) -> types.EntityType:
+    def create_entity_type(self,
+      agent_id: str = None,
+      obj: types.EntityType = None,
+      **kwargs) -> types.EntityType:
         """Creates a single Entity Type object resource.
 
         Args:
