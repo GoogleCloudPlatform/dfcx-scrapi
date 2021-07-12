@@ -1,17 +1,14 @@
+"""CX Session Resource functions."""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
-import requests
+from typing import Dict, List
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
-from google.protobuf import field_mask_pb2
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -22,6 +19,7 @@ logging.basicConfig(
 
 
 class Sessions(SapiBase):
+    """Core Class for CX Session Resource functions."""
     def __init__(
         self,
         creds_path: str = None,
@@ -33,19 +31,40 @@ class Sessions(SapiBase):
             creds_path=creds_path, creds_dict=creds_dict, scope=scope
         )
 
-    # SESSION FX
+        if session_id:
+            self.session_id = session_id
+
     def run_conversation(
         self,
-        agent_id,
-        session_id,
-        conversation,
+        agent_id: str = None,
+        session_id: str = None,
+        conversation: List[str] = None,
         parameters=None,
         response_text=False,
     ):
-        """Tests a full conversation with the bot.
+        """Tests a full conversation with the specified CX Agent.
 
-        Using the same `session_id` between requests allows continuation
-        of the conversation."""
+        Args:
+          agent_id, the Agent ID of the CX Agent to have the conversation with.
+          session_id, an RFC 4122 formatted UUID to be used as the unique ID
+            for the duration of the conversation session. When using Python
+            uuid library, uuid.uuid4() is preferred.
+          conversation, a List of Strings that represent the USER utterances
+            for the given conversation, in the order they would happen
+            chronologically in the conversation.
+            Ex:
+              ['I want to check my bill', 'yes', 'no that is all', 'thanks!']
+          parameters, (Optional) Dict of CX Session Parameters to set in the
+            conversation. Typically this is set before a conversation starts.
+          response_text, Will provide the Agent Response text if set to True.
+            Default value is False.
+
+        Returns:
+          None, the conversation Request/Response is printed to console.
+        """
+        if not session_id:
+            session_id = self.session_id
+
         client_options = self._set_region(agent_id)
         session_client = services.sessions.SessionsClient(
             client_options=client_options
@@ -75,25 +94,25 @@ class Sessions(SapiBase):
                 session=session_path, query_input=query_input
             )
             response = session_client.detect_intent(request=request)
-            qr = response.query_result
+            query_result = response.query_result
 
             print("=" * 20)
-            print("Query text: {}".format(qr.text))
-            if "intent" in qr:
-                print("Triggered Intent: {}".format(qr.intent.display_name))
+            print("Query text: {}".format(query_result.text))
+            if "intent" in query_result:
+                print("Triggered Intent: {}".format(query_result.intent.display_name))
 
-            if "intent_detection_confidence" in qr:
+            if "intent_detection_confidence" in query_result:
                 print(
                     "Intent Confidence {}".format(
-                        qr.intent_detection_confidence
+                        query_result.intent_detection_confidence
                     )
                 )
 
-            print("Response Page: {}".format(qr.current_page.display_name))
+            print("Response Page: {}".format(query_result.current_page.display_name))
 
-            for param in qr.parameters:
+            for param in query_result.parameters:
                 if param == "statusMessage":
-                    print("Status Message: {}".format(qr.parameters[param]))
+                    print("Status Message: {}".format(query_result.parameters[param]))
 
             if response_text:
                 print(
@@ -101,15 +120,14 @@ class Sessions(SapiBase):
                         " ".join(
                             [
                                 " ".join(response_message.text.text)
-                                for response_message in qr.response_messages
+                                for response_message in query_result.response_messages
                             ]
                         )
                     )
                 )
 
     def detect_intent(
-        self, agent_id, session_id, text, parameters=None, response_text=False
-    ):
+        self, agent_id, session_id, text, parameters=None):
         """Returns the result of detect intent with texts as inputs.
 
         Using the same `session_id` between requests allows continuation
@@ -142,11 +160,18 @@ class Sessions(SapiBase):
             session=session_path, query_input=query_input
         )
         response = session_client.detect_intent(request=request)
-        qr = response.query_result
+        query_result = response.query_result
 
-        return qr
+        return query_result
 
-    def preset_parameters(self, agent_id, session_id, parameters):
+    def preset_parameters(self, agent_id: str = None, session_id: str = None, parameters=None):
+        """Used to set session parameters before a conversation starts.
+
+        agent_id, the Agent ID of the CX Agent to have the conversation with.
+        session_id, an RFC 4122 formatted UUID to be used as the unique ID
+            for the duration of the conversation session. When using Python
+            uuid library, uuid.uuid4() is preferred.
+        """
         client_options = self._set_region(agent_id)
         session_client = services.sessions.SessionsClient(
             client_options=client_options
