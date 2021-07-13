@@ -1,3 +1,4 @@
+"""[BETA] Object Oriented Agent manipulation with Class inheritence."""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
@@ -18,6 +19,11 @@ logging.basicConfig(
 
 
 class Project(SapiBase):
+    """Top Level class representing the Project level resources
+    when working on a Dialogflow CX project. This Class will allow you to
+    extract information about your GCP project as a whole in relation to
+    your CX agents.
+    """
     def __init__(
         self,
         creds_path: str = None,
