@@ -1,17 +1,17 @@
+"""Flow Resource functions."""
+
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
+from typing import Dict
 import requests
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
 from google.protobuf import field_mask_pb2
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -22,6 +22,8 @@ logging.basicConfig(
 
 
 class Flows(SapiBase):
+    """Core Class for CX Flow Resource functions."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -29,6 +31,7 @@ class Flows(SapiBase):
         creds=None,
         scope=False,
         flow_id: str = None,
+        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -40,9 +43,9 @@ class Flows(SapiBase):
         if flow_id:
             self.flow_id = flow_id
 
-        self.agent_id = None
+        self.agent_id = agent_id
 
-    def get_flows_map(self, agent_id, reverse=False):
+    def get_flows_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
@@ -50,9 +53,11 @@ class Flows(SapiBase):
             - reverse, (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-            - flows_map, Dictionary containing flow UUIDs as keys and
+            - flows_dict, Dictionary containing flow UUIDs as keys and
                 flow.display_name as values
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         if reverse:
             flows_dict = {
@@ -68,17 +73,20 @@ class Flows(SapiBase):
 
         return flows_dict
 
-    def train_flow(self):
+    def train_flow(self, flow_id: str = None):
         """trains the specified flow.
 
         Args:
           flow_id: CX flow ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/flows/<FLOW ID>
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/
+              flows/<FLOW ID>
 
         Returns:
           response: A Long Running Operation (LRO) ID that can be used to
             check the status of the export using dfcx.get_lro()
         """
+        if not flow_id:
+            flow_id = self.flow_id
 
         request = types.flow.TrainFlowRequest()
         request.name = self.flow_id
@@ -87,6 +95,18 @@ class Flows(SapiBase):
         return response
 
     def list_flows(self, agent_id=None):
+        """Get a List of all Flows in the current Agent.
+
+        Args:
+          agent_id, CX Agent ID string in the proper format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+
+        Returns:
+          flows, a List of Flow objects
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
         agent_id = agent_id or self.agent_id  # default value
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
@@ -104,7 +124,17 @@ class Flows(SapiBase):
 
         return flows
 
-    def get_flow(self, flow_id):
+    def get_flow(self, flow_id: str = None):
+        """Get a single CX Flow object.
+
+        Args:
+          flow_id, CX Flow ID in the proper format
+
+        Returns:
+          response, a single CX Flow object"""
+        if not flow_id:
+            flow_id = self.flow_id
+
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
             credentials=self.creds, client_options=client_options
@@ -113,11 +143,25 @@ class Flows(SapiBase):
 
         return response
 
-    def update_flow(self, flow_id, obj=None, **kwargs):
+    def update_flow(
+        self, flow_id: str = None, obj: types.Flow = None, **kwargs
+    ):
+        """Update a single specific CX Flow object.
+
+        Args:
+          flow_id, CX Flow ID in the proper format
+          obj, (Optional) a single CX Flow object of types.Flow
+
+        Returns:
+          response, a copy of the updated Flow object
+        """
+
         if obj:
             flow = obj
             flow.name = flow_id
         else:
+            if not flow_id:
+                flow_id = self.flow_id
             flow = self.get_flow(flow_id)
 
         # set flow attributes to args
@@ -138,16 +182,18 @@ class Flows(SapiBase):
         """updates flow to new NLU setting.
         Args:
             flow_id: flow id to update nlu settings for.
-            model_type: (Optional) [0:unspecified, 1:MODEL_TYPE_STANDARD, 2:Custom, 3:Advanced]
+            model_type: (Optional) [0:unspecified, 1:MODEL_TYPE_STANDARD,
+              2:Custom, 3:Advanced]
             classification_threshold: (Optional) threshold for the flow
-            model_training_mode: (Optional) [0:unspecified, 1:automatic, 2:'manual]
+            model_training_mode: (Optional) [0:unspecified, 1:automatic,
+              2:'manual]
         """
 
         flow = self.get_flow(flow_id)
-        currentSettings = flow.nlu_settings
+        current_settings = flow.nlu_settings
         for key, value in kwargs.items():
-            setattr(currentSettings, key, value)
-        self.update_flow(flow_id=flow_id, nlu_settings=currentSettings)
+            setattr(current_settings, key, value)
+        self.update_flow(flow_id=flow_id, nlu_settings=current_settings)
 
     def export_flow(
         self,
@@ -162,11 +208,12 @@ class Flows(SapiBase):
           flow_id, the formatted CX Flow ID to export
           gcs_path, the full GCS Bucket and File name path
           data_format, (Optional) One of 'BLOB' or 'JSON'. Defaults to 'BLOB'.
-          ref_flows, (Optional) Bool to include referenced flows connected to primary flow
+          ref_flows, (Optional) Bool to include referenced flows connected to
+            primary flow
 
         Returns:
-          lro, Dict with value containing a Long Running Operation UUID that can be
-              used to retrieve status of LRO from dfcx.get_lro
+          lro, Dict with value containing a Long Running Operation UUID that
+            can be used to retrieve status of LRO from dfcx.get_lro
         """
 
         location = flow_id.split("/")[3]
@@ -190,10 +237,10 @@ class Flows(SapiBase):
         }
 
         # Make REST call
-        r = requests.post(url, json=body, headers=headers)
-        r.raise_for_status()
+        response = requests.post(url, json=body, headers=headers)
+        response.raise_for_status()
 
-        lro = r.json()
+        lro = response.json()
 
         return lro
 
@@ -211,8 +258,8 @@ class Flows(SapiBase):
           import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'FALLBACK'
 
         Returns:
-          lro, Dict with value containing a Long Running Operation UUID that can be
-              used to retrieve status of LRO from dfcx.get_lro
+          lro, Dict with value containing a Long Running Operation UUID that
+            can be used to retrieve status of LRO from dfcx.get_lro
         """
 
         location = destination_agent_id.split("/")[3]
@@ -235,21 +282,31 @@ class Flows(SapiBase):
         }
 
         # Make REST call
-        r = requests.post(url, json=body, headers=headers)
-        r.raise_for_status()
+        response = requests.post(url, json=body, headers=headers)
+        response.raise_for_status()
 
-        lro = r.json()
+        lro = response.json()
 
         return lro
 
-    def delete_flow(self, flow_id: str, force: bool = False):
-        """
+    def delete_flow(self, flow_id: str = None, force: bool = False) -> None:
+        """Deletes a single CX Flow Object resources.
+
         Args:
           flow_id: flow to delete
-          force: False means a flow will not be deleted if a route to the flow exists, True means the flow will be deleted and all
+          force: False means a flow will not be deleted if a route to the flow
+            exists, True means the flow will be deleted and all
         """
+        if not flow_id:
+            flow_id = self.flow_id
+
         request = types.DeleteFlowRequest()
         request.name = flow_id
         request.force = force
-        client = services.flows.FlowsClient()
+
+        client_options = self._set_region(flow_id)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options
+        )
+
         client.delete_flow(request)

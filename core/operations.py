@@ -1,14 +1,12 @@
+"""Operations Resource functions."""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
+from typing import Dict
 import requests
-from google.oauth2 import service_account
-from google.auth.transport.requests import Request
-
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -19,6 +17,10 @@ logging.basicConfig(
 
 
 class Operations(SapiBase):
+    """Core class for Operations functions, primarily used to
+    extract LRO information on long running jobs for CX.
+    """
+
     def __init__(
         self, creds_path: str = None, creds_dict: Dict = None, scope=False
     ):
@@ -31,7 +33,8 @@ class Operations(SapiBase):
 
         Args:
           lro: The Long Running Operation(LRO) ID in the following format
-              'projects/<project-name>/locations/<locat>/operations/<operation-uuid>'
+              'projects/<project-name>/locations/<locat>/operations/
+                <operation-uuid>'
 
         Returns:
           response: Response status and payload from LRO

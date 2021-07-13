@@ -1,20 +1,21 @@
+"""Base for other SAPI classes."""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
-""" base for other SAPI classes."""
 
 import logging
 import json
 
+from typing import Dict
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
 from google.protobuf import json_format  # type: ignore
 
-from typing import Dict, List
-
 
 class SapiBase:
+    """Core Class for managing Auth and other shared functions."""
+
     global_scopes = [
         "https://www.googleapis.com/auth/cloud-platform",
         "https://www.googleapis.com/auth/dialogflow",
@@ -88,18 +89,17 @@ class SapiBase:
         return blob
 
     @staticmethod
-    def response_to_json(response):
+    def cx_object_to_json(cx_object):
         """response objects have a magical _pb field attached"""
-        # return SapiBase.pbuf_to_dict(response._pb)
-        return SapiBase.pbuf_to_dict(response._pb)
+        return SapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
 
     @staticmethod
-    def response_to_dict(response):
+    def cx_object_to_dict(cx_object):
         """response objects have a magical _pb field attached"""
-        return SapiBase.pbuf_to_dict(response._pb)
+        return SapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
 
     @staticmethod
     def extract_payload(msg):
         """convert to json so we can get at the object"""
-        blob = SapiBase.response_to_dict(msg)
+        blob = SapiBase.cx_object_to_dict(msg)
         return blob.get("payload")  # deref for nesting
