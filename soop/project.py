@@ -5,10 +5,10 @@
 
 import logging
 import time
+from typing import Dict
+
 from dfcx_sapi.core.sapi_base import SapiBase
 from dfcx_sapi.core.agents import Agents
-
-from typing import Dict
 
 # logging config
 logging.basicConfig(
@@ -68,13 +68,13 @@ class Project(SapiBase):
             "europe-west2",
         ]
 
-        if project_id:
-            self.project_id = project_id
+        if not project_id:
+            project_id = self.project_id
 
         all_agents = []
         for region in region_list:
             location_path = "projects/{}/locations/{}".format(
-                self.project_id, region
+                project_id, region
             )
 
             all_agents += self.agents.list_agents(location_path)
@@ -90,16 +90,18 @@ class Project(SapiBase):
         Returns:
           lro_list: List of all LROs to reference backend job status
         """
+        if not project_id:
+            project_id = self.project_id
 
-        logging.info("=" * 10 + " Fetching all Agent IDs " + "=" * 10)
-        all_agents = self.list_agents()
-        logging.info("Received %s Agent IDs" % len(all_agents))
+        logging.info("==== Fetching all Agent IDs =====")
+        all_agents = self.list_agents(project_id=project_id)
+        logging.info("Received %s Agent IDs", len(all_agents))
 
-        logging.info("=" * 10 + " Strating Agent Backups " + "=" * 10)
+        logging.info("==== Starting Agent Backups ====")
 
         lro_list = []
         for agent in all_agents:
-            logging.info("Backing up Agent: %s" % agent.display_name)
+            logging.info("Backing up Agent: %s", agent.display_name)
             temp_display_name = agent.display_name
             temp_display_name = temp_display_name.strip()
             temp_display_name = temp_display_name.lower()
@@ -113,6 +115,6 @@ class Project(SapiBase):
 
             time.sleep(1)
 
-        logging.info("=" * 10 + " Agent Backup Job Complete " + "=" * 10)
+        logging.info("==== Agent Backup Job Complete ====")
 
         return lro_list
