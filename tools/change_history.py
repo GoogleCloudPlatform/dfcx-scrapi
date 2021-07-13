@@ -1,14 +1,16 @@
+"""A collection of Methods to support the Change History feature in DFCX."""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
+from typing import Dict
+
 import numpy as np
 import pandas as pd
 import requests
 
 from dfcx_sapi.core.sapi_base import SapiBase
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -19,18 +21,37 @@ logging.basicConfig(
 
 
 class ChangeHistory(SapiBase):
+    """Tools class that contains methods to support Change History feature."""
     def __init__(
         self,
         creds_path: str = None,
         creds_dict: Dict = None,
-        scope=False,
-        webhook_id: str = None,
+        creds = None,
+        scope = False,
+        agent_id = None
     ):
         super().__init__(
-            creds_path=creds_path, creds_dict=creds_dict, scope=scope
+            creds_path=creds_path,
+            creds_dict=creds_dict,
+            creds=creds,
+            scope=scope
         )
 
-    def get_change_history(self, agent_id):
+        if agent_id:
+            self.agent_id = agent_id
+
+    def get_change_history(self, agent_id: str = None):
+        """Extract the Change History log for a single DFCX Agent.
+
+        Args:
+          agent_id, the formatted CX Agent ID
+
+        Returns:
+          logs, a List of logs from the Agent ID
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
         location = agent_id.split("/")[3]
         if location != "global":
             base_url = "https://{}-dialogflow.googleapis.com/v3alpha1".format(
@@ -72,16 +93,24 @@ class ChangeHistory(SapiBase):
         return logs
 
     def change_history_to_dataframe(self, agent_id):
+        """Format the output of get_change_history into a Pandas Dataframe.
+
+        Args:
+          agent_id, the formatted CX Agent ID
+
+        Returns:
+          final_dataframe, the final dataframe output of the formatted logs
+        """
         change_logs = self.get_change_history(agent_id)
-        df = pd.DataFrame.from_records(data=change_logs)
+        final_dataframe = pd.DataFrame.from_records(data=change_logs)
 
-        df["createTime"] = pd.to_datetime(
-            df["createTime"], infer_datetime_format=True
+        final_dataframe["createTime"] = pd.to_datetime(
+            final_dataframe["createTime"], infer_datetime_format=True
         )  # coerce datetime from CX
-        df["userType"] = np.where(
-            df.userEmail.str.contains("@google.com"), "Internal", "External"
-        )  # determine int/ext user
+        final_dataframe["userType"] = np.where(
+            final_dataframe.userEmail.str.contains("@google.com"),
+            "Internal", "External")  # determine int/ext user
 
-        # functions to determine which Flow this resource belongs to
+        # TODO: functions to determine which Flow this resource belongs to
 
-        return df
+        return final_dataframe
