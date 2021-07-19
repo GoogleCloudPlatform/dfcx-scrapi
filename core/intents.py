@@ -276,14 +276,19 @@ class Intents(SapiBase):
 
         return response
 
-    def create_intent(self, agent_id, obj=None, intent_dictionary: dict = None):
-        """Creates an intent in the agent with the provided agent_id from a protobuff or dictionary
+    def create_intent(
+        self,
+        agent_id,
+        obj=None,
+        intent_dictionary: dict = None):
+        """Creates an intent in the agent from a protobuff or dictionary.
 
         Args:
           - agent_id, the formatted CX Agent ID to use
           - obj, (Optional) intent protobuf
-          -intent_dictionary, (optional) dictionary of the intent to pass in wth structure
-          
+          -intent_dictionary, (optional) dictionary of the intent to pass in
+            with structure
+
         example intent dictionary:
            test_intent = {
             "description": "",
@@ -314,25 +319,23 @@ class Intents(SapiBase):
                     "repeat_count": 1
                 }
             ]
-        } 
-          
+        }
+
 
         Returns:
           - intents protobuff object
         """
 
         if obj and intent_dictionary:
-            raise ValueError('cannot provide both obj and intent_dictionary')
+            raise ValueError("cannot provide both obj and intent_dictionary")
         elif obj:
             intent = obj
             intent.name = ""
         elif intent_dictionary:
-            intent = types.intent.Intent.from_json(json.dumps(intent_dictionary))
-        else: 
-            raise ValueError('must provide either obj or intent_dictionary')
-            
-
-
+            intent = types.intent.Intent.from_json(json.dumps(
+                intent_dictionary))
+        else:
+            raise ValueError("must provide either obj or intent_dictionary")
 
         client_options = self._set_region(agent_id)
         client = services.intents.IntentsClient(

@@ -13,6 +13,7 @@ import traceback
 
 from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
+from google.api_core import exceptions as core_exceptions
 from proto.marshal.collections.repeated import RepeatedComposite
 
 from .sapi_base import SapiBase
@@ -176,8 +177,8 @@ class DialogflowConversation(SapiBase):
             response = session_client.detect_intent(request=request)
 
         # CX throws a 429 error
-        # TODO - more specific exception
-        except BaseException as err:
+        except core_exceptions.ClientError as err:
+        # except BaseException as err:
             logging.error("BaseException caught on CX.detect %s", err)
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(err).__name__, err.args)
