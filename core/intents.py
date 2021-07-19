@@ -5,6 +5,7 @@
 # agreement with Google.
 
 from collections import defaultdict
+import json
 import logging
 from typing import Dict
 import numpy as np
@@ -275,51 +276,63 @@ class Intents(SapiBase):
 
         return response
 
-    def create_intent(self, agent_id: str = None, obj=None, **kwargs):
-        """Creats a single CX Intent object.
+    def create_intent(self, agent_id, obj=None, intent_dictionary: dict = None):
+        """Creates an intent in the agent with the provided agent_id from a protobuff or dictionary
 
         Args:
-          agent_id, the properly formatted CX Agent ID where you want to create
-            the Intent object
-          obj, (Optional) a predefined CX Intent Object
+          - agent_id, the formatted CX Agent ID to use
+          - obj, (Optional) intent protobuf
+          -intent_dictionary, (optional) dictionary of the intent to pass in wth structure
+          
+        example intent dictionary:
+           test_intent = {
+            "description": "",
+            "display_name": "my_intent",
+            "is_fallback": False,
+            "labels": {},
+            "priority": 500000,
+            "training_phrases": [
+                {
+                    "id": "",
+                    "parts": [
+                        {
+                            "text": "hello"
+                        },
+                        {
+                            "text": "all"
+                        }
+                    ],
+                    "repeat_count": 1
+                },
+                {
+                    "id": "",
+                    "parts": [
+                        {
+                            "text": "hi"
+                        }
+                    ],
+                    "repeat_count": 1
+                }
+            ]
+        } 
+          
 
         Returns:
-          resopnse, a copy of the successfully created CX Intent Object
+          - intents protobuff object
         """
-        if not agent_id:
-            agent_id = self.agent_id
 
-        if obj:
+        if obj and intent_dictionary:
+            raise ValueError('cannot provide both obj and intent_dictionary')
+        elif obj:
             intent = obj
             intent.name = ""
-        else:
-            intent = types.intent.Intent()
+        elif intent_dictionary:
+            intent = types.intent.Intent.from_json(json.dumps(intent_dictionary))
+        else: 
+            raise ValueError('must provide either obj or intent_dictionary')
+            
 
-        for key, value in kwargs.items():
-            if key == "training_phrases":
-                assert isinstance(kwargs[key], list)
-                training_phrases = []
-                for arg in kwargs[key]:
-                    if isinstance(arg, dict):
-                        train_phrase = types.intent.Intent.TrainingPhrase()
-                        parts = []
-                        for part_i in arg["parts"]:
-                            if isinstance(part_i, dict):
-                                part = types.intent.Intent.TrainingPhrase.Part()
-                                part.text = part_i["text"]
-                                part.parameter_id = part_i.get("parameter_id")
-                                parts.append(part)
-                            else:
-                                print("Wrong object in parts list")
-                                break
-                        train_phrase.parts = parts
-                        train_phrase.repeat_count = arg.get("repeat_count")
-                        training_phrases.append(train_phrase)
-                    else:
-                        print("Wrong object in training phrases list")
-                        break
-                setattr(intent, key, training_phrases)
-            setattr(intent, key, value)
+
 
         client_options = self._set_region(agent_id)
         client = services.intents.IntentsClient(

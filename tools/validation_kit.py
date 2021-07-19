@@ -31,8 +31,8 @@ class ValidationKit(SapiBase):
             scope=scope,
         )
 
-        self.agents = Agents(creds=self.creds)
-        self.flows = Flows(creds=self.creds)
+        self.agents = Agents(creds_path=creds_path, creds_dict=creds_dict)
+        self.flows = Flows(creds_path=creds_path, creds_dict=creds_dict)
 
     def validation_results_to_dataframe(self, validation_results: Dict):
         """ "Transform the Validation results into a dataframe. Note will not work if you call get_validation_result with a flow_id specified. For calling validate ensure lro is complete

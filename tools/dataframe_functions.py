@@ -26,6 +26,7 @@ from dfcx_sapi.core.pages import Pages
 from dfcx_sapi.core.transition_route_groups import TransitionRouteGroups
 
 
+
 g_drive_scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
@@ -42,15 +43,30 @@ logging.basicConfig(
 class DataframeFunctions(SapiBase):
     """Class that supports dataframe functions in DFCX."""
 
-    def __init__(self, creds_path: str):
-        logging.info("create dfcx creds %s", creds_path)
-        self.entities = entity_types.EntityTypes(creds_path)
-        self.intents = intents.Intents(creds_path)
-        self.flows = flows.Flows(creds_path)
-        self.pages = pages.Pages(creds_path)
-        self.route_groups = transition_route_groups.TransitionRouteGroups(
-            creds_path
+
+        
+    def __init__(
+        self,
+        creds_path: str = None,
+        creds_dict: dict = None,
+        creds=None,
+        scope=False,
+    ):
+        super().__init__(
+            creds_path=creds_path,
+            creds_dict=creds_dict,
+            creds=creds,
+            scope=scope,
         )
+        
+        
+        logging.info("create dfcx creds %s", creds_path)
+        self.entities = entity_types.EntityTypes(creds_path, creds_dict)
+        self.intents = intents.Intents(creds_path, creds_dict)
+        self.flows = flows.Flows(creds_path, creds_dict)
+        self.pages = pages.Pages(creds_path, creds_dict)
+        self.route_groups = transition_route_groups.TransitionRouteGroups(
+            creds_path, creds_dict)
         self.creds_path = creds_path
 
     def sheets_to_dataframe(self, sheet_name, worksheet_name):

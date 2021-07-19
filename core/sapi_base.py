@@ -36,20 +36,23 @@ class SapiBase:
 
         if creds:
             self.creds = creds
-
+            self.creds.refresh(Request())
+            self.token = self.creds.token
         elif creds_path:
             self.creds = service_account.Credentials.from_service_account_file(
                 creds_path, scopes=self.scopes
             )
+            self.creds.refresh(Request())
+            self.token = self.creds.token
         elif creds_dict:
             self.creds = service_account.Credentials.from_service_account_info(
                 creds_dict, scopes=self.scopes
             )
+            self.creds.refresh(Request())
+            self.token = self.creds.token
         else:
-            raise ValueError("creds_type must be of [creds_path, creds_dict]")
-
-        self.creds.refresh(Request())
-        self.token = self.creds.token
+            self.creds = None
+            self.token = None
 
         if agent_path:
             self.agent_path = agent_path
