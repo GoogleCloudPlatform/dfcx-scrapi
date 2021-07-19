@@ -89,7 +89,7 @@ class Flows(SapiBase):
             flow_id = self.flow_id
 
         request = types.flow.TrainFlowRequest()
-        request.name = self.flow_id
+        request.name = flow_id or self.flow_id
         client = services.flows.FlowsClient(credentials=self.creds)
         response = client.train_flow(request)
         return response
