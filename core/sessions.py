@@ -144,13 +144,14 @@ class Sessions(SapiBase):
         of the conversation."""
         client_options = self._set_region(agent_id)
         session_client = services.sessions.SessionsClient(
-            client_options=client_options
+            client_options=client_options, credentials=self.creds
         )
+
         session_path = "{}/sessions/{}".format(agent_id, session_id)
 
         if parameters:
             query_params = types.session.QueryParameters(parameters=parameters)
-            text_input = types.session.TextInput(text="")
+            text_input = types.session.TextInput(text=text)
             query_input = types.session.QueryInput(
                 text=text_input, language_code="en"
             )
