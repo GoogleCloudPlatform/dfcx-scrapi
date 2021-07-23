@@ -1,6 +1,7 @@
 google-cloud-dialogflow-cx
 google-auth
 google-oauth
+oauth2client
 pandas
 tabulate
 gspread
