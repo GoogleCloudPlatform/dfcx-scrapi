@@ -29,3 +29,10 @@ autofix-min-whitespace:
 # make autofix f=somefile.py
 autofix-all:
 	autopep8 --aggressive --aggressive --verbose --in-place ${f}
+
+add-upstream:
+	git remote add upstream git@gitlab.com:google-pso/ais/verizon/dfcx_sapi.git
+
+merge-upstream:
+	git merge upstream/master
+

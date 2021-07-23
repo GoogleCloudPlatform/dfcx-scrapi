@@ -1,11 +1,13 @@
+"""
+methods for creating CX object types
+such as transition routes or fulfillments
+"""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
 
 import logging
 import google.cloud.dialogflowcx_v3beta1.types as types
-
-from typing import Dict, List
 
 # logging config
 logging.basicConfig(
@@ -21,8 +23,12 @@ SCOPES = [
 
 
 class MakerUtil:
-    @staticmethod
-    def make_generic(obj, obj_type, default, conditionals=dict()):
+    """Util class to create CX objects like transition routes"""
+    @classmethod
+    def make_generic(cls, obj, obj_type, default, conditionals=None):
+        if conditionals is None:
+            conditionals = dict()
+
         if isinstance(obj, obj_type):
             return obj
 
@@ -54,16 +60,19 @@ class MakerUtil:
         else:
             return default
 
-    @staticmethod
-    def make_seq(self, obj, obj_type, default, conditionals=dict()):
+    @classmethod
+    def make_seq(cls, obj, obj_type, default, conditionals=None):
+        if conditionals is None:
+            conditionals = dict()
         assert isinstance(obj, list)
         l = []
         for x in obj:
-            l.append(self.make_generic(x, obj_type, default, conditionals))
+            l.append(cls.make_generic(
+                x, obj_type, default, conditionals))
         return l
 
-    @staticmethod
-    def make_transition_route(self, obj=None, **kwargs):
+    @classmethod
+    def make_transition_route(cls, obj=None, **kwargs):
         """Creates a single Transition Route object for Dialogflow CX.
 
         Transition routes are used to navigate a user from page to page, or
@@ -84,11 +93,12 @@ class MakerUtil:
           condition, (str): The condition to evaluate on the route
           target_page, (str): The UUID of the target page to transition to
           target_flow, (str): The UUID of the target flow to transition to
-          trigger_fulfillment, (obj): Requires an object in the format of
-              type <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
+          trigger_fulfillment, (obj): Requires an object in the format of type
+          <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
 
         Returns:
-          Route object of type <google.cloud.dialogflowcx_v3beta1.types.page.TransitionRoute>
+          Route object of type
+          <google.cloud.dialogflowcx_v3beta1.types.page.TransitionRoute>
         """
 
         if obj:
@@ -104,16 +114,16 @@ class MakerUtil:
         # Set route attributes to args
         for key, value in kwargs.items():
             if key == "trigger_fulfillment":
-                tf = self.make_trigger_fulfillment(value)
+                tf = cls.make_trigger_fulfillment(value)
                 setattr(route, key, tf)
             else:
                 setattr(route, key, value)
 
         return route
 
-    @staticmethod
+    @classmethod
     def make_trigger_fulfillment(
-        self, messages=None, webhook_id=None, webhook_tag=None
+        cls, messages=None, webhook_id=None, webhook_tag=None
     ):
         """Creates a single Fulfillment object for Dialogflow CX.
 
@@ -121,17 +131,20 @@ class MakerUtil:
         messages back to the user, trigger webhooks, set parameter presets,
         and enable IVR options where applicable.
 
-        Note: if no args are provided, a blank Fulfillment object will be returned.
+        Note: if no args are provided, a blank Fulfillment object will be
+        returned.
 
         Args:
-            messages, (list): (Optional) The list of Dialogue messages to send back to the user
-            webhook_id, (str): (Optional) The UUID of the Dialogflow CX webhook to trigger
-            when the Fulfillment is triggered by the conversation.
-            webhook_tag, (str): (Required if webhook_id is provided) User defined tag
-            associated with
+            messages: Optional list of Dialogue messages to send
+            webhook_id, (str): (Optional)
+                The UUID of the Dialogflow CX webhook to trigger
+                when the Fulfillment is triggered by the conversation.
+            webhook_tag, (str): (Required if webhook_id is provided)
+                User defined tag associated with
 
         Returns:
-            Fulfillment object of type <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
+            Fulfillment object of type
+            <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
         """
         fulfillment = types.fulfillment.Fulfillment()
 
@@ -156,32 +169,32 @@ class MakerUtil:
         print(fulfillment)
         return fulfillment
 
-    @staticmethod
-    def set_entity_type_attr(self, entity_type, kwargs):
+    @classmethod
+    def set_entity_type_attr(cls, entity_type, kwargs):
         for key, value in kwargs.items():
             if key == "kind":
                 kind = types.entity_type.EntityType.Kind
-                obj = self.make_generic(value, kind, kind(0))
+                obj = cls.make_generic(value, kind, kind(0))
                 setattr(entity_type, key, obj)
             # For the auto expansion mode case create helper object to set at
             # entity_type attribute
             elif key == "auto_expansion_mode":
                 aem = types.entity_type.EntityType.AutoExpansionMode
-                obj = self.make_generic(value, aem, aem(1))
+                obj = cls.make_generic(value, aem, aem(1))
                 setattr(entity_type, key, obj)
 
             # For the entities case iterate over dictionary and assign key value
             # pairs to entity type elements of entities list
             elif key == "entities":
                 entity = types.entity_type.EntityType.Entity
-                obj = self.make_seq(value, entity, entity())
+                obj = cls.make_seq(value, entity, entity())
                 setattr(entity_type, key, obj)
 
             # For the excluded phrases case assign value to the excluded phrase
             # object then set as the entity_type attribute
             elif key == "excluded_phrases":
                 ep = types.entity_type.EntityType.ExcludedPhrase
-                obj = self.make_seq(value, ep, ep())
+                obj = cls.make_seq(value, ep, ep())
                 setattr(entity_type, key, obj)
 
             else:

@@ -1,3 +1,4 @@
+"""util class for doing searches"""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
@@ -23,6 +24,8 @@ logging.basicConfig(
 
 
 class SearchUtil(SapiBase):
+    """class for searching items"""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -149,8 +152,9 @@ class SearchUtil(SapiBase):
         page_name=None,
         flag_search_all=False,
     ):
-        """This is the master function where a user can search across all pages in a flow,
-        an entire agent etc. search conditionals for an exact string in conditional routes.
+        """This is the master function where a user can search across
+        all pages in a flow, an entire agent etc.
+        Search conditionals for an exact string in conditional routes.
 
         Args:
             - search, string to search
@@ -159,12 +163,16 @@ class SearchUtil(SapiBase):
             - page_name,  (optional) the display name of the page to search
             - flag_search_all, (optional)
                 When set to True:
-                    -if just an agent_id is specified an entire agent is searched
-                    -if just an agent_id and flow_name are specified an entire flow is searched
-                    -if an agent_id, flow_name and page_name are specified a page is searched
+                    -if just an agent_id then entire agent is searched
+                    -if just an agent_id and flow_name are specified
+                        an entire flow is searched
+                    -if an agent_id, flow_name and page_name are specified
+                        a page is searched
                 When set to False:
-                    -if just an agent_id and flow_name are specified only the start page of the flow is searched
-                    -if an agent_id, flow_name and page_name are specified a page is searched
+                    -if just an agent_id and flow_name are specified
+                        only the start page of the flow is searched
+                    -if an agent_id, flow_name and page_name are specified
+                        a page is searched
         Returns:
             - locator, dataframe of the results of where this string was found
         """
@@ -174,11 +182,12 @@ class SearchUtil(SapiBase):
                 flows_map = self.flows.get_flows_map(
                     agent_id=agent_id, reverse=True
                 )
-            except:
+            # check - maybe other error types here
+            except ValueError:
                 logging.error(
-                    "{0} is not a valid flow_name for agent {1}".format(
-                        flow_name, agent_id
-                    )
+                    "%s is not a valid flow_name for agent %s",
+                    flow_name,
+                    agent_id,
                 )
             try:
                 pages_map = self.pages.get_pages_map(
@@ -188,11 +197,12 @@ class SearchUtil(SapiBase):
                     page_id=pages_map[page_name], search=search
                 )
 
-            except:
+            except ValueError:
                 logging.error(
-                    "{0} is not a valid page_name for flow {1} in agent {2}".format(
-                        page_name, flow_name, agent_id
-                    )
+                    "%s is not a valid page_name for flow %s in agent %s",
+                    page_name,
+                    flow_name,
+                    agent_id,
                 )
 
         if flow_name:
@@ -207,11 +217,11 @@ class SearchUtil(SapiBase):
                 flow_search.insert(0, "resource_name", flow_name)
                 flow_search.insert(0, "resource_type", "flow")
                 locator = locator.append(flow_search)
-            except:
+            except ValueError:
                 logging.error(
-                    "{0} is not a valid flow_name for agent {1}".format(
-                        flow_name, agent_id
-                    )
+                    "%s is not a valid flow_name for agent %s",
+                    flow_name,
+                    agent_id,
                 )
 
             if flag_search_all:
@@ -230,7 +240,7 @@ class SearchUtil(SapiBase):
 
             return locator
 
-        if flow_name == None and page_name == None and flag_search_all == True:
+        if flow_name is None and page_name is None and flag_search_all is True:
             locator = pd.DataFrame()
 
             flows_map = self.flows.get_flows_map(
