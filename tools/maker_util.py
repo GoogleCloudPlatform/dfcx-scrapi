@@ -160,13 +160,14 @@ class MakerUtil:
             fulfillment.webhook = webhook_id
 
             if not webhook_tag:
-                print("webhook_tag is required when specifying webhook_id")
-                return
+                logging.info(
+                    "webhook_tag is required when specifying webhook_id")
+                return None
 
             else:
                 fulfillment.tag = webhook_tag
 
-        print(fulfillment)
+        # print(fulfillment)
         return fulfillment
 
     @classmethod

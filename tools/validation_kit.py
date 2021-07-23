@@ -1,3 +1,4 @@
+"""Working with built in CX validation functions"""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
@@ -17,6 +18,8 @@ SCOPES = [
 
 
 class ValidationKit(SapiBase):
+    """Helper for working with built in CX validation functions"""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -35,9 +38,12 @@ class ValidationKit(SapiBase):
         self.flows = Flows(creds_path=creds_path, creds_dict=creds_dict)
 
     def validation_results_to_dataframe(self, validation_results: Dict):
-        """ "Transform the Validation results into a dataframe. Note will not work if you call get_validation_result with a flow_id specified. For calling validate ensure lro is complete
+        """ "Transform the Validation results into a dataframe.
+        Note will not work if you call get_validation_result with a
+        flow_id specified. For calling validate ensure lro is complete
         Args:
-            validation_results: dictionary of validation results passed back from get_validation_result or validate functions
+            validation_results: dictionary of validation results
+                passed back from get_validation_result or validate functions
 
         Return:
             df: dataframe containing the validation results
@@ -80,14 +86,22 @@ class ValidationKit(SapiBase):
     def intent_disambiguation(self, agent_id, refresh=False, flow=None):
         """Obtains the intent disambiguation tasks from the validation tool
             Args:
-                refresh: (optional) False means validation results are pulled as is. True means the validation tool is refreshed then results are pulled
-                flow: (optional) If specified results are returned for the indicated flow display name
+                refresh: (optional) False means validation results are pulled
+                    as is. True means the validation tool is refreshed then
+                    results are pulled
+                flow: (optional) If specified results are returned
+                    for the indicated flow display name
 
 
         Returns:
-          Dictionary of intent disambiguation Validation results in two dataframes.
-              extended: All intent disambiguation validtion results as seperate instances. If 5 training phrases conflict in 5 intents they will be shown as 5 rows.
-              compact: Only showing the first instance of a conflict for each grouping. If 5 trainig phrases conflic in 5 intents only the first training phrase will show.
+          Dictionary of intent disambiguation Validation results
+          in two dataframes.
+              extended: All intent disambiguation validtion results as
+                seperate instances. If 5 training phrases conflict
+                in 5 intents they will be shown as 5 rows.
+              compact: Only showing the first instance of a conflict
+                for each grouping. If 5 trainig phrases conflic in 5 intents
+                only the first training phrase will show.
         """
 
         if refresh:
@@ -105,14 +119,12 @@ class ValidationKit(SapiBase):
         validation_df = validation_df[["flow", "detail"] + resources]
         disambig_id, intents_list, tp_list, id_ = [], [], [], 0
         flows = []
+        ph = "Multiple intents share training phrases which are too similar"
+
         for _, row in validation_df.iterrows():
             deets, flow = row["detail"], row["flow"]
-            if bool(
-                re.search(
-                    "Multiple intents share training phrases which are too similar:",
-                    deets,
-                )
-            ):
+
+            if bool(re.search(ph, deets)):
                 intents = re.findall("Intent '(.*)': training phrase ", deets)
                 training_phrases = re.findall("training phrase '(.*)'", deets)
                 intents_list = intents_list + intents

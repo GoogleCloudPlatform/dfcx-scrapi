@@ -265,3 +265,6 @@ class SearchUtil(SapiBase):
                     page_search.insert(0, "resource_type", "page")
                     locator = locator.append(page_search)
             return locator
+
+        # not found
+        return None

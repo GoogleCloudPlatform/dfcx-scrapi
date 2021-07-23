@@ -36,3 +36,7 @@ add-upstream:
 merge-upstream:
 	git merge upstream/master
 
+# use it like this:
+# f=tools/validation_kit.py make lint-lines
+lint-lines:
+	black --line-length=80 ${f}

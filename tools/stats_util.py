@@ -1,4 +1,4 @@
-"""A set of utiliity functions to provide Agent Stats for a Dialogflow CX agent."""
+"""Utiliity functions to provide Agent Stats for a Dialogflow CX agent."""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
@@ -10,8 +10,10 @@ from dfcx_sapi.core.intents import Intents
 from dfcx_sapi.core.flows import Flows
 from dfcx_sapi.core.pages import Pages
 
+
 class StatsUtil(SapiBase):
     """A util class to provide common stats for a CX Agent."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -48,8 +50,8 @@ class StatsUtil(SapiBase):
         if not agent_id:
             agent_id = self.agent_id
 
-        all_intents = self.intents_tracker.bulk_intent_to_df()
-        flows_map = self.flows_tracker.get_flows_map()
+        all_intents = self.intents_tracker.bulk_intent_to_df(agent_id=agent_id)
+        flows_map = self.flows_tracker.get_flows_map(agent_id)
         info = {
             "Total # of Flows": len(flows_map.keys()),
             "Total # of Intents": all_intents.intent.nunique(),

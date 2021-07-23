@@ -118,7 +118,7 @@ class DataframeFunctions(sapi_base.SapiBase):
         self,
         intent_id: str,
         dataframe: pd.DataFrame,
-        params: pd.DataFrame() = None,
+        params = None,
         mode: str = "basic"):
         """Update existing Intents, TPs and Parameters from DataFrame.
 
@@ -424,7 +424,7 @@ class DataframeFunctions(sapi_base.SapiBase):
         self,
         display_name: str,
         tp_df: pd.DataFrame,
-        params: pd.Dataframe = None,
+        params = None,
         meta: Dict[str,str] = None,
         mode: str = "basic",
     ):
@@ -572,7 +572,7 @@ class DataframeFunctions(sapi_base.SapiBase):
         self,
         agent_id: str,
         tp_df: pd.DataFrame,
-        params_df: pd.DataFrame = None,
+        params_df = None,
         mode: str = "basic",
         update_flag: Boolean = False,
         rate_limiter: int = 5,
