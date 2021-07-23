@@ -1,3 +1,4 @@
+"""Utility file for dataframe functions in support of Dialogflow CX."""
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
@@ -5,27 +6,18 @@
 import json
 import logging
 import time
-
-from dfcx_sapi.core import entity_types
-from dfcx_sapi.core import flows
-from dfcx_sapi.core import intents
-from dfcx_sapi.core import pages
-from dfcx_sapi.core import transition_route_groups
-import google.cloud.dialogflowcx_v3beta1.types as types
+from typing import Dict, List
 import gspread
+import pandas as pd
+from pyasn1.type.univ import Boolean
+from tabulate import tabulate
 from gspread_dataframe import set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
-import pandas as pd
-from tabulate import tabulate
 
-from dfcx_sapi.core.sapi_base import SapiBase
-from dfcx_sapi.core.intents import Intents
-from dfcx_sapi.core.entity_types import EntityTypes
-from dfcx_sapi.core.flows import Flows
-from dfcx_sapi.core.pages import Pages
-from dfcx_sapi.core.transition_route_groups import TransitionRouteGroups
+import google.cloud.dialogflowcx_v3beta1.types as types
 
-
+from dfcx_sapi.core import (sapi_base, intents, entity_types, flows, pages,
+  transition_route_groups)
 
 g_drive_scope = [
     "https://spreadsheets.google.com/feeds",
@@ -39,12 +31,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-
-class DataframeFunctions(SapiBase):
+class DataframeFunctions(sapi_base.SapiBase):
     """Class that supports dataframe functions in DFCX."""
-
-
-        
     def __init__(
         self,
         creds_path: str = None,
@@ -58,8 +46,7 @@ class DataframeFunctions(SapiBase):
             creds=creds,
             scope=scope,
         )
-        
-        
+
         logging.info("create dfcx creds %s", creds_path)
         self.entities = entity_types.EntityTypes(creds_path, creds_dict)
         self.intents = intents.Intents(creds_path, creds_dict)
@@ -68,6 +55,35 @@ class DataframeFunctions(SapiBase):
         self.route_groups = transition_route_groups.TransitionRouteGroups(
             creds_path, creds_dict)
         self.creds_path = creds_path
+
+    @staticmethod
+    def progress_bar(current, total, bar_length=50, type_="Progress"):
+        """Display progress bar for processing."""
+        percent = float(current) * 100 / total
+        arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
+        spaces = " " * (bar_length - len(arrow))
+        print(
+            "{2}({0}/{1})".format(current, total, type_)
+            + "[%s%s] %d %%" % (arrow, spaces, percent),
+            end="\r",
+        )
+
+    @staticmethod
+    def _coerce_to_string(dataframe: pd.DataFrame, fields: List[str]):
+        """Coerce incoming object type to string"""
+        for field in fields:
+            dataframe = dataframe.astype({field: "string"})
+
+        return dataframe
+
+    @staticmethod
+    def _coerce_to_int(dataframe: pd.DataFrame, fields: List[str]):
+        """Coerce incoming object type to int"""
+        for field in fields:
+            dataframe = dataframe.astype({field: "int32"})
+
+        return object
+
 
     def sheets_to_dataframe(self, sheet_name, worksheet_name):
         """Move Intent/TP data from Google Sheets to a DataFrame."""
@@ -98,19 +114,12 @@ class DataframeFunctions(SapiBase):
         worksheet = g_sheets.worksheet(worksheet_name)
         set_with_dataframe(worksheet, df)
 
-    def progress_bar(self, current, total, bar_length=50, type_="Progress"):
-        percent = float(current) * 100 / total
-        arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
-        spaces = " " * (bar_length - len(arrow))
-        print(
-            "{2}({0}/{1})".format(current, total, type_)
-            + "[%s%s] %d %%" % (arrow, spaces, percent),
-            end="\r",
-        )
-
     def update_intent_from_dataframe(
-        self, intent_id: str, train_phrases, params=pd.DataFrame(), mode="basic"
-    ):
+        self,
+        intent_id: str,
+        dataframe: pd.DataFrame,
+        params: pd.DataFrame() = None,
+        mode: str = "basic"):
         """Update existing Intents, TPs and Parameters from DataFrame.
 
         The intent must exist in the agent.
@@ -130,41 +139,38 @@ class DataframeFunctions(SapiBase):
         """
 
         if mode == "basic":
-            try:
-                train_phrases = train_phrases[["text"]]
-                train_phrases = train_phrases.astype({"text": "string"})
-            except BaseException:
+            if hasattr(dataframe, 'text'):
+                dataframe = dataframe[["text"]]
+                dataframe = self._coerce_to_string(dataframe, ['text'])
+            else:
                 tp_schema = pd.DataFrame(
-                    index=["text", "parameter_id"],
-                    columns=[0],
-                    data=["string", "string"],
-                ).astype({0: "string"})
+                    data={
+                        'text': ["string1"],
+                        'parameter_id': ['string2']
+                        }
+                    )
                 logging.error(
-                    "%s mode train_phrases schema must be %s \n" % mode,
-                    tabulate(
-                        tp_schema.transpose(), headers="keys", tablefmt="psql"
-                    ),
+                    "%s mode train_phrases schema must be %s \n", mode,
+                      tabulate(
+                          tp_schema.transpose(),
+                          headers="keys",
+                          tablefmt="psql")
                 )
 
         elif mode == "advanced":
-            try:
-                train_phrases = train_phrases[
-                    ["training_phrase", "part", "text", "parameter_id"]
-                ]
-                train_phrases = train_phrases.astype(
-                    {
-                        "training_phrase": "int32",
-                        "part": "int32",
-                        "text": "string",
-                        "parameter_id": "string",
-                    }
-                )
+            if all (k in dataframe for k in [
+                "training_phrase", "part", "text", "parameter_id"]):
+
+                dataframe = dataframe[["training_phrase", "part", "text", "parameter_id"]]
+                dataframe = self._coerce_to_int(dataframe, ['training_phrase', 'part'])
+                dataframe = self._coerce_to_string(dataframe, ['text', 'parameter_id'])
+
                 if params:
                     params = params[["id", "entity_type"]]
-                    params = params.astype(
-                        {"id": "string", "entity_type": "string"}
-                    )
-            except BaseException:
+                    params = self._coerce_to_string(
+                        params, ['id', 'entity_type'])
+
+            else:
                 tp_schema = pd.DataFrame(
                     index=["training_phrase", "part", "text", "parameter_id"],
                     columns=[0],
@@ -176,28 +182,24 @@ class DataframeFunctions(SapiBase):
                     data=["string", "string"],
                 ).astype({0: "string"})
                 logging.error(
-                    "{0} mode train_phrases schema must be {1} \n".format(
-                        mode,
+                    "%s mode train_phrases schema must be %s \n", mode,
                         tabulate(
                             tp_schema.transpose(),
                             headers="keys",
                             tablefmt="psql",
-                        ),
-                    )
+                        )
                 )
                 logging.error(
-                    "{0} mode parameter schema must be {1} \n".format(
-                        mode,
+                    "%s mode parameter schema must be %s \n", mode,
                         tabulate(
                             p_schema.transpose(),
                             headers="keys",
                             tablefmt="psql",
-                        ),
-                    )
+                        )
                 )
 
         else:
-            raise ValueError("mode must be basic or advanced")
+            raise ValueError("Mode must be \'basic\' or \'advanced\'")
 
         original = self.intents.get_intent(intent_id=intent_id)
         intent = {}
@@ -211,9 +213,9 @@ class DataframeFunctions(SapiBase):
         # training phrases
         if mode == "advanced":
             training_phrases = []
-            for tp in list(set(train_phrases["training_phrase"])):
-                tp_parts = train_phrases[
-                    train_phrases["training_phrase"].astype(int) == int(tp)
+            for phrase in list(set(dataframe["training_phrase"])):
+                tp_parts = dataframe[
+                    dataframe["training_phrase"].astype(int) == int(phrase)
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
@@ -242,7 +244,7 @@ class DataframeFunctions(SapiBase):
 
         elif mode == "basic":
             training_phrases = []
-            for _, row in train_phrases.iterrows():
+            for _, row in dataframe.iterrows():
                 part = {"text": row["text"], "parameter_id": None}
                 parts = [part]
                 training_phrase = {"parts": parts, "repeat_count": 1, "id": ""}
@@ -258,7 +260,7 @@ class DataframeFunctions(SapiBase):
     def bulk_update_intents_from_dataframe(
         self,
         agent_id,
-        train_phrases_df,
+        tp_df,
         params_df=pd.DataFrame(),
         mode="basic",
         update_flag=False,
@@ -269,7 +271,7 @@ class DataframeFunctions(SapiBase):
         Args:
           agent_id: name parameter of the agent to update_flag - full path to
             agent
-          train_phrases_df: dataframe of bulk training phrases required columns:
+          tp_df: dataframe of bulk training phrases required columns:
             text, display_name in advanced mode have training_phrase and parts
             column to track the build
           params_df(optional): dataframe of bulk parameters
@@ -285,31 +287,32 @@ class DataframeFunctions(SapiBase):
             intent protobufs as values
         """
         if mode == "basic":
-            try:
-                train_phrases_df = train_phrases_df[["display_name", "text"]]
-                train_phrases_df = train_phrases_df.astype(
-                    {"display_name": "string", "text": "string"}
-                )
-            except BaseException:
+            if all (k in tp_df for k in ['display_name', 'text']):
+                tp_df = tp_df[["display_name", "text"]]
+                tp_df = self._coerce_to_string(
+                    tp_df, ['display_name', 'text'])
+
+            else:
                 tp_schema = pd.DataFrame(
                     index=["display_name", "text", "parameter_id"],
                     columns=[0],
                     data=["string", "string", "string"],
                 ).astype({0: "string"})
                 logging.error(
-                    "{0} mode train_phrases schema must be {1} \n".format(
-                        mode,
+                    "%s mode train_phrases schema must be %s \n", mode,
                         tabulate(
                             tp_schema.transpose(),
                             headers="keys",
                             tablefmt="psql",
-                        ),
-                    )
+                        )
                 )
 
         elif mode == "advanced":
-            try:
-                train_phrases_df = train_phrases_df[
+            if all (k in tp_df for k in [
+                'display_name', 'training_phrase',
+                'part', 'text', 'parameter_id']):
+
+                tp_df = tp_df[
                     [
                         "display_name",
                         "training_phrase",
@@ -318,16 +321,13 @@ class DataframeFunctions(SapiBase):
                         "parameter_id",
                     ]
                 ]
-                train_phrases_df = train_phrases_df.astype(
-                    {
-                        "display_name": "string",
-                        "training_phrase": "int32",
-                        "part": "int32",
-                        "text": "string",
-                        "parameter_id": "string",
-                    }
-                )
-                if params_df > 0:
+
+                tp_df = self._coerce_to_string(
+                    tp_df, ['display_name', 'text', 'parameter_id'])
+                tp_df = self._coerce_to_int(
+                    tp_df, ['training_phrase', 'part'])
+
+                if params_df:
                     params_df = params_df[["display_name", "id", "entity_type"]]
                     params_df = params_df.astype(
                         {
@@ -336,7 +336,7 @@ class DataframeFunctions(SapiBase):
                             "entity_type": "string",
                         }
                     )
-            except BaseException:
+            else:
                 tp_schema = pd.DataFrame(
                     index=[
                         "display_name",
@@ -354,56 +354,29 @@ class DataframeFunctions(SapiBase):
                     data=["string", "string", "string"],
                 ).astype({0: "string"})
                 logging.error(
-                    "{0} mode train_phrases schema must be {1} \n".format(
-                        mode,
+                    "%s mode train_phrases schema must be %s \n", mode,
                         tabulate(
                             tp_schema.transpose(),
                             headers="keys",
                             tablefmt="psql",
-                        ),
-                    )
+                        )
                 )
                 logging.error(
-                    "{0} mode parameter schema must be {1} \n".format(
-                        mode,
+                    "%s mode parameter schema must be %s \n", mode,
                         tabulate(
                             p_schema.transpose(),
                             headers="keys",
                             tablefmt="psql",
-                        ),
-                    )
+                        )
                 )
 
         else:
             raise ValueError("mode must be basic or advanced")
 
-        # TODO - check if user provided DF is in the right shape
-        # phrase_schema_user = train_phrases_df.dtypes.to_frame().astype(
-        # {0:'string'})
-        # param_schema_user = params_df.dtypes.to_frame().astype({0:'string'})
-
-        # if (phrase_schema_user.equals(phrase_schema_master))==False:
-        #     logging.error('training phrase schema must be\n {} \n'.format(
-        #         tabulate(phrase_schema_master.transpose(), headers='keys',
-        # tablefmt='psql')))
-        #     logging.error('got schema \n {}'.format(
-        #         tabulate(phrase_schema_user.transpose(), headers='keys',
-        # tablefmt='psql')))
-        #     logging.error('df.head \n%s', train_phrases_df.head() )
-        # raise ValueError('wrong schema format \n%s' % phrase_schema_user)
-
-        # if mode =='advanced':
-        #     if (param_schema_user.equals(param_schema_master))==False and
-        # len(params_df)>0:
-        #         raise ValueError('parameter schema must be {}'.format(
-        # tabulate(phrase_schema_master.transpose(), headers='keys',
-        # tablefmt='psql')))
-
-        #         logging.info('updating agent_id %s', agent_id)
         intents_map = self.intents.get_intents_map(
             agent_id=agent_id, reverse=True
         )
-        intent_names = list(set(train_phrases_df["display_name"]))
+        intent_names = list(set(tp_df["display_name"]))
 
         new_intents = {}
         i = 0
@@ -414,8 +387,8 @@ class DataframeFunctions(SapiBase):
                 logging.warning("empty intent_name")
                 continue
 
-            tps = train_phrases_df.copy()[
-                train_phrases_df["display_name"] == intent_name
+            tps = tp_df.copy()[
+                tp_df["display_name"] == intent_name
             ].drop(columns="display_name")
             params = pd.DataFrame()
             if mode == "advanced":
@@ -429,10 +402,9 @@ class DataframeFunctions(SapiBase):
                 )
                 continue
 
-            # logging.info('update intent %s', intent_name)
             new_intent = self.update_intent_from_dataframe(
                 intent_id=intents_map[intent_name],
-                train_phrases=tps,
+                dataframe=tps,
                 params=params,
                 mode=mode,
             )
@@ -451,10 +423,10 @@ class DataframeFunctions(SapiBase):
     def create_intent_from_dataframe(
         self,
         display_name: str,
-        train_phrases,
-        params=pd.DataFrame(),
-        meta={},
-        mode="basic",
+        tp_df: pd.DataFrame,
+        params: pd.Dataframe = None,
+        meta: Dict[str,str] = None,
+        mode: str = "basic",
     ):
         """Create an intent from a DataFrame.
 
@@ -473,8 +445,8 @@ class DataframeFunctions(SapiBase):
         """
         if mode == "basic":
             try:
-                train_phrases = train_phrases[["text"]]
-                train_phrases = train_phrases.astype({"text": "string"})
+                tp_df = tp_df[["text"]]
+                tp_df = tp_df.astype({"text": "string"})
             except BaseException:
                 tp_schema = pd.DataFrame(
                     index=["text", "parameter_id"],
@@ -494,10 +466,10 @@ class DataframeFunctions(SapiBase):
 
         elif mode == "advanced":
             try:
-                train_phrases = train_phrases[
+                tp_df = tp_df[
                     ["training_phrase", "part", "text", "parameter_id"]
                 ]
-                train_phrases = train_phrases.astype(
+                tp_df = tp_df.astype(
                     {
                         "training_phrase": "int32",
                         "part": "int32",
@@ -522,24 +494,20 @@ class DataframeFunctions(SapiBase):
                     data=["string", "string"],
                 ).astype({0: "string"})
                 logging.error(
-                    "{0} mode train_phrases schema must be {1} \n".format(
-                        mode,
+                    "%s mode train_phrases schema must be %s \n", mode,
                         tabulate(
                             tp_schema.transpose(),
                             headers="keys",
                             tablefmt="psql",
-                        ),
-                    )
+                        )
                 )
                 logging.error(
-                    "{0} mode parameter schema must be {1} \n".format(
-                        mode,
+                    "%s mode parameter schema must be %s \n", mode,
                         tabulate(
                             p_schema.transpose(),
                             headers="keys",
                             tablefmt="psql",
-                        ),
-                    )
+                        )
                 )
 
         else:
@@ -555,9 +523,9 @@ class DataframeFunctions(SapiBase):
         # training phrases
         if mode == "advanced":
             training_phrases = []
-            for tp in list(set(train_phrases["training_phrase"])):
-                tp_parts = train_phrases[
-                    train_phrases["training_phrase"].astype(int) == int(tp)
+            for phrase in list(set(tp_df["training_phrase"])):
+                tp_parts = tp_df[
+                    tp_df["training_phrase"].astype(int) == int(phrase)
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
@@ -586,7 +554,7 @@ class DataframeFunctions(SapiBase):
 
         elif mode == "basic":
             training_phrases = []
-            for _, row in train_phrases.iterrows():
+            for _, row in tp_df.iterrows():
                 part = {"text": row["text"], "parameter_id": None}
                 parts = [part]
                 training_phrase = {"parts": parts, "repeat_count": 1, "id": ""}
@@ -602,13 +570,13 @@ class DataframeFunctions(SapiBase):
 
     def bulk_create_intent_from_dataframe(
         self,
-        agent_id,
-        train_phrases_df,
-        params_df=pd.DataFrame(),
-        mode="basic",
-        update_flag=False,
-        rate_limiter=5,
-        meta={},
+        agent_id: str,
+        tp_df: pd.DataFrame,
+        params_df: pd.DataFrame = None,
+        mode: str = "basic",
+        update_flag: Boolean = False,
+        rate_limiter: int = 5,
+        meta: Dict[str,str] = None,
     ):
         """Create Intents in DFCX from a DataFrame.
 
@@ -634,8 +602,8 @@ class DataframeFunctions(SapiBase):
         # remove any unnecessary columns
         if mode == "basic":
             try:
-                train_phrases_df = train_phrases_df[["display_name", "text"]]
-                train_phrases_df = train_phrases_df.astype(
+                tp_df = tp_df[["display_name", "text"]]
+                tp_df = tp_df.astype(
                     {"display_name": "string", "text": "string"}
                 )
             except BaseException:
@@ -657,10 +625,10 @@ class DataframeFunctions(SapiBase):
 
         elif mode == "advanced":
             try:
-                if "meta" not in train_phrases_df.columns:
-                    train_phrases_df["meta"] = [dict()] * len(train_phrases_df)
+                if "meta" not in tp_df.columns:
+                    tp_df["meta"] = [dict()] * len(tp_df)
 
-                train_phrases_df = train_phrases_df[
+                tp_df = tp_df[
                     [
                         "display_name",
                         "training_phrase",
@@ -670,7 +638,7 @@ class DataframeFunctions(SapiBase):
                         "meta",
                     ]
                 ]
-                train_phrases_df = train_phrases_df.astype(
+                tp_df = tp_df.astype(
                     {
                         "display_name": "string",
                         "training_phrase": "int32",
@@ -724,12 +692,12 @@ class DataframeFunctions(SapiBase):
         else:
             raise ValueError("mode must be basic or advanced")
 
-        intents = list(set(train_phrases_df["display_name"]))
+        intents = list(set(tp_df["display_name"]))
         new_intents = {}
         i = 0
         for instance in intents:
-            tps = train_phrases_df.copy()[
-                train_phrases_df["display_name"] == instance
+            tps = tp_df.copy()[
+                tp_df["display_name"] == instance
             ].drop(columns="display_name")
             params = pd.DataFrame()
             if mode == "advanced":
@@ -739,7 +707,7 @@ class DataframeFunctions(SapiBase):
 
             new_intent = self.create_intent_from_dataframe(
                 display_name=instance,
-                train_phrases=tps,
+                tp_df=tps,
                 params=params,
                 meta=meta,
                 mode=mode,
