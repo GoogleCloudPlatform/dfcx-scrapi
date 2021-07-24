@@ -9,6 +9,7 @@ import time
 from typing import Dict, List
 import gspread
 import pandas as pd
+import numpy as np
 from pyasn1.type.univ import Boolean
 from tabulate import tabulate
 from gspread_dataframe import set_with_dataframe
@@ -406,9 +407,7 @@ class DataframeFunctions(sapi_base.SapiBase):
         new_intents = {}
         i = 0
         for intent_name in intent_names:
-
-            # easier way to compare for empty pd cell values?
-            if isinstance(intent_name, pd._libs.missing.NAType):
+            if intent_name in (["", np.nan, None]):
                 logging.warning("empty intent_name")
                 continue
 
