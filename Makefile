@@ -34,6 +34,7 @@ add-upstream:
 	git remote add upstream git@gitlab.com:google-pso/ais/verizon/dfcx_sapi.git
 
 merge-upstream:
+	git fetch upstream
 	git merge upstream/master
 
 # use it like this:

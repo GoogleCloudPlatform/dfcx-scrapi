@@ -1,8 +1,9 @@
-"""Core Class to control full end to end converstaions."""
+"""client of DfCx agent - tracks session internally"""
 
 # Copyright 2021 Google LLC. This software is provided as-is, without warranty
 # or representation for any use or purpose. Your use of it is subject to your
 # agreement with Google.
+
 
 import json
 import logging
@@ -10,14 +11,11 @@ import os
 import uuid
 import time
 import traceback
-
 from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
 from google.api_core import exceptions as core_exceptions
 from proto.marshal.collections.repeated import RepeatedComposite
-
 from .sapi_base import SapiBase
-
 logger = logging
 
 logging.basicConfig(
@@ -75,8 +73,8 @@ class DialogflowConversation(SapiBase):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
         self.turn_count = 0
-        # logging.info('restarted agent: session: %s', self.session_id)
-        # print('restarted DFCX.client=>', self.agent_path)
+        # logging.info("restarted agent: session: %s", self.session_id)
+        # print("restarted DFCX.client=>", self.agent_path)
 
     def set_agent_env(self, param, value):
         """setting changes related to the environment"""
@@ -108,11 +106,18 @@ class DialogflowConversation(SapiBase):
         """
 
         # if disable_webhook:
-        #     logging.info('disable_webhook: %s', disable_webhook)
+        #     logging.info("disable_webhook: %s", disable_webhook)
 
         text = send_obj.get("text")
+        if not text:
+            logger.warning("trying to reply to empty message %s", send_obj)
+
+        if text and len(text) > 250:
+            logging.error("text is too long %s", text)
+            text = text[0:250]
+
         send_params = send_obj.get("params")
-        # logging.info('send params %s', send_params)
+        # logging.info("send params %s", send_params)
         self.checkpoint(start=True)
 
         if restart:
@@ -160,7 +165,7 @@ class DialogflowConversation(SapiBase):
                 language_code=self.language_code,
             )
 
-        # self.checkpoint('<< prepared request')
+        # self.checkpoint("<< prepared request")
 
         request = session.DetectIntentRequest(
             session=session_path,
@@ -176,13 +181,27 @@ class DialogflowConversation(SapiBase):
         try:
             response = session_client.detect_intent(request=request)
 
+        # how to import this exception?
+        # except com.google.apps.framework.request.BadRequestException as err:
+        #     logging.error("BadRequestException %s", err)
+
         # CX throws a 429 error
+        # catch Auth exceptions too separately - eg if creds are expired
+        except core_exceptions.InternalServerError as err:
+            logging.error(
+                "---- ERROR --- InternalServerError caught on CX.detect %s",
+                err)
+            logging.error("text: %s", text)
+            logging.error("query_params: %s", query_params)
+            logging.error("query_input: %s", query_input)
+            return {}
+
         except core_exceptions.ClientError as err:
-        # except BaseException as err:
-            logging.error("BaseException caught on CX.detect %s", err)
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            logging.error(
+                "---- ERROR ---- ClientError caught on CX.detect %s", err)
+            template = "An exception of type {0} occurred. \nArguments:\n{1!r}"
             message = template.format(type(err).__name__, err.args)
-            logging.error(message)
+            logging.error("err name %s", message)
 
             logging.error("text %s", text)
             logging.error("query_params %s", query_params)
@@ -192,10 +211,13 @@ class DialogflowConversation(SapiBase):
             if retries < MAX_RETRIES:
                 # TODO - increase back off / delay? not needed for 3 retries
                 logging.error("retrying")
-                self.reply(send_obj, restart=restart, raw=raw, retries=retries)
+                return self.reply(send_obj, restart=restart, raw=raw,
+                                  retries=retries)
             else:
                 logging.error("MAX_RETRIES exceeded")
-                raise err
+                # try to continue but this may crash somewhere else
+                return {}
+                # raise err
                 # return None ## try next one
 
         # format reply
@@ -214,22 +236,22 @@ class DialogflowConversation(SapiBase):
                 reply["payload"] = SapiBase.extract_payload(msg)
             if (len(msg.text.text)) > 0:
                 text = msg.text.text[-1]  # this could be multiple lines too?
-                # print('text', text)
+                # print("text", text)
                 texts.append(text)
 
         # flatten params struct
         params = {}
-        # print('parameters', json.dumps(qr.parameters))  ## not JSON
-        # serialisable until it's not
+        # print("parameters", json.dumps(qr.parameters))  ## not JSON
+        # serialisable until it"s not
         if query_result.parameters:
             for param in query_result.parameters:
                 # turn into key: value pairs
                 val = query_result.parameters[param]
                 try:
                     if isinstance(val, RepeatedComposite):
-                        # protobuf array - we just flatten as a string with
-                        # spaces
-                        logging.info("converting param: %s val: %s", param, val)
+                        # protobuf array - we flatten as a string with spaces
+                        logging.info(
+                            "converting param: %s val: %s", param, val)
                         val = " ".join(val)
 
                 except TypeError as err:
@@ -252,16 +274,16 @@ class DialogflowConversation(SapiBase):
 
         # if raw:
         # self.qr = qr
-        # reply['qr'] = qr
+        # reply["qr"] = qr
 
         if DEBUG_LEVEL == "silly":
             blob = SapiBase.cx_object_to_json(query_result)
             logging.info(
                 "response: %s", json.dumps(blob, indent=2)
             )  # do NOT deploy
-            # logging.debug('response: %s', blob)
+            # logging.debug("response: %s", blob)
 
-        # self.checkpoint('<< formatted response')
+        # self.checkpoint("<< formatted response")
         logging.debug("reply %s", reply)
         return reply
 
@@ -281,7 +303,7 @@ class DialogflowConversation(SapiBase):
                 }
             )
             rank += 1
-        # intents_map[alt['DisplayName']] = alt['Score']
+        # intents_map[alt["DisplayName"]] = alt["Score"]
         if self:  # keep as instance method and silence linter
             return items
 
