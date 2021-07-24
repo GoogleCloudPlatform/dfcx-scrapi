@@ -16,8 +16,14 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 import google.cloud.dialogflowcx_v3beta1.types as types
 
-from dfcx_sapi.core import (sapi_base, intents, entity_types, flows, pages,
-  transition_route_groups)
+from dfcx_sapi.core import (
+    sapi_base,
+    intents,
+    entity_types,
+    flows,
+    pages,
+    transition_route_groups,
+)
 
 g_drive_scope = [
     "https://spreadsheets.google.com/feeds",
@@ -31,8 +37,10 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+
 class DataframeFunctions(sapi_base.SapiBase):
     """Class that supports dataframe functions in DFCX."""
+
     def __init__(
         self,
         creds_path: str = None,
@@ -53,7 +61,8 @@ class DataframeFunctions(sapi_base.SapiBase):
         self.flows = flows.Flows(creds_path, creds_dict)
         self.pages = pages.Pages(creds_path, creds_dict)
         self.route_groups = transition_route_groups.TransitionRouteGroups(
-            creds_path, creds_dict)
+            creds_path, creds_dict
+        )
         self.creds_path = creds_path
 
     @staticmethod
@@ -90,13 +99,13 @@ class DataframeFunctions(sapi_base.SapiBase):
         dataframe = pd.DataFrame(columns=columns)
 
         type_map = {
-            'display_name': 'string',
-            'text': 'string',
-            'parameter_id': 'string',
-            'training_phrase': 'int32',
-            'part': 'int32',
-            'id': 'string',
-            'entity_type': 'string'
+            "display_name": "string",
+            "text": "string",
+            "parameter_id": "string",
+            "training_phrase": "int32",
+            "part": "int32",
+            "id": "string",
+            "entity_type": "string",
         }
 
         temp_data = {}
@@ -125,8 +134,9 @@ class DataframeFunctions(sapi_base.SapiBase):
         self,
         intent_id: str,
         train_phrases: pd.DataFrame,
-        params = None,
-        mode: str = "basic"):
+        params=None,
+        mode: str = "basic",
+    ):
         """Make an Updated Intent Object based on already existing Intent.
 
         The intent must exist in the agent.
@@ -149,62 +159,69 @@ class DataframeFunctions(sapi_base.SapiBase):
         """
 
         if mode == "basic":
-            if hasattr(train_phrases, 'text'):
+            if hasattr(train_phrases, "text"):
                 train_phrases = train_phrases[["text"]]
-                train_phrases = self._coerce_to_string(train_phrases, ['text'])
+                train_phrases = self._coerce_to_string(train_phrases, ["text"])
             else:
-                tp_schema = self._make_schema(['text', 'parameter_id'])
+                tp_schema = self._make_schema(["text", "parameter_id"])
 
                 logging.error(
-                    "%s mode train_phrases schema must be: \n%s", mode,
-                      tabulate(
-                          tp_schema,
-                          headers="keys",
-                          tablefmt="psql")
+                    "%s mode train_phrases schema must be: \n%s",
+                    mode,
+                    tabulate(tp_schema, headers="keys", tablefmt="psql"),
                 )
-                raise KeyError('Missing column \'text\' in DataFrame columns')
+                raise KeyError("Missing column 'text' in DataFrame columns")
 
         elif mode == "advanced":
-            if all (k in train_phrases for k in [
-                "training_phrase", "part", "text", "parameter_id"]):
+            if all(
+                k in train_phrases
+                for k in ["training_phrase", "part", "text", "parameter_id"]
+            ):
 
                 train_phrases = train_phrases[
-                    ["training_phrase", "part", "text", "parameter_id"]]
+                    ["training_phrase", "part", "text", "parameter_id"]
+                ]
                 train_phrases = self._coerce_to_int(
-                    train_phrases, ['training_phrase', 'part'])
+                    train_phrases, ["training_phrase", "part"]
+                )
                 train_phrases = self._coerce_to_string(
-                    train_phrases, ['text', 'parameter_id'])
+                    train_phrases, ["text", "parameter_id"]
+                )
 
                 if params:
                     params = params[["id", "entity_type"]]
                     params = self._coerce_to_string(
-                        params, ['id', 'entity_type'])
+                        params, ["id", "entity_type"]
+                    )
 
             else:
                 tp_schema = self._make_schema(
-                    ['training_phrase', 'part', 'text', 'parameter_id'])
-                p_schema = self._make_schema(['id', 'entity_type'])
+                    ["training_phrase", "part", "text", "parameter_id"]
+                )
+                p_schema = self._make_schema(["id", "entity_type"])
 
                 logging.error(
-                    "%s mode train_phrases schema must be: \n%s", mode,
-                        tabulate(
-                            tp_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                    "%s mode train_phrases schema must be: \n%s",
+                    mode,
+                    tabulate(
+                        tp_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
                 logging.error(
-                    "%s mode parameter schema must be %s \n", mode,
-                        tabulate(
-                            p_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                    "%s mode parameter schema must be %s \n",
+                    mode,
+                    tabulate(
+                        p_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
-                raise KeyError('Missing column name in DataFrame. See schema.')
+                raise KeyError("Missing column name in DataFrame. See schema.")
 
         else:
-            raise ValueError("Mode must be \'basic\' or \'advanced\'")
+            raise ValueError("Mode must be 'basic' or 'advanced'")
 
         original = self.intents.get_intent(intent_id=intent_id)
         intent = self._remap_intent_values(original)
@@ -282,14 +299,13 @@ class DataframeFunctions(sapi_base.SapiBase):
           rate_limiter: seconds to sleep between operations.
 
         Returns:
-          modified_intents: dictionary with intent display names as keys and the new
-            intent protobufs as values
+          modified_intents: dictionary with intent display names as keys and
+            the new intent protobufs as values
         """
         if mode == "basic":
-            if all (k in tp_df for k in ['display_name', 'text']):
+            if all(k in tp_df for k in ["display_name", "text"]):
                 tp_df = tp_df[["display_name", "text"]]
-                tp_df = self._coerce_to_string(
-                    tp_df, ['display_name', 'text'])
+                tp_df = self._coerce_to_string(tp_df, ["display_name", "text"])
 
             else:
                 tp_schema = pd.DataFrame(
@@ -298,18 +314,26 @@ class DataframeFunctions(sapi_base.SapiBase):
                     data=["string", "string", "string"],
                 ).astype({0: "string"})
                 logging.error(
-                    "%s mode train_phrases schema must be %s \n", mode,
-                        tabulate(
-                            tp_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                    "%s mode train_phrases schema must be %s \n",
+                    mode,
+                    tabulate(
+                        tp_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
 
         elif mode == "advanced":
-            if all (k in tp_df for k in [
-                'display_name', 'training_phrase',
-                'part', 'text', 'parameter_id']):
+            if all(
+                k in tp_df
+                for k in [
+                    "display_name",
+                    "training_phrase",
+                    "part",
+                    "text",
+                    "parameter_id",
+                ]
+            ):
 
                 tp_df = tp_df[
                     [
@@ -322,9 +346,9 @@ class DataframeFunctions(sapi_base.SapiBase):
                 ]
 
                 tp_df = self._coerce_to_string(
-                    tp_df, ['display_name', 'text', 'parameter_id'])
-                tp_df = self._coerce_to_int(
-                    tp_df, ['training_phrase', 'part'])
+                    tp_df, ["display_name", "text", "parameter_id"]
+                )
+                tp_df = self._coerce_to_int(tp_df, ["training_phrase", "part"])
 
                 if params_df:
                     params_df = params_df[["display_name", "id", "entity_type"]]
@@ -353,20 +377,22 @@ class DataframeFunctions(sapi_base.SapiBase):
                     data=["string", "string", "string"],
                 ).astype({0: "string"})
                 logging.error(
-                    "%s mode train_phrases schema must be %s \n", mode,
-                        tabulate(
-                            tp_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                    "%s mode train_phrases schema must be %s \n",
+                    mode,
+                    tabulate(
+                        tp_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
                 logging.error(
-                    "%s mode parameter schema must be %s \n", mode,
-                        tabulate(
-                            p_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                    "%s mode parameter schema must be %s \n",
+                    mode,
+                    tabulate(
+                        p_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
 
         else:
@@ -386,9 +412,9 @@ class DataframeFunctions(sapi_base.SapiBase):
                 logging.warning("empty intent_name")
                 continue
 
-            tps = tp_df.copy()[
-                tp_df["display_name"] == intent_name
-            ].drop(columns="display_name")
+            tps = tp_df.copy()[tp_df["display_name"] == intent_name].drop(
+                columns="display_name"
+            )
             params = pd.DataFrame()
             if mode == "advanced":
                 params = params_df.copy()[
@@ -423,7 +449,7 @@ class DataframeFunctions(sapi_base.SapiBase):
         display_name: str,
         tp_df: pd.DataFrame,
         params_df: pd.DataFrame = None,
-        meta: Dict[str,str] = None,
+        meta: Dict[str, str] = None,
         mode: str = "basic",
     ):
         """Create an intent from a DataFrame.
@@ -435,37 +461,40 @@ class DataframeFunctions(sapi_base.SapiBase):
           params(optional): dataframe of parameters
           meta: dictionary
           mode: basic - build assuming one row is one training phrase no
-                  entities, advance - build keeping track of training phrases and
-                  parts with the training_phrase and parts column.
+                  entities, advance - build keeping track of training phrases
+                  and parts with the training_phrase and parts column.
 
         Returns:
           intent_pb: the new intents protobuf object
         """
         if mode == "basic":
-            if all (k in tp_df for k in ['text']):
+            if all(k in tp_df for k in ["text"]):
                 tp_df = tp_df[["text"]]
-                tp_df = self._coerce_to_string(tp_df, ['text'])
+                tp_df = self._coerce_to_string(tp_df, ["text"])
 
             else:
-                tp_schema = self._make_schema(['text', 'parameter_id'])
+                tp_schema = self._make_schema(["text", "parameter_id"])
 
                 logging.error(
-                    "%s mode train_phrases schema must be %s \n", mode,
-                        tabulate(
-                            tp_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                    "%s mode train_phrases schema must be %s \n",
+                    mode,
+                    tabulate(
+                        tp_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
 
         elif mode == "advanced":
-            if all (k in tp_df for k in ['training_phrase', 'part', 'text',
-            'parameter_id']):
+            if all(
+                k in tp_df
+                for k in ["training_phrase", "part", "text", "parameter_id"]
+            ):
                 tp_df = tp_df[
                     ["training_phrase", "part", "text", "parameter_id"]
                 ]
-                tp_df = self._coerce_to_string(tp_df, ['text', 'parameter_id'])
-                tp_df = self._coerce_to_int(tp_df, ['training_phrase', 'part'])
+                tp_df = self._coerce_to_string(tp_df, ["text", "parameter_id"])
+                tp_df = self._coerce_to_int(tp_df, ["training_phrase", "part"])
 
                 if params_df:
                     params_df = params_df[["id", "entity_type"]]
@@ -473,25 +502,28 @@ class DataframeFunctions(sapi_base.SapiBase):
                         {"id": "string", "entity_type": "string"}
                     )
             else:
-                tp_schema = self._make_schema(['training_phrase', 'part',
-                'text', 'parameter_id'])
-                p_schema = self._make_schema(['id', 'entity_type'])
+                tp_schema = self._make_schema(
+                    ["training_phrase", "part", "text", "parameter_id"]
+                )
+                p_schema = self._make_schema(["id", "entity_type"])
 
                 logging.error(
-                    "%s mode train_phrases schema must be %s \n", mode,
-                        tabulate(
-                            tp_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                    "%s mode train_phrases schema must be %s \n",
+                    mode,
+                    tabulate(
+                        tp_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
                 logging.error(
-                    "%s mode parameter schema must be %s \n", mode,
-                        tabulate(
-                            p_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                    "%s mode parameter schema must be %s \n",
+                    mode,
+                    tabulate(
+                        p_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
 
         else:
@@ -560,20 +592,21 @@ class DataframeFunctions(sapi_base.SapiBase):
         mode: str = "basic",
         update_flag: Boolean = False,
         rate_limiter: int = 5,
-        meta: Dict[str,str] = None,
+        meta: Dict[str, str] = None,
     ):
         """Create Intents in DFCX from a DataFrame.
 
         Args:
-          agent_id: name parameter of the agent to update_flag - full path to agent
-          train_phrases_df: dataframe of bulk training phrases required columns of
-            text, display_name in advanced mode have training_phrase and parts
-            column to track the build
+          agent_id: name parameter of the agent to update_flag - full path to
+           agent
+          train_phrases_df: dataframe of bulk training phrases required
+            columns of text, display_name in advanced mode have training_phrase
+            and parts column to track the build
           params_df(optional): dataframe of bulk parameters
           mode: basic|advanced
             basic - build assuming one row is one training phrase no entities
-            advanced - build keeping track of training phrases and parts with the
-              training_phrase and parts column.
+            advanced - build keeping track of training phrases and parts with
+              the training_phrase and parts column.
           update_flag: True to update_flag the intents in the agent
           rate_limiter: number of seconds to wait between calls
           meta: dictionary
@@ -584,27 +617,35 @@ class DataframeFunctions(sapi_base.SapiBase):
 
         """
         if mode == "basic":
-            if all (k in tp_df for k in ['display_name', 'text']):
-                tp_df = tp_df[['display_name', 'text']]
-                tp_df = self._coerce_to_string(
-                    tp_df, ['display_name', 'text'])
+            if all(k in tp_df for k in ["display_name", "text"]):
+                tp_df = tp_df[["display_name", "text"]]
+                tp_df = self._coerce_to_string(tp_df, ["display_name", "text"])
 
             else:
-                tp_schema = self._make_schema(['display_name', 'text', 'parameter_id'])
+                tp_schema = self._make_schema(
+                    ["display_name", "text", "parameter_id"]
+                )
 
                 raise ValueError(
                     "%s mode train_phrases schema must be %s" % mode,
-                        tabulate(
-                            tp_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                    tabulate(
+                        tp_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
 
         elif mode == "advanced":
-            if all (k in tp_df for k in [
-                'display_name', 'training_phrase', 'part', 'text',
-                'parameter_id']):
+            if all(
+                k in tp_df
+                for k in [
+                    "display_name",
+                    "training_phrase",
+                    "part",
+                    "text",
+                    "parameter_id",
+                ]
+            ):
                 if "meta" not in tp_df.columns:
                     tp_df["meta"] = [dict()] * len(tp_df)
 
@@ -619,36 +660,45 @@ class DataframeFunctions(sapi_base.SapiBase):
                     ]
                 ]
                 tp_df = self._coerce_to_string(
-                    tp_df, ['display_name', 'text', 'parameter_id'])
-                tp_df = self._coerce_to_int(
-                    tp_df, ['training_phrase', 'part'])
+                    tp_df, ["display_name", "text", "parameter_id"]
+                )
+                tp_df = self._coerce_to_int(tp_df, ["training_phrase", "part"])
 
                 if params_df:
-                    params_df = params_df[
-                        ["display_name", "id", "entity_type"]]
+                    params_df = params_df[["display_name", "id", "entity_type"]]
                     params_df = self._coerce_to_string(
-                        params_df, ['display_name', 'id', 'entity_type'])
+                        params_df, ["display_name", "id", "entity_type"]
+                    )
 
             else:
                 tp_schema = self._make_schema(
-                    ['display_name', 'training_phrase', 'part', 'text',
-                    'parameter_id'])
+                    [
+                        "display_name",
+                        "training_phrase",
+                        "part",
+                        "text",
+                        "parameter_id",
+                    ]
+                )
 
                 p_schema = self._make_schema(
-                    ['display_name', 'id', 'entity_type'])
+                    ["display_name", "id", "entity_type"]
+                )
 
-                raise ValueError("%s mode train_phrases schema must be %s \n parameter\
-                        schema must be %s" % mode,
-                        tabulate(
-                            tp_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        ),
-                        tabulate(
-                            p_schema.transpose(),
-                            headers="keys",
-                            tablefmt="psql",
-                        )
+                raise ValueError(
+                    "%s mode train_phrases schema must be %s \n parameter\
+                        schema must be %s"
+                    % mode,
+                    tabulate(
+                        tp_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
+                    tabulate(
+                        p_schema.transpose(),
+                        headers="keys",
+                        tablefmt="psql",
+                    ),
                 )
 
         else:
@@ -658,9 +708,9 @@ class DataframeFunctions(sapi_base.SapiBase):
         new_intents = {}
         i = 0
         for intent in temp_intents:
-            tps = tp_df.copy()[
-                tp_df["display_name"] == intent
-            ].drop(columns="display_name")
+            tps = tp_df.copy()[tp_df["display_name"] == intent].drop(
+                columns="display_name"
+            )
             params = pd.DataFrame()
             if mode == "advanced":
                 params = params_df.copy()[
@@ -683,10 +733,12 @@ class DataframeFunctions(sapi_base.SapiBase):
 
         return new_intents
 
-    def create_entity_from_dataframe(self,
-      display_name: str,
-      entity_df: pd.DataFrame,
-      meta: Dict[str,str] = None):
+    def create_entity_from_dataframe(
+        self,
+        display_name: str,
+        entity_df: pd.DataFrame,
+        meta: Dict[str, str] = None,
+    ):
         """Create an entity.
 
         Args:
@@ -726,15 +778,16 @@ class DataframeFunctions(sapi_base.SapiBase):
         """Bulk create entities from a dataframe.
 
         Args:
-          agent_id: name parameter of the agent to update_flag - full path to agent
+          agent_id: name parameter of the agent to update_flag - full path to
+            agent
           entities_df: dataframe of bulk entities;
             required columns: display_name, value, synonyms
           update_flag: True to update_flag the entities in the agent
           rate_limiter: seconds to sleep between operations.
 
         Returns:
-          new_entities: dictionary with entity display names as keys and the new
-            entity protobufs as values
+          new_entities: dictionary with entity display names as keys and the
+            new entity protobufs as values
         """
 
         if "meta" in entities_df.columns:
@@ -769,7 +822,8 @@ class DataframeFunctions(sapi_base.SapiBase):
                 time.sleep(rate_limiter)
 
             self.progress_bar(
-                i, len(list(set(entities_df["display_name"]))), type_="entities"
+                i, len(list(set(
+                    entities_df["display_name"]))), type_="entities"
             )
         return custom_entities
 
@@ -777,7 +831,8 @@ class DataframeFunctions(sapi_base.SapiBase):
         """Create transition route.
 
         Args:
-          route_df: dataframe with a singular routes data. Should only be one row
+          route_df: dataframe with a singular routes data. Should only be one
+            row
             intent: intent id
             condition: string condition. ex.
               $session.params.dtmf_diy_opt_in = 1 AND
@@ -822,7 +877,8 @@ class DataframeFunctions(sapi_base.SapiBase):
 
         # custom payloads and text
         payload = {
-            "messages": custom_payload_list + [{"text": {"text": fulfillment_text}}]
+            "messages": custom_payload_list
+            + [{"text": {"text": fulfillment_text}}]
         }
 
         payload_json = json.dumps(payload)
@@ -866,7 +922,8 @@ class DataframeFunctions(sapi_base.SapiBase):
             fulfillment_text: = list of text ["yo", "hi"]
             parameter_presets: = dictionary of parameter presets ex.
               {"param1":"value","param2":"othervalues"}
-              update_flag: True to create the route group in the provided flow id
+              update_flag: True to create the route group in the provided
+                flow id
 
         Returns:
           rg: route group protobuf
@@ -880,7 +937,9 @@ class DataframeFunctions(sapi_base.SapiBase):
             )
 
         if "target_flow" in route_group_df.columns:
-            flows_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
+            flows_map = self.flows.get_flows_map(
+                agent_id=agent_id, reverse=True
+            )
             route_group_df["target_flow"] = route_group_df.apply(
                 lambda x: flows_map[x["target_flow"]], axis=1
             )
