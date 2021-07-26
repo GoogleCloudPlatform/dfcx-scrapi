@@ -30,8 +30,8 @@ autofix-min-whitespace:
 autofix-all:
 	autopep8 --aggressive --aggressive --verbose --in-place ${f}
 
-add-upstream:
-	git remote add upstream git@gitlab.com:google-pso/ais/verizon/dfcx_sapi.git
+# add-upstream:
+# 	git remote add upstream <YOUR_UPSTREAM_REPO>
 
 merge-upstream:
 	git fetch upstream
