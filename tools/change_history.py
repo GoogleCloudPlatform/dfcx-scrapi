@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
 logging.basicConfig(
@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 
 
-class ChangeHistory(SapiBase):
+class ChangeHistory(ScrapiBase):
     """Tools class that contains methods to support Change History feature."""
     def __init__(
         self,

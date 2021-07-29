@@ -8,7 +8,7 @@ from typing import Dict, List
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
 
-from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
 logging.basicConfig(
@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 
 
-class Sessions(SapiBase):
+class Sessions(ScrapiBase):
     """Core Class for CX Session Resource functions."""
 
     def __init__(

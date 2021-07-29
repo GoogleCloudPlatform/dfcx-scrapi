@@ -9,8 +9,8 @@ from datetime import datetime
 
 import pytest
 import google.cloud.dialogflowcx_v3beta1.types as types
-from dfcx_sapi.core.agents import Agents
-from dfcx_sapi.core.operations import Operations
+from dfcx_scrapi.core.agents import Agents
+from dfcx_scrapi.core.operations import Operations
 
 DEV = True  # Set flag to disable some tests while in development
 

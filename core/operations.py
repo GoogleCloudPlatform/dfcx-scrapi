@@ -6,7 +6,7 @@
 import logging
 from typing import Dict
 import requests
-from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
 logging.basicConfig(
@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 
 
-class Operations(SapiBase):
+class Operations(ScrapiBase):
     """Core class for Operations functions, primarily used to
     extract LRO information on long running jobs for CX.
     """

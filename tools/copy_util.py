@@ -12,7 +12,7 @@ from collections import defaultdict
 import google.cloud.dialogflowcx_v3beta1.types as types
 from google.api_core import exceptions as core_exceptions
 
-from dfcx_sapi.core import (sapi_base, intents, entity_types, flows, pages,
+from dfcx_scrapi.core import (scrapi_base, intents, entity_types, flows, pages,
   webhooks, transition_route_groups)
 
 # logging config
@@ -22,7 +22,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 
-class CopyUtil(sapi_base.SapiBase):
+class CopyUtil(scrapi_base.ScrapiBase):
     """Tools Utility class for copying DFCX Resources between Agents."""
     def __init__( #pylint: disable=too-many-arguments
         self,

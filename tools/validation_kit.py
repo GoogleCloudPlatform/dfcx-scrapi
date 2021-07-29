@@ -7,9 +7,9 @@ import re
 from typing import Dict
 import pandas as pd
 
-from dfcx_sapi.core.sapi_base import SapiBase
-from dfcx_sapi.core.agents import Agents
-from dfcx_sapi.core.flows import Flows
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.agents import Agents
+from dfcx_scrapi.core.flows import Flows
 
 SCOPES = [
     "https://www.googleapis.com/auth/cloud-platform",
@@ -17,7 +17,7 @@ SCOPES = [
 ]
 
 
-class ValidationKit(SapiBase):
+class ValidationKit(ScrapiBase):
     """Helper for working with built in CX validation functions"""
 
     def __init__(
@@ -53,14 +53,14 @@ class ValidationKit(SapiBase):
 
         flows_map = self.flows.get_flows_map(agent_id)
         max_cols_old = 0
-        df = pd.DataFrame()
+        dataframe = pd.DataFrame()
 
         for flow in validation_results["flowValidationResults"]:
 
             temp = "/".join(flow["name"].split("/")[:-1])
-            vm = flow.get("validationMessages", {})
-            if bool(vm):
-                temp_df = pd.DataFrame(vm)
+            val_msg = flow.get("validationMessages", {})
+            if bool(val_msg):
+                temp_df = pd.DataFrame(val_msg)
                 temp_df.insert(0, "flow", flows_map[temp])
 
                 max_cols_new = max([len(x) for x in temp_df.resourceNames])
@@ -72,16 +72,16 @@ class ValidationKit(SapiBase):
 
                 for index in temp_df.index:
                     i = 1
-                    for d in temp_df["resourceNames"][index]:
-                        temp_df["resource{}".format(i)][index] = d[
+                    for frame in temp_df["resourceNames"][index]:
+                        temp_df["resource{}".format(i)][index] = frame[
                             "displayName"
                         ]
                         i += 1
 
-                df = df.append(temp_df)
+                dataframe = dataframe.append(temp_df)
                 max_cols_old = 0
 
-        return df
+        return dataframe
 
     def intent_disambiguation(self, agent_id, refresh=False, flow=None):
         """Obtains the intent disambiguation tasks from the validation tool
@@ -119,12 +119,13 @@ class ValidationKit(SapiBase):
         validation_df = validation_df[["flow", "detail"] + resources]
         disambig_id, intents_list, tp_list, id_ = [], [], [], 0
         flows = []
-        ph = "Multiple intents share training phrases which are too similar"
+        phrase = "Multiple intents share training phrases which are too\
+             similar"
 
         for _, row in validation_df.iterrows():
             deets, flow = row["detail"], row["flow"]
 
-            if bool(re.search(ph, deets)):
+            if bool(re.search(phrase, deets)):
                 intents = re.findall("Intent '(.*)': training phrase ", deets)
                 training_phrases = re.findall("training phrase '(.*)'", deets)
                 intents_list = intents_list + intents

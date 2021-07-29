@@ -8,7 +8,7 @@ import logging
 from typing import Dict
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
-from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
 logging.basicConfig(
@@ -23,7 +23,7 @@ SCOPES = [
 ]
 
 
-class SapiExperiments(SapiBase):
+class SapiExperiments(ScrapiBase):
     """Wrapper for working with Experiments"""
 
     def __init__(
@@ -56,7 +56,7 @@ class SapiExperiments(SapiBase):
             client_options=client_options, credentials=self.creds
         )
         response = client.list_experiments(request)
-        blob = SapiBase.cx_object_to_json(response)
+        blob = ScrapiBase.cx_object_to_json(response)
 
         if len(blob) < 1:
             logging.warning(

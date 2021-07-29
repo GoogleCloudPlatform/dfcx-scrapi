@@ -14,7 +14,7 @@ import pandas as pd
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
 
-from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
 logging.basicConfig(
@@ -24,7 +24,7 @@ logging.basicConfig(
 )
 
 
-class Intents(SapiBase):
+class Intents(ScrapiBase):
     """Core Class for CX Intent Resource functions."""
 
     def __init__(

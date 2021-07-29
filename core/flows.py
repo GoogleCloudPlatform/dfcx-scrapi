@@ -11,7 +11,7 @@ import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
 from google.protobuf import field_mask_pb2
 
-from dfcx_sapi.core.sapi_base import SapiBase
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
 logging.basicConfig(
@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 
-class Flows(SapiBase):
+class Flows(ScrapiBase):
     """Core Class for CX Flow Resource functions."""
 
     def __init__(

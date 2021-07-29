@@ -7,8 +7,8 @@ import logging
 import time
 from typing import Dict
 
-from dfcx_sapi.core.sapi_base import SapiBase
-from dfcx_sapi.core.agents import Agents
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.agents import Agents
 
 # logging config
 logging.basicConfig(
@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 
 
-class Project(SapiBase):
+class Project(ScrapiBase):
     """Top Level class representing the Project level resources
     when working on a Dialogflow CX project. This Class will allow you to
     extract information about your GCP project as a whole in relation to

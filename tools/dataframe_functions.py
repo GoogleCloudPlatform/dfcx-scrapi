@@ -17,8 +17,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 import google.cloud.dialogflowcx_v3beta1.types as types
 
-from dfcx_sapi.core import (
-    sapi_base,
+from dfcx_scrapi.core import (
+    scrapi_base,
     intents,
     entity_types,
     flows,
@@ -39,7 +39,7 @@ logging.basicConfig(
 )
 
 
-class DataframeFunctions(sapi_base.SapiBase):
+class DataframeFunctions(scrapi_base.ScrapiBase):
     """Class that supports dataframe functions in DFCX."""
 
     def __init__(

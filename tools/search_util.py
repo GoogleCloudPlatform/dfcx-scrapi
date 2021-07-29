@@ -4,16 +4,16 @@
 # agreement with Google.
 
 import logging
-import pandas as pd
 import time
-
 from typing import Dict
 
-from dfcx_sapi.core.entity_types import EntityTypes
-from dfcx_sapi.core.flows import Flows
-from dfcx_sapi.core.intents import Intents
-from dfcx_sapi.core.pages import Pages
-from dfcx_sapi.core.sapi_base import SapiBase
+import pandas as pd
+
+from dfcx_scrapi.core.entity_types import EntityTypes
+from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.intents import Intents
+from dfcx_scrapi.core.pages import Pages
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
 logging.basicConfig(
@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 
 
-class SearchUtil(SapiBase):
+class SearchUtil(ScrapiBase):
     """class for searching items"""
 
     def __init__(

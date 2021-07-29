@@ -11,10 +11,10 @@ import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
 from google.protobuf import field_mask_pb2
 
-from dfcx_sapi.core.flows import Flows
-from dfcx_sapi.core.intents import Intents
-from dfcx_sapi.core.sapi_base import SapiBase
-from dfcx_sapi.core.webhooks import Webhooks
+from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.intents import Intents
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.webhooks import Webhooks
 
 # logging config
 logging.basicConfig(
@@ -24,7 +24,7 @@ logging.basicConfig(
 )
 
 
-class TransitionRouteGroups(SapiBase):
+class TransitionRouteGroups(ScrapiBase):
     """Core Class for CX Transition Route Group functions."""
 
     def __init__(

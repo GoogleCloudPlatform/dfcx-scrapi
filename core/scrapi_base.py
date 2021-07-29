@@ -13,7 +13,7 @@ from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
 
 
-class SapiBase:
+class ScrapiBase:
     """Core Class for managing Auth and other shared functions."""
 
     global_scopes = [
@@ -30,7 +30,7 @@ class SapiBase:
         agent_path=None,
     ):
 
-        self.scopes = SapiBase.global_scopes
+        self.scopes = ScrapiBase.global_scopes
         if scope:
             self.scopes += scope
 
@@ -94,15 +94,15 @@ class SapiBase:
     @staticmethod
     def cx_object_to_json(cx_object):
         """response objects have a magical _pb field attached"""
-        return SapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
+        return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
 
     @staticmethod
     def cx_object_to_dict(cx_object):
         """response objects have a magical _pb field attached"""
-        return SapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
+        return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
 
     @staticmethod
     def extract_payload(msg):
         """convert to json so we can get at the object"""
-        blob = SapiBase.cx_object_to_dict(msg)
+        blob = ScrapiBase.cx_object_to_dict(msg)
         return blob.get("payload")  # deref for nesting

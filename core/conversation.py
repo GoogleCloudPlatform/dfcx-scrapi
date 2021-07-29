@@ -15,7 +15,7 @@ from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
 from google.api_core import exceptions as core_exceptions
 from proto.marshal.collections.repeated import RepeatedComposite
-from .sapi_base import SapiBase
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 logger = logging
 
 logging.basicConfig(
@@ -26,7 +26,7 @@ MAX_RETRIES = 3  # JWT errors on CX API
 DEBUG_LEVEL = "info"  # silly for request/response
 
 
-class DialogflowConversation(SapiBase):
+class DialogflowConversation(ScrapiBase):
     """
     wrapping client requests to a CX agent for a conversation
     with internally maintained session state
@@ -233,7 +233,7 @@ class DialogflowConversation(SapiBase):
         texts = []
         for msg in query_result.response_messages:
             if msg.payload:
-                reply["payload"] = SapiBase.extract_payload(msg)
+                reply["payload"] = ScrapiBase.extract_payload(msg)
             if (len(msg.text.text)) > 0:
                 text = msg.text.text[-1]  # this could be multiple lines too?
                 # print("text", text)
@@ -277,7 +277,7 @@ class DialogflowConversation(SapiBase):
         # reply["qr"] = qr
 
         if DEBUG_LEVEL == "silly":
-            blob = SapiBase.cx_object_to_json(query_result)
+            blob = ScrapiBase.cx_object_to_json(query_result)
             logging.info(
                 "response: %s", json.dumps(blob, indent=2)
             )  # do NOT deploy
