@@ -8,5 +8,3 @@
 environment: 'development'
 
 # GCP project metadata
-
-project_id: 'nj-pods-dev'
