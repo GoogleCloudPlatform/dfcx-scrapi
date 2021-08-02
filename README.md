@@ -1,8 +1,8 @@
 <!-- PROJECT LOGO -->
 <div align="center">
-    <img src="images/logo.png" alt="Scrappy, the SAPI mascot!" width="200">
+    <img src="images/logo.png" alt="Scrappy, the SCRAPI mascot!" width="200">
 
-  <h3 align="center">Python Dialogflow CX Scripting API (SAPI)</h3>
+  <h3 align="center">Python Dialogflow CX Scripting API (SCRAPI)</h3>
   <p align="center">
     A high level scripting API for bot builders, developers, and maintainers.<br>
   </p>
@@ -15,7 +15,7 @@
     <li>
       <a href="#introduction">Introduction</a>
       <ul>
-        <li><a href="#what-can-i-do-with-dfcx-sapi">What Can I Do with SAPI?</a></li>
+        <li><a href="#what-can-i-do-with-dfcx-scrapi">What Can I Do with SCRAPI?</a></li>
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
@@ -42,16 +42,16 @@
 <!-- INTRODUCTION -->
 # Introduction
 
-The Python Dialogflow CX Scripting API (DFCX SAPI) is a high level API that extends the official Google [Python Client for Dialogflow CX](https://github.com/googleapis/python-dialogflow-cx) which makes using CX easier, more friendly, and more pythonic for bot builders, developers and maintainers.
+The Python Dialogflow CX Scripting API (DFCX SCRAPI) is a high level API that extends the official Google [Python Client for Dialogflow CX](https://github.com/googleapis/python-dialogflow-cx) which makes using CX easier, more friendly, and more pythonic for bot builders, developers and maintainers.
 
 ```
-SAPI --> Python Dialogflow CX
+SCRAPI --> Python Dialogflow CX
 as
 Keras --> Tensorflow
 ```
 
-## What Can I Do With DFCX SAPI?
-With DFCX SAPI, you can perform many bot building and maintenance actions at scale including, but not limited to:
+## What Can I Do With DFCX SCRAPI?
+With DFCX SCRAPI, you can perform many bot building and maintenance actions at scale including, but not limited to:
 - Create, Update, Delete, Get, List for all CX resources types (i.e. Intents, Entity Types, Pages, Flows, etc.)
 - Convert commonly accessed CX Resources to Pandas Dataframes for data manipulation and analysis
   - Ex: `bulk_intents_to_dataframe` provides you all intents and training phrases in a Pandas DataFrame that can be manipulated and/or exported to CSV or back to CX
@@ -90,11 +90,11 @@ For more information on view the official docs for [Creating and Managing GCP Se
 <!-- USAGE EXAMPLES -->
 # Usage
 To run a simple bit of code you can do the following:
-- Import a Class from `dfcx_sapi.core`
+- Import a Class from `dfcx_scrapi.core`
 - Assign your Service Account to a local variable
 
 ```python
-from dfcx_sapi.core.intents import Intents
+from dfcx_scrapi.core.intents import Intents
 
 creds_path = '<PATH_TO_YOUR_SERVICE_ACCOUNT_JSON_FILE>'
 agent_path = '<FULL_DFCX_AGENT_ID_PATH>'
@@ -156,7 +156,7 @@ Patrick Marlow - pmarlow@google.com  - [@kmaphoenix](https://github.com/kmaphoen
 David "DC" Collier - dcollier@google.com  - [@DCsan](https://github.com/dcsan)  
 Henry Drescher - drescher@google.com  - [@Hgithubacct](https://github.com/Hgithubacct)  
 
-Project Link: [go/dfcx-sapi](go/dfcx-sapi)
+Project Link: [go/dfcx-scrapi](go/dfcx-scrapi)
 
 <!-- ACKNOWLEDGEMENTS -->
 # Acknowledgements

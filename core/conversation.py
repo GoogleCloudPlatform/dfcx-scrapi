@@ -123,7 +123,7 @@ class DialogflowConversation(ScrapiBase):
         if restart:
             self.restart()
 
-        # FIXME - use SapiBase but needs a param of item eg self.agent_id ?
+        # FIXME - use ScrapiBase but needs a param of item eg self.agent_id ?
         client_options = self._set_region(item_id=self.agent_path)
         session_client = SessionsClient(client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"

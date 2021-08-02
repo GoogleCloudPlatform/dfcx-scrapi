@@ -23,7 +23,7 @@ SCOPES = [
 ]
 
 
-class SapiExperiments(ScrapiBase):
+class ScrapiExperiments(ScrapiBase):
     """Wrapper for working with Experiments"""
 
     def __init__(
