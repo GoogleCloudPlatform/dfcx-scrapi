@@ -58,7 +58,7 @@ linting:
     rules:
         - changes:
             - '**/*.{py}'
-            - tests/license/license_check.sh
+            # - tests/license/license_check.sh
           when: on_success
         - when: never
     script:
