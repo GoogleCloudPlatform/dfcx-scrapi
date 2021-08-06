@@ -430,3 +430,46 @@ class Intents(ScrapiBase):
 
         else:
             raise ValueError("Mode types: [basic, advanced]")
+
+    def intents_to_df_cosine_prep(self, agent_id: str = None):
+        """Exports a dataframe and defaultdict of Intents for use with Cosine
+        Similarity tools.
+
+        Args:
+          agent_id, agent to pull list of intents from
+
+        Returns:
+          df, a Pandas Dataframe of Intents and TPs
+          intent_dict, a Defaultdict(List) that is prepped to feed to the
+            Cosine similarity tool (offline)
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        intent_dict = defaultdict(list)
+        intents = self.list_intents(agent_id)
+
+        for intent in intents: # pylint: disable=R1702
+            if intent.display_name == "Default Negative Intent":
+                pass
+            else:
+                if "training_phrases" in intent:
+                    for tp in intent.training_phrases:
+                        s = []
+                        if len(tp.parts) > 1:
+                            for item in tp.parts:
+                                s.append(item.text)
+                            intent_dict[intent.display_name].append("".join(s))
+                        else:
+                            intent_dict[intent.display_name].append(
+                                tp.parts[0].text)
+                else:
+                    intent_dict[intent.display_name].append("")
+
+        df = pd.DataFrame.from_dict(intent_dict, orient="index").transpose()
+        df = df.stack().to_frame().reset_index(level=1)
+        df = df.rename(
+            columns={"level_1":"intent",0:"tp"}).reset_index(drop=True)
+        df = df.sort_values(["intent","tp"])
+
+        return df, intent_dict
