@@ -19,22 +19,10 @@ image: python:3.7.9
 variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
-# Pip's cache doesn't store the python packages
-# https://pip.pypa.io/en/stable/reference/pip_install/#caching
-#
-# If you want to also cache the installed packages, you have to install
-# them in a virtualenv and cache it as well.
-cache:
-    key: ${CI_JOB_NAME}
-    paths:
-        - .cache/pip
-        - venv/
-
 before_script:
-    - python -V  # Print out python version for debugging
+    - python -V 
     - python -m venv venv
     - source venv/bin/activate
-    # - cp config.yaml.example config.yaml
 
 # Job to run if there's nothing to lint or test.
 noop:
@@ -64,6 +52,7 @@ linting:
     script:
         # - chmod +x tests/license/license_check.sh
         # - tests/license/license_check.sh
+        - pip install --upgrade pip
         - pip install pylint==2.8.3
         - pylint --jobs=0 $(git ls-files '*.py')
 

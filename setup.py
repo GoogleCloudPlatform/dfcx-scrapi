@@ -14,6 +14,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pathlib
 from setuptools import setup, find_packages
 
-setup(name="dfcx", packages=find_packages())
+here = pathlib.Path(__file__).parent.resolve()
+
+long_description = (here / 'README.md').read_text(encoding='utf-8')
+
+setup(
+    name='dfcx-scrapi',
+    version='1.0.0',
+    description='A high level scripting API for bot builders, developers, and\
+      maintainers.',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    url='https://github.com/GoogleCloudPlatform/dfcx-scrapi',
+    author='Patrick Marlow',
+    author_email='pmarlow@google.com',
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'Topic :: Software Development :: Bot Building',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+    ],
+    keywords='dialogflow, cx, google, bot, chatbot, intent, dfcx, entity',
+    package_dir={'':'src'},
+    packages=find_packages(where='src'),
+    python_requires='>=3.6, <4',
+    install_requires=['google-cloud-dialogflow-cx']
+)

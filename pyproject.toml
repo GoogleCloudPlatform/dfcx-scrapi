@@ -30,9 +30,6 @@ exclude = '''
 
 
 # Build system information below.
-# NOTE: You don't need this in your own Black configuration.
-
 [build-system]
-requires = ["setuptools>=41.0", "setuptools-scm", "wheel"]
+requires = ["setuptools>=42", "setuptools-scm", "wheel"]
 build-backend = "setuptools.build_meta"
-

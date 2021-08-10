@@ -31,12 +31,6 @@ jobs=4
 # active Python interpreter and may run arbitrary code.
 unsafe-load-any-extension=no
 
-# A comma-separated list of package or module names from where C extensions may
-# be loaded. Extensions are loading into the active Python interpreter and may
-# run arbitrary code
-extension-pkg-whitelist=
-
-
 [MESSAGES CONTROL]
 
 # Only show warnings with the listed confidence levels. Leave empty to show
