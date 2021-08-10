@@ -243,7 +243,7 @@ class CopyUtil(scrapi_base.ScrapiBase):
         webhooks_map,
         convert_type = None):
 
-        for trans_route in pages_map.transition_routes:
+        for trans_route in page_object.transition_routes:
             if 'target_page' in trans_route:
                 trans_route.target_page = self.__convert_tr_target_page(
                     trans_route, pages_map, convert_type=convert_type)

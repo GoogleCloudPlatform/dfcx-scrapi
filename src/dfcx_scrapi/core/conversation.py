@@ -28,7 +28,7 @@ from dfcx_scrapi.core.scrapi_base import ScrapiBase
 logger = logging
 
 logging.basicConfig(
-    format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO
+    format="[dfcx] %(levelname)s:%(message)s", level=None
 )
 
 MAX_RETRIES = 3  # JWT errors on CX API
@@ -182,7 +182,7 @@ class DialogflowConversation(ScrapiBase):
             query_params=query_params,
         )
 
-        logging.info("disable_webhook: %s", disable_webhook)
+#         logging.info("disable_webhook: %s", disable_webhook)
         logging.debug("query_params: %s", query_params)
         logging.debug("request %s", request)
 
@@ -259,8 +259,8 @@ class DialogflowConversation(ScrapiBase):
                 try:
                     if isinstance(val, RepeatedComposite):
                         # protobuf array - we flatten as a string with spaces
-                        logging.info(
-                            "converting param: %s val: %s", param, val)
+#                         logging.info(
+#                             "converting param: %s val: %s", param, val)
                         val = " ".join(val)
 
                 except TypeError as err:

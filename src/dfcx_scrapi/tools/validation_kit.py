@@ -123,19 +123,21 @@ class ValidationKit(ScrapiBase):
         validation_df = self.validation_results_to_dataframe(validation)
         if flow:
             validation_df = validation_df[validation_df["flow"] == flow]
-
+        
+     
         # Parse df
         resources = validation_df.columns
         resources = [r for r in resources if "resource" in r]
         validation_df = validation_df[["flow", "detail"] + resources]
+        
+     
+        
         disambig_id, intents_list, tp_list, id_ = [], [], [], 0
         flows = []
-        phrase = "Multiple intents share training phrases which are too\
-             similar"
-
+        phrase = "Multiple intents share training phrases which are too similar"
+        
         for _, row in validation_df.iterrows():
             deets, flow = row["detail"], row["flow"]
-
             if bool(re.search(phrase, deets)):
                 intents = re.findall("Intent '(.*)': training phrase ", deets)
                 training_phrases = re.findall("training phrase '(.*)'", deets)
@@ -150,6 +152,8 @@ class ValidationKit(ScrapiBase):
         extraction.insert(0, "flow", flows)
         extraction["intent"] = intents_list
         extraction["training_phrase"] = tp_list
+       
+        
         intent_options = (
             extraction.groupby(["disambig_id"])["intent"]
             .apply(list)
@@ -159,9 +163,13 @@ class ValidationKit(ScrapiBase):
         intent_options["intents"] = intent_options.apply(
             lambda x: list(set(x["intents"])), axis=1
         )
+        
+        
         extraction = pd.merge(
             extraction, intent_options, on=["disambig_id"], how="left"
         )
+        
+        
         internal = extraction.copy()
         internal["intent_count"] = internal.apply(
             lambda x: len(x["intents"]), axis=1
