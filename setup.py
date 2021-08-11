@@ -34,10 +34,10 @@ setup(
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
-        'Topic :: Software Development :: Bot Building',
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        'Topic :: Communications :: Chat',
+        'Topic :: Software Development',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
     ],
