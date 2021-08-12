@@ -103,7 +103,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         for field in fields:
             dataframe = dataframe.astype({field: "int32"})
 
-        return object
+        return dataframe
 
     @staticmethod
     def _make_schema(columns: List[str]) -> pd.DataFrame:
@@ -200,7 +200,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
                     train_phrases, ["text", "parameter_id"]
                 )
 
-                if params:
+                if not params.empty:
                     params = params[["id", "entity_type"]]
                     params = self._coerce_to_string(
                         params, ["id", "entity_type"]
@@ -256,7 +256,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
                 training_phrase = {"parts": parts, "repeat_count": 1, "id": ""}
                 training_phrases.append(training_phrase)
 
-            intent["training_phrases"] = training_phrases
+            intent.training_phrases = training_phrases
             parameters = []
             for _, row in params.iterrows():
                 parameter = {
@@ -268,7 +268,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
                 parameters.append(parameter)
 
             if parameters:
-                intent["parameters"] = parameters
+                intent.parameters = parameters
 
         elif mode == "basic":
             training_phrases = []
@@ -314,6 +314,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
           modified_intents: dictionary with intent display names as keys and
             the new intent protobufs as values
         """
+
         if mode == "basic":
             if all(k in tp_df for k in ["display_name", "text"]):
                 tp_df = tp_df[["display_name", "text"]]
@@ -357,12 +358,14 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
                     ]
                 ]
 
+
                 tp_df = self._coerce_to_string(
                     tp_df, ["display_name", "text", "parameter_id"]
                 )
+
                 tp_df = self._coerce_to_int(tp_df, ["training_phrase", "part"])
 
-                if params_df:
+                if not params_df.empty:
                     params_df = params_df[["display_name", "id", "entity_type"]]
                     params_df = params_df.astype(
                         {
@@ -371,6 +374,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
                             "entity_type": "string",
                         }
                     )
+
             else:
                 tp_schema = pd.DataFrame(
                     index=[
@@ -413,6 +417,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         intents_map = self.intents.get_intents_map(
             agent_id=agent_id, reverse=True
         )
+
         intent_names = list(set(tp_df["display_name"]))
 
         new_intents = {}
@@ -506,7 +511,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
                 tp_df = self._coerce_to_string(tp_df, ["text", "parameter_id"])
                 tp_df = self._coerce_to_int(tp_df, ["training_phrase", "part"])
 
-                if params_df:
+                if not params_df.empty:
                     params_df = params_df[["id", "entity_type"]]
                     params_df = params_df.astype(
                         {"id": "string", "entity_type": "string"}
@@ -674,7 +679,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
                 )
                 tp_df = self._coerce_to_int(tp_df, ["training_phrase", "part"])
 
-                if params_df:
+                if not params_df.empty:
                     params_df = params_df[["display_name", "id", "entity_type"]]
                     params_df = self._coerce_to_string(
                         params_df, ["display_name", "id", "entity_type"]
