@@ -144,7 +144,11 @@ class Agents(ScrapiBase):
 
         return response
 
-    def validate_agent(self, agent_id: str) -> Dict:
+
+    def validate_agent(
+        self,
+        agent_id: str = None,
+        timeout: float = None) -> Dict:
         """Initiates the Validation of the CX Agent or Flow.
 
         This function will start the Validation feature for the given Agent
@@ -153,29 +157,35 @@ class Agents(ScrapiBase):
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+          timeout: (Optional) The timeout for this request
 
         Returns:
           results: Dictionary of Validation results for the entire Agent
             or for the specified Flow.
         """
-        location = agent_id.split("/")[3]
-        if location != "global":
-            base_url = "https://{}-dialogflow.googleapis.com/v3beta1".format(
-                location
-            )
-        else:
-            base_url = "https://dialogflow.googleapis.com/v3beta1"
 
-        url = "{0}/{1}/validationResult".format(base_url, agent_id)
-        headers = {"Authorization": "Bearer {}".format(self.token)}
+        if not agent_id:
+            agent_id = self.agent_id
 
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
+        request = types.agent.ValidateAgentRequest()
+        request.name = agent_id
 
-        return results.json()
+        client_options = self._set_region(agent_id)
+        client = services.agents.AgentsClient(
+            credentials=self.creds, client_options=client_options
+        )
 
-    def get_validation_result(self, agent_id: str, flow_id: str = None) -> Dict:
+        response = client.validate_agent(request, timeout=timeout)
+
+        val_dict = self.cx_object_to_dict(response)
+
+        return val_dict
+
+
+    def get_validation_result(
+        self,
+        agent_id: str = None,
+        timeout: float = None) -> Dict:
         """Extract Validation Results from CX Validation feature.
 
         This function will get the LATEST validation result run for the given
@@ -189,49 +199,34 @@ class Agents(ScrapiBase):
         that Flow ID.
 
         Args:
-          agent_id: CX Agent ID string in the following format
+        agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-          flow_id: (Optional) CX Flow ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/
-              flows/<FLOW ID>
+        timeout: (Optional) The timeout for this request
 
         Returns:
-          results: Dictionary of Validation results for the entire Agent
+        results: Dictionary of Validation results for the entire Agent
             or for the specified Flow.
         """
 
-        if flow_id:
-            location = flow_id.split("/")[3]
-            if location != "global":
-                base_url = (
-                    "https://{}-dialogflow.googleapis.com/v3beta1".format(
-                        location
-                    )
-                )
-            else:
-                base_url = "https://dialogflow.googleapis.com/v3beta1"
+        if not agent_id:
+            agent_id = self.agent_id
 
-            url = "{0}/{1}/validationResult".format(base_url, flow_id)
-        else:
-            location = agent_id.split("/")[3]
-            if location != "global":
-                base_url = (
-                    "https://{}-dialogflow.googleapis.com/v3beta1".format(
-                        location
-                    )
-                )
-            else:
-                base_url = "https://dialogflow.googleapis.com/v3beta1"
+        request = types.agent.GetAgentValidationResultRequest()
+        request.name = agent_id + "/validationResult"
 
-            url = "{0}/{1}/validationResult".format(base_url, agent_id)
+        client_options = self._set_region(agent_id)
+        client = services.agents.AgentsClient(
+            credentials=self.creds, client_options=client_options
+        )
 
-        headers = {"Authorization": "Bearer {}".format(self.token)}
+        response = client.get_agent_validation_result(
+            request, timeout=timeout
+        )
 
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
+        val_results_dict = self.cx_object_to_dict(response)
 
-        return results.json()
+        return val_results_dict
+
 
     def export_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
         """Exports the specified CX agent to Google Cloud Storage bucket.
@@ -259,6 +254,7 @@ class Agents(ScrapiBase):
         response = client.export_agent(request)
 
         return response.operation.name
+
 
     def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
         """Restores a CX agent from a gcs_bucket location.
@@ -335,3 +331,99 @@ class Agents(ScrapiBase):
         client.delete_agent(name=agent_id)
 
         return "Agent '{}' successfully deleted.".format(agent_id)
+
+
+    def validate_agent_rest(self, agent_id: str) -> Dict:
+        """Initiates the Validation of the CX Agent or Flow.
+        *NOTE* THIS METHOD IS BEING DEPRECATED SOON (8/15/21)
+
+        This function will start the Validation feature for the given Agent
+        and then return the results as a Dict.
+
+        Args:
+        agent_id: CX Agent ID string in the following format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+
+        Returns:
+        results: Dictionary of Validation results for the entire Agent
+            or for the specified Flow.
+        """
+        location = agent_id.split("/")[3]
+        if location != "global":
+            base_url = "https://{}-dialogflow.googleapis.com/v3beta1".format(
+                location
+            )
+        else:
+            base_url = "https://dialogflow.googleapis.com/v3beta1"
+
+        url = "{0}/{1}/validationResult".format(base_url, agent_id)
+        headers = {"Authorization": "Bearer {}".format(self.token)}
+
+        # Make REST call
+        results = requests.get(url, headers=headers)
+        results.raise_for_status()
+
+        return results.json()
+
+
+    def get_validation_result_rest(
+        self,
+        agent_id: str,
+        flow_id: str = None) -> Dict:
+        """Extract Validation Results from CX Validation feature.
+         *NOTE* THIS METHOD IS BEING DEPRECATED SOON (8/15/21)
+
+        This function will get the LATEST validation result run for the given
+        CX Agent or CX Flow. If there has been no validation run on the Agent
+        or Flow, no result will be returned. Use `dfcx.validate` function to
+        run Validation on an Agent/Flow.
+
+        Passing in the Agent ID will provide ALL validation results for
+        ALL flows.
+        Passing in the Flow ID will provide validation results for only
+        that Flow ID.
+
+        Args:
+          agent_id: CX Agent ID string in the following format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+          flow_id: (Optional) CX Flow ID string in the following format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/
+              flows/<FLOW ID>
+
+        Returns:
+          results: Dictionary of Validation results for the entire Agent
+            or for the specified Flow.
+        """
+
+        if flow_id:
+            location = flow_id.split("/")[3]
+            if location != "global":
+                base_url = (
+                    "https://{}-dialogflow.googleapis.com/v3beta1".format(
+                        location
+                    )
+                )
+            else:
+                base_url = "https://dialogflow.googleapis.com/v3beta1"
+
+            url = "{0}/{1}/validationResult".format(base_url, flow_id)
+        else:
+            location = agent_id.split("/")[3]
+            if location != "global":
+                base_url = (
+                    "https://{}-dialogflow.googleapis.com/v3beta1".format(
+                        location
+                    )
+                )
+            else:
+                base_url = "https://dialogflow.googleapis.com/v3beta1"
+
+            url = "{0}/{1}/validationResult".format(base_url, agent_id)
+
+        headers = {"Authorization": "Bearer {}".format(self.token)}
+
+        # Make REST call
+        results = requests.get(url, headers=headers)
+        results.raise_for_status()
+
+        return results.json()
