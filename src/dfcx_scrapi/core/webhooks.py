@@ -139,7 +139,8 @@ class Webhooks(ScrapiBase):
             setattr(webhook, key, value)
 
         client_options = self._set_region(agent_id)
-        client = services.webhooks.WebhooksClient(client_options=client_options)
+        client = services.webhooks.WebhooksClient(
+            client_options=client_options, credentials=self.creds)
         response = client.create_webhook(parent=agent_id, webhook=webhook)
 
         return response

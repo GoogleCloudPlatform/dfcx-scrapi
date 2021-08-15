@@ -390,7 +390,7 @@ class Intents(ScrapiBase):
         else:
             client_options = self._set_region(intent_id)
             client = services.intents.IntentsClient(
-                client_options=client_options
+                client_options=client_options, credentials=self.creds
             )
             client.delete_intent(name=intent_id)
 

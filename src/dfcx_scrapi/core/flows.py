@@ -99,12 +99,17 @@ class Flows(ScrapiBase):
             flow_id = self.flow_id
 
         request = types.flow.TrainFlowRequest()
-        request.name = flow_id or self.flow_id
-        client = services.flows.FlowsClient(credentials=self.creds)
+        request.name = flow_id
+
+        client_options = self._set_region(flow_id)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options)
+
         response = client.train_flow(request)
+
         return response
 
-    def list_flows(self, agent_id=None):
+    def list_flows(self, agent_id: str = None):
         """Get a List of all Flows in the current Agent.
 
         Args:
@@ -117,7 +122,6 @@ class Flows(ScrapiBase):
         if not agent_id:
             agent_id = self.agent_id
 
-        agent_id = agent_id or self.agent_id  # default value
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
 

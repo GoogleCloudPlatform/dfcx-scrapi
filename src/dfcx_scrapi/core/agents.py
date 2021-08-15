@@ -53,33 +53,6 @@ class Agents(ScrapiBase):
             self.agent_id = agent_id
             self.client_options = self._set_region(agent_id)
 
-    @staticmethod
-    def _set_region(item_id):
-        """different regions have different API endpoints
-
-        Args:
-            item_id: agent/flow/page - any type of long path id like
-                `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
-
-        Returns:
-            client_options: use when instantiating other library client objects
-        """
-        try:
-            location = item_id.split("/")[3]
-        except IndexError as err:
-            logging.error("IndexError - path too short? %s", item_id)
-            raise err
-
-        if location != "global":
-            api_endpoint = "{}-dialogflow.googleapis.com:443".format(location)
-            client_options = {"api_endpoint": api_endpoint}
-            return client_options
-
-        else:
-            return None  # explicit None return when not required
-
-    # AGENT FX
-
     def list_agents(self, location_id: str) -> List[types.Agent]:
         """Get list of all CX agents in a given GCP project
 

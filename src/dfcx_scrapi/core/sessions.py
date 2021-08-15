@@ -79,7 +79,7 @@ class Sessions(ScrapiBase):
 
         client_options = self._set_region(agent_id)
         session_client = services.sessions.SessionsClient(
-            client_options=client_options
+            client_options=client_options, credentials=self.creds
         )
         session_path = "{}/sessions/{}".format(agent_id, session_id)
 
@@ -198,7 +198,7 @@ class Sessions(ScrapiBase):
         """
         client_options = self._set_region(agent_id)
         session_client = services.sessions.SessionsClient(
-            client_options=client_options
+            client_options=client_options, credentials=self.creds
         )
         session_path = "{}/sessions/{}".format(agent_id, session_id)
 
