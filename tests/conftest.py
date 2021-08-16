@@ -15,14 +15,37 @@
 # limitations under the License.
 
 import pytest
-
+from dfcx_scrapi.core.agents import Agents
+from dfcx_scrapi.core.operations import Operations
 
 def pytest_addoption(parser):
     """Method to add option for creds in tests."""
     parser.addoption("--creds", action="store")
+    parser.addoption("--project", action="store")
+    parser.addoption("--gcs_bucket", action="store")
 
 
 @pytest.fixture(scope="session")
 def creds(request):
     """Fixture to share creds across the test class"""
     return request.config.getoption("--creds")
+
+@pytest.fixture(scope="session")
+def project(request):
+    """Fixture to share project across the test class"""
+    return request.config.getoption("--project")
+
+@pytest.fixture(scope="session")
+def gcs_bucket(request):
+    """Fixture to share gcs_bucket across the test class"""
+    return request.config.getoption("--gcs_bucket")
+
+@pytest.fixture(scope="session")
+def agents(creds): # pylint: disable=W0621
+    """Fixture to track the Agents class object"""
+    return Agents(creds_path=creds)
+
+@pytest.fixture(scope="session")
+def ops(creds): # pylint: disable=W0621
+    """Fixture to track the Operations class object"""
+    return Operations(creds_path=creds)

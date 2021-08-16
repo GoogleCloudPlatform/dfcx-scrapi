@@ -8,7 +8,7 @@ workflow:
 
 stages:
     - lint
-    # - test
+    - test
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
@@ -73,6 +73,8 @@ linting:
 #           when: on_success
 #         - when: never
 #     script:
+#         - pip install --upgrade pip
 #         - pip install -r requirements.txt
-#         - pytest -n auto tests/unit --cov=src
+#         - pip install dfcx-scrapi --extra-index-url https://$SCRAPI_DEPLOY_USER:$SCRAPI_DEPLOY_TOKEN@gitlab.com/api/v4/projects/22236448/packages/pypi/simple
+#         - pytest tests/unit --cov=src --project=$SCRAPI_TEST_PROJECT --gcs_bucket=$SCRAPI_TEST_GCS_BUCKET
 #     coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
