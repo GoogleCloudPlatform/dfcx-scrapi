@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import re
 from typing import Dict
 import pandas as pd
@@ -132,7 +133,6 @@ class ValidationKit(ScrapiBase):
         disambig_id, intents_list, tp_list, id_ = [], [], [], 0
         flows = []
         phrase = "Multiple intents share training phrases which are too similar"
-
         for _, row in validation_df.iterrows():
             deets, flow = row["detail"], row["flow"]
             if bool(re.search(phrase, deets)):
@@ -144,11 +144,18 @@ class ValidationKit(ScrapiBase):
                 flows = flows + ([flow] * len(training_phrases))
                 id_ += 1
 
+
+
         extraction = pd.DataFrame()
         extraction["disambig_id"] = disambig_id
         extraction.insert(0, "flow", flows)
         extraction["intent"] = intents_list
         extraction["training_phrase"] = tp_list
+
+        if extraction.empty:
+            logging.info(
+                "Validation results do not contain clashing intent phrases.")
+            return None
 
         intent_options = (
             extraction.groupby(["disambig_id"])["intent"]
@@ -165,6 +172,7 @@ class ValidationKit(ScrapiBase):
         )
 
         internal = extraction.copy()
+
         internal["intent_count"] = internal.apply(
             lambda x: len(x["intents"]), axis=1
         )
