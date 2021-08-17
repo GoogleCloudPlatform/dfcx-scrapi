@@ -1,3 +1,4 @@
+--extra-index-url https://gitlab.com/api/v4/projects/22236448/packages/pypi/simple
 google-cloud-dialogflow-cx
 google-auth
 google-oauth
@@ -13,3 +14,4 @@ pytest==6.0.2
 pytest-cov==2.11.1
 pytest-xdist==2.1.0
 pyyaml==5.3.1
+dfcx-scrapi

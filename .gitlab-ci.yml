@@ -9,10 +9,11 @@ workflow:
 stages:
     - lint
     - test
+    - build
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: python:3.7.9
+image: python:latest
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -23,6 +24,7 @@ before_script:
     - python -V 
     - python -m venv venv
     - source venv/bin/activate
+    - pip install --upgrade pip
 
 # Job to run if there's nothing to lint or test.
 noop:
@@ -43,6 +45,7 @@ noop:
 
 linting:
     stage: lint
+    needs: []
     rules:
         - changes:
             - '**/*.{py}'
@@ -61,20 +64,41 @@ linting:
 # If this is a merge request, only run tests if certain files were modified.
 # Tests need to always be run on the default branch to update the test coverage
 # metric in GitLab.
-# unit_test:
-#     stage: test
-#     rules:
-#         - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-#           when: on_success
-#         - if: $CI_MERGE_REQUEST_IID
-#           changes:
-#             - '**/*.{py}'
-#             - tests/**/*
-#           when: on_success
-#         - when: never
-#     script:
-#         - pip install --upgrade pip
-#         - pip install -r requirements.txt
-#         - pip install dfcx-scrapi --extra-index-url https://$SCRAPI_DEPLOY_USER:$SCRAPI_DEPLOY_TOKEN@gitlab.com/api/v4/projects/22236448/packages/pypi/simple
-#         - pytest tests/unit --cov=src --project=$SCRAPI_TEST_PROJECT --gcs_bucket=$SCRAPI_TEST_GCS_BUCKET
-#     coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
+e2e_test:
+    stage: test
+    needs: []
+    rules:
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+          when: on_success
+        - if: $CI_MERGE_REQUEST_IID
+          changes:
+            - '**/*.{py}'
+            - tests/**/*
+          when: on_success
+        - when: never
+    script:
+        # Provide creds to pip in order to access private Gitlab PyPI packages
+        - echo "machine gitlab.com" > ~/.netrc
+        - echo "login gitlab-ci-token" >> ~/.netrc
+        - echo "password ${CI_JOB_TOKEN}" >> ~/.netrc
+
+        # Run Tests
+        - pip install -r requirements.txt
+        - pytest tests --cov=tests --project=$SCRAPI_TEST_PROJECT --gcs_bucket=$SCRAPI_TEST_GCS_BUCKET --creds=$SCRAPI_CI_SA
+    coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
+    tags:
+      - k8s-dev-runner
+
+building:
+    stage: build
+    rules:
+        - changes:
+            - '**/*.{py}'
+            - setup.py
+          when: on_success
+    script:
+        # Prep to build and deploy to Gitlab Package repo
+        - pip install twine
+        - pip install wheel
+        - python setup.py sdist bdist_wheel
+        - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
