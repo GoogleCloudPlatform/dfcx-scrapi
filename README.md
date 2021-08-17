@@ -156,7 +156,7 @@ Patrick Marlow - pmarlow@google.com  - [@kmaphoenix](https://github.com/kmaphoen
 David "DC" Collier - dcollier@google.com  - [@DCsan](https://github.com/dcsan)  
 Henry Drescher - drescher@google.com  - [@Hgithubacct](https://github.com/Hgithubacct)  
 
-Project Link: [go/dfcx-scrapi](go/dfcx-scrapi)
+Project Link: [https://github.com/GoogleCloudPlatform/dfcx-scrapi](https://github.com/GoogleCloudPlatform/dfcx-scrapi)
 
 <!-- ACKNOWLEDGEMENTS -->
 # Acknowledgements
