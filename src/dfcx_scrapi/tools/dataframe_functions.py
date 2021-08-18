@@ -546,10 +546,12 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
 
         intent = {}
         intent["display_name"] = display_name
-        intent["priority"] = meta.get("priority", 500000)
-        intent["is_fallback"] = meta.get("is_fallback", False)
-        intent["labels"] = meta.get("labels", {})
-        intent["description"] = meta.get("description", "")
+
+        if meta:
+            intent["priority"] = meta.get("priority", 500000)
+            intent["is_fallback"] = meta.get("is_fallback", False)
+            intent["labels"] = meta.get("labels", {})
+            intent["description"] = meta.get("description", "")
 
         # training phrases
         if mode == "advanced":
