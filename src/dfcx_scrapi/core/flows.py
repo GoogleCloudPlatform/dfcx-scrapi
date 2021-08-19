@@ -93,7 +93,7 @@ class Flows(ScrapiBase):
 
         Returns:
           response: A Long Running Operation (LRO) ID that can be used to
-            check the status of the export using dfcx.get_lro()
+            check the status of the export using dfcx_scrapi.core.operations->get_lro()
         """
         if not flow_id:
             flow_id = self.flow_id
@@ -227,7 +227,7 @@ class Flows(ScrapiBase):
 
         Returns:
           lro, Dict with value containing a Long Running Operation UUID that
-            can be used to retrieve status of LRO from dfcx.get_lro
+            can be used to retrieve status of LRO from dfcx_scrapi.core.operations->get_lro()
         """
 
         location = flow_id.split("/")[3]
@@ -273,7 +273,7 @@ class Flows(ScrapiBase):
 
         Returns:
           lro, Dict with value containing a Long Running Operation UUID that
-            can be used to retrieve status of LRO from dfcx.get_lro
+            can be used to retrieve status of LRO from dfcx_scrapi.core.operations->get_lro()
         """
 
         location = destination_agent_id.split("/")[3]
