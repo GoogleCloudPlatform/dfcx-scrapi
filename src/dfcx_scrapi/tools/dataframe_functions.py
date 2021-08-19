@@ -293,6 +293,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         mode: str = "basic",
         update_flag: Boolean = False,
         rate_limiter: int = 5,
+        language_code: str = None
     ):
         """Update existing Intent, TPs and Parameters from a Dataframe.
 
@@ -453,7 +454,9 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
             self.progress_bar(i, len(intent_names))
             if update_flag:
                 self.intents.update_intent(
-                    intent_id=new_intent.name, obj=new_intent
+                    intent_id=new_intent.name,
+                    obj=new_intent,
+                    language_code=language_code
                 )
                 time.sleep(rate_limiter)
 

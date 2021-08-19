@@ -355,7 +355,11 @@ class Intents(ScrapiBase):
 
         return response
 
-    def update_intent(self, intent_id: str = None, obj=None):
+    def update_intent(
+        self,
+        intent_id: str = None,
+        obj=None,
+        language_code=None):
         """Updates a single Intent object based on provided args.
         Args:
           intent_id, the destination Intent ID. Must be formatted properly
@@ -366,6 +370,7 @@ class Intents(ScrapiBase):
         if obj:
             intent = obj
             intent.name = intent_id
+
         else:
             if not intent_id:
                 intent_id = self.intent_id
@@ -375,7 +380,15 @@ class Intents(ScrapiBase):
         client = services.intents.IntentsClient(
             client_options=client_options, credentials=self.creds
         )
-        response = client.update_intent(intent=intent)
+
+        if language_code:
+            req = types.intent.UpdateIntentRequest(
+                intent=intent,
+                language_code=language_code
+            )
+            response = client.update_intent(req)
+        else:
+            response = client.update_intent(intent=intent)
 
         return response
 
