@@ -20,18 +20,19 @@ import requests
 from google.cloud.dialogflowcx_v3beta1 import services
 import google.cloud.dialogflowcx_v3beta1.types as types
 from google.protobuf import field_mask_pb2
+
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
+
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 class Agents(ScrapiBase):
     """Core Class for CX Agent Resource functions."""
-    # logging config
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)-8s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
 
     def __init__(
         self,
@@ -128,7 +129,7 @@ class Agents(ScrapiBase):
         if possibleAgent:
             logging.warning(
                 "display_name is case-sensitive. Did you mean \"%s\"?",
-                            possibleAgent.display_name
+                possibleAgent.display_name
             )
             
         return None
