@@ -62,6 +62,8 @@ docs.metadata
 
 # Virtual environment
 env/
+venv
+
 coverage.xml
 sponge_log.xml
 
@@ -71,6 +73,3 @@ system_tests/local_test_setup
 # Make sure a generated file isn't accidentally committed.
 pylintrc
 pylintrc.test
-
-# virtual env
-venv
