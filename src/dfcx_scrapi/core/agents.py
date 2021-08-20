@@ -20,19 +20,18 @@ import requests
 from google.cloud.dialogflowcx_v3beta1 import services
 import google.cloud.dialogflowcx_v3beta1.types as types
 from google.protobuf import field_mask_pb2
-
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
-
-# logging config
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)-8s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 
 
 class Agents(ScrapiBase):
     """Core Class for CX Agent Resource functions."""
+    # logging config
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)-8s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
 
     def __init__(
         self,
@@ -92,6 +91,47 @@ class Agents(ScrapiBase):
         response = client.get_agent(request)
 
         return response
+    
+    def get_agent_by_display_name(
+        self, 
+        location_id: str,
+        display_name: str
+    ) -> types.Agent:
+        """Get CX agent in a given GCP project by its human readable 
+            display name.
+
+        Args:
+          location_id: The GCP Project/Location ID in the following format
+              `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
+          display_name: human readable display name string of CX agent
+        Returns:
+          Agents: CX agent resource object. If no agent is found,
+              returns None.
+        """ 
+        request = types.agent.ListAgentsRequest()
+        request.parent = location_id
+
+        client_options = self._set_region(location_id)
+        client = services.agents.AgentsClient(
+            credentials=self.creds, client_options=client_options
+        )
+        response = client.list_agents(request)
+        
+        possibleAgent = None
+        for page in response.pages:
+            for agent in page.agents:
+                if agent.display_name == display_name:
+                    return agent
+                elif agent.display_name.lower() == display_name.lower():
+                    possibleAgent = agent
+        
+        if possibleAgent:
+            logging.warning(
+                "display_name is case-sensitive. Did you mean \"%s\"?",
+                            possibleAgent.display_name
+            )
+            
+        return None
 
     def create_agent(
         self,
