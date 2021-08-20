@@ -240,7 +240,7 @@ class Agents(ScrapiBase):
 
         Returns:
           response: A Long Running Operation (LRO) ID that can be used to
-            check the status of the export using dfcx.get_lro()
+            check the status of the export using dfcx_scrapi.core.operations->get_lro()
         """
 
         request = types.agent.ExportAgentRequest()
@@ -270,7 +270,7 @@ class Agents(ScrapiBase):
 
         Returns:
           response: A Long Running Operation (LRO) ID that can be used to
-            check the status of the import using dfcx.get_lro()
+            check the status of the import using dfcx_scrapi.core.operations->get_lro()
         """
 
         request = types.RestoreAgentRequest()
