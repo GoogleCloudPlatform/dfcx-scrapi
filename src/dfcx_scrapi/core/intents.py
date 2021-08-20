@@ -113,8 +113,8 @@ class Intents(ScrapiBase):
                                 columns=[
                                     "display_name",
                                     "name",
-                                    "tp_id",
-                                    "part_id",
+                                    "training_phrase",
+                                    "part",
                                     "text",
                                     "parameter_id",
                                     "repeat_count",
@@ -139,14 +139,14 @@ class Intents(ScrapiBase):
 
                 phrases = tp_df.copy()
                 phrase_lst = (
-                    phrases.groupby(["tp_id"])["text"]
+                    phrases.groupby(["training_phrase"])["text"]
                     .apply(lambda x: "".join(x))  # pylint: disable=W0108
                     .reset_index()
                     .rename(columns={"text": "phrase"})
                 )
 
                 phrases = pd.merge(
-                    phrases, phrase_lst, on=["tp_id"], how="outer"
+                    phrases, phrase_lst, on=["training_phrase"], how="outer"
                 )
 
                 if len(params) > 0:
@@ -180,8 +180,8 @@ class Intents(ScrapiBase):
                         columns=[
                             "display_name",
                             "name",
-                            "tp_id",
-                            "part_id",
+                            "training_phrase",
+                            "part",
                             "text",
                             "parameter_id",
                             "repeat_count",
