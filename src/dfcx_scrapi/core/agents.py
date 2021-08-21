@@ -22,6 +22,7 @@ import google.cloud.dialogflowcx_v3beta1.types as types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.soop.project import Project
 
 # logging config
 logging.basicConfig(
@@ -95,37 +96,31 @@ class Agents(ScrapiBase):
     
     def get_agent_by_display_name(
         self, 
-        location_id: str,
+        project_id: str,
         display_name: str
     ) -> types.Agent:
         """Get CX agent in a given GCP project by its human readable 
             display name.
 
         Args:
-          location_id: The GCP Project/Location ID in the following format
-              `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
-          display_name: human readable display name string of CX agent
+          project_id: The GCP Project ID as string
+          display_name: human-readable display name of CX agent as string
         Returns:
           Agents: CX agent resource object. If no agent is found,
               returns None.
         """ 
-        request = types.agent.ListAgentsRequest()
-        request.parent = location_id
-
-        client_options = self._set_region(location_id)
-        client = services.agents.AgentsClient(
-            credentials=self.creds, client_options=client_options
-        )
-        response = client.list_agents(request)
+        
+        project = Project(project_id = project_id)
+        agent_list = project.list_agents()
         
         possible_agent = None
         matched_agent = None
-        for page in response.pages:
-            for agent in page.agents:
-                if agent.display_name == display_name:
-                    matched_agent = agent
-                elif agent.display_name.lower() == display_name.lower():
-                    possible_agent = agent
+
+        for agent in agent_list:
+            if agent.display_name == display_name:
+                matched_agent = agent
+            elif agent.display_name.lower() == display_name.lower():
+                possible_agent = agent
         
         if possible_agent and not(matched_agent):
             logging.warning(
