@@ -118,21 +118,22 @@ class Agents(ScrapiBase):
         )
         response = client.list_agents(request)
         
-        possibleAgent = None
+        possible_agent = None
+        matched_agent = None
         for page in response.pages:
             for agent in page.agents:
                 if agent.display_name == display_name:
-                    return agent
+                    matched_agent = agent
                 elif agent.display_name.lower() == display_name.lower():
-                    possibleAgent = agent
+                    possible_agent = agent
         
-        if possibleAgent:
+        if possible_agent and not(matched_agent):
             logging.warning(
                 "display_name is case-sensitive. Did you mean \"%s\"?",
-                possibleAgent.display_name
+                possible_agent.display_name
             )
             
-        return None
+        return matched_agent
 
     def create_agent(
         self,
