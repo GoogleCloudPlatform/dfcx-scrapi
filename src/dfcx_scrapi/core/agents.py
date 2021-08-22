@@ -53,15 +53,9 @@ class Agents(ScrapiBase):
             self.agent_id = agent_id
             self.client_options = self._set_region(agent_id)
 
-    def list_agents(self, location_id: str) -> List[types.Agent]:
-        """Get list of all CX agents in a given GCP project
+    def _build_list_agents_client_request(self, location_id):
+        """Builds the List Agents Request object."""
 
-        Args:
-          location_id: The GCP Project/Location ID in the following format
-              `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
-        Returns:
-          agents: List of Agent objects
-        """
         request = types.agent.ListAgentsRequest()
         request.parent = location_id
 
@@ -70,12 +64,66 @@ class Agents(ScrapiBase):
             credentials=self.creds, client_options=client_options
         )
 
-        response = client.list_agents(request)
+        return client, request
 
-        agents = []
-        for page in response.pages:
-            for agent in page.agents:
-                agents.append(agent)
+    def list_agents(
+        self,
+        location_id: str = None,
+        project_id: str = None) -> List[types.Agent]:
+        """Get list of all CX agents in a given GCP Region or Project.
+
+        This method allows you to provide a specific Location ID consisting of
+        a GCP Project ID and Location ID (i.e. GCP Region Name) to retrieve all
+        of the CX agents associated with that Project/Region. Optionally, you
+        can provide just the Project ID and the funciton will traverse ALL
+        available GCP regions to list ALL agents across the regions.
+
+        Args:
+          location_id: The GCP Project/Location ID in the following format
+              `projects/<GCP PROJECT ID>/locations/<LOCATION ID>`
+              `projects/my-gcp-project/locations/us-central1`
+          project_id: The GCP Project ID as a string
+        Returns:
+          agents: List of Agent objects
+        """
+
+        if project_id:
+            region_list = [
+                "global",
+                "us-central1",
+                "us-east1",
+                "us-west1",
+                "asia-northeast1",
+                "asia-south1",
+                "australia-southeast1",
+                "northamerica-northeast1",
+                "europe-west1",
+                "europe-west2",
+            ]
+
+            agents = []
+            for region in region_list:
+                location_path = "projects/{}/locations/{}".format(
+                    project_id, region
+                )
+
+                client, request = self._build_list_agents_client_request(
+                    location_path
+                )
+
+                agents += self.list_agents(location_id=location_path)
+
+        else:
+            client, request = self._build_list_agents_client_request(
+                location_id
+            )
+
+            response = client.list_agents(request)
+
+            agents = []
+            for page in response.pages:
+                for agent in page.agents:
+                    agents.append(agent)
 
         return agents
 
