@@ -22,7 +22,6 @@ import google.cloud.dialogflowcx_v3beta1.types as types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
-from dfcx_scrapi.soop.project import Project
 
 # logging config
 logging.basicConfig(
@@ -141,41 +140,62 @@ class Agents(ScrapiBase):
         response = client.get_agent(request)
 
         return response
-    
+
     def get_agent_by_display_name(
-        self, 
+        self,
         project_id: str,
-        display_name: str
+        display_name: str,
+        location_id: str = None
     ) -> types.Agent:
-        """Get CX agent in a given GCP project by its human readable 
+        """Get CX agent in a given GCP project by its human readable
             display name.
 
         Args:
           project_id: The GCP Project ID as string
           display_name: human-readable display name of CX agent as string
+          location_id: Optional. Location ID associateed with agent as
+              string. Improves execution time and resolves conflicts caused
+              when multiple agents on different regions have identical
+              display names.
         Returns:
           Agents: CX agent resource object. If no agent is found,
               returns None.
-        """ 
-        
-        project = Project(project_id = project_id)
-        agent_list = project.list_agents()
-        
+        """
+
+        if location_id:
+            agent_list = self.list_agents(
+                location_id="projects/{}/locations/{}".format(
+                    project_id, location_id
+                )
+            )
+        else:
+            agent_list = self.list_agents(project_id=project_id)
+
         possible_agent = None
         matched_agent = None
 
         for agent in agent_list:
-            if agent.display_name == display_name:
+            if agent.display_name == display_name and not matched_agent:
                 matched_agent = agent
+            elif agent.display_name == display_name and matched_agent:
+                possible_agent = agent
             elif agent.display_name.lower() == display_name.lower():
                 possible_agent = agent
-        
-        if possible_agent and not(matched_agent):
+
+        if possible_agent and not matched_agent:
             logging.warning(
                 "display_name is case-sensitive. Did you mean \"%s\"?",
                 possible_agent.display_name
             )
-            
+        elif possible_agent and matched_agent:
+            logging.warning(
+                '''Found multiple agents with the display name \"%s\".
+                 Include the location_id parameter to resolve cross-region
+                 ambiguity.''',
+                possible_agent.display_name
+            )
+            matched_agent = None
+
         return matched_agent
 
     def create_agent(
