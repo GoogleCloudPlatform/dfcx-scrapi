@@ -145,7 +145,8 @@ class Agents(ScrapiBase):
         self,
         project_id: str,
         display_name: str,
-        location_id: str = None
+        location_id: str = None,
+        region: str = None
     ) -> types.Agent:
         """Get CX agent in a given GCP project by its human readable
             display name.
@@ -153,10 +154,17 @@ class Agents(ScrapiBase):
         Args:
           project_id: The GCP Project ID as string
           display_name: human-readable display name of CX agent as string
-          location_id: Optional. Location ID associateed with agent as
-              string. Improves execution time and resolves conflicts caused
+          location_id: Optional. The GCP Project/Location ID in the following format
+              `projects/<GCP PROJECT ID>/locations/<LOCATION ID>`
+              Improves execution time and resolves conflicts caused
               when multiple agents on different regions have identical
               display names.
+          region: Optional. The agent's region ID as string.
+              Improves execution time and resolves conflicts caused
+              when multiple agents on different regions have identical
+              display names.
+              Syntax for region ID can be found here:
+              https://cloud.google.com/dialogflow/cx/docs/concept/region#avail
         Returns:
           Agents: CX agent resource object. If no agent is found,
               returns None.
@@ -164,9 +172,14 @@ class Agents(ScrapiBase):
 
         if location_id:
             agent_list = self.list_agents(
-                location_id="projects/{}/locations/{}".format(
-                    project_id, location_id
+                location_id=location_id
                 )
+            
+        elif region:
+            agent_list = self.list_agents(
+                location_id="projects/{}/locations/{}".format(
+                    project_id, region
+                    )
             )
         else:
             agent_list = self.list_agents(project_id=project_id)
@@ -190,7 +203,7 @@ class Agents(ScrapiBase):
         elif possible_agent and matched_agent:
             logging.warning(
                 '''Found multiple agents with the display name \"%s\".
-                 Include the location_id parameter to resolve cross-region
+                 Include location_id or region parameter to resolve cross-region
                  ambiguity.''',
                 possible_agent.display_name
             )
