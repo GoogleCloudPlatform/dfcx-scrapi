@@ -154,7 +154,8 @@ class Agents(ScrapiBase):
         Args:
           project_id: The GCP Project ID as string
           display_name: human-readable display name of CX agent as string
-          location_id: Optional. The GCP Project/Location ID in the following format
+          location_id: Optional. The GCP Project/Location ID, as string
+              and in this format:
               `projects/<GCP PROJECT ID>/locations/<LOCATION ID>`
               Improves execution time and resolves conflicts caused
               when multiple agents on different regions have identical
@@ -174,7 +175,7 @@ class Agents(ScrapiBase):
             agent_list = self.list_agents(
                 location_id=location_id
                 )
-            
+
         elif region:
             agent_list = self.list_agents(
                 location_id="projects/{}/locations/{}".format(
