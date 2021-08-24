@@ -67,7 +67,7 @@ def test_get_agent(agents):
 
 def test_get_agent_by_display_name(agents, project):
     """Test that we can retrieve agent by display name"""
-    region = pytest.temp_agent.display_name.split("/")[3]
+    region = pytest.temp_agent.name.split("/")[3]
     agent = agents.get_agent_by_display_name(
         project_id=project,
         display_name=pytest.temp_agent.display_name,
