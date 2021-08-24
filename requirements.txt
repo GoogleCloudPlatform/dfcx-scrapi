@@ -1,4 +1,3 @@
---extra-index-url https://gitlab.com/api/v4/projects/22236448/packages/pypi/simple
 google-cloud-dialogflow-cx
 google-auth
 google-oauth

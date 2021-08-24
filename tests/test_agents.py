@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import time
 from datetime import datetime
 # from typing import List, Dict
@@ -64,6 +65,37 @@ def test_get_agent(agents):
     assert isinstance(agent, types.Agent)
     assert pytest.temp_agent.display_name == AGENT_NAME
 
+def test_get_agent_by_display_name(agents, project):
+    """Test that we can retrieve agent by display name"""
+    region = pytest.temp_agent.display_name.split("/")[3]
+    agent = agents.get_agent_by_display_name(
+        project_id=project,
+        display_name=pytest.temp_agent.display_name,
+        region=region
+    )
+
+    assert isinstance(agent, types.Agent)
+    assert agent.display_name == AGENT_NAME
+
+def test_get_agent_by_display_name_dupe(agents, project, caplog):
+    """Test this function when providing a display name that is ambiguous and
+    exists in multiple regions"""
+    with caplog.at_level(logging.WARNING):
+        agents.get_agent_by_display_name(
+            project_id=project,
+            display_name="SCRAPI - CI Duplicate")
+
+    assert "Found multiple agents with the display name" in caplog.text
+
+def test_get_agent_by_display_name_approx(agents, project, caplog):
+    """test this function with approximate matching of agent name."""
+    with caplog.at_level(logging.WARNING):
+        agents.get_agent_by_display_name(
+            project_id=project,
+            display_name="sCRAPI - CI Duplicate"
+        )
+
+    assert "display_name is case-sensitive" in caplog.text
 
 def test_export_agent(agents, ops, gcs_bucket):
     """Tests the SCRAPI method export_agent from core/agents.py"""

@@ -77,11 +77,6 @@ e2e_test:
           when: on_success
         - when: never
     script:
-        # Provide creds to pip in order to access private Gitlab PyPI packages
-        - echo "machine gitlab.com" > ~/.netrc
-        - echo "login gitlab-ci-token" >> ~/.netrc
-        - echo "password ${CI_JOB_TOKEN}" >> ~/.netrc
-
         # Run Tests
         - pip install -r requirements.txt
         - pytest tests --cov=tests --project=$SCRAPI_TEST_PROJECT --gcs_bucket=$SCRAPI_TEST_GCS_BUCKET --creds=$SCRAPI_CI_SA
