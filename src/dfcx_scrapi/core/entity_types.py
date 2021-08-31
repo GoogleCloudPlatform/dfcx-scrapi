@@ -18,6 +18,7 @@ import logging
 from typing import Dict
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
+from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
@@ -48,12 +49,8 @@ class EntityTypes(ScrapiBase):
             scope=scope,
         )
 
-        if entity_id:
-            self.entity_id = entity_id
-            self.client_options = self._set_region(entity_id)
-
-        if agent_id:
-            self.agent_id = agent_id
+        self.entity_id = entity_id
+        self.agent_id = agent_id
 
     def get_entities_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Entityt Names and UUIDs into a user friendly dict.
@@ -157,9 +154,6 @@ class EntityTypes(ScrapiBase):
         for key, value in kwargs.items():
             setattr(entity_type, key, value)
 
-        # Apply any optional functions argument to entity_type object
-        #         entity_type = set_entity_type_attr(entity_type, kwargs)
-
         client_options = self._set_region(agent_id)
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
@@ -167,6 +161,50 @@ class EntityTypes(ScrapiBase):
         response = client.create_entity_type(
             parent=agent_id, entity_type=entity_type
         )
+        return response
+
+    def update_entity_type(
+        self,
+        entity_type_id: str = None,
+        obj: types.EntityType = None,
+        **kwargs):
+        """Update a single CX Entity Type object.
+        Pass in a the Entity Type ID and the specified kwargs for the
+        parameters in Entity Types object that you want updated. If you do not
+        provide an Entity Type object, the object will be fetched based on the
+        ID provided. Optionally, you can include a pre-made Entity Type object
+        that will be used to replace some of the parameters in the existing
+        Entity Type object as defined by the kwargs provided.
+
+        Args:
+          entity_type_id, CX Entity Type ID in proper format
+          obj, (Optional) a CX Entity Type object of types.EntityType
+
+        Returns:
+          response, a copy of the updated Entity Type object
+        """
+
+        if obj:
+            entity_type = obj
+            entity_type.name = entity_type_id
+        else:
+            if not entity_type_id:
+                entity_type_id = self.entity_id
+            entity_type = self.get_entity_type(entity_type_id)
+
+        # set entity type attributes to args
+        for key, value in kwargs.items():
+            setattr(entity_type, key, value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+
+        client_options = self._set_region(entity_type_id)
+        client = services.entity_types.EntityTypesClient(
+            credentials=self.creds, client_options=client_options
+        )
+        response = client.update_entity_type(
+            entity_type=entity_type, update_mask=mask)
+
         return response
 
     def delete_entity_type(self, entity_id: str = None, obj=None) -> None:
