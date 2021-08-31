@@ -68,6 +68,39 @@ class TransitionRouteGroups(ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
 
+    def _rg_temp_dict_update(self, temp_dict, element):
+        """Modify the temp dict and return to dataframe function."""
+        element_dict = self.cx_object_to_dict(element)
+        key = list(element_dict.keys())[0]
+
+        if key == "payload":
+            temp_dict.update({"custom_payload": element_dict[key]})
+        elif key == "liveAgentHandoff":
+            temp_dict.update(
+                {"live_agent_handoff": element_dict[key]["metadata"]}
+            )
+        elif key == "conversationSuccess":
+            temp_dict.update(
+                {"conversation_success": element_dict[key]["metadata"]}
+            )
+        elif key == "playAudio":
+            temp_dict.update({"play_audio": element_dict[key]["audioUri"]})
+        elif key == "outputAudioText":
+            temp_dict.update({"output_audio_text": element_dict[key]["text"]})
+        elif key == "text":
+            if len(element_dict[key]["text"]) == 1:
+                temp_dict.update(
+                    {"fulfillment_message": element_dict[key]["text"][0]}
+                )
+            else:
+                temp_dict.update(
+                    {"fulfillment_message": element_dict[key]["text"]}
+                )
+        else:
+            temp_dict.update({key: element_dict[key]})
+
+        return temp_dict
+
     def get_route_groups_map(self, flow_id: str = None, reverse=False):
         """Exports Agent Route Group UUIDs and Names into a user friendly dict.
 
@@ -292,16 +325,10 @@ class TransitionRouteGroups(ScrapiBase):
                         {"webhook_tag": route.trigger_fulfillment.tag}
                     )
 
-                    messages_length = len(route.trigger_fulfillment.messages)
-                    text_length = len(
-                        route.trigger_fulfillment.messages[0].text.text)
-
-                    if messages_length > 0 and text_length > 0:
-                        temp_dict.update(
-                            {"fulfillment_message":
-                            route.trigger_fulfillment.messages[0].text.text[0]
-                            }
-                            )
+                    for element in route.trigger_fulfillment.messages:
+                        temp_dict = self._rg_temp_dict_update(
+                            temp_dict, element
+                        )
 
                     rows_list.append(temp_dict)
 
