@@ -407,8 +407,12 @@ class Intents(ScrapiBase):
             )
             client.delete_intent(name=intent_id)
 
-    def bulk_intent_to_df(self, agent_id=None, mode="basic"):
-        """intents to dataframe
+    def bulk_intent_to_df(
+        self,
+        agent_id=None,
+        mode="basic",
+        intent_subset:list=None):
+        """Extracts all Intents and Training Phrases into a Pandas DataFrame.
 
         Args:
           agent_id, agent to pull list of intents
@@ -425,6 +429,9 @@ class Intents(ScrapiBase):
         if mode == "basic":
             main_frame = pd.DataFrame()
             for obj in intents:
+                if (intent_subset) and (obj.display_name not in intent_subset):
+                    continue
+
                 data_frame = self.intent_proto_to_dataframe(obj, mode=mode)
                 main_frame = main_frame.append(data_frame)
             main_frame = main_frame.sort_values(["intent", "tp"])
@@ -434,6 +441,8 @@ class Intents(ScrapiBase):
             master_phrases = pd.DataFrame()
             master_parameters = pd.DataFrame()
             for obj in intents:
+                if (intent_subset) and (obj.display_name not in intent_subset):
+                    continue
                 output = self.intent_proto_to_dataframe(obj, mode="advanced")
                 master_phrases = master_phrases.append(output["phrases"])
                 master_parameters = master_parameters.append(
