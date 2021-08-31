@@ -109,22 +109,22 @@ i = Intents(creds_path, agent_id=agent_path)
 df = i.bulk_intent_to_df()
 ```
 
-_For more examples, please refer to [Examples](examples/) or [Tools](tools/)._
+_For more examples, please refer to [Examples](../examples) or [Tools](../src/dfcx_scrapi/tools)._
 
 # Library Composition
 A brief overview of the motivation behind the library structure
 
 ## Core  
-The [Core](core/) folder is synonymous with the core Resource types in the DFCX Agents like:
+The [Core](../src/dfcx_scrapi/core) folder is synonymous with the core Resource types in the DFCX Agents like:
 - agents
 - intents
 - entity_types
 - etc.
 
-The [Core](core/) folder is meant to contain the fundamental building blocks for even higher level customized tools and applications that can be built with this library.
+The [Core](../src/dfcx_scrapi/core) folder is meant to contain the fundamental building blocks for even higher level customized tools and applications that can be built with this library.
 
 ## Tools
-The [Tools](tools/) folder contains various customized toolkits that allow you to do more complex bot management tasks.
+The [Tools](../src/dfcx_scrapi/tools) folder contains various customized toolkits that allow you to do more complex bot management tasks.
 These include things like:
 - Manipulating Agent Resource types into various DataFrame structure for data scienc-y type tasks
 - Copying Agent Resources between Agents and GCP Projects on a resource by resource level
