@@ -210,6 +210,182 @@ class Intents(ScrapiBase):
         else:
             raise ValueError("Mode types: [basic, advanced]")
 
+    @staticmethod
+    def modify_training_phrase_df(
+        actions: pd.DataFrame, training_phrase_df: pd.DataFrame
+    ):
+        """
+        Update the advanced mode training phrases dataframe to reflect the
+        actions provided in the actions dataframe. Pass the returned new
+        training phrase dataframe and the original parameters dataframe to the
+        bulk_update_intents_from_dataframe functions with update_flag = True in
+        order to make these edits. Entities in training phrsaes not touched
+        will be maintained. Entities will not be added in phrases which are
+        added or moved.
+
+        Args:
+          actions:
+            display_name, display_name of the intent to take action on
+            phrase, exact string training phrase to take action on
+            action, add or delete. To do a move it is an add + a delete action
+              of the same phrase
+            training_phrase_df, advanced mode training phrase dataframe pulled
+
+        Returns:
+          updated_training_phrases_df, training phrase df from advanced mode
+            with the edits made to it shown in the actions_taken dataframe
+          actions_taken: actions taken based on the actions provided. For
+            example we cannot delete a training phrase which does not exit;
+            this will be shown.
+        """
+        mutations = pd.merge(
+            training_phrase_df,
+            actions,
+            on=["display_name", "phrase"],
+            how="outer",
+        )
+
+        # untouched
+        untouched = mutations[mutations["action"].isna()]
+
+        # Adding new phrases
+        true_additions = mutations[
+            (mutations["action"] == "add") & (mutations["text"].isna())
+        ]
+        false_additions = mutations[
+            (mutations["action"] == "add") & (~mutations["text"].isna())
+        ]
+
+        true_additions = true_additions.drop(
+            columns=[
+                "name",
+                "training_phrase",
+                "part",
+                "text",
+                "parameter_id",
+                "repeat_count",
+                "id",
+            ]
+        )
+        true_additions["name"] = list(set(untouched["name"]))[0]
+
+        next_tp_id = int(untouched["training_phrase"].max() + 1)
+        last_tp_id = int(
+            untouched["training_phrase"].max() + len(true_additions)
+        )
+
+        true_additions["training_phrase"] = list(
+            range(next_tp_id, last_tp_id + 1)
+        )
+        true_additions["part"] = 0
+        true_additions["text"] = true_additions["phrase"]
+        true_additions["parameter_id"] = ""
+        true_additions["repeat_count"] = 1
+        true_additions["id"] = ""
+        true_additions = true_additions[untouched.columns]
+
+        # Deleting existing phrases
+        true_deletions = mutations.copy()[
+            (mutations["action"] == "delete") & (~mutations["text"].isna())
+        ]
+        false_deletions = mutations.copy()[
+            (mutations["action"] == "delete") & (mutations["text"].isna())
+        ]
+
+        updated_training_phrases_df = untouched.copy()
+        updated_training_phrases_df = updated_training_phrases_df.append(
+            false_additions
+        )
+        updated_training_phrases_df = updated_training_phrases_df.append(
+            true_additions
+        )
+        updated_training_phrases_df = updated_training_phrases_df.drop(
+            columns=["action"]
+        )
+
+        actions_taken = pd.DataFrame()
+        if true_additions.empty is False:
+            true_additions.insert(len(true_additions.columns), "completed", 1)
+            true_additions.insert(
+                len(true_additions.columns), "category", "true addition"
+            )
+            true_additions.insert(
+                len(true_additions.columns),
+                "outcome",
+                true_additions.apply(
+                    lambda x: "{} added to {}".format(
+                        x["phrase"], x["display_name"]
+                    ),
+                    axis=1,
+                ),
+            )
+            actions_taken = actions_taken.append(true_additions)
+
+        if false_additions.empty is False:
+            false_additions.insert(len(false_additions.columns), "completed", 0)
+            false_additions.insert(
+                len(false_additions.columns), "category", "false addition"
+            )
+            false_additions.insert(
+                len(false_additions.columns),
+                "outcome",
+                false_additions.apply(
+                    lambda x: "{} already in {}".format(
+                        x["phrase"], x["display_name"]
+                    ),
+                    axis=1,
+                ),
+            )
+            actions_taken = actions_taken.append(false_additions)
+
+        if true_deletions.empty is False:
+            true_deletions.insert(len(true_deletions.columns), "completed", 1)
+            true_deletions.insert(
+                len(true_deletions.columns), "category", "true deletion"
+            )
+            true_deletions.insert(
+                len(true_deletions.columns),
+                "outcome",
+                true_deletions.apply(
+                    lambda x: "{} removed from {}".format(
+                        x["phrase"], x["display_name"]
+                    ),
+                    axis=1,
+                ),
+            )
+            actions_taken = actions_taken.append(true_deletions)
+
+        if false_deletions.empty is False:
+            false_deletions.insert(len(false_deletions.columns), "completed", 0)
+            false_deletions.insert(
+                len(false_deletions.columns), "category", "false deletion"
+            )
+            false_deletions.insert(
+                len(false_deletions.columns),
+                "outcome",
+                false_deletions.apply(
+                    lambda x: "{} not found in {}".format(
+                        x["phrase"], x["display_name"]
+                    ),
+                    axis=1,
+                ),
+            )
+            actions_taken = actions_taken.append(false_deletions)
+
+        actionable_intents = list(
+            set(actions_taken[actions_taken["completed"] == 1]["display_name"])
+        )
+
+        updated_training_phrases_df = updated_training_phrases_df[
+            updated_training_phrases_df["display_name"].isin(actionable_intents)
+        ]
+        return_data = {
+            "updated_training_phrases_df": updated_training_phrases_df,
+            "actions_taken": actions_taken,
+        }
+
+        return return_data
+
     def get_intents_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Intent Names and UUIDs into a user friendly dict.
 
@@ -286,11 +462,7 @@ class Intents(ScrapiBase):
 
         return response
 
-    def create_intent(
-        self,
-        agent_id,
-        obj=None,
-        intent_dictionary: dict = None):
+    def create_intent(self, agent_id, obj=None, intent_dictionary: dict = None):
         """Creates an intent in the agent from a protobuff or dictionary.
 
         Args:
@@ -342,8 +514,9 @@ class Intents(ScrapiBase):
             intent = obj
             intent.name = ""
         elif intent_dictionary:
-            intent = types.intent.Intent.from_json(json.dumps(
-                intent_dictionary))
+            intent = types.intent.Intent.from_json(
+                json.dumps(intent_dictionary)
+            )
         else:
             raise ValueError("must provide either obj or intent_dictionary")
 
@@ -356,10 +529,8 @@ class Intents(ScrapiBase):
         return response
 
     def update_intent(
-        self,
-        intent_id: str = None,
-        obj=None,
-        language_code=None):
+        self, intent_id: str = None, obj=None, language_code=None
+    ):
         """Updates a single Intent object based on provided args.
         Args:
           intent_id, the destination Intent ID. Must be formatted properly
@@ -383,8 +554,7 @@ class Intents(ScrapiBase):
 
         if language_code:
             req = types.intent.UpdateIntentRequest(
-                intent=intent,
-                language_code=language_code
+                intent=intent, language_code=language_code
             )
             response = client.update_intent(req)
         else:
@@ -471,27 +641,30 @@ class Intents(ScrapiBase):
         intent_dict = defaultdict(list)
         intents = self.list_intents(agent_id)
 
-        for intent in intents: # pylint: disable=R1702
+        for intent in intents:  # pylint: disable=R1702
             if intent.display_name == "Default Negative Intent":
                 pass
             else:
                 if "training_phrases" in intent:
-                    for tp in intent.training_phrases:
-                        s = []
-                        if len(tp.parts) > 1:
-                            for item in tp.parts:
-                                s.append(item.text)
-                            intent_dict[intent.display_name].append("".join(s))
+                    for training_phrase in intent.training_phrases:
+                        text_list = []
+                        if len(training_phrase.parts) > 1:
+                            for item in training_phrase.parts:
+                                text_list.append(item.text)
+                            intent_dict[intent.display_name].append(
+                                "".join(text_list))
                         else:
                             intent_dict[intent.display_name].append(
-                                tp.parts[0].text)
+                                training_phrase.parts[0].text
+                            )
                 else:
                     intent_dict[intent.display_name].append("")
 
-        df = pd.DataFrame.from_dict(intent_dict, orient="index").transpose()
-        df = df.stack().to_frame().reset_index(level=1)
-        df = df.rename(
-            columns={"level_1":"intent",0:"tp"}).reset_index(drop=True)
-        df = df.sort_values(["intent","tp"])
+        dataframe = pd.DataFrame.from_dict(
+            intent_dict, orient="index").transpose()
+        dataframe = dataframe.stack().to_frame().reset_index(level=1)
+        dataframe = dataframe.rename(
+            columns={"level_1": "intent", 0: "tp"}).reset_index(drop=True)
+        dataframe = dataframe.sort_values(["intent", "tp"])
 
-        return df, intent_dict
+        return dataframe, intent_dict

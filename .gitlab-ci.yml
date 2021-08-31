@@ -57,7 +57,7 @@ linting:
         # - tests/license/license_check.sh
         - pip install --upgrade pip
         - pip install pylint==2.8.3
-        - pylint --jobs=0 $(git ls-files '*.py')
+        - pylint --rcfile=.pylintrc --jobs=0 $(git ls-files '*.py')
 
 # Run unit tests. Always runs unit tests on the default branch.
 #
