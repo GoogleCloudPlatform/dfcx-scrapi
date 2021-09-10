@@ -16,7 +16,7 @@
 
 import json
 import logging
-import os
+from typing import Dict
 import uuid
 import time
 import traceback
@@ -32,7 +32,7 @@ logging.basicConfig(
 )
 
 MAX_RETRIES = 3  # JWT errors on CX API
-DEBUG_LEVEL = "info"  # silly for request/response
+DEBUG_LEVEL = "info"
 
 
 class DialogflowConversation(ScrapiBase):
@@ -42,15 +42,20 @@ class DialogflowConversation(ScrapiBase):
     """
 
     def __init__(
-        self, config=None, creds_path=None, agent_path=None, language_code="en"
+        self,
+        config=None,
+        creds_path: str = None,
+        creds_dict: Dict = None,
+        creds=None,
+        agent_path: str = None,
+        language_code: str = "en"
     ):
-        """
-        one of:
-            config: object with creds_path and agent_path
-            creds_path: IAM creds file which sets which projects you can access
-            creds: TODO - already loaded creds data
-        agent_path = full path to project
-        """
+
+        super().__init__(
+            creds_path=creds_path,
+            creds_dict=creds_dict,
+            creds=creds,
+            agent_path=agent_path)
 
         logging.info(
             "create conversation with creds_path: %s | agent_path: %s",
@@ -63,12 +68,8 @@ class DialogflowConversation(ScrapiBase):
             raise KeyError("no creds give to create agent")
         logging.info("creds_path %s", creds_path)
 
-        # FIX ME - remove this and use creds on every call instead
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
-
         # format: projects/*/locations/*/agents/*/
-        agent_path = agent_path or config["agent_path"]
-        super().__init__(creds_path=creds_path, agent_path=agent_path)
+        self.agent_path = agent_path or config["agent_path"]
 
         self.language_code = language_code or config["language_code"]
         self.start_time = None
@@ -82,8 +83,7 @@ class DialogflowConversation(ScrapiBase):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
         self.turn_count = 0
-        # logging.info("restarted agent: session: %s", self.session_id)
-        # print("restarted DFCX.client=>", self.agent_path)
+
 
     def set_agent_env(self, param, value):
         """setting changes related to the environment"""
@@ -102,21 +102,24 @@ class DialogflowConversation(ScrapiBase):
             if msg:
                 print("{:0.2f}s {}".format(duration, msg))
 
-    def reply(self, send_obj, restart=False, raw=False, retries=0):
+    def reply(
+        self,
+        send_obj,
+        restart=False,
+        raw=False,
+        retries=0,
+        current_page=None):
         """
         args:
             send_obj  {text, params, dtmf}
             restart: boolean
             raw: boolean
             retries: used for recurse calling this func if API fails
+            current_page: Specify the page id to start the conversation from
 
         Pass restart=True to start a new conv with a new session_id
         otherwise uses the agents continues conv with session_id
         """
-
-        # if disable_webhook:
-        #     logging.info("disable_webhook: %s", disable_webhook)
-
         text = send_obj.get("text")
         if not text:
             logger.warning("trying to reply to empty message %s", send_obj)
@@ -126,15 +129,14 @@ class DialogflowConversation(ScrapiBase):
             text = text[0:250]
 
         send_params = send_obj.get("params")
-        # logging.info("send params %s", send_params)
         self.checkpoint(start=True)
 
         if restart:
             self.restart()
 
-        # FIXME - use ScrapiBase but needs a param of item eg self.agent_id ?
-        client_options = self._set_region(item_id=self.agent_path)
-        session_client = SessionsClient(client_options=client_options)
+        client_options = self._set_region(self.agent_path)
+        session_client = SessionsClient(
+            credentials=self.creds, client_options=client_options)
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
         # projects/*/locations/*/agents/*/environments/*/sessions/*
@@ -150,9 +152,18 @@ class DialogflowConversation(ScrapiBase):
 
         disable_webhook = self.agent_env.get("disable_webhook") or False
 
-        if send_params:
+        if send_params and current_page:
+            query_params = session.QueryParameters(
+                disable_webhook=disable_webhook,
+                parameters=send_params, current_page=current_page
+            )
+        elif send_params and not current_page:
             query_params = session.QueryParameters(
                 disable_webhook=disable_webhook, parameters=send_params
+            )
+        elif not send_params and current_page:
+            query_params = session.QueryParameters(
+                disable_webhook=disable_webhook, current_page=current_page
             )
         else:
             query_params = session.QueryParameters(
@@ -182,7 +193,6 @@ class DialogflowConversation(ScrapiBase):
             query_params=query_params,
         )
 
-#         logging.info("disable_webhook: %s", disable_webhook)
         logging.debug("query_params: %s", query_params)
         logging.debug("request %s", request)
 
@@ -190,12 +200,6 @@ class DialogflowConversation(ScrapiBase):
         try:
             response = session_client.detect_intent(request=request)
 
-        # how to import this exception?
-        # except com.google.apps.framework.request.BadRequestException as err:
-        #     logging.error("BadRequestException %s", err)
-
-        # CX throws a 429 error
-        # catch Auth exceptions too separately - eg if creds are expired
         except core_exceptions.InternalServerError as err:
             logging.error(
                 "---- ERROR --- InternalServerError caught on CX.detect %s",
@@ -238,7 +242,6 @@ class DialogflowConversation(ScrapiBase):
         reply = {}
 
         # flatten array of text responses
-        # seems like there should be a better interface to pull out the texts
         texts = []
         for msg in query_result.response_messages:
             if msg.payload:
@@ -251,7 +254,6 @@ class DialogflowConversation(ScrapiBase):
         # flatten params struct
         params = {}
         # print("parameters", json.dumps(qr.parameters))  ## not JSON
-        # serialisable until it"s not
         if query_result.parameters:
             for param in query_result.parameters:
                 # turn into key: value pairs
@@ -280,10 +282,6 @@ class DialogflowConversation(ScrapiBase):
         reply["intent_name"] = query_result.intent.display_name
         reply["other_intents"] = self.format_other_intents(query_result)
         reply["params"] = params
-
-        # if raw:
-        # self.qr = qr
-        # reply["qr"] = qr
 
         if DEBUG_LEVEL == "silly":
             blob = ScrapiBase.cx_object_to_json(query_result)
