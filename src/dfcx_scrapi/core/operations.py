@@ -33,10 +33,17 @@ class Operations(ScrapiBase):
     """
 
     def __init__(
-        self, creds_path: str = None, creds_dict: Dict = None, scope=False
+        self,
+        creds_path: str = None,
+        creds_dict: Dict = None,
+        creds=None,
+        scope=False
     ):
         super().__init__(
-            creds_path=creds_path, creds_dict=creds_dict, scope=scope
+            creds_path=creds_path,
+            creds_dict=creds_dict,
+            creds=creds,
+            scope=scope
         )
 
     def get_lro(self, lro: str) -> Dict[str, str]:

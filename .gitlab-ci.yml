@@ -64,7 +64,7 @@ linting:
 # If this is a merge request, only run tests if certain files were modified.
 # Tests need to always be run on the default branch to update the test coverage
 # metric in GitLab.
-e2e_test:
+e2e_agents_test:
     stage: test
     needs: []
     rules:
@@ -72,8 +72,8 @@ e2e_test:
           when: on_success
         - if: $CI_MERGE_REQUEST_IID
           changes:
-            - '**/*.{py}'
-            - tests/**/*
+            - '**/agents.{py}'
+            - tests/test_agents.{py}
           when: on_success
         - when: never
     script:
