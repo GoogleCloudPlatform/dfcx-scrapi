@@ -52,14 +52,197 @@ class SearchUtil(ScrapiBase):
             scope=scope,
         )
 
+        self.intents = Intents(creds_path=creds_path, creds_dict=creds_dict)
+        self.entities = EntityTypes(
+            creds_path=creds_path, creds_dict=creds_dict
+        )
+        self.flows = Flows(creds_path=creds_path, creds_dict=creds_dict)
+        self.pages = Pages(creds_path=creds_path, creds_dict=creds_dict)
+
         if agent_id:
             self.agent_id = agent_id
+            self.flow_map = self.flows.get_flows_map(
+                agent_id=agent_id, reverse=True
+            )
             self.client_options = self._set_region(agent_id)
 
-        self.intents = Intents(creds=self.creds)
-        self.entities = EntityTypes(creds=self.creds)
-        self.flows = Flows(creds=self.creds)
-        self.pages = Pages(creds=self.creds)
+    def _find_true_routes_flow_level(self, flow_display_name, flow_map):
+        flow_id = flow_map[flow_display_name]
+        start_page = self.flows.get_flow(flow_id) # pylint: disable=W0612
+        other_pages = self.pages.list_pages(flow_id)
+
+        # Start page - no entry fulfillment
+        pages_dataframe = pd.DataFrame()
+        for page in other_pages:
+            display_name = page.display_name
+
+            webhook = False
+            if page.entry_fulfillment.webhook:
+                webhook = True
+
+            has_parameters = False
+            if page.form.parameters:
+                has_parameters = True
+
+            has_true_route = False
+            has_true_final_route = False
+            for route in page.transition_routes:
+                if route.condition == "true":
+                    has_true_route = True
+
+                if route.condition == '$page.params.status = "FINAL" AND true':
+                    has_true_final_route = True
+
+            page_dataframe = pd.DataFrame(
+                columns=[
+                    "flow_display_name",
+                    "page_display_name",
+                    "webhook_entry_fullfillment",
+                    "has_parameters",
+                    "has_true_route",
+                    "has_true_and_final_route",
+                ],
+                data=[
+                    [
+                        flow_display_name,
+                        display_name,
+                        webhook,
+                        has_parameters,
+                        has_true_route,
+                        has_true_final_route,
+                    ]
+                ],
+            )
+            pages_dataframe = pages_dataframe.append(page_dataframe)
+
+        return pages_dataframe
+
+    # Flows - event handlers
+    def _flow_level_handlers(self):
+        flows_in_agent = self.flows.list_flows(self.agent_id)
+
+        flow_event_handler_data = pd.DataFrame()
+        for flow in flows_in_agent:
+            flow_level_event_handlers = flow.event_handlers
+            flow_level_event_handlers_dataframe = pd.DataFrame()
+
+            for handler in flow_level_event_handlers:
+                flow_level_event_handlers_dataframe = (
+                    flow_level_event_handlers_dataframe.append(
+                        pd.DataFrame(
+                            columns=[
+                                "flow",
+                                "event",
+                                "messages",
+                                "transition_flow",
+                                "transition_page",
+                            ],
+                            data=[
+                                [
+                                    flow.display_name,
+                                    handler.event,
+                                    handler.trigger_fulfillment.messages,
+                                    handler.target_flow,
+                                    handler.target_page,
+                                ]
+                            ],
+                        )
+                    )
+                )
+                flow_event_handler_data = flow_event_handler_data.append(
+                    flow_level_event_handlers_dataframe
+                )
+
+        return flow_event_handler_data
+
+    # Pages - event handlers
+    def _page_level_handlers(self):
+        page_level_event_handlers_all_dataframe = pd.DataFrame()
+        flow_map = self.flows.get_flows_map(self.agent_id)
+        for flow_ in flow_map.keys():
+            pages_in_flow = self.pages.list_pages(flow_)
+
+            for page in pages_in_flow:
+                page_level_event_handlers = page.event_handlers
+                page_level_event_handlers_dataframe = pd.DataFrame()
+                for handler in page_level_event_handlers:
+                    page_level_event_handlers_dataframe = (
+                        page_level_event_handlers_dataframe.append(
+                            pd.DataFrame(
+                                columns=[
+                                    "flow",
+                                    "page",
+                                    "event",
+                                    "messages",
+                                    "transition_flow",
+                                    "transition_page",
+                                ],
+                                data=[
+                                    [
+                                        flow_map[flow_],
+                                        page.display_name,
+                                        handler.event,
+                                        handler.trigger_fulfillment.messages,
+                                        handler.target_flow,
+                                        handler.target_page,
+                                    ]
+                                ],
+                            )
+                        )
+                    )
+
+                page_level_event_handlers_all_dataframe = (
+                    page_level_event_handlers_all_dataframe.append(
+                        page_level_event_handlers_dataframe
+                    )
+                )
+        return page_level_event_handlers_all_dataframe
+
+    # Parameters - event handlers
+    def _parameter_level_handlers(self):
+        parameter_level_event_handlers_all_dataframe = pd.DataFrame()
+        flow_map = self.flows.get_flows_map(self.agent_id)
+        for flow_ in flow_map.keys():
+            pages_in_flow = self.pages.list_pages(flow_)
+            for page in pages_in_flow:
+                parameters = page.form.parameters
+                for parameter in parameters:
+                    parameter_event_handlers = (
+                        parameter.fill_behavior.reprompt_event_handlers
+                    )
+                    param_lvl_event_df = pd.DataFrame()
+                    for handler in parameter_event_handlers:
+                        param_lvl_event_df = param_lvl_event_df.append(
+                            pd.DataFrame(
+                                columns=[
+                                    "flow",
+                                    "page",
+                                    "parameter",
+                                    "event",
+                                    "messages",
+                                    "transition_flow",
+                                    "transition_page",
+                                ],
+                                data=[
+                                    [
+                                        flow_map[flow_],
+                                        page.display_name,
+                                        parameter.display_name,
+                                        handler.event,
+                                        handler.trigger_fulfillment.messages,
+                                        handler.target_flow,
+                                        handler.target_page,
+                                    ]
+                                ],
+                            )
+                        )
+                    parameter_level_event_handlers_all_dataframe = (
+                        parameter_level_event_handlers_all_dataframe.append(
+                            param_lvl_event_df
+                        )
+                    )
+        return parameter_level_event_handlers_all_dataframe
+
 
     def find_list_parameters(self, agent_id):
         """This method extracts Parameters set at a page level that are
@@ -279,3 +462,63 @@ class SearchUtil(ScrapiBase):
 
         # not found
         return None
+
+
+    def find_true_routes(self, agent_id: str = None):
+        """This method extracts data to see if routes with no parameters have a
+        true route or pages with parameters have a true route +
+        page.params.status = "Final" route. Having these routes ensure a user
+        can escape this page no matter what.
+
+        Args:
+          - agent_id: The properly formatted CX Agent ID
+
+        Returns:
+          - agent_results: dataframe with:
+              flow_display_name: display name of the associated page
+              page_display_name: display name of the page with the associated
+                data
+              webhook_entry_fulfillments: True if a page has a webhook on entry
+                else False
+              has_parameters: True if a page has parameters else False
+              has_true_route: True if a page has a true route else False
+              has_true_and_final_route: True if a page has a route with true
+                + page.params.status=Final else False
+        """
+
+        if not agent_id:
+            agent_id = self.agent_id
+
+        agent_results = pd.DataFrame()
+        flow_map = self.flows.get_flows_map(
+                agent_id=agent_id, reverse=True
+            )
+
+        for flow_display_name in flow_map.keys():
+            flow_scan = self._find_true_routes_flow_level(
+                flow_display_name, flow_map
+            )
+            agent_results = agent_results.append(flow_scan)
+        return agent_results
+
+
+    # Event handlers Main Function
+    def find_event_handlers(self):
+        """This method extracts event handlers at the flow, page and parameter
+        level and displays data about their associated event. A user can use
+        this data to spot patterns in event types and look for detrimental
+        patterns.
+
+        Args:
+          - agent_id must specify agent id when instantiating the class
+
+        Returns:
+          - dictionary with flow, page and parameter events
+        """
+        event_handler_scan = {
+            "flow": self._flow_level_handlers(),
+            "page": self._page_level_handlers(),
+            "parameter": self._parameter_level_handlers(),
+        }
+
+        return event_handler_scan
