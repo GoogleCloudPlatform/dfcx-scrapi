@@ -264,27 +264,15 @@ class SearchUtil(ScrapiBase):
 
         # entities = self.dfcx.list_entity_types(agent_id)
         flows_map = self.flows.get_flows_map(agent_id)
-        entities_map = self.entities.get_entities_map(agent_id)
 
         params_list = []
 
-        for flow in flows_map:
-            temp_pages = self.pages.list_pages(flows_map[flow])
+        for flow in flows_map.keys():
+            temp_pages = self.pages.list_pages(flow)
             for page in temp_pages:
                 for param in page.form.parameters:
                     if param.is_list:
                         params_list.append(param.display_name)
-                        print("FLOW = {}".format(flow))
-                        print("PAGE = {}".format(page.display_name))
-                        print(param.display_name)
-                        if "sys" in param.entity_type.split("/")[-1]:
-                            print(param.entity_type.split("/")[-1])
-                        else:
-                            print(param.entity_type)
-                            print(
-                                entities_map[param.entity_type.split("/")[-1]]
-                            )
-                        print("\n")
 
         return params_list
 
