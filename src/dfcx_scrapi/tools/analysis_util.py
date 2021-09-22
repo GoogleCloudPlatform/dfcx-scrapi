@@ -88,7 +88,7 @@ class AnalysisUtil():
           threshold: float describing the levenshtein distance above which
           a pair of phrases should be associated. Default: .75
 
-          silent: When set to True, the program will execute without 
+          silent: When set to True, the program will execute without
           creating Info logs or updating the progress on the console.
           Default=False
 
