@@ -93,10 +93,11 @@ class AnalysisUtil():
           Default=False
 
         Returns:
-          tp_distances: Object listing each training phrase in intent_key.
-          Associated with each intent_key will be a list of pairings,
-          where each pair represents an utterance from intent_comparator
-          with a similarity ratio above the defined threshold.
+          Dict containing two major parts. The first ("stats") contains
+          statistics surrounding the outcome of the execution.
+          The second ("distances") is a list of pairings, with phrases
+          from intent_key as the key, and utterance from intent_comparator
+          with a similarity ratio above the defined threshold as the value.
         """
 
         if isinstance(intent_key, types.Intent):
