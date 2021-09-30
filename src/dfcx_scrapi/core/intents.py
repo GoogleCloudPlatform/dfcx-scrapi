@@ -219,7 +219,7 @@ class Intents(ScrapiBase):
         actions provided in the actions dataframe. Pass the returned new
         training phrase dataframe and the original parameters dataframe to the
         bulk_update_intents_from_dataframe functions with update_flag = True in
-        order to make these edits. Entities in training phrsaes not touched
+        order to make these edits. Entities in training phrases not touched
         will be maintained. Entities will not be added in phrases which are
         added or moved.
 
