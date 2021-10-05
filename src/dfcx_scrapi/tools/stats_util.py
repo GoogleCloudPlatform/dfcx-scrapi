@@ -41,8 +41,7 @@ class StatsUtil(ScrapiBase):
             scope=scope,
         )
 
-        if agent_id:
-            self.agent_id = agent_id
+        self.agent_id = agent_id
 
         self.intents_tracker = Intents(
             creds=self.creds, agent_id=self.agent_id)
@@ -82,7 +81,8 @@ class StatsUtil(ScrapiBase):
         flows_map = self._get_flows_map(agent_id)
 
         all_intents = self.intents_tracker.bulk_intent_to_df(agent_id=agent_id)
-        all_entity_types = self.entity_tracker.list_entity_types()
+        all_entity_types = self.entity_tracker.list_entity_types(
+            agent_id=agent_id)
         all_pages = self._list_all_pages(flows_map)
         all_rgs = self._list_all_rgs(flows_map)
 
