@@ -115,13 +115,17 @@ class ChangeHistory(ScrapiBase):
         change_logs = self.get_change_history(agent_id)
         final_dataframe = pd.DataFrame.from_records(data=change_logs)
 
-        final_dataframe["createTime"] = pd.to_datetime(
-            final_dataframe["createTime"], infer_datetime_format=True
-        )  # coerce datetime from CX
-        final_dataframe["userType"] = np.where(
-            final_dataframe.userEmail.str.contains("@google.com"),
-            "Internal", "External")  # determine int/ext user
+        try:
+            final_dataframe["createTime"] = pd.to_datetime(
+                final_dataframe["createTime"], infer_datetime_format=True
+            )  # coerce datetime from CX
+            final_dataframe["userType"] = np.where(
+                final_dataframe.userEmail.str.contains("@google.com"),
+                "Internal", "External")  # determine int/ext user
 
-        # TODO: functions to determine which Flow this resource belongs to
+            # TODO: functions to determine which Flow this resource belongs to
+
+        except AttributeError:
+            print("No Change History Results for this Agent.")
 
         return final_dataframe
