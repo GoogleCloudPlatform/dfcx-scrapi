@@ -310,6 +310,8 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
               training_phrase and parts column.
           update_flag: True to update_flag the intents in the agent
           rate_limiter: seconds to sleep between operations.
+          language_code: Language code of the intents being uploaded. Reference:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
           modified_intents: dictionary with intent display names as keys and
