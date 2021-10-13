@@ -16,20 +16,24 @@
 
 import json
 import logging
+import pandas as pd
 from typing import Dict
 import uuid
+from threading import Thread
 import time
 import traceback
 from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
 from google.cloud.dialogflowcx_v3beta1.types import session
 from google.api_core import exceptions as core_exceptions
 from proto.marshal.collections.repeated import RepeatedComposite
+
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.pages import Pages
+
 logger = logging
 
-logging.basicConfig(
-    format="[dfcx] %(levelname)s:%(message)s", level=None
-)
+logging.basicConfig(format="[dfcx] %(levelname)s:%(message)s", level=None)
 
 MAX_RETRIES = 3  # JWT errors on CX API
 DEBUG_LEVEL = "info"
@@ -48,14 +52,15 @@ class DialogflowConversation(ScrapiBase):
         creds_dict: Dict = None,
         creds=None,
         agent_path: str = None,
-        language_code: str = "en"
+        language_code: str = "en",
     ):
 
         super().__init__(
             creds_path=creds_path,
             creds_dict=creds_dict,
             creds=creds,
-            agent_path=agent_path)
+            agent_path=agent_path,
+        )
 
         logging.info(
             "create conversation with creds_path: %s | agent_path: %s",
@@ -65,7 +70,7 @@ class DialogflowConversation(ScrapiBase):
 
         creds_path = creds_path or config["creds_path"]
         if not creds_path:
-            raise KeyError("no creds give to create agent")
+            raise KeyError("no creds given to create agent")
         logging.info("creds_path %s", creds_path)
 
         # format: projects/*/locations/*/agents/*/
@@ -78,12 +83,66 @@ class DialogflowConversation(ScrapiBase):
         self.turn_count = None
         self.agent_env = {}  # empty
         self.restart()
+        self.flows = Flows(creds=self.creds)
+        self.pages = Pages(creds=self.creds)
+
+    @staticmethod
+    def _validate_test_set_input(test_set: pd.DataFrame):
+        mask = test_set.page_id.isna().to_list()
+        invalid_pages = set(test_set.page_display_name[mask].to_list())
+
+        if invalid_pages:
+            raise Exception("The following Pages are invalid and missing Page "
+                "IDs: \n%s\n\nPlease ensure that your Page Display Names do "
+                "not contain typos.\nFor Default Start Page use the special "
+                "page display name START_PAGE." % invalid_pages)
+
+
+    def _page_id_mapper(self):
+        agent_pages_map = pd.DataFrame()
+        flow_map = self.flows.get_flows_map(agent_id=self.agent_path)
+        for flow_id in flow_map.keys():
+
+            page_map = self.pages.get_pages_map(flow_id=flow_id)
+
+            flow_mapped = pd.DataFrame.from_dict(page_map, orient="index")
+            flow_mapped["page_id"] = flow_mapped.index
+
+            flow_mapped = flow_mapped.rename(columns={0: "page_display_name"})
+
+            # add start page
+            start_page_id = flow_id + "/pages/START_PAGE"
+            flow_mapped = flow_mapped.append(
+                pd.DataFrame(
+                    columns=["page_display_name", "page_id"],
+                    data=[["START_PAGE", start_page_id]],
+                )
+            )
+
+            flow_mapped.insert(0, "flow_display_name", flow_map[flow_id])
+            agent_pages_map = agent_pages_map.append(flow_mapped)
+
+        self.agent_pages_map = agent_pages_map.reset_index(drop=True)
+
+
+    def _intent_detection(self, utterance, page_id, results, i):
+        response = self.reply(
+            send_obj={"text": utterance}, current_page=page_id, restart=True
+        )
+
+        intent = response["intent_name"]
+        confidence = response["confidence"]
+        target_page = response["page_name"]
+
+        results["detected_intent"][i] = intent or "no match"
+        results["confidence"][i] = confidence
+        results["target_page"][i] = target_page
+
 
     def restart(self):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
         self.turn_count = 0
-
 
     def set_agent_env(self, param, value):
         """setting changes related to the environment"""
@@ -103,12 +162,8 @@ class DialogflowConversation(ScrapiBase):
                 print("{:0.2f}s {}".format(duration, msg))
 
     def reply(
-        self,
-        send_obj,
-        restart=False,
-        raw=False,
-        retries=0,
-        current_page=None):
+        self, send_obj, restart=False, raw=False, retries=0, current_page=None
+    ):
         """
         args:
             send_obj  {text, params, dtmf}
@@ -136,7 +191,8 @@ class DialogflowConversation(ScrapiBase):
 
         client_options = self._set_region(self.agent_path)
         session_client = SessionsClient(
-            credentials=self.creds, client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
         # projects/*/locations/*/agents/*/environments/*/sessions/*
@@ -155,7 +211,8 @@ class DialogflowConversation(ScrapiBase):
         if send_params and current_page:
             query_params = session.QueryParameters(
                 disable_webhook=disable_webhook,
-                parameters=send_params, current_page=current_page
+                parameters=send_params,
+                current_page=current_page,
             )
         elif send_params and not current_page:
             query_params = session.QueryParameters(
@@ -186,7 +243,6 @@ class DialogflowConversation(ScrapiBase):
             )
 
         # self.checkpoint("<< prepared request")
-
         request = session.DetectIntentRequest(
             session=session_path,
             query_input=query_input,
@@ -202,8 +258,8 @@ class DialogflowConversation(ScrapiBase):
 
         except core_exceptions.InternalServerError as err:
             logging.error(
-                "---- ERROR --- InternalServerError caught on CX.detect %s",
-                err)
+                "---- ERROR --- InternalServerError caught on CX.detect %s", err
+            )
             logging.error("text: %s", text)
             logging.error("query_params: %s", query_params)
             logging.error("query_input: %s", query_input)
@@ -211,7 +267,8 @@ class DialogflowConversation(ScrapiBase):
 
         except core_exceptions.ClientError as err:
             logging.error(
-                "---- ERROR ---- ClientError caught on CX.detect %s", err)
+                "---- ERROR ---- ClientError caught on CX.detect %s", err
+            )
             template = "An exception of type {0} occurred. \nArguments:\n{1!r}"
             message = template.format(type(err).__name__, err.args)
             logging.error("err name %s", message)
@@ -224,8 +281,9 @@ class DialogflowConversation(ScrapiBase):
             if retries < MAX_RETRIES:
                 # TODO - increase back off / delay? not needed for 3 retries
                 logging.error("retrying")
-                return self.reply(send_obj, restart=restart, raw=raw,
-                                  retries=retries)
+                return self.reply(
+                    send_obj, restart=restart, raw=raw, retries=retries
+                )
             else:
                 logging.error("MAX_RETRIES exceeded")
                 # try to continue but this may crash somewhere else
@@ -259,10 +317,8 @@ class DialogflowConversation(ScrapiBase):
                 # turn into key: value pairs
                 val = query_result.parameters[param]
                 try:
+                    # protobuf array - we flatten as a string with spaces
                     if isinstance(val, RepeatedComposite):
-                        # protobuf array - we flatten as a string with spaces
-#                         logging.info(
-#                             "converting param: %s val: %s", param, val)
                         val = " ".join(val)
 
                 except TypeError as err:
@@ -335,3 +391,67 @@ class DialogflowConversation(ScrapiBase):
             return elem
 
         return None
+
+
+    def run_intent_detection(self, test_set: pd.DataFrame):
+        """Test a set of utterances for intent detection against a CX Agent.
+
+        This function uses Python Threading to run tests in parallel to
+        expedite intent detection testing for Dialogflow CX agents.
+
+        Args:
+          test_set: A Pandas DataFrame with the following schema.
+            flow_display_name: str
+            page_display_name: str
+              - NOTE, when using the Default Start Page of a Flow you must
+                define it as the special display name START_PAGE
+            utterance: str
+
+        Returns:
+          intent_detection: A Pandas DataFrame consisting of the original
+            DataFrame plus an additional column for the detected intent with
+            the following schema.
+              flow_display_name: str
+              page_display_name: str
+              utterance: str
+              detected_intent: str
+              confidence: float
+              target_page: str
+        """
+
+        self._page_id_mapper()
+        test_set_mapped = pd.merge(
+            test_set,
+            self.agent_pages_map,
+            on=["flow_display_name", "page_display_name"],
+            how="left",
+        )
+        utterances = list(test_set_mapped["utterance"])
+        page_ids = list(test_set_mapped["page_id"])
+
+        self._validate_test_set_input(test_set_mapped)
+
+        threads = [None] * len(utterances)
+        results = {
+            "detected_intent": [None] * len(utterances),
+            "confidence": [None] * len(utterances),
+            "target_page": [None] * len(utterances),
+        }
+        for i, (utterance, page_id) in enumerate(zip(utterances, page_ids)):
+            threads[i] = Thread(
+                target=self._intent_detection,
+                args=(utterance, page_id, results, i),
+            )
+            threads[i].start()
+
+        for idx, _ in enumerate(threads):
+            threads[idx].join()
+
+        test_set_mapped["detected_intent"] = results["detected_intent"]
+        test_set_mapped["confidence"] = results["confidence"]
+        test_set_mapped["target_page"] = results["target_page"]
+        test_set_mapped = test_set_mapped.drop(columns=["page_id"])
+
+        intent_detection = test_set_mapped.copy()
+
+        return intent_detection
