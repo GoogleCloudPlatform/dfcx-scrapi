@@ -17,12 +17,13 @@
 from collections import defaultdict
 import json
 import logging
-from typing import Dict
+from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
 import google.cloud.dialogflowcx_v3beta1.services as services
 import google.cloud.dialogflowcx_v3beta1.types as types
+from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
@@ -386,15 +387,15 @@ class Intents(ScrapiBase):
 
         return return_data
 
-    def get_intents_map(self, agent_id: str = None, reverse=False):
+    def get_intents_map(self, agent_id: str = None, reverse: bool = False):
         """Exports Agent Intent Names and UUIDs into a user friendly dict.
 
         Args:
-          - agent_id, the formatted CX Agent ID to use
-          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+          agent_id, the formatted CX Agent ID to use
+          reverse, (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          - intents_map, Dictionary containing Intent UUIDs as keys and
+          intents_map, Dictionary containing Intent UUIDs as keys and
               intent.display_name as values
         """
         if not agent_id:
@@ -414,11 +415,16 @@ class Intents(ScrapiBase):
 
         return intents_dict
 
-    def list_intents(self, agent_id: str = None):
+    def list_intents(
+        self,
+        agent_id: str = None,
+        language_code: str = None) -> List[types.Intent]:
         """Exports List of all intents in specific CX Agent.
 
         Args:
-          agent_id, the CX agent id to pull the intents from
+          agent_id, the formatted CX Agent ID to use
+          language_code: Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
           intents, List of Intent objects
@@ -427,8 +433,11 @@ class Intents(ScrapiBase):
             agent_id = self.agent_id
 
         request = types.intent.ListIntentsRequest()
-        request.parent = agent_id
 
+        if language_code:
+            request.language_code = language_code
+
+        request.parent = agent_id
         client_options = self._set_region(agent_id)
         client = services.intents.IntentsClient(
             credentials=self.creds, client_options=client_options
@@ -442,11 +451,16 @@ class Intents(ScrapiBase):
 
         return intents
 
-    def get_intent(self, intent_id: str = None):
+    def get_intent(
+        self,
+        intent_id: str = None,
+        language_code: str = None) -> types.Intent:
         """Get a single Intent object based on specific CX Intent ID.
 
         Args:
           intent_id, the properly formatted CX Intent ID
+          language_code: Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
           response, a single Intent object
@@ -454,21 +468,33 @@ class Intents(ScrapiBase):
         if not intent_id:
             intent_id = self.intent_id
 
+        request = types.intent.GetIntentRequest()
+
+        if language_code:
+            request.language_code = language_code
+
+        request.name = intent_id
         client_options = self._set_region(intent_id)
         client = services.intents.IntentsClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.get_intent(name=intent_id)
+
+        response = client.get_intent(request)
 
         return response
 
-    def create_intent(self, agent_id, obj=None, intent_dictionary: dict = None):
+    def create_intent(
+        self,
+        agent_id: str,
+        obj: types.Intent = None,
+        intent_dictionary: dict = None,
+        language_code: str = None) -> types.Intent:
         """Creates an intent in the agent from a protobuff or dictionary.
 
         Args:
-          - agent_id, the formatted CX Agent ID to use
-          - obj, (Optional) intent protobuf
-          -intent_dictionary, (optional) dictionary of the intent to pass in
+          agent_id, the formatted CX Agent ID to use
+          obj, (Optional) intent protobuf
+          intent_dictionary, (optional) dictionary of the intent to pass in
             with structure
 
         example intent dictionary:
@@ -505,7 +531,7 @@ class Intents(ScrapiBase):
 
 
         Returns:
-          - intents protobuff object
+          Intent protobuf object
         """
 
         if obj and intent_dictionary:
@@ -520,23 +546,37 @@ class Intents(ScrapiBase):
         else:
             raise ValueError("must provide either obj or intent_dictionary")
 
+        request = types.intent.CreateIntentRequest()
+
+        if language_code:
+            request.language_code = language_code
+
+        request.parent = agent_id
+        request.intent = intent
+
         client_options = self._set_region(agent_id)
         client = services.intents.IntentsClient(
             client_options=client_options, credentials=self.creds
         )
-        response = client.create_intent(parent=agent_id, intent=intent)
+
+        response = client.create_intent(request)
 
         return response
 
     def update_intent(
-        self, intent_id: str = None, obj=None, language_code=None
-    ):
+        self,
+        intent_id: str = None,
+        obj: types.Intent = None,
+        language_code: str = None,
+        **kwargs) -> types.Intent:
         """Updates a single Intent object based on provided args.
         Args:
           intent_id, the destination Intent ID. Must be formatted properly
-              for Intent IDs in CX.
-          obj, The CX Intent object in proper format. This can also
-              be extracted by using the get_intent() method.
+            for Intent IDs in CX.
+          obj, The CX Intent object in proper format. This can also be
+            extracted by using the get_intent() method.
+          language_code: Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
         """
         if obj:
             intent = obj
@@ -547,23 +587,31 @@ class Intents(ScrapiBase):
                 intent_id = self.intent_id
             intent = self.get_intent(intent_id)
 
+        # set intent attributes from kwargs
+        for key, value in kwargs.items():
+            setattr(intent, key, value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+
         client_options = self._set_region(intent_id)
         client = services.intents.IntentsClient(
             client_options=client_options, credentials=self.creds
         )
 
+        request = types.intent.UpdateIntentRequest()
+
+        request.intent = intent
+        request.update_mask = mask
+
         if language_code:
-            req = types.intent.UpdateIntentRequest(
-                intent=intent, language_code=language_code
-            )
-            response = client.update_intent(req)
-        else:
-            response = client.update_intent(intent=intent)
+            request.language_code = language_code
+
+        response = client.update_intent(request)
 
         return response
 
-    def delete_intent(self, intent_id, obj=None):
-        """deletes an intent
+    def delete_intent(self, intent_id: str, obj: types.Intent = None) -> None:
+        """Deletes an intent by Intent ID.
 
         Args:
           intent_id, intent to delete
@@ -579,9 +627,10 @@ class Intents(ScrapiBase):
 
     def bulk_intent_to_df(
         self,
-        agent_id=None,
-        mode="basic",
-        intent_subset:list=None):
+        agent_id: str = None,
+        mode: str = "basic",
+        intent_subset:list = None,
+        language_code:str = None) -> pd.DataFrame:
         """Extracts all Intents and Training Phrases into a Pandas DataFrame.
 
         Args:
@@ -590,12 +639,14 @@ class Intents(ScrapiBase):
             plain text.
           Advanced returns training phrase and parameters df broken out by
             parts.
+          language_code: Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
         """
 
         if not agent_id:
             agent_id = self.agent_id
 
-        intents = self.list_intents(agent_id)
+        intents = self.list_intents(agent_id, language_code=language_code)
         if mode == "basic":
             main_frame = pd.DataFrame()
             for obj in intents:
@@ -623,7 +674,9 @@ class Intents(ScrapiBase):
         else:
             raise ValueError("Mode types: [basic, advanced]")
 
-    def intents_to_df_cosine_prep(self, agent_id: str = None):
+    def intents_to_df_cosine_prep(
+        self,
+        agent_id: str = None) -> Tuple[pd.DataFrame, Dict[str,str]]:
         """Exports a dataframe and defaultdict of Intents for use with Cosine
         Similarity tools.
 
