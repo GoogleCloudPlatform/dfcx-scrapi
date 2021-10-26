@@ -228,18 +228,26 @@ class DialogflowConversation(ScrapiBase):
                 print("{:0.2f}s {}".format(duration, msg))
 
     def reply(
-        self, send_obj, restart=False, raw=False, retries=0, current_page=None
+        self,
+        send_obj,
+        restart: bool = False,
+        raw: bool = False,
+        retries: int = 0,
+        current_page: str = None,
+        checkpoints: bool = False
     ):
         """
         args:
             send_obj  {text, params, dtmf}
-            restart: boolean
+            restart: Boolean flag that determines whether to use the existing
+              session ID or start a new conversation with a new session ID.
+              Passing True will create a new session ID on subsequent calls.
+              Defaults to False.
             raw: boolean
             retries: used for recurse calling this func if API fails
             current_page: Specify the page id to start the conversation from
-
-        Pass restart=True to start a new conv with a new session_id
-        otherwise uses the agents continues conv with session_id
+            checkpoints: Boolean flag to enable/disable Checkpoint timer
+              debugging. Defaults to False.
         """
         text = send_obj.get("text")
         if not text:
@@ -250,7 +258,9 @@ class DialogflowConversation(ScrapiBase):
             text = text[0:250]
 
         send_params = send_obj.get("params")
-        self.checkpoint(start=True)
+
+        if checkpoints:
+            self.checkpoint(start=True)
 
         if restart:
             self.restart()
@@ -358,8 +368,8 @@ class DialogflowConversation(ScrapiBase):
                 # return None ## try next one
 
         # format reply
-
-        self.checkpoint("<< got response")
+        if checkpoints:
+            self.checkpoint("<< got response")
         query_result = response.query_result
         logging.debug("dfcx>qr %s", query_result)
         self.query_result = query_result  # for debugging
