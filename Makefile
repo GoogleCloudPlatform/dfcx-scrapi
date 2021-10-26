@@ -1,7 +1,3 @@
-# defautl file for whitespace fixes if not defined at cmdline
-f ?= dfcx.py
-
-# for google cloud shell
 python-setup:
 	sudo apt-get install python3-venv
 	python3 -m venv venv
@@ -15,10 +11,10 @@ pfreeze:
 	pip freeze > requirements.txt
 
 test:
-	pytest
+	pytest tests --cov=tests --project=${gcp_project} --gcs_bucket=${gcs_bucket} --creds=${creds}
 
 lint:
-	make pylint core/*
+	make pylint ${dir}/*
 
 # just fix selected whitespace
 autofix-min-whitespace:
@@ -29,13 +25,6 @@ autofix-min-whitespace:
 # make autofix f=somefile.py
 autofix-all:
 	autopep8 --aggressive --aggressive --verbose --in-place ${f}
-
-# add-upstream:
-# 	git remote add upstream <YOUR_UPSTREAM_REPO>
-
-merge-upstream:
-	git fetch upstream
-	git merge upstream/master
 
 # use it like this:
 # f=tools/validation_kit.py make lint-lines
