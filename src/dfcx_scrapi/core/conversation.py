@@ -98,6 +98,18 @@ class DialogflowConversation(ScrapiBase):
                 "page display name START_PAGE." % invalid_pages)
 
 
+    @staticmethod
+    def progress_bar(current, total, bar_length=50, type_="Progress"):
+        """Display progress bar for processing."""
+        percent = float(current) * 100 / total
+        arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
+        spaces = " " * (bar_length - len(arrow))
+        print(
+            "{2}({0}/{1})".format(current, total, type_)
+            + "[%s%s] %d %%" % (arrow, spaces, percent),
+            end="\r",
+        )
+
     def _page_id_mapper(self):
         agent_pages_map = pd.DataFrame()
         flow_map = self.flows.get_flows_map(agent_id=self.agent_path)
@@ -125,7 +137,15 @@ class DialogflowConversation(ScrapiBase):
         self.agent_pages_map = agent_pages_map.reset_index(drop=True)
 
 
-    def _intent_detection(self, utterance, page_id, results, i):
+    def _get_reply_results(self, utterance, page_id, results, i):
+        """Get results of single text utterance to CX Agent.
+
+        Args:
+          utterance: Text to send to the bot for testing.
+          page_id: Specified CX Page to send the utterance request to
+          results: Pandas Dataframe to capture and store the results
+          i: Internal tracking for Python Threading
+        """
         response = self.reply(
             send_obj={"text": utterance}, current_page=page_id, restart=True
         )
@@ -137,6 +157,52 @@ class DialogflowConversation(ScrapiBase):
         results["detected_intent"][i] = intent or "no match"
         results["confidence"][i] = confidence
         results["target_page"][i] = target_page
+
+
+    def _get_intent_detection(self, test_set: pd.DataFrame):
+        """Gets the results of a subset of Intent Detection tests.
+
+        NOTE - This is an internal method used by run_intent_detection to
+        manage parallel intent detection requests and should not be used as a
+        standalone function.
+        """
+
+        self._page_id_mapper()
+        test_set_mapped = pd.merge(
+            test_set,
+            self.agent_pages_map,
+            on=["flow_display_name", "page_display_name"],
+            how="left",
+        )
+        utterances = list(test_set_mapped["utterance"])
+        page_ids = list(test_set_mapped["page_id"])
+
+        self._validate_test_set_input(test_set_mapped)
+
+        threads = [None] * len(utterances)
+        results = {
+            "detected_intent": [None] * len(utterances),
+            "confidence": [None] * len(utterances),
+            "target_page": [None] * len(utterances),
+        }
+        for i, (utterance, page_id) in enumerate(zip(utterances, page_ids)):
+            threads[i] = Thread(
+                target=self._get_reply_results,
+                args=(utterance, page_id, results, i),
+            )
+            threads[i].start()
+
+        for idx, _ in enumerate(threads):
+            threads[idx].join()
+
+        test_set_mapped["detected_intent"] = results["detected_intent"]
+        test_set_mapped["confidence"] = results["confidence"]
+        test_set_mapped["target_page"] = results["target_page"]
+        test_set_mapped = test_set_mapped.drop(columns=["page_id"])
+
+        intent_detection = test_set_mapped.copy()
+
+        return intent_detection
 
 
     def restart(self):
@@ -393,11 +459,17 @@ class DialogflowConversation(ScrapiBase):
         return None
 
 
-    def run_intent_detection(self, test_set: pd.DataFrame):
-        """Test a set of utterances for intent detection against a CX Agent.
+    def run_intent_detection(
+        self,
+        test_set: pd.DataFrame,
+        chunk_size: int = 300,
+        rate_limit: float = 20):
+        """Tests a set of utterances for intent detection against a CX Agent.
 
         This function uses Python Threading to run tests in parallel to
-        expedite intent detection testing for Dialogflow CX agents.
+        expedite intent detection testing for Dialogflow CX agents. The default
+        quota for Text requests/min is 1200. Ref:
+          https://cloud.google.com/dialogflow/quotas#table
 
         Args:
           test_set: A Pandas DataFrame with the following schema.
@@ -406,6 +478,10 @@ class DialogflowConversation(ScrapiBase):
               - NOTE, when using the Default Start Page of a Flow you must
                 define it as the special display name START_PAGE
             utterance: str
+          chunk_size: Determines the number of text requests to send in
+            parallel. This should be adjusted based on your test_set size and
+            the Quota limits set for your GCP project. Default is 300.
+          rate_limit: Number of seconds to wait between running test set chunks
 
         Returns:
           intent_detection: A Pandas DataFrame consisting of the original
@@ -419,39 +495,12 @@ class DialogflowConversation(ScrapiBase):
               target_page: str
         """
 
-        self._page_id_mapper()
-        test_set_mapped = pd.merge(
-            test_set,
-            self.agent_pages_map,
-            on=["flow_display_name", "page_display_name"],
-            how="left",
-        )
-        utterances = list(test_set_mapped["utterance"])
-        page_ids = list(test_set_mapped["page_id"])
+        result = pd.DataFrame()
+        for start in range(0, test_set.shape[0], chunk_size):
+            test_set_chunk = test_set.iloc[start:start + chunk_size]
+            result_chunk = self._get_intent_detection(test_set=test_set_chunk)
+            result = result.append(result_chunk)
+            self.progress_bar(start, test_set.shape[0])
+            time.sleep(rate_limit)
 
-        self._validate_test_set_input(test_set_mapped)
-
-        threads = [None] * len(utterances)
-        results = {
-            "detected_intent": [None] * len(utterances),
-            "confidence": [None] * len(utterances),
-            "target_page": [None] * len(utterances),
-        }
-        for i, (utterance, page_id) in enumerate(zip(utterances, page_ids)):
-            threads[i] = Thread(
-                target=self._intent_detection,
-                args=(utterance, page_id, results, i),
-            )
-            threads[i].start()
-
-        for idx, _ in enumerate(threads):
-            threads[idx].join()
-
-        test_set_mapped["detected_intent"] = results["detected_intent"]
-        test_set_mapped["confidence"] = results["confidence"]
-        test_set_mapped["target_page"] = results["target_page"]
-        test_set_mapped = test_set_mapped.drop(columns=["page_id"])
-
-        intent_detection = test_set_mapped.copy()
-
-        return intent_detection
+        return result
