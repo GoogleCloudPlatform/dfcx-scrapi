@@ -68,14 +68,8 @@ class DialogflowConversation(ScrapiBase):
             agent_path,
         )
 
-        creds_path = creds_path or config["creds_path"]
-        if not creds_path:
-            raise KeyError("no creds given to create agent")
-        logging.info("creds_path %s", creds_path)
-
         # format: projects/*/locations/*/agents/*/
         self.agent_path = agent_path or config["agent_path"]
-
         self.language_code = language_code or config["language_code"]
         self.start_time = None
         self.query_result = None
