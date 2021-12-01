@@ -46,6 +46,7 @@ class TransitionRouteGroups(ScrapiBase):
         route_group_id: str = None,
         flow_id: str = None,
         agent_id: str = None,
+        
     ):
         super().__init__(
             creds_path=creds_path,
@@ -222,6 +223,7 @@ class TransitionRouteGroups(ScrapiBase):
         self,
         route_group_id: str = None,
         obj: types.TransitionRouteGroup = None,
+        language_code: str = None,
         **kwargs,
     ):
         """Update a single Route Group resource.
@@ -230,6 +232,8 @@ class TransitionRouteGroups(ScrapiBase):
           route_group_id, the formatted CX Route Group ID to update.
           obj, (Optional) the Transition Route Group object of type
             types.TransitionRouteGroup that you want to update.
+          language_code, (Optional) the language in which the agent should 
+            update the TransitionRouteGroup
 
         Returns:
           response, a copy of the successfully updated Route Group object
@@ -249,9 +253,16 @@ class TransitionRouteGroups(ScrapiBase):
         client = services.transition_route_groups.TransitionRouteGroupsClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.update_transition_route_group(
-            transition_route_group=route_group, update_mask=mask
-        )
+        
+        request = types.transition_route_group.UpdateTransitionRouteGroupRequest()
+
+        request.transition_route_group = transition_route_group
+        request.update_mask = mask
+
+        if language_code:
+            request.language_code = language_code
+        
+        response = client.update_transition_route_group(request)
 
         return response
 
