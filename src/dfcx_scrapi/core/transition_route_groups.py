@@ -253,7 +253,7 @@ class TransitionRouteGroups(ScrapiBase):
             credentials=self.creds, client_options=client_options
         )
         
-        request = types.transition_route_group.UpdateTransitionRouteGroupRequest()
+        request = types.transition_route_groups.UpdateTransitionRouteGroupRequest()
 
         request.transition_route_group = route_group
         request.update_mask = mask
