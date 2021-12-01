@@ -46,7 +46,6 @@ class TransitionRouteGroups(ScrapiBase):
         route_group_id: str = None,
         flow_id: str = None,
         agent_id: str = None,
-        
     ):
         super().__init__(
             creds_path=creds_path,
@@ -256,7 +255,7 @@ class TransitionRouteGroups(ScrapiBase):
         
         request = types.transition_route_group.UpdateTransitionRouteGroupRequest()
 
-        request.transition_route_group = transition_route_group
+        request.transition_route_group = route_group
         request.update_mask = mask
 
         if language_code:
