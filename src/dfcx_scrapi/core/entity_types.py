@@ -130,7 +130,8 @@ class EntityTypes(ScrapiBase):
         return response
 
     def create_entity_type(
-        self, agent_id: str = None, obj: types.EntityType = None, **kwargs
+        self, agent_id: str = None, obj: types.EntityType = None,
+        language_code: str = None, **kwargs
     ) -> types.EntityType:
         """Creates a single Entity Type object resource.
 
@@ -158,9 +159,18 @@ class EntityTypes(ScrapiBase):
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.create_entity_type(
-            parent=agent_id, entity_type=entity_type
-        )
+        if language_code:
+            response = client.create_entity_type(
+                parent=agent_id,
+                entity_type=entity_type,
+                language_code=language_code
+            )
+        else:
+            response = client.create_entity_type(
+                parent=agent_id,
+                entity_type=entity_type
+            )
+
         return response
 
     def update_entity_type(
