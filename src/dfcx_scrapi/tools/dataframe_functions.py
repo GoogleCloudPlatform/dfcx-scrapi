@@ -807,6 +807,8 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
           entities_df: dataframe of bulk entities;
             required columns: display_name, value, synonyms
           update_flag: True to update_flag the entities in the agent
+          language_code: Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
           rate_limiter: seconds to sleep between operations.
 
         Returns:
