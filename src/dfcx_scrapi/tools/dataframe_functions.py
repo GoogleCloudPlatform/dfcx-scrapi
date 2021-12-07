@@ -795,8 +795,9 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         return entity_pb
 
     def bulk_create_entity_from_dataframe(
-        self, agent_id, entities_df, update_flag=False, rate_limiter=5,
-        language_code: str = None
+        self, agent_id, entities_df, update_flag=False,
+        language_code: str = None, rate_limiter=5,
+
     ):
         """Bulk create entities from a dataframe.
 
