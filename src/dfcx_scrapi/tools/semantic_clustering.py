@@ -1,6 +1,6 @@
 """Grouping of semantically similiar utterances.
 For best results replace entities with a parameter name ex,
-all countires with the word country or all dates with the word date"""
+all countries with the word country or all dates with the word date"""
 
 # Copyright 2021 Google LLC
 #
@@ -36,27 +36,35 @@ logging.info("embedder status: imported")
 
 
 class SemanticClustering:
-    """
-    Grouping semanticaly similiar utterances for a variety of tasks:
+    """Grouping semantically similiar utterances for a variety of tasks:
     - Intent identification
     - Reducing bloated intents
     - no-match patterns
+
+    This class takes a set of utterances and groups them
+        according to semantic similarity.
+    Similarity is determined based on distance between
+        instances in a feature array.
+
+    Attributes:
+        phrases: Indicates the utterances to be clustered.
+            Need to specify format.
     """
 
     def __init__(self, phrases: pd.DataFrame):
+        """Initializes SemanticClustering with a pandas data frame"""
         if "text" not in phrases.columns:
             raise ValueError("Utterances dataframe must have a text column")
         self.phrases = phrases
 
     @staticmethod
     def _string_cleaner(string):
-        """Clean text by removing tokens, punctuation and applying lower().
+        """Clean text by removing tokens, punctuation, and applying lower().
         Args:
-            string, string to apply changes to
+            string: text string to be cleaned
 
         Returns:
-            x, cleaned string
-
+            x: cleaned string
         """
         string = re.sub(r"[^\w\s]", "", string.lower())
         tokens = ["\n", "\r", "\t"]
@@ -76,24 +84,24 @@ class SemanticClustering:
         power=None,
         n_jobs=-1,
     ):
-        """Cluster phrases with a model with set hyperparams
+        """Cluster phrases using a model with set hyperparameters
         Args:
-            data, DataFrame to cluster
-            eps, max distance between two points for them to be
-                considered in same neighborhood
-            min_samples, minimum number of samples a cluster can have
-            metric, metric for measuring distance between instances
-                in a feature array
-            metric_params, additional keywords for metric function
-            algorithm, algo used to compute pointwise distances and
-                find nearest neightbors.
-            leaf-size, only passed ot BallTree or cKDTree algorithms.
-            p, power of Minkowski metric to calculate distance between points.
+            data: DataFrame to cluster
+            eps: max distance between two points for them to be
+                considered in same neighborhood.
+            min_samples: minimum number of samples a cluster can have
+            metric: metric for measuring distance between instances
+                in a feature array.
+            metric_params: additional keywords for metric function
+            algorithm: algo used to compute pointwise distances and
+                find nearest neighbors.
+            leaf-size: only passed to BallTree or cKDTree algorithms.
+            p: power of Minkowski metric to calculate distance between points.
                 DEFAULT = 2 (Euclidean distance)
-            n_jobs, number of parallel jobs to run. -1 means all processors
+            n_jobs: number of parallel jobs to run. -1 means all processors
 
         Returns:
-            data, input data with associated clusters by the text column.
+            data: input data with associated clusters by the text column.
         """
 
         input_data = list(data["cleaned_text"])
@@ -134,29 +142,32 @@ class SemanticClustering:
         power=None,
         n_jobs=-1,
     ):
-        """Cluster phrases with a model with set hyperparams for the entire
-        dataset. User can set stop metrics and mutliple models will be
-        generated with increasing neighborhood sizes.
+        """Cluster phrases using a model with set hyperparameters
+            for the entire dataset.
+
+        User can set stop metrics and multiple models will be generated
+            with increasing neighborhood sizes.
 
         Args:
-            stop_threshold, Percentage of data which can be in no cluster
-              to signify that new models can stop being created.
-            max_rounds, maximum number of rounds that take place of
-              trying new model hypterparameters to get to the stop_threshold.
-            iterator, eps value to change by in each round.
-            start_eps, eps value to run on the first algo.
-            min_samples, minimum number of samples a cluster can have
-            metric, metric for measuring distance between instances in a
-              feature array
-            metric_params, additional keywords for metric function
-            algorithm, algo used to compute pointwise distances and find
-              nearest neightbors.
-            leaf-size, only passed ot BallTree or cKDTree algorithms.
-            p, power of Minkowski metric to calculate distance between points.
-              DEFAULT = 2 (Euclidean distance)
-            n_jobs, number of paralell jobs to run. -1 means all processors
+            stop_threshold: Percentage of data which can be in no cluster
+                to signify that new models can stop being created.
+            max_rounds: maximum number of rounds that take place of
+                trying new model hyperparameters to get to the stop_threshold.
+            iterator: eps value to change by in each round.
+            start_eps: eps value to run on the first algo.
+            min_samples: minimum number of samples a cluster can have
+            metric: metric for measuring distance between instances
+                in a feature array.
+            metric_params: additional keywords for metric function
+            algorithm: algo used to compute pointwise distances and find
+                nearest neighbors.
+            leaf-size: only passed to BallTree or cKDTree algorithms.
+            p: power of Minkowski metric to calculate distance between points.
+                DEFAULT = 2 (Euclidean distance)
+            n_jobs: number of parallel jobs to run. -1 means all processors
+
         Returns:
-            clustered, DataFrame of clustered data.
+            clustered: DataFrame of clustered data.
         """
 
         if not hasattr(self, "transformed_data"):
