@@ -771,7 +771,8 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         Returns:
           entity_pb: the new entity protobuf object
         """
-
+        if not meta:
+            meta = {}
         entity_obj = {}
         entity_obj["display_name"] = display_name
         entity_obj["kind"] = meta.get("kind", 1)
