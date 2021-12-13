@@ -162,17 +162,19 @@ class EntityTypes(ScrapiBase):
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
         )
+
+        request = types.entity_type.CreateEntityTypeRequest(
+            agent_id,
+            entity_type)
+
         if language_code:
-            response = client.create_entity_type(
-                parent=agent_id,
-                entity_type=entity_type,
-                language_code=language_code
-            )
-        else:
-            response = client.create_entity_type(
-                parent=agent_id,
-                entity_type=entity_type
-            )
+            request.language_code = language_code
+
+        response = client.create_entity_type(
+            request=request,
+            parent=agent_id,
+            entity_type=entity_type
+        )
 
         return response
 
