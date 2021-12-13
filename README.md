@@ -153,7 +153,8 @@ Project Link: [https://github.com/GoogleCloudPlatform/dfcx-scrapi](https://githu
 
 <!-- ACKNOWLEDGEMENTS -->
 # Acknowledgements
-[Dialogflow CX Python Client Library](https://github.com/googleapis/python-dialogflow-cx)
+[Dialogflow CX Python Client Library](https://github.com/googleapis/python-dialogflow-cx)   
+[:hugs: Hugging Face - Pegasus Paraphrase](https://huggingface.co/tuner007/pegasus_paraphrase)
 
 
 
