@@ -181,6 +181,7 @@ class EntityTypes(ScrapiBase):
         self,
         entity_type_id: str = None,
         obj: types.EntityType = None,
+        language_code: str = None,
         **kwargs):
         """Update a single CX Entity Type object.
         Pass in a the Entity Type ID and the specified kwargs for the
@@ -193,6 +194,8 @@ class EntityTypes(ScrapiBase):
         Args:
           entity_type_id, CX Entity Type ID in proper format
           obj, (Optional) a CX Entity Type object of types.EntityType
+          language_code: Language code of the intents being uploaded. Ref:
+          https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
           response, a copy of the updated Entity Type object
@@ -216,8 +219,14 @@ class EntityTypes(ScrapiBase):
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.update_entity_type(
-            entity_type=entity_type, update_mask=mask)
+
+        request = types.entity_type.UpdateEntityTypeRequest()
+        request.entity_type = entity_type
+        request.update_mask = mask
+        if language_code:
+            request.language_code = language_code
+
+        response = client.update_entity_type(request)
 
         return response
 
