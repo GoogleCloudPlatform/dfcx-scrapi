@@ -231,7 +231,7 @@ class TransitionRouteGroups(ScrapiBase):
           route_group_id, the formatted CX Route Group ID to update.
           obj, (Optional) the Transition Route Group object of type
             types.TransitionRouteGroup that you want to update.
-          language_code, (Optional) the language in which the agent should 
+          language_code, (Optional) the language in which the agent should
             update the TransitionRouteGroup
 
         Returns:
@@ -252,15 +252,15 @@ class TransitionRouteGroups(ScrapiBase):
         client = services.transition_route_groups.TransitionRouteGroupsClient(
             credentials=self.creds, client_options=client_options
         )
-        
-        request = types.transition_route_groups.UpdateTransitionRouteGroupRequest()
+
+        request = types.transition_route_groups.UpdateTransitionRouteGroupRequest() # pylint: disable=C0301
 
         request.transition_route_group = route_group
         request.update_mask = mask
 
         if language_code:
             request.language_code = language_code
-        
+
         response = client.update_transition_route_group(request)
 
         return response
