@@ -893,10 +893,11 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
 
             custom_entities[entity] = new_entity
             i += 1
+            entity_type_id = one_entity["name"].max()
 
             if update_flag:
                 self.entities.update_entity_type(
-                    one_entity.name, new_entity, language_code
+                    entity_type_id, new_entity, language_code
                 )
                 time.sleep(rate_limiter)
 
