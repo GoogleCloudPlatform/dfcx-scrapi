@@ -808,7 +808,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
           rate_limiter: seconds to sleep between operations.
 
         Returns:
-          new_entities: dictionary with entity display names as keys and the
+          custom_entities: dictionary with entity display names as keys and the
             new entity protobufs as values
         """
 
@@ -847,6 +847,64 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
                 i, len(list(set(
                     entities_df["display_name"]))), type_="entities"
             )
+        return custom_entities
+
+    def bulk_update_entity_from_dataframe(
+        self, entities_df, update_flag=False, language_code=None,
+        rate_limiter=5
+    ):
+        """Bulk updates entities from a dataframe.
+
+        Args:
+          agent_id: name parameter of the agent to update_flag - full path to
+            agent
+          entities_df: dataframe of bulk entities;
+            required columns: display_name, value, synonyms
+          update_flag: True to update_flag the entities in the agent
+          language_code: Language code of the intents being uploaded. Ref:
+          https://cloud.google.com/dialogflow/cx/docs/reference/language
+          rate_limiter: seconds to sleep between operations.
+
+        Returns:
+          custom_entities: dictionary with entity display names as keys and the
+            new entity protobufs as values
+        """
+        if "meta" in entities_df.columns:
+            meta = (
+                entities_df.copy()[["display_name", "meta"]]
+                .drop_duplicates()
+                .reset_index()
+            )
+
+        i, custom_entities = 0, {}
+        for entity in list(set(entities_df["display_name"])):
+            one_entity = entities_df[entities_df["display_name"] == entity]
+            if "meta" in locals():
+                meta_ = meta[meta["display_name"] == entity]["meta"].iloc[0]
+                meta_ = json.loads(meta_)
+                new_entity = self.create_entity_from_dataframe(
+                    display_name=entity, entity_df=one_entity, meta=meta
+                )
+
+            else:
+                new_entity = self.create_entity_from_dataframe(
+                    display_name=entity, entity_df=one_entity
+                )
+
+            custom_entities[entity] = new_entity
+            i += 1
+
+            if update_flag:
+                self.entities.update_entity_type(
+                    one_entity.name, new_entity, language_code
+                )
+                time.sleep(rate_limiter)
+
+            self.progress_bar(
+                i, len(list(set(
+                    entities_df["display_name"]))), type_="entities"
+            )
+
         return custom_entities
 
     def create_transition_route_from_dataframe(self, route_df):
