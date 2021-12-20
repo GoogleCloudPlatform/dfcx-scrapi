@@ -795,7 +795,9 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         return entity_pb
 
     def bulk_create_entity_from_dataframe(
-        self, agent_id, entities_df, update_flag=False, rate_limiter=5
+        self, agent_id, entities_df, update_flag=False,
+        language_code: str = None, rate_limiter=5,
+
     ):
         """Bulk create entities from a dataframe.
 
@@ -805,6 +807,8 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
           entities_df: dataframe of bulk entities;
             required columns: display_name, value, synonyms
           update_flag: True to update_flag the entities in the agent
+          language_code: Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
           rate_limiter: seconds to sleep between operations.
 
         Returns:
@@ -839,7 +843,9 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
 
             if update_flag:
                 self.entities.create_entity_type(
-                    agent_id=agent_id, obj=new_entity
+                    agent_id=agent_id,
+                    obj=new_entity,
+                    language_code=language_code,
                 )
                 time.sleep(rate_limiter)
 

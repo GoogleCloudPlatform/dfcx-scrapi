@@ -130,12 +130,16 @@ class EntityTypes(ScrapiBase):
         return response
 
     def create_entity_type(
-        self, agent_id: str = None, obj: types.EntityType = None, **kwargs
+        self, agent_id: str = None, obj: types.EntityType = None,
+        language_code: str = None, **kwargs
     ) -> types.EntityType:
         """Creates a single Entity Type object resource.
 
         Args:
           - agent_id, the formatted CX Agent ID to create the object on
+          - obj, The CX EntityType object in proper format.
+          - language_code: Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
           - response, copy of the Entity Type object created
@@ -158,9 +162,19 @@ class EntityTypes(ScrapiBase):
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
         )
+
+        request = types.entity_type.CreateEntityTypeRequest()
+
+        request.parent = agent_id
+        request.entity_type = entity_type
+
+        if language_code:
+            request.language_code = language_code
+
         response = client.create_entity_type(
-            parent=agent_id, entity_type=entity_type
+            request=request
         )
+
         return response
 
     def update_entity_type(
