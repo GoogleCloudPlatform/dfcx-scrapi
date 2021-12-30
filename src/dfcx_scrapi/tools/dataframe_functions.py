@@ -615,6 +615,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         update_flag: Boolean = False,
         rate_limiter: int = 5,
         meta: Dict[str, str] = None,
+        language_code: str = None,
     ):
         """Create Intents in DFCX from a DataFrame.
 
@@ -632,6 +633,8 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
           update_flag: True to update_flag the intents in the agent
           rate_limiter: number of seconds to wait between calls
           meta: dictionary
+          language_code: Language code of the intents being uploaded. Reference:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
           new_intents: dictionary with intent display names as keys and the new
@@ -751,7 +754,8 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
             self.progress_bar(i, len(temp_intents))
             if update_flag:
                 time.sleep(rate_limiter)
-                self.intents.create_intent(agent_id=agent_id, obj=new_intent)
+                self.intents.create_intent(agent_id=agent_id, obj=new_intent,
+                    language_code=language_code)
 
         return new_intents
 
