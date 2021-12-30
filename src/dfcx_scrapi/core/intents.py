@@ -489,11 +489,11 @@ class Intents(ScrapiBase):
         obj: types.Intent = None,
         intent_dictionary: dict = None,
         language_code: str = None) -> types.Intent:
-        """Creates an intent in the agent from a protobuff or dictionary.
+        """Creates an Intent from a protobuf or dictionary.
 
         Args:
           agent_id, the formatted CX Agent ID to use
-          obj, (Optional) intent protobuf
+          obj, (Optional) Intent protobuf of types.Intent
           intent_dictionary, (optional) dictionary of the intent to pass in
             with structure
 
@@ -528,7 +528,6 @@ class Intents(ScrapiBase):
                 }
             ]
         }
-
 
         Returns:
           Intent protobuf object
