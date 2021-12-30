@@ -7,14 +7,36 @@ assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+### Is your proposal related to a problem?
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+<!--
+  Provide a clear and concise description of what the problem is.
+  For example, "I'm always frustrated when..."
+-->
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+(Write your answer here.)
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+### Describe the solution you'd like
+
+<!--
+  Provide a clear and concise description of what you want to happen.
+-->
+
+(Describe your proposed solution here.)
+
+### Describe alternatives you've considered
+
+<!--
+  Let us know about other solutions you've tried or researched.
+-->
+
+(Write your answer here.)
+
+### Additional context
+
+<!--
+  Is there anything else you can add about the proposal?
+  You might want to link to related issues here, if you haven't already.
+-->
+
+(Write your answer here.)
