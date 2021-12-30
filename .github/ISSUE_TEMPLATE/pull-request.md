@@ -29,8 +29,15 @@ Please delete options that are not relevant.
 Please describe the tests that you ran to verify your changes. Provide instructions and code snippets so we can reproduce. Please also list any relevant details for your test configuration (i.e. new dependencies).
 
 
-**Code Snippets**:
-
+### Code Snippets:
+```py
+# Ex:
+# from dfcx_scrapi.core.intents import Intents
+# i = Intents()
+# intents = i.list_intents()
+# for intent in intents:
+#   print(intent.display_name)
+```
 
 ## Checklist:
 
