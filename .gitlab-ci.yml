@@ -1,0 +1,100 @@
+# Only run pipelines for MRs and master.
+workflow:
+    rules:
+        - if: $CI_MERGE_REQUEST_IID
+        - if: $CI_COMMIT_TAG
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+        - when: never
+
+stages:
+    - lint
+    - test
+    # - build
+
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+# image: python:latest 
+image: python:3.9.7
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+before_script:
+    - python -V 
+    - python -m venv venv
+    - source venv/bin/activate
+    - pip install --upgrade pip
+
+# Job to run if there's nothing to lint or test.
+noop:
+    image: alpine:3.7
+    stage: lint
+    rules:
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+          when: never
+        - if: $CI_MERGE_REQUEST_IID
+          changes:
+            - '**/*.{py}'
+            - tests/**/*
+          when: never
+        - when: on_success
+    cache: {}
+    before_script: []
+    script: echo 'noop'
+
+linting:
+    stage: lint
+    needs: []
+    rules:
+        - changes:
+            - '**/*.{py}'
+            # - tests/license/license_check.sh
+          when: on_success
+        - when: never
+    script:
+        # - chmod +x tests/license/license_check.sh
+        # - tests/license/license_check.sh
+        - pip install --upgrade pip
+        - pip install pylint==2.8.3
+        - pylint --rcfile=.pylintrc --jobs=0 $(git ls-files '*.py')
+
+# Run unit tests. Always runs unit tests on the default branch.
+#
+# If this is a merge request, only run tests if certain files were modified.
+# Tests need to always be run on the default branch to update the test coverage
+# metric in GitLab.
+e2e_agents_test:
+    stage: test
+    needs: []
+    rules:
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+          when: on_success
+        - if: $CI_MERGE_REQUEST_IID
+          changes:
+            - '**/agents.{py}'
+            - tests/test_agents.{py}
+          when: on_success
+        - when: never
+    script:
+        # Run Tests
+        - pip install -r requirements.txt
+        - pytest tests --cov=tests --project=$SCRAPI_TEST_PROJECT --gcs_bucket=$SCRAPI_TEST_GCS_BUCKET --creds=$SCRAPI_CI_SA
+    coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
+    tags:
+      - k8s-dev-runner
+
+# building:
+#     stage: build
+#     rules:
+#         - changes:
+#             - '**/*.{py}'
+#             - setup.py
+#           when: on_success
+#     script:
+#         # Prep to build and deploy to Gitlab Package repo
+#         - pip install twine
+#         - pip install wheel
+#         - python setup.py sdist bdist_wheel
+#         - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*

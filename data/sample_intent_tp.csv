@@ -1,0 +1,6 @@
+display_name,text
+head_intent.order_pizza,I want to order a pizza
+head_intent.order_pizza,I\'d like a cheese pizza with pepporoni please!
+head_intent.order_pizza,A slice of cheese with extra basil
+head_intent.order_pizza,2 large thin crust extra pepp add olives
+head_intent.order_pizza,I need to place an order for 15 large cheese pizzas for a birthday party!
