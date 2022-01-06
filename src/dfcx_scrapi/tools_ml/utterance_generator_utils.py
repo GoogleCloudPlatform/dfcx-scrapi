@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import logging
 import string
 import pandas as pd
@@ -28,8 +29,11 @@ logging.basicConfig(
 
 
 class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
-    """Wrapper for utterance generator. Can be used to create
-    independent test sets and net-new training phrases for intents."""
+    """Wrapper for utterance generator that creates new training phrases.
+    
+    Can be used to create independent test sets and net-new training phrases 
+    for intents.
+    """
 
     def __init__(
         self,
@@ -54,7 +58,15 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
 
     @staticmethod
     def progress_bar(current, total, bar_length=50, type_="Progress"):
-        """Display progress bar for processing."""
+        """Display progress bar for processing.
+        
+        Args: 
+            current: (int) number for current iteration.
+            total: (int) number for total iterations.
+            bar_length: (int) number of spaces to make the progress bar,
+                default 50.
+            type_: (str) label for the bar, default 'Progress'.
+        """
         percent = float(current) * 100 / total
         arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
         spaces = " " * (bar_length - len(arrow))
@@ -66,12 +78,17 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
 
     @staticmethod
     def clean_string(string_raw):
-        """
-        Clean a string with the same steps for comparison whether the generated
+        """Cleans a string for comparison. 
+
+        Cleans a string with the same steps for comparison whether the generated
         ext exists or not, removes phrases which only differ by:
-            -case
-            -punctuation
-            -leading and trailing spaces
+            -case,
+            -punctuation, or
+            -leading and trailing spaces.
+        Args: 
+            string_raw: phrase to clean
+        Returns:
+            cleaned string
         """
         return " ".join(
             string_raw.translate(str.maketrans("", "", string.punctuation))
@@ -80,10 +97,19 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         )
 
     def _remove_training(self, synthetic_intent_set, existing_phrases: list):
-        """
+        """Removes generated phrases that already exist as intent TPs.
+
         Internal function for removing generated phrases which already
         exist within intents as training phrases. This is done after applying
         clean_string to both.
+
+        Args:
+            synthetic_intent_set: (pd.DataFrame) dataframe containing generated
+                training phrases.
+            existing_phrases: (list) list of phrases that already exist as 
+                intent training phrases.
+        Returns: 
+            a dataframe of new only generated phrases.
         """
         existing_phrases_cleaned = [
             self.clean_string(phrase) for phrase in existing_phrases
@@ -118,13 +144,21 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         training_phrases_one_intent: pd.DataFrame,
         synthetic_phrases_per_intent: int,
     ):
-        """
-        main internal function for generating new syntehtic phrases from
+        """Generates new synthetic phrases.
+
+        main internal function for generating new synthetic phrases from
         the existing training phrases within an intent. The synthetic phrases
-        are only as good as the training in the intent.
+        are only as good as the training phrases in the intent.
+
+        Args: 
+            training_phrases_one_intent: (pd.DataFrame) input phrases from 
+                which to generate new training phrases.
+            synthetic_phrases_per_intent: (int) number of phrases to generate.
+        Returns:
+            a DataFrame containing synthetic training phrases.
         """
         synthetic_instances = (
-            int(
+                int(
                 float(synthetic_phrases_per_intent)
                 / float(len(training_phrases_one_intent))
             )
@@ -166,9 +200,18 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         return synthetic_intent_set
 
     def _generate_phrases(self, training_phrases: pd.DataFrame, set_size: int):
-        """
+        """Generates phrases for all user-specified intents.
+
         Internal function for running _generate_phrases_intent for all the
-        user specified intents.
+        user-specified intents.
+
+        Args: 
+            training_phrases: (pd.DataFrame) df of training phrases for
+                multiple intents with an "intent" column.
+            set_size: (int) number of requested phrases to generate over all 
+                specified intents.
+        Returns:
+            pd.DataFrame of generated training phrases.
         """
         synthetic_set = pd.DataFrame()
         intents_list = list(set(training_phrases["intent"]))
@@ -195,46 +238,59 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
     def create_synthetic_set(
         self, agent_id: str, intent_subset: list, set_size: int = 100
     ):
-        """Create a test set where none of the utterances in the test set
-        are in the training of the existing phrases"""
+        """Creates a synthetic test set.
+        
+        Creates a test set where none of the utterances in the test set
+        are in the training of the existing phrases.
+
+        Args: 
+            agent_id: (str) ID of the DFCX agent.
+            intent_subset: (list) intents to generate a test set for.
+            set_size: (int) number of synthetic phrases to generate. 
+                Default 100. 
+        Returns:
+            a DataFrame containing synthetic test set utterances.
+        """
         training_phrases = self.intents.bulk_intent_to_df(
             agent_id=agent_id, intent_subset=intent_subset
         )
-        training_phrases = training_phrases.copy().rename(columns={"tp": "utterance"})
+        training_phrases = training_phrases.copy().rename(
+            columns={"tp": "utterance"})
 
         test_set = self._generate_phrases(training_phrases, set_size)
         test_set = test_set[:set_size]
         return test_set.reset_index(drop=True)
 
-    def create_test_set(self, agent_id: str, intent_subset: list, set_size: int = 100):
-        """
-        Create a test set for a given list of intents. The phrases in this set will not
-        be exact string match phrases which exist in the training phrases but will be close
-        semantically.This set is automatically labeled by the intent whose training was
-        used to generate the new phrase. This can be used to run through the core.conversations
-        run_intent_detection function. You may need to specify a flow_display_name and
-        page_display_name in the dataframe to run the set at the correct location.
-
+    def create_test_set(
+        self, agent_id: str, intent_subset: list, set_size: int = 100
+    ):
+        """Creates a test set for a given list of intents. 
+        
+        The phrases in this set will not be exact string match phrases which
+        exist in the training phrases but will be close semantically. This set
+        is automatically labeled by the intent whose training was used to
+        generate the new phrase. This can be used to run through the
+        core.conversations run_intent_detection function. You may need to
+        specify a flow_display_name and page_display_name in the dataframe to
+        run the set at the correct location.
 
         Args:
-            agent_id: (string) name parameter of the agent to pull intents from - full path to
-                agent
-            intent_subset: (list) display names of the intents to create a test for, base
-                phrases come from the training in the
+            agent_id: (string) name parameter of the agent to pull intents from
+                full path to agent
+            intent_subset: (list) display names of the intents to create a test
+                for, base phrases come from the training in the intent.
+            set_size: (int) overall target size of the test set to create, may
+                be less depending if new independent phrases can be generated
+                from the data. The function tries to get even entries per
                 intent.
-            set_size: (int) overall target size of the test set to create, may be less
-                depending if new independent phrases can be generated from the data.
-                The function tries to get even entries per intent.
-
-
-
 
         Returns:
-          test_set: (DataFrame) a pandas dataframe consisting of rows of the utterance and
-          the intent which it was generated from. This generated from intent can be used as
-          the true label.
+          test_set: (pd.DataFrame) a pandas dataframe consisting of rows of the
+          utterance and the intent which it was generated from. This generated
+          from intent can be used as the true label.
         """
-        synthetic_set = self.create_synthetic_set(agent_id, intent_subset, set_size)
+        synthetic_set = self.create_synthetic_set(agent_id, intent_subset, 
+            set_size)
         test_set = (
             synthetic_set.copy()[["synethic_phrases", "intent"]]
             .rename(columns={"synethic_phrases": "utterance"})
@@ -245,20 +301,21 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
     def create_new_training_phrases(
         self, agent_id: str, intent_subset: list, new_phrases: int = 100
     ):
-        """
-        Create a new training phrasese for a given list of intents. The phrases in
-        this set will not be exact string match phrases which exist in the training
-        phrases but will be close semantically. This can be used to run through the
-        core.intents modify_training_phrase_df function to create a new training phrase
-        dataframe. This and a parameters dataframe can be run through tools.dataframe_functions
-        bulk_update_intents_from_dataframe function to make the updates in a dialogflow agent.
-        The new_training output dataframe can be used as the input actions dataframe in the
-        bulk_update_intents_from_dataframe function.
-
+        """ Create a new training phrasese for a given list of intents. 
+        
+        The phrases in this set will not be exact string match phrases which
+        exist in the training phrases but will be close semantically. This can
+        be used to run through the core.intents modify_training_phrase_df
+        function to create a new training phrase dataframe. This and a
+        parameters dataframe can be run through tools.dataframe_functions
+        bulk_update_intents_from_dataframe function to make the updates in a
+        dialogflow agent. The new_training output dataframe can be used as the
+        input actions dataframe in the bulk_update_intents_from_dataframe
+        function.
 
         Args:
             agent_id: (string) name parameter of the agent to pull intents from - full path to
-                agent
+                agent.
             intent_subset: (list) display names of the intents to create a new phrases for, base
                 phrases come from the training in the intent.
             new_phrases: (int) overall target size of new phrases to create, may be less depending
