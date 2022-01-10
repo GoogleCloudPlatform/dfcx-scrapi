@@ -83,7 +83,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         )
 
     @staticmethod
-    def clean_string(string_raw: str):
+    def clean_string(string_raw: str) -> str:
         """Cleans a string for comparison. 
 
         Cleans a string with the same steps for comparison whether the generated
@@ -106,7 +106,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         self, 
         synthetic_intent_dataset: pd.DataFrame, 
         existing_phrases: List[str]
-    ):
+    ) -> pd.DataFrame:
         """Removes generated phrases that already exist as intent TPs.
 
         Internal function for removing generated phrases which already
@@ -155,7 +155,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         self,
         training_phrases_one_intent: pd.DataFrame,
         synthetic_phrases_per_intent: int,
-    ):
+    ) -> pd.DataFrame:
         """Generates new synthetic phrases.
 
         main internal function for generating new synthetic phrases from
@@ -214,7 +214,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         self, 
         training_phrases: pd.DataFrame, 
         dataset_size: int
-    ):
+    ) -> pd.DataFrame:
         """Generates phrases for all user-specified intents.
 
         Internal function for running _generate_phrases_intent for all the
@@ -226,7 +226,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             dataset_size: number of requested phrases to generate over all 
                 specified intents.
         Returns:
-            pd.DataFrame of generated training phrases.
+            a DataFrame of generated training phrases.
         """
         synthetic_dataset = pd.DataFrame()
         intents_list = list(set(training_phrases["intent"]))
@@ -252,7 +252,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         agent_id: str, 
         intent_subset: List[str], 
         dataset_size: int = 100
-    ):
+    ) -> pd.DataFrame:
         """Creates a synthetic test dataset.
         
         Creates a test dataset where none of the utterances in the test dataset
@@ -343,8 +343,8 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
                 the data. The function tries to get even entries per intent.
 
         Returns:
-            new_training: a pandas dataframe consisting of rows of the new
-                training phrase,the intent to add to and the add action.
+            a pandas dataframe consisting of rows of the new training phrase,the
+                intent to add to and the add action.
         """
         synthetic_dataset = self.create_synthetic_dataset(
             agent_id, intent_subset, new_phrases
