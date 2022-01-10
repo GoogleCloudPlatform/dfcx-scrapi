@@ -72,50 +72,6 @@ class GoogleSheetsConnector:
         g_sheets = self.client.open(sheet_name)
         self.client.del_spreadsheet(g_sheets.id)
 
-    def sheets_to_dataframe(self, sheet_name: str, worksheet_name: str):
-        """Moves Intent/TP data from Google Sheets to a DataFrame.
-        
-        Args:
-            sheet_name: name of the sheets object to pull data from.
-            worksheet_name: name of the worksheet/tab to pull data from.
-
-        Returns:
-            pandas dataframe containing the data in the g-sheet and worksheet specified
-        """
-        g_sheets = self.client.open(sheet_name)
-        sheet = g_sheets.worksheet(worksheet_name)
-        data_pull = sheet.get_all_values()
-        data = pd.DataFrame(columns=data_pull[0], data=data_pull[1:])
-        return data
-
-    def dataframe_to_existing_sheet(
-        self, sheet_name: str, worksheet_name: str, dataframe: pd.DataFrame
-    ):
-        """Moves Intent/TP data from a DataFrame to Google Sheets.
-
-        Args:
-            sheet_name: name of the sheets object to push data to.
-            worksheet_name: name of the worksheet/tab object to push data to.
-            dataframe: pandas dataframe to push to the sheet and worksheet.
-
-        """
-        g_sheets = self.client.open(sheet_name)
-        worksheet = g_sheets.worksheet(worksheet_name)
-        set_with_dataframe(worksheet, dataframe)
-
-    def list_permissions(self, sheet_name: str):
-        """Lists existing permissions on a sheet.
-
-        Args:
-            sheet_name: name of the sheet to pull existing permissions from.
-
-        Returns:
-            list of permissions on the sheet object.
-        """
-        g_sheets = self.client.open(sheet_name)
-        permissions = g_sheets.list_permissions()
-        return permissions
-
     def share_sheet(
         self,
         sheet_name: str,
@@ -167,6 +123,19 @@ class GoogleSheetsConnector:
         worksheet = g_sheets.worksheet(title=worksheet_name)
         g_sheets.del_worksheet(worksheet=worksheet)
 
+    def list_permissions(self, sheet_name: str):
+        """Lists existing permissions on a sheet.
+
+        Args:
+            sheet_name: name of the sheet to pull existing permissions from.
+
+        Returns:
+            list of permissions on the sheet object.
+        """
+        g_sheets = self.client.open(sheet_name)
+        permissions = g_sheets.list_permissions()
+        return permissions
+    
     def dataframe_to_new_sheet(
         self,
         sheet_name: str,
@@ -195,3 +164,35 @@ class GoogleSheetsConnector:
             time.sleep(1)
         logging.info("Added data to %s - %s shared with emails: %s",
                      sheet_name, worksheet_name, emails)
+    
+    def dataframe_to_existing_sheet(
+        self, sheet_name: str, worksheet_name: str, dataframe: pd.DataFrame
+    ):
+        """Moves Intent/TP data from a DataFrame to Google Sheets.
+
+        Args:
+            sheet_name: name of the sheets object to push data to.
+            worksheet_name: name of the worksheet/tab object to push data to.
+            dataframe: pandas dataframe to push to the sheet and worksheet.
+
+        """
+        g_sheets = self.client.open(sheet_name)
+        worksheet = g_sheets.worksheet(worksheet_name)
+        set_with_dataframe(worksheet, dataframe)
+
+    def sheets_to_dataframe(self, sheet_name: str, worksheet_name: str):
+        """Moves Intent/TP data from Google Sheets to a DataFrame.
+        
+        Args:
+            sheet_name: name of the sheets object to pull data from.
+            worksheet_name: name of the worksheet/tab to pull data from.
+
+        Returns:
+            pandas dataframe containing the data in the g-sheet and worksheet specified
+        """
+        g_sheets = self.client.open(sheet_name)
+        sheet = g_sheets.worksheet(worksheet_name)
+        data_pull = sheet.get_all_values()
+        data = pd.DataFrame(columns=data_pull[0], data=data_pull[1:])
+        return data
+
