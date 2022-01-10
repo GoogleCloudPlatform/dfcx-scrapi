@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import logging
 import time
 
@@ -23,8 +24,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 
 
-class GoogleDriveConnector:
-    """Class for google sheets operations"""
+class GoogleSheetsConnector:
+    """Class for Google Sheets operations"""
 
     global_scopes = [
         "https://spreadsheets.google.com/feeds",
@@ -52,32 +53,34 @@ class GoogleDriveConnector:
         self.client = gspread.authorize(creds)
 
     def create_google_sheet(self, sheet_name: str):
-        """Create new google sheet object, this sheet is created
-        under service account drive account and must be shared to an account
-        to view it from that account.
+        """Creates new Google Sheet object. 
+        
+        This sheet is created under service account drive account and must be
+        shared to an account to view it from that account.
 
         Args:
-          sheet_name: name of the sheets object to create.
+            sheet_name: name of the sheets object to create.
         """
         self.client.create(title=sheet_name)
 
     def delete_google_sheet(self, sheet_name: str):
-        """Delete a google sheet object
+        """Deletes a Google Sheet object.
 
         Args:
-          sheet_name: name of the sheets object to delete.
+            sheet_name: name of the sheets object to delete.
         """
         g_sheets = self.client.open(sheet_name)
         self.client.del_spreadsheet(g_sheets.id)
 
     def sheets_to_dataframe(self, sheet_name: str, worksheet_name: str):
-        """Move Intent/TP data from Google Sheets to a DataFrame.
+        """Moves Intent/TP data from Google Sheets to a DataFrame.
+        
         Args:
-          sheet_name: name of the sheets object to pull data from.
-          worksheet_name: name of the worksheet in the sheets objec to pull data from.
+            sheet_name: name of the sheets object to pull data from.
+            worksheet_name: name of the worksheet/tab to pull data from.
 
         Returns:
-          data: pandas dataframe containing the data in the g-sheet and worksheet specified
+            pandas dataframe containing the data in the g-sheet and worksheet specified
         """
         g_sheets = self.client.open(sheet_name)
         sheet = g_sheets.worksheet(worksheet_name)
@@ -88,12 +91,12 @@ class GoogleDriveConnector:
     def dataframe_to_existing_sheet(
         self, sheet_name: str, worksheet_name: str, dataframe: pd.DataFrame
     ):
-        """Move Intent/TP data from a DataFrame to Google Sheets.
+        """Moves Intent/TP data from a DataFrame to Google Sheets.
 
         Args:
-          sheet_name: name of the sheets object to push data to.
-          worksheet_name: name of the worksheet in the sheets objec to push data to.
-          dataframe: pandas dataframe to push to the sheet and worksheet.
+            sheet_name: name of the sheets object to push data to.
+            worksheet_name: name of the worksheet/tab object to push data to.
+            dataframe: pandas dataframe to push to the sheet and worksheet.
 
         """
         g_sheets = self.client.open(sheet_name)
@@ -101,13 +104,13 @@ class GoogleDriveConnector:
         set_with_dataframe(worksheet, dataframe)
 
     def list_permissions(self, sheet_name: str):
-        """List existing permissions on a sheet
+        """Lists existing permissions on a sheet.
 
         Args:
-          sheet_name: name of the sheets object to pull existing permissions from.
+            sheet_name: name of the sheet to pull existing permissions from.
 
         Returns:
-          permissions: list of permissions on the sheet object.
+            list of permissions on the sheet object.
         """
         g_sheets = self.client.open(sheet_name)
         permissions = g_sheets.list_permissions()
@@ -119,20 +122,18 @@ class GoogleDriveConnector:
         email: str,
         role: str = "writer",
         perm_type: str = "user",
-        notify: bool = True,
+        notify: bool = True
     ):
-        """Share an existing google sheet with emails.
+        """Shares an existing Google Sheet with emails.
 
         Args:
-          sheet_name: name of the sheets object share
-          email: email to share the sheet with.
-          role: can be writer, reader or owner
-          perm_type: type of permissoin giving
-              user
-              group
-              domain
-              anyone
-          notify: true to notify email that the sheets object has been shared.
+            sheet_name: name of the sheet to share.
+            email: email to share the sheet with.
+            role: role to assign when sharing in {owner, writer, reader},
+                default writer.
+            perm_type: permission type to give {user, group, domain, anyone},
+                default user.
+            notify: true to send a share notification email, default True.
         """
         g_sheets = self.client.open(sheet_name)
         g_sheets.share(email, role=role, perm_type=perm_type, notify=notify)
@@ -142,25 +143,25 @@ class GoogleDriveConnector:
         sheet_name: str,
         worksheet_name: str,
         rows: int = 100,
-        cols: int = 26,
+        cols: int = 26
     ):
-        """Add worksheet to an existing google sheet.
+        """Adds worksheet to an existing Google Sheet.
 
         Args:
-          sheet_name: name of the sheets object
-          worksheet_name: name of worksheet in the sheets object to add
-          rows: rows to add to the sheet
-          column: columns to add to the sheet
+            sheet_name: name of the sheets object.
+            worksheet_name: name of worksheet/tab to add.
+            rows: number of rows to enable for the worksheet, default 100.
+            column: number of columns to enable for the worksheet, default 26.
         """
         g_sheets = self.client.open(sheet_name)
         g_sheets.add_worksheet(title=worksheet_name, rows=rows, cols=cols)
 
     def delete_worksheet(self, sheet_name: str, worksheet_name: str):
-        """Delete worksheet from an existing google sheet.
+        """Deletes a worksheet from an existing Google Sheet.
 
         Args:
-          sheet_name: name of the sheets object
-          worksheet_name: name of worksheet in the sheets object to delete
+          sheet_name: name of the sheets object.
+          worksheet_name: name of worksheet in the sheets object to delete.
         """
         g_sheets = self.client.open(sheet_name)
         worksheet = g_sheets.worksheet(title=worksheet_name)
@@ -173,13 +174,13 @@ class GoogleDriveConnector:
         dataframe: pd.DataFrame,
         emails: list,
     ):
-        """Create a new google sheet and worksheet, share it with specified
-        emails and add data to it.
+        """Exports data to a new Google Sheet and shares it.
+
         Args:
-          sheet_name: name of the sheets object
-          worksheet_name: name of worksheet in the sheets object to add data to
-          dataframe: pandas dataframe of data to add to the worksheet
-          emails: list of emails to share the google sheet with.
+          sheet_name: name of the sheets object.
+          worksheet_name: name of worksheet/tab to add data to.
+          dataframe: data to add to the worksheet.
+          emails: list of emails to share the Google Sheet with.
         """
         self.create_google_sheet(sheet_name)
         self.add_worksheet(
