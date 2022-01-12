@@ -357,3 +357,4 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         )
         new_training.insert(len(new_training.columns), "action", "add")
         return new_training
+
