@@ -87,7 +87,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         """Cleans a string for comparison. 
 
         Cleans a string with the same steps for comparison whether the generated
-        ext exists or not, removes phrases which only differ by:
+        text exists or not, removes phrases which only differ by:
             -case,
             -punctuation, or
             -leading and trailing spaces.
@@ -127,7 +127,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         synthetic_intent_dataset.insert(
             0,
             "cleaned_synthetic_phrase",
-            synthetic_intent_dataset["synethic_phrases"]
+            synthetic_intent_dataset["synthetic_phrases"]
             .apply(self.clean_string),
         )
         synthetic_intent_dataset = synthetic_intent_dataset.drop_duplicates(
@@ -309,8 +309,8 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         synthetic_dataset = self.create_synthetic_dataset(agent_id, intent_subset, 
             dataset_size)
         test_dataset = (
-            synthetic_dataset.copy()[["synethic_phrases", "intent"]]
-            .rename(columns={"synethic_phrases": "utterance"})
+            synthetic_dataset.copy()[["synthetic_phrases", "intent"]]
+            .rename(columns={"synthetic_phrases": "utterance"})
             .reset_index(drop=True)
         )
         return test_dataset
@@ -321,7 +321,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         intent_subset: List[str], 
         new_phrases: int = 100
     ) -> pd.DataFrame:
-        """ Create a new training phrasese for a given list of intents. 
+        """ Creates new training phrases for a given list of intents. 
         
         The phrases in this set will not be exact string match phrases which
         exist in the training phrases but will be close semantically. This can
@@ -350,9 +350,9 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             agent_id, intent_subset, new_phrases
         )
         new_training = (
-            synthetic_dataset.copy()[["intent", "synethic_phrases"]]
+            synthetic_dataset.copy()[["intent", "synthetic_phrases"]]
             .rename(columns={
-                "intent": "display_name", "synethic_phrases": "phrase"})
+                "intent": "display_name", "synthetic_phrases": "phrase"})
             .reset_index(drop=True)
         )
         new_training.insert(len(new_training.columns), "action", "add")
