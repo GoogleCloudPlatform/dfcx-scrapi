@@ -216,11 +216,8 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         Returns:
             cleaned string
         """
-        return " ".join(
-            string_raw.translate(str.maketrans("", "", string.punctuation))
-            .lower()
-            .split()
-        )
+        return string_raw.translate(str.maketrans("", "", string.punctuation)
+            ).lower().strip()
 
     def _remove_training(
         self, 
@@ -318,9 +315,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
                 >= (synthetic_phrases_per_intent - 1)
             ):
                 break
-            synthetic_intent_dataset["synthetic_instances"] = (
-                synthetic_intent_dataset["synthetic_instances"] + 1
-            )
+            synthetic_intent_dataset["synthetic_instances"] += 1
             attempts += 1
             if attempts > 3:
                 break
