@@ -216,11 +216,8 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         Returns:
             cleaned string
         """
-        return " ".join(
-            string_raw.translate(str.maketrans("", "", string.punctuation))
-            .lower()
-            .split()
-        )
+        return string_raw.translate(str.maketrans("", "", string.punctuation)
+            ).lower().strip()
 
     def _remove_training(
         self, 
@@ -294,11 +291,8 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         existing_phrases = list(set(training_phrases_one_intent["utterance"]))
         if synthetic_instances == 1:
             training_phrases_one_intent = training_phrases_one_intent.sample(
-                frac=1
-            ).reset_index(drop=True)
-            training_phrases_one_intent = training_phrases_one_intent.iloc[
-                :synthetic_phrases_per_intent
-            ]
+                n=synthetic_phrases_per_intent, ignore_index=True
+            )
 
         attempts = 0
         while True:
@@ -318,17 +312,14 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
                 >= (synthetic_phrases_per_intent - 1)
             ):
                 break
-            synthetic_intent_dataset["synthetic_instances"] = (
-                synthetic_intent_dataset["synthetic_instances"] + 1
-            )
+            synthetic_intent_dataset["synthetic_instances"] += 1
             attempts += 1
             if attempts > 3:
                 break
 
-        synthetic_intent_dataset = synthetic_intent_dataset.sample(frac=1).iloc[
-            :synthetic_phrases_per_intent
-        ]
-        return synthetic_intent_dataset
+        return synthetic_intent_dataset.sample(
+            n=synthetic_phrases_per_intent, ignore_index=True
+        )
 
     def _generate_phrases(
         self, 
