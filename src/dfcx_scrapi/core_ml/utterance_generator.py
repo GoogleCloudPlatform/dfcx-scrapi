@@ -71,7 +71,7 @@ class UtteranceGenerator:
 
         Args:
           origin_utterances: dataframe specifying the phrases
-          to generate syntheic phrases from
+          to generate synthetic phrases from
               Columns:
                   utterance: utterance to generate synthetic phrases from
                   synthetic_instances (optional): if not set for each phrase
@@ -111,7 +111,7 @@ class UtteranceGenerator:
                 temperature=temperature,
                 truncation=truncation,
             )
-            iter_frame["synethic_phrases"] = synthetic_phrases
+            iter_frame["synthetic_phrases"] = synthetic_phrases
             for col in origin_utterances.columns:
                 iter_frame[col] = row[col]
             synthetic_phrases_df = synthetic_phrases_df.append(iter_frame)
@@ -119,7 +119,7 @@ class UtteranceGenerator:
                 "id",
                 "synthetic_instances",
                 "utterance",
-                "synethic_phrases",
+                "synthetic_phrases",
             ]
             remaineder_cols = list(
                 set(origin_utterances.columns) - set(ordered_cols)
