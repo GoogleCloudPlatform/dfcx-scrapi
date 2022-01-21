@@ -57,6 +57,126 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         self.utterance_generator = utterance_generator.UtteranceGenerator()
         logging.info("utterance generator utils setup")
 
+    def create_synthetic_dataset(
+        self, 
+        agent_id: str, 
+        intent_subset: List[str], 
+        dataset_size: int = 100
+    ) -> pd.DataFrame:
+        """Creates a synthetic test dataset.
+        
+        Creates a test dataset where none of the utterances in the test dataset
+        are in the training of the existing phrases.
+
+        Args: 
+            agent_id: ID of the DFCX agent.
+            intent_subset: intents to generate a test dataset for.
+            dataset_size: number of synthetic phrases to generate, default 100.
+        Returns:
+            a DataFrame containing synthetic test dataset utterances, columns:
+                id: IDs of original utterances.
+                synthetic instances: number of synthetic phrases per original 
+                    phrase. 
+                utterance: original utterances.
+                synthetic_phrases: generated phrases.
+                intent: intent the utterance is from.
+        """
+        training_phrases = self.intents.bulk_intent_to_df(
+            agent_id=agent_id, intent_subset=intent_subset
+        )
+        training_phrases = training_phrases.copy().rename(
+            columns={"tp": "utterance"})
+
+        test_dataset = self._generate_phrases(training_phrases, dataset_size)
+        test_dataset = test_dataset[:dataset_size]
+        return test_dataset.reset_index(drop=True)
+
+    def create_test_dataset(
+        self, 
+        agent_id: str, 
+        intent_subset: List[str], 
+        dataset_size: int = 100
+    ) -> pd.DataFrame:
+        """Creates a test dataset for a given list of intents. 
+        
+        The phrases in this dataset will not be exact string match phrases which
+        exist in the training phrases but will be close semantically. This set
+        is automatically labeled by the intent whose training was used to
+        generate the new phrase. This can be used to run through the
+        core.conversations run_intent_detection function. You may need to
+        specify a flow_display_name and page_display_name in the dataframe to
+        run the set at the correct location.
+
+        Args:
+            agent_id: name parameter of the agent to pull intents from
+                full path to agent
+            intent_subset: display names of the intents to create a test
+                for, base phrases come from the training in the intent.
+            dataset_size: overall target size of the test set to create, may
+                be less depending if new independent phrases can be generated
+                from the data. The function tries to get even entries per
+                intent.
+
+        Returns:
+            Dataframe with columns:
+                utterance: synthesized phrases.
+                intent: intent the utterance was generated from, 
+                    also true label.
+        """
+        synthetic_dataset = self.create_synthetic_dataset(agent_id, intent_subset, 
+            dataset_size)
+        test_dataset = (
+            synthetic_dataset.copy()[["synthetic_phrases", "intent"]]
+            .rename(columns={"synthetic_phrases": "utterance"})
+            .reset_index(drop=True)
+        )
+        return test_dataset
+
+    def create_new_training_phrases(
+        self, 
+        agent_id: str, 
+        intent_subset: List[str], 
+        new_phrases: int = 100
+    ) -> pd.DataFrame:
+        """ Creates new training phrases for a given list of intents. 
+        
+        The phrases in this set will not be exact string match phrases which
+        exist in the training phrases but will be close semantically. This can
+        be used to run through the core.intents modify_training_phrase_df
+        function to create a new training phrase dataframe. This and a
+        parameters dataframe can be run through tools.dataframe_functions
+        bulk_update_intents_from_dataframe function to make the updates in a
+        dialogflow agent. The new_training output dataframe can be used as the
+        input actions dataframe in the bulk_update_intents_from_dataframe
+        function.
+
+        Args:
+            agent_id: name parameter of the agent to pull intents from - full
+                path to agent.
+            intent_subset: display names of the intents to create a new phrases
+                for, base phrases come from the training in the intent.
+            new_phrases: overall target size of new phrases to create, may be
+                less depending if new independent phrases can be generated from
+                the data. The function tries to get even entries per intent.
+
+        Returns:
+            Dataframe with columns:
+                display_name: intent to add the phrase to.
+                phrase: new phrase. 
+                action: "add".
+        """
+        synthetic_dataset = self.create_synthetic_dataset(
+            agent_id, intent_subset, new_phrases
+        )
+        new_training = (
+            synthetic_dataset.copy()[["intent", "synthetic_phrases"]]
+            .rename(columns={
+                "intent": "display_name", "synthetic_phrases": "phrase"})
+            .reset_index(drop=True)
+        )
+        new_training.insert(len(new_training.columns), "action", "add")
+        return new_training
+
     @staticmethod
     def progress_bar(
         current: int, 
@@ -246,115 +366,4 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             self.progress_bar(i, len(intents_list))
 
         return synthetic_dataset
-
-    def create_synthetic_dataset(
-        self, 
-        agent_id: str, 
-        intent_subset: List[str], 
-        dataset_size: int = 100
-    ) -> pd.DataFrame:
-        """Creates a synthetic test dataset.
-        
-        Creates a test dataset where none of the utterances in the test dataset
-        are in the training of the existing phrases.
-
-        Args: 
-            agent_id: ID of the DFCX agent.
-            intent_subset: intents to generate a test dataset for.
-            dataset_size: number of synthetic phrases to generate, default 100.
-        Returns:
-            a DataFrame containing synthetic test dataset utterances.
-        """
-        training_phrases = self.intents.bulk_intent_to_df(
-            agent_id=agent_id, intent_subset=intent_subset
-        )
-        training_phrases = training_phrases.copy().rename(
-            columns={"tp": "utterance"})
-
-        test_dataset = self._generate_phrases(training_phrases, dataset_size)
-        test_dataset = test_dataset[:dataset_size]
-        return test_dataset.reset_index(drop=True)
-
-    def create_test_dataset(
-        self, 
-        agent_id: str, 
-        intent_subset: List[str], 
-        dataset_size: int = 100
-    ) -> pd.DataFrame:
-        """Creates a test dataset for a given list of intents. 
-        
-        The phrases in this dataset will not be exact string match phrases which
-        exist in the training phrases but will be close semantically. This set
-        is automatically labeled by the intent whose training was used to
-        generate the new phrase. This can be used to run through the
-        core.conversations run_intent_detection function. You may need to
-        specify a flow_display_name and page_display_name in the dataframe to
-        run the set at the correct location.
-
-        Args:
-            agent_id: name parameter of the agent to pull intents from
-                full path to agent
-            intent_subset: display names of the intents to create a test
-                for, base phrases come from the training in the intent.
-            dataset_size: overall target size of the test set to create, may
-                be less depending if new independent phrases can be generated
-                from the data. The function tries to get even entries per
-                intent.
-
-        Returns:
-            dataframe consisting of rows of the utterance and the intent which
-            it was generated from. This generated from intent can be used as the
-            true label.
-        """
-        synthetic_dataset = self.create_synthetic_dataset(agent_id, intent_subset, 
-            dataset_size)
-        test_dataset = (
-            synthetic_dataset.copy()[["synthetic_phrases", "intent"]]
-            .rename(columns={"synthetic_phrases": "utterance"})
-            .reset_index(drop=True)
-        )
-        return test_dataset
-
-    def create_new_training_phrases(
-        self, 
-        agent_id: str, 
-        intent_subset: List[str], 
-        new_phrases: int = 100
-    ) -> pd.DataFrame:
-        """ Creates new training phrases for a given list of intents. 
-        
-        The phrases in this set will not be exact string match phrases which
-        exist in the training phrases but will be close semantically. This can
-        be used to run through the core.intents modify_training_phrase_df
-        function to create a new training phrase dataframe. This and a
-        parameters dataframe can be run through tools.dataframe_functions
-        bulk_update_intents_from_dataframe function to make the updates in a
-        dialogflow agent. The new_training output dataframe can be used as the
-        input actions dataframe in the bulk_update_intents_from_dataframe
-        function.
-
-        Args:
-            agent_id: name parameter of the agent to pull intents from - full
-                path to agent.
-            intent_subset: display names of the intents to create a new phrases
-                for, base phrases come from the training in the intent.
-            new_phrases: overall target size of new phrases to create, may be
-                less depending if new independent phrases can be generated from
-                the data. The function tries to get even entries per intent.
-
-        Returns:
-            a pandas dataframe consisting of rows of the new training phrase,the
-                intent to add to and the add action.
-        """
-        synthetic_dataset = self.create_synthetic_dataset(
-            agent_id, intent_subset, new_phrases
-        )
-        new_training = (
-            synthetic_dataset.copy()[["intent", "synthetic_phrases"]]
-            .rename(columns={
-                "intent": "display_name", "synthetic_phrases": "phrase"})
-            .reset_index(drop=True)
-        )
-        new_training.insert(len(new_training.columns), "action", "add")
-        return new_training
 
