@@ -121,8 +121,8 @@ class UtteranceGenerator:
                 "utterance",
                 "synthetic_phrases",
             ]
-            remaineder_cols = list(
+            remainder_cols = list(
                 set(origin_utterances.columns) - set(ordered_cols)
             )
-            column_ordering = ordered_cols + remaineder_cols
+            column_ordering = ordered_cols + remainder_cols
         return synthetic_phrases_df[column_ordering]
