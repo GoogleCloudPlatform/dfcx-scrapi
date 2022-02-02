@@ -58,7 +58,7 @@ class UtteranceGeneratorUtils(ScrapiBase):
         logging.info("utterance generator utils setup")
 
     @staticmethod
-    def progress_bar(
+    def _progress_bar(
         current: int,
         total: int,
         bar_length: int = 50,
@@ -80,7 +80,7 @@ class UtteranceGeneratorUtils(ScrapiBase):
           end="\r")
 
     @staticmethod
-    def clean_string(string_raw: str) -> str:
+    def _clean_string(string_raw: str) -> str:
         """Cleans a string for comparison.
 
         Cleans a string with the same steps for comparison whether the generated
@@ -116,13 +116,13 @@ class UtteranceGeneratorUtils(ScrapiBase):
             a dataframe of new only generated phrases.
         """
         existing_phrases_cleaned = [
-            self.clean_string(phrase) for phrase in existing_phrases
+            self._clean_string(phrase) for phrase in existing_phrases
         ]
         synthetic_intent_dataset.insert(
             0,
             "cleaned_synthetic_phrase",
             synthetic_intent_dataset["synthetic_phrases"]
-            .apply(self.clean_string),
+            .apply(self._clean_string),
         )
         synthetic_intent_dataset = synthetic_intent_dataset.drop_duplicates(
             subset=["training_phrase", "cleaned_synthetic_phrase"]
@@ -236,7 +236,7 @@ class UtteranceGeneratorUtils(ScrapiBase):
             )
             synthetic_dataset = synthetic_dataset.append(intent_set)
             i += 1
-            self.progress_bar(i, len(intents_list))
+            self._progress_bar(i, len(intents_list))
 
         return synthetic_dataset
 
