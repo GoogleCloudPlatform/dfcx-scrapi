@@ -102,7 +102,7 @@ class UtteranceGenerator:
             iter_frame = pd.DataFrame()
             num_beams = int(row["synthetic_instances"])
             num_return_sequences = int(row["synthetic_instances"])
-            utterance = row["utterance"]
+            utterance = row["training_phrase"]
             synthetic_phrases = self.get_response(
                 utterance,
                 num_return_sequences,
@@ -118,7 +118,7 @@ class UtteranceGenerator:
             ordered_cols = [
                 "id",
                 "synthetic_instances",
-                "utterance",
+                "training_phrase",
                 "synthetic_phrases",
             ]
             remainder_cols = list(
