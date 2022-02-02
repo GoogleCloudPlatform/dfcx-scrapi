@@ -326,15 +326,14 @@ class UtteranceGeneratorUtils(ScrapiBase):
     ) -> pd.DataFrame:
         """Creates new training phrases for a given list of intents.
 
-        The phrases in this set will not be exact string match phrases which
-        exist in the training phrases but will be close semantically. This can
-        be used to run through the core.intents modify_training_phrase_df
-        function to create a new training phrase dataframe. This and a
-        parameters dataframe can be run through tools.dataframe_functions
-        bulk_update_intents_from_dataframe function to make the updates in a
-        dialogflow agent. The new_training output dataframe can be used as the
-        input actions dataframe in the bulk_update_intents_from_dataframe
-        function.
+        Generates phrases that are semantically similar to the input training
+        phrases and returns them in a dataframe. The resulting dataframe can
+        be used with the core.intents.modify_training_phrase_df method to
+        create the appropriately formatted training phrase dataframe that will
+        be ready to update to a CX agent. Using this newly formatted dataframe
+        (and optionally a Parameters dataframe), the
+        tools.dataframe_functions.bulk_update_intents_from_dataframe method can
+        be used to make the final updates to the CX agent.
 
         Args:
             agent_id: name parameter of the agent to pull intents from - full
