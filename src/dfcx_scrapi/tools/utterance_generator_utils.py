@@ -355,9 +355,8 @@ class UtteranceGeneratorUtils(ScrapiBase):
             agent_id, intent_subset, new_phrases
         )
         new_training = (
-            synthetic_dataset.copy()[["intent", "synthetic_phrases"]]
-            .rename(columns={
-                "intent": "display_name", "synthetic_phrases": "phrase"})
+            synthetic_dataset.copy()[["display_name", "synthetic_phrases"]]
+            .rename(columns={"synthetic_phrases": "phrase"})
             .reset_index(drop=True)
         )
         new_training.insert(len(new_training.columns), "action", "add")
