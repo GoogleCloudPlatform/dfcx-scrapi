@@ -125,7 +125,7 @@ class UtteranceGeneratorUtils(ScrapiBase):
             .apply(self.clean_string),
         )
         synthetic_intent_dataset = synthetic_intent_dataset.drop_duplicates(
-            subset=["utterance", "cleaned_synthetic_phrase"]
+            subset=["training_phrase", "cleaned_synthetic_phrase"]
         )
 
         synthetic_intent_dataset.insert(
@@ -165,7 +165,8 @@ class UtteranceGeneratorUtils(ScrapiBase):
         """
         synthetic_instances = ( synthetic_phrases_per_intent
                 // len(training_phrases_one_intent) ) + 1
-        existing_phrases = list(set(training_phrases_one_intent["utterance"]))
+        existing_phrases = list(set(
+            training_phrases_one_intent["training_phrase"]))
         if synthetic_instances == 1:
             training_phrases_one_intent = training_phrases_one_intent.sample(
                 frac=1
@@ -214,21 +215,21 @@ class UtteranceGeneratorUtils(ScrapiBase):
 
         Args:
             training_phrases: df of training phrases for multiple intents with
-                an "intent" column.
+                an Intent "display_name" column.
             dataset_size: number of requested phrases to generate over all
                 specified intents.
         Returns:
             a DataFrame of generated training phrases.
         """
         synthetic_dataset = pd.DataFrame()
-        intents_list = list(set(training_phrases["intent"]))
+        intents_list = list(set(training_phrases["display_name"]))
         unique_intents_count = len(intents_list)
         synthetic_phrases_per_intent = dataset_size // unique_intents_count + 1
 
         i = 0
         for intent in intents_list:
             training_phrases_one_intent = training_phrases.copy()[
-                training_phrases["intent"] == intent
+                training_phrases["display_name"] == intent
             ].reset_index(drop=True)
             intent_set = self._generate_phrases_intent(
                 training_phrases_one_intent, synthetic_phrases_per_intent
@@ -303,14 +304,14 @@ class UtteranceGeneratorUtils(ScrapiBase):
         Returns:
             Dataframe with columns:
                 utterance: synthesized phrases.
-                intent: intent the utterance was generated from,
-                    also true label.
+                display_name: Display name of the intent the utterance was
+                  generated from; also true label.
         """
         synthetic_dataset = self.create_synthetic_dataset(
             agent_id, intent_subset,
             dataset_size)
         test_dataset = (
-            synthetic_dataset.copy()[["synthetic_phrases", "intent"]]
+            synthetic_dataset.copy()[["synthetic_phrases", "display_name"]]
             .rename(columns={"synthetic_phrases": "utterance"})
             .reset_index(drop=True)
         )
