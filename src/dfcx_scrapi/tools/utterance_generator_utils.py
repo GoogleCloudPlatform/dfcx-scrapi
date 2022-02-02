@@ -18,8 +18,9 @@ import logging
 import string
 import pandas as pd
 from typing import List
-from dfcx_scrapi.core import scrapi_base, intents
-from dfcx_scrapi.core_ml import utterance_generator
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.intents import Intents
+from dfcx_scrapi.core_ml.utterance_generator import UtteranceGenerator
 
 # logging config
 logging.basicConfig(
@@ -28,8 +29,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-
-class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
+class UtteranceGeneratorUtils(ScrapiBase):
     """Wrapper for utterance generator that creates new training phrases.
 
     Can be used to create independent test sets and net-new training phrases
@@ -52,9 +52,9 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         )
 
         logging.info("setting up utils....")
-        self.intents = intents.Intents(creds_path, creds_dict)
+        self.intents = Intents(creds_path, creds_dict)
         logging.info("downloading model....")
-        self.utterance_generator = utterance_generator.UtteranceGenerator()
+        self.utterance_generator = UtteranceGenerator()
         logging.info("utterance generator utils setup")
 
     @staticmethod
