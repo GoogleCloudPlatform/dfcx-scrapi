@@ -93,9 +93,10 @@ class Intents(ScrapiBase):
             ).transpose()
             data_frame = data_frame.stack().to_frame().reset_index(level=1)
             data_frame = data_frame.rename(
-                columns={"level_1": "intent", 0: "tp"}
+                columns={"level_1": "display_name", 0: "training_phrase"}
             ).reset_index(drop=True)
-            data_frame = data_frame.sort_values(["intent", "tp"])
+            data_frame = data_frame.sort_values(
+                ["display_name", "training_phrase"])
 
             return data_frame
 
@@ -654,7 +655,8 @@ class Intents(ScrapiBase):
 
                 data_frame = self.intent_proto_to_dataframe(obj, mode=mode)
                 main_frame = main_frame.append(data_frame)
-            main_frame = main_frame.sort_values(["intent", "tp"])
+            main_frame = main_frame.sort_values(
+                ["display_name", "training_phrase"])
             return main_frame
 
         elif mode == "advanced":
@@ -716,7 +718,8 @@ class Intents(ScrapiBase):
             intent_dict, orient="index").transpose()
         dataframe = dataframe.stack().to_frame().reset_index(level=1)
         dataframe = dataframe.rename(
-            columns={"level_1": "intent", 0: "tp"}).reset_index(drop=True)
-        dataframe = dataframe.sort_values(["intent", "tp"])
+            columns={"level_1": "display_name",
+            0: "training_phrase"}).reset_index(drop=True)
+        dataframe = dataframe.sort_values(["display_name", "training_phrase"])
 
         return dataframe, intent_dict

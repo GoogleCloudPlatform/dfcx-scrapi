@@ -1,6 +1,6 @@
 """Utility file for generating synthetic phrases from input phrases"""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ class UtteranceGenerator:
 
         Args:
           origin_utterances: dataframe specifying the phrases
-          to generate syntheic phrases from
+          to generate synthetic phrases from
               Columns:
                   utterance: utterance to generate synthetic phrases from
                   synthetic_instances (optional): if not set for each phrase
@@ -102,7 +102,7 @@ class UtteranceGenerator:
             iter_frame = pd.DataFrame()
             num_beams = int(row["synthetic_instances"])
             num_return_sequences = int(row["synthetic_instances"])
-            utterance = row["utterance"]
+            utterance = row["training_phrase"]
             synthetic_phrases = self.get_response(
                 utterance,
                 num_return_sequences,
@@ -111,18 +111,18 @@ class UtteranceGenerator:
                 temperature=temperature,
                 truncation=truncation,
             )
-            iter_frame["synethic_phrases"] = synthetic_phrases
+            iter_frame["synthetic_phrases"] = synthetic_phrases
             for col in origin_utterances.columns:
                 iter_frame[col] = row[col]
             synthetic_phrases_df = synthetic_phrases_df.append(iter_frame)
             ordered_cols = [
                 "id",
                 "synthetic_instances",
-                "utterance",
-                "synethic_phrases",
+                "training_phrase",
+                "synthetic_phrases",
             ]
-            remaineder_cols = list(
+            remainder_cols = list(
                 set(origin_utterances.columns) - set(ordered_cols)
             )
-            column_ordering = ordered_cols + remaineder_cols
+            column_ordering = ordered_cols + remainder_cols
         return synthetic_phrases_df[column_ordering]
