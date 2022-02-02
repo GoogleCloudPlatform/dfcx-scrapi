@@ -93,9 +93,10 @@ class Intents(ScrapiBase):
             ).transpose()
             data_frame = data_frame.stack().to_frame().reset_index(level=1)
             data_frame = data_frame.rename(
-                columns={"level_1": "intent", 0: "tp"}
+                columns={"level_1": "display_name", 0: "training_phrase"}
             ).reset_index(drop=True)
-            data_frame = data_frame.sort_values(["intent", "tp"])
+            data_frame = data_frame.sort_values(
+                ["display_name", "training_phrase"])
 
             return data_frame
 
