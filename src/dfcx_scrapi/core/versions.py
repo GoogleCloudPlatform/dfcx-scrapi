@@ -48,12 +48,12 @@ class Versions(ScrapiBase):
             self.flow_id = flow_id
 
     def list_versions(self, flow_id:str):
-        """
-        List all Versions for a given Flow
+        """List all Versions for a given Flow.
 
         Args:
           flow_id: Required. The targeted flow for the operation. Format:
-            projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>
+            projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>
+              /flows/<Flow ID>
 
         returns:
             List of Version objects.
@@ -78,34 +78,9 @@ class Versions(ScrapiBase):
 
         return versions
 
-    def delete_version(self, version_name:str, flow_id:str=None):
-        """
-        Delete a specified Version.
-
-        Args:
-          version_name: Unique Version ID of the target to delete. Format:
-            projects/<Project ID>/locations/<Location ID>/agents/
-            <Agent ID>/flows/<Flow ID>/versions/<Version ID>
-
-            flow_id: The targeted flow for the operation. Defaults to self.flow_id. Format:
-            projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>
-        """
-        request = types.version.DeleteVersionRequest(name=version_name)
-
-        if not flow_id:
-            flow_id = self.flow_id
-
-        client = services.versions.VersionsClient(
-            client_options=self._set_region(flow_id),
-            credentials=self.creds
-        )
-
-        return client.delete_version(request)
-
-
     def get_version(self, version_name:str=None, display_name:str=None, flow_id:str=None):
-        """
-        Get Version object for specific version.
+        """Get Version object for specific version.
+
         Requires either version's ID or version's display name.
         If both are provided, display_name is considered first.
 
@@ -146,13 +121,10 @@ class Versions(ScrapiBase):
 
 
     def get_version_by_display_name(self, display_name, flow_id:str=None):
-        """
-        Get Version object for specific version by its display name.
-        This technically duplicates get_version(), but one uses the other,
-        and I see no reason to keep it as private.
+        """Get Version object for specific version by its display name.
 
         Args:
-          display_name: Required. Version's human-legible display name of the target to get.
+          display_name: Human readable display name of the target to get.
 
           flow_id: The targeted flow for the operation. Defaults to self.flow_id. format:
             projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>
@@ -169,7 +141,6 @@ class Versions(ScrapiBase):
                 return version_obj
 
         return None
-
 
     def load_version(
         self,
@@ -242,6 +213,23 @@ class Versions(ScrapiBase):
 
         response = client.create_version(request)
         return response
+
+    def delete_version(self, version_id:str):
+        """Delete a specified Version.
+
+        Args:
+          version_name: Unique Version ID of the target to delete. Format:
+            projects/<Project ID>/locations/<Location ID>/agents/
+            <Agent ID>/flows/<Flow ID>/versions/<Version ID>
+        """
+        request = types.version.DeleteVersionRequest(name=version_id)
+
+        client = services.versions.VersionsClient(
+            client_options=self._set_region(version_id),
+            credentials=self.creds
+        )
+
+        return client.delete_version(request)
 
     def compare_versions(self, base_version:str, target_version:str, flow_id:str = None):
         """
