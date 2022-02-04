@@ -144,20 +144,17 @@ class Versions(ScrapiBase):
         self,
         version:types.version.Version,
         allow_override:bool = False,
-        flow_id:str = None
-    ):
-        """
-        Switch a flow to the specified version.
+        flow_id:str = None):
+        """Switch a flow to the specified version.
 
         Args:
-          version: Required. Version object of the desired target version.
-
+          version: Version object of the desired target version.
           allow_override: allow_override_agent_resources is false,
                 conflicted agent-level resources will not be overridden
                 (i.e. intents, entities, webhooks)
-
-          flow_id: Required. The targeted flow for the operation. Format:
-            projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>
+          flow_id: The targeted flow for the operation. Format:
+            projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+              flows/<Flow ID>
 
         Returns:
             An object representing a long-running operation (LRO)
@@ -178,7 +175,6 @@ class Versions(ScrapiBase):
 
         response = client.load_version(request)
         return response
-
 
     def create_version(self, version:types.version.Version, flow_id:str = None):
         """
