@@ -176,36 +176,40 @@ class Versions(ScrapiBase):
         response = client.load_version(request)
         return response
 
-    def create_version(self, version:types.version.Version, flow_id:str = None):
-        """
-        Switch a flow to the specified version.
+    def create_version(
+        self,
+        flow_id:str,
+        display_name:str,
+        description:str=None):
+        """Create a Version for the specified Flow ID.
 
         Args:
-          version: Required. Version object of the desired target version.
-
-          allow_override: allow_override_agent_resources is false, conflicted agent-level
-          resources will not be overridden (i.e. intents, entities, webhooks)
-
-          flow_id: Required. The targeted flow for the operation. Format:
-            projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>
+          flow_id: The targeted flow for the operation. Format: 
+            projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+              flows/<Flow ID>
+          display_name: Human readable display name of the Version created.
+          description: Additional description details for the Version created.
 
         Returns:
             An object representing a long-running operation (LRO)
         """
-        if not flow_id:
-            flow_id = self.flow_id
 
-        request = types.version.CreateVersionRequest(
-            version=version,
-            parent=flow_id
-        )
+        request = types.version.CreateVersionRequest()
 
         client_options = self._set_region(flow_id)
         client = services.versions.VersionsClient(
             client_options=client_options, credentials=self.creds
         )
 
+        version = types.Version()
+        version.display_name = display_name
+        version.description = description
+
+        request.parent = flow_id
+        request.version = version
+
         response = client.create_version(request)
+
         return response
 
     def delete_version(self, version_id:str):
@@ -264,4 +268,5 @@ class Versions(ScrapiBase):
         )
 
         response = client.compare_versions(request)
+
         return response
