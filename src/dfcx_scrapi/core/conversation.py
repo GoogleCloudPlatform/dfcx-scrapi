@@ -1,6 +1,6 @@
-"""client of DfCx agent - tracks session internally"""
+"""DFCX End to End Conversation Functions"""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,14 +35,13 @@ logger = logging
 
 logging.basicConfig(format="[dfcx] %(levelname)s:%(message)s", level=None)
 
-MAX_RETRIES = 3  # JWT errors on CX API
+MAX_RETRIES = 3
 DEBUG_LEVEL = "info"
 
 
 class DialogflowConversation(ScrapiBase):
-    """
-    wrapping client requests to a CX agent for a conversation
-    with internally maintained session state
+    """Class that wraps the SessionsClient to hold end to end conversations
+    and maintain internal session state
     """
 
     def __init__(
@@ -87,10 +86,9 @@ class DialogflowConversation(ScrapiBase):
 
         if invalid_pages:
             raise Exception("The following Pages are invalid and missing Page "
-                "IDs: \n%s\n\nPlease ensure that your Page Display Names do "
-                "not contain typos.\nFor Default Start Page use the special "
-                "page display name START_PAGE." % invalid_pages)
-
+                f"IDs: \n{invalid_pages}\n\nPlease ensure that your Page "
+                "Display Names do not contain typos.\nFor Default Start Page "
+                "use the special page display name START_PAGE.")
 
     @staticmethod
     def progress_bar(current, total, bar_length=50, type_="Progress"):
@@ -98,11 +96,9 @@ class DialogflowConversation(ScrapiBase):
         percent = float(current) * 100 / total
         arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
         spaces = " " * (bar_length - len(arrow))
-        print(
-            "{2}({0}/{1})".format(current, total, type_)
-            + "[%s%s] %d %%" % (arrow, spaces, percent),
-            end="\r",
-        )
+        print(f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent}%",
+          end="\r")
+
 
     def _page_id_mapper(self):
         agent_pages_map = pd.DataFrame()
@@ -219,7 +215,7 @@ class DialogflowConversation(ScrapiBase):
         duration = round((time.perf_counter() - start_time), 2)
         if duration > 2:
             if msg:
-                print("{:0.2f}s {}".format(duration, msg))
+                print(f"{duration:0.2f}s {msg}")
 
     def reply(
         self,
@@ -272,9 +268,8 @@ class DialogflowConversation(ScrapiBase):
             # just the environment and NOT experiment
             # (change to elif if experiment comes back)
             logging.info("req using env: %s", custom_environment)
-            session_path = "{}/environments/{}/sessions/{}".format(
-                self.agent_path, custom_environment, self.session_id
-            )
+            session_path = f"{self.agent_path}/environments/"\
+            f"{custom_environment}/sessions/{self.session_id}"
 
         disable_webhook = self.agent_env.get("disable_webhook") or False
 
