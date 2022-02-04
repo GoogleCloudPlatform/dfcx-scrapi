@@ -78,18 +78,18 @@ class Versions(ScrapiBase):
 
         return versions
 
-    def get_version(self, version_name:str=None, display_name:str=None, flow_id:str=None):
+    def get_version(self, version_id:str=None, display_name:str=None, flow_id:str=None):
         """Get Version object for specific version.
 
         Requires either version's ID or version's display name.
         If both are provided, display_name is considered first.
 
         Args:
-          version_name: Unique Version ID of the target to get. Format:
+          version_id: Unique Version ID of the target to get. Format:
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/flows/<Flow ID>/versions/<Version ID>
 
-          display_name: Version's human-legible display name of the target to get.
+          display_name: Human readable display name of the Version to get.
 
           flow_id: The targeted flow for the operation. Defaults to self.flow_id. format:
             projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>
@@ -98,7 +98,7 @@ class Versions(ScrapiBase):
             Version object.
         """
 
-        if not display_name and not version_name:
+        if not display_name and not version_id:
             logging.warning("versions.get_version requires param name or display_name.")
             return None
 
@@ -109,7 +109,7 @@ class Versions(ScrapiBase):
             response = self.get_version_by_display_name(display_name)
 
         else:
-            request = types.version.GetVersionRequest(name=version_name)
+            request = types.version.GetVersionRequest(name=version_id)
             client = services.versions.VersionsClient(
                 client_options=self._set_region(flow_id),
                 credentials=self.creds
@@ -231,19 +231,20 @@ class Versions(ScrapiBase):
 
         return client.delete_version(request)
 
-    def compare_versions(self, base_version:str, target_version:str, flow_id:str = None):
-        """
-        Compares the specified base version with target version.
+    def compare_versions(
+        self,
+        base_version_id:str,
+        target_version_id:str,
+        flow_id:str = None):
+        """Compares the specified base version with target version.
 
         Args:
-          version: Required. Version object of the desired target version.
-
-          base_version: Required. Name of the base flow version
+          base_version_id: ID of the base flow version
             to compare with the target version. format:
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/flows/<Flow ID>/versions/<Version ID>.
 
-          target_version: Required. Name of the target flow version
+          target_version_id: ID of the target flow version
             to compare with the base version. format:
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/flows/<Flow ID>/versions/<Version ID>.
@@ -259,8 +260,8 @@ class Versions(ScrapiBase):
             flow_id = self.flow_id
 
         request = types.version.CompareVersionsRequest(
-            base_version=base_version,
-            target_version=target_version
+            base_version=base_version_id,
+            target_version=target_version_id
         )
 
         client_options = self._set_region(flow_id)
