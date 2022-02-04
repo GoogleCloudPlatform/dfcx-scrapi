@@ -1,6 +1,6 @@
 """Operations Resource functions."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import logging
 from typing import Dict
-import requests
+from google.api_core import operations_v1, grpc_helpers
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
@@ -25,7 +25,6 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-
 
 class Operations(ScrapiBase):
     """Core class for Operations functions, primarily used to
@@ -46,7 +45,7 @@ class Operations(ScrapiBase):
             scope=scope
         )
 
-    def get_lro(self, lro: str) -> Dict[str, str]:
+    def get_lro(self, lro: str):
         """Used to retrieve the status of LROs for Dialogflow CX.
 
         Args:
@@ -55,23 +54,15 @@ class Operations(ScrapiBase):
                 <operation-uuid>'
 
         Returns:
-          response: Response status and payload from LRO
-
+        response: Response status and payload from LRO
         """
 
-        location = lro.split("/")[3]
-        if location != "global":
-            base_url = "https://{}-dialogflow.googleapis.com/v3beta1".format(
-                location
-            )
-        else:
-            base_url = "https://dialogflow.googleapis.com/v3beta1"
+        host = "dialogflow.googleapis.com"
+        channel = grpc_helpers.create_channel(
+            host,
+            credentials=self.creds
+        )
+        client = operations_v1.OperationsClient(channel)
+        response = client.get_operation(lro)
 
-        url = "{0}/{1}".format(base_url, lro)
-        headers = {"Authorization": "Bearer {}".format(self.token)}
-
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
-
-        return results.json()
+        return response
