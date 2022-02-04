@@ -84,10 +84,7 @@ class Project(ScrapiBase):
 
         all_agents = []
         for region in region_list:
-            location_path = "projects/{}/locations/{}".format(
-                project_id, region
-            )
-
+            location_path = f"projects/{project_id}/locations/{region}"
             all_agents += self.agents.list_agents(location_path)
 
         return all_agents
@@ -120,7 +117,7 @@ class Project(ScrapiBase):
             temp_display_name = temp_display_name.replace("/", "_")
             temp_display_name = temp_display_name.replace(":", "_")
             temp_display_name = temp_display_name.replace("-", "_")
-            temp_gcs_uri = "gs://{}/{}".format(gcs_bucket, temp_display_name)
+            temp_gcs_uri = f"gs://{gcs_bucket}/{temp_display_name}"
 
             lro_list.append(self.agents.export_agent(agent.name, temp_gcs_uri))
 
