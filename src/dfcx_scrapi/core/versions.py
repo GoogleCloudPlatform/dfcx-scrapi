@@ -16,8 +16,8 @@
 
 import logging
 from typing import Dict
-import google.cloud.dialogflowcx_v3beta1.services as services
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
@@ -93,9 +93,9 @@ class Versions(ScrapiBase):
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/flows/<Flow ID>/versions/<Version ID>
           display_name: Human readable display name of the Version to get.
-          flow_id: The targeted flow for the operation. format: 
+          flow_id: The targeted flow for the operation. format:
           projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
-            flows/<Flow ID> 
+            flows/<Flow ID>
 
         Returns:
             Version object.
@@ -103,7 +103,7 @@ class Versions(ScrapiBase):
 
         if not display_name and not version_id:
             logging.warning("versions.get_version requires version_id or"
-            + " display_name.")
+            " display_name.")
             return None
 
         if display_name:
@@ -126,7 +126,7 @@ class Versions(ScrapiBase):
         Args:
           display_name: Human readable display name of the target to get.
 
-          flow_id: The targeted flow for the operation. format: 
+          flow_id: The targeted flow for the operation. format:
           projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
             flows/<Flow ID>
 
@@ -184,7 +184,7 @@ class Versions(ScrapiBase):
         """Create a Version for the specified Flow ID.
 
         Args:
-          flow_id: The targeted flow for the operation. Format: 
+          flow_id: The targeted flow for the operation. Format:
             projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
               flows/<Flow ID>
           display_name: Human readable display name of the Version created.
