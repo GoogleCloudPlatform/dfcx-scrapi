@@ -78,40 +78,41 @@ class Versions(ScrapiBase):
 
         return versions
 
-    def get_version(self, version_id:str=None, display_name:str=None, flow_id:str=None):
+    def get_version(
+        self,
+        version_id:str=None,
+        display_name:str=None,
+        flow_id:str=None):
         """Get Version object for specific version.
 
-        Requires either version's ID or version's display name.
+        Requires either Version's ID or Version's display name.
         If both are provided, display_name is considered first.
 
         Args:
           version_id: Unique Version ID of the target to get. Format:
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/flows/<Flow ID>/versions/<Version ID>
-
           display_name: Human readable display name of the Version to get.
-
-          flow_id: The targeted flow for the operation. Defaults to self.flow_id. format:
-            projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>
+          flow_id: The targeted flow for the operation. format: 
+          projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+            flows/<Flow ID> 
 
         Returns:
             Version object.
         """
 
         if not display_name and not version_id:
-            logging.warning("versions.get_version requires param name or display_name.")
+            logging.warning("versions.get_version requires version_id or"
+            + " display_name.")
             return None
 
-        if not flow_id:
-            flow_id = self.flow_id
-
         if display_name:
-            response = self.get_version_by_display_name(display_name)
+            response = self.get_version_by_display_name(display_name, flow_id)
 
         else:
             request = types.version.GetVersionRequest(name=version_id)
             client = services.versions.VersionsClient(
-                client_options=self._set_region(flow_id),
+                client_options=self._set_region(version_id),
                 credentials=self.creds
             )
 
@@ -119,22 +120,19 @@ class Versions(ScrapiBase):
 
         return response
 
-
-    def get_version_by_display_name(self, display_name, flow_id:str=None):
+    def get_version_by_display_name(self, display_name:str, flow_id:str):
         """Get Version object for specific version by its display name.
 
         Args:
           display_name: Human readable display name of the target to get.
 
-          flow_id: The targeted flow for the operation. Defaults to self.flow_id. format:
-            projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>
+          flow_id: The targeted flow for the operation. format: 
+          projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+            flows/<Flow ID>
 
         Returns:
             Version object.
         """
-        if not flow_id:
-            flow_id = self.flow_id
-
         versions_list = self.list_versions(flow_id)
         for version_obj in versions_list:
             if version_obj.display_name == display_name:
