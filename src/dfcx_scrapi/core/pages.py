@@ -1,6 +1,6 @@
 """Page Resource functions."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 import logging
 from typing import Dict, List
-import google.cloud.dialogflowcx_v3beta1.services as services
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
@@ -28,7 +28,6 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-
 
 class Pages(ScrapiBase):
     """Core Class for CX Page Resource functions."""
@@ -57,8 +56,9 @@ class Pages(ScrapiBase):
             self.flow_id = flow_id
 
     def get_pages_map(
-        self, flow_id: str = None, reverse=False
-    ) -> Dict[str, str]:
+        self,
+        flow_id: str = None,
+        reverse=False) -> Dict[str, str]:
         """Exports Agent Page UUIDs and Names into a user friendly dict.
 
         Args:
@@ -134,8 +134,10 @@ class Pages(ScrapiBase):
         return response
 
     def create_page(
-        self, flow_id: str = None, obj: types.Page = None, **kwargs
-    ) -> types.Page:
+        self,
+        flow_id: str = None,
+        obj: types.Page = None,
+        **kwargs) -> types.Page:
         """Create a single CX Page object in the specified Flow ID.
 
         Args:
@@ -167,8 +169,10 @@ class Pages(ScrapiBase):
         return response
 
     def update_page(
-        self, page_id: str = None, obj: types.Page = None, **kwargs
-    ) -> types.Page:
+        self,
+        page_id: str = None,
+        obj: types.Page = None,
+        **kwargs) -> types.Page:
         """Update a single CX Page object.
 
         Args:
