@@ -1,6 +1,6 @@
 """Utility file for dataframe functions in support of Dialogflow CX."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,21 +21,19 @@ from typing import Dict, List
 import gspread
 import pandas as pd
 import numpy as np
-from pyasn1.type.univ import Boolean
 from tabulate import tabulate
 from gspread_dataframe import set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
 
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import types
 
-from dfcx_scrapi.core import (
-    scrapi_base,
-    intents,
-    entity_types,
-    flows,
-    pages,
-    transition_route_groups,
-)
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.intents import Intents
+from dfcx_scrapi.core.entity_types import EntityTypes
+from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.pages import Pages
+from dfcx_scrapi.core.webhooks import Webhooks
+from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
 
 g_drive_scope = [
     "https://spreadsheets.google.com/feeds",
@@ -49,8 +47,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-
-class DataframeFunctions(scrapi_base.ScrapiBase):
+class DataframeFunctions(ScrapiBase):
     """Class that supports dataframe functions in DFCX."""
 
     def __init__(
@@ -68,11 +65,11 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         )
 
         logging.info("create dfcx creds %s", creds_path)
-        self.entities = entity_types.EntityTypes(creds_path, creds_dict)
-        self.intents = intents.Intents(creds_path, creds_dict)
-        self.flows = flows.Flows(creds_path, creds_dict)
-        self.pages = pages.Pages(creds_path, creds_dict)
-        self.route_groups = transition_route_groups.TransitionRouteGroups(
+        self.entities = EntityTypes(creds_path, creds_dict)
+        self.intents = Intents(creds_path, creds_dict)
+        self.flows = Flows(creds_path, creds_dict)
+        self.pages = Pages(creds_path, creds_dict)
+        self.route_groups = TransitionRouteGroups(
             creds_path, creds_dict
         )
         self.creds_path = creds_path
@@ -83,11 +80,8 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         percent = float(current) * 100 / total
         arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
         spaces = " " * (bar_length - len(arrow))
-        print(
-            "{2}({0}/{1})".format(current, total, type_)
-            + "[%s%s] %d %%" % (arrow, spaces, percent),
-            end="\r",
-        )
+        print(f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent}%",
+          end="\r")
 
     @staticmethod
     def _coerce_to_string(dataframe: pd.DataFrame, fields: List[str]):
@@ -291,7 +285,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         tp_df: pd.DataFrame,
         params_df: pd.DataFrame = None,
         mode: str = "basic",
-        update_flag: Boolean = False,
+        update_flag: bool = False,
         rate_limiter: int = 5,
         language_code: str = None
     ):
@@ -612,7 +606,7 @@ class DataframeFunctions(scrapi_base.ScrapiBase):
         tp_df: pd.DataFrame,
         params_df: pd.DataFrame = None,
         mode: str = "basic",
-        update_flag: Boolean = False,
+        update_flag: bool = False,
         rate_limiter: int = 5,
         meta: Dict[str, str] = None,
         language_code: str = None,
