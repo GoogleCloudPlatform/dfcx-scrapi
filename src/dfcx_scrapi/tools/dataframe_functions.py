@@ -32,7 +32,6 @@ from dfcx_scrapi.core.intents import Intents
 from dfcx_scrapi.core.entity_types import EntityTypes
 from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.pages import Pages
-from dfcx_scrapi.core.webhooks import Webhooks
 from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
 
 g_drive_scope = [
@@ -645,13 +644,14 @@ class DataframeFunctions(ScrapiBase):
                     ["display_name", "text", "parameter_id"]
                 )
 
-                raise ValueError(
-                    "%s mode train_phrases schema must be %s" % mode,
-                    tabulate(
+                schema_error = tabulate(
                         tp_schema.transpose(),
                         headers="keys",
                         tablefmt="psql",
-                    ),
+                    )
+
+                raise ValueError(
+                    f"{mode} mode train_phrases schema must be {schema_error}"
                 )
 
         elif mode == "advanced":
@@ -666,7 +666,7 @@ class DataframeFunctions(ScrapiBase):
                 ]
             ):
                 if "meta" not in tp_df.columns:
-                    tp_df["meta"] = [dict()] * len(tp_df)
+                    tp_df["meta"] = [{}] * len(tp_df)
 
                 tp_df = tp_df[
                     [
@@ -704,20 +704,20 @@ class DataframeFunctions(ScrapiBase):
                     ["display_name", "id", "entity_type"]
                 )
 
-                raise ValueError(
-                    "%s mode train_phrases schema must be %s \n parameter\
-                        schema must be %s"
-                    % mode,
-                    tabulate(
+                tp_schema_error = tabulate(
                         tp_schema.transpose(),
                         headers="keys",
                         tablefmt="psql",
-                    ),
-                    tabulate(
+                    )
+                p_schema_error = tabulate(
                         p_schema.transpose(),
                         headers="keys",
                         tablefmt="psql",
-                    ),
+                    )
+                raise ValueError(
+                    f"{mode} mode train_phrases schema must be "\
+                    f"{tp_schema_error} \n parameter schema must be "
+                    f"{p_schema_error}"
                 )
 
         else:
