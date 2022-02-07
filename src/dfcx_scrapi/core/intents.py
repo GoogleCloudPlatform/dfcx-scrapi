@@ -1,6 +1,6 @@
 """Intent Resource functions."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
-import google.cloud.dialogflowcx_v3beta1.services as services
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
@@ -315,7 +315,7 @@ class Intents(ScrapiBase):
                 len(true_additions.columns),
                 "outcome",
                 true_additions.apply(
-                    lambda x: "{} added to {}".format(
+                    lambda x: "{} added to {}".format( #pylint: disable=C0209
                         x["phrase"], x["display_name"]
                     ),
                     axis=1,
@@ -332,7 +332,7 @@ class Intents(ScrapiBase):
                 len(false_additions.columns),
                 "outcome",
                 false_additions.apply(
-                    lambda x: "{} already in {}".format(
+                    lambda x: "{} already in {}".format( #pylint: disable=C0209
                         x["phrase"], x["display_name"]
                     ),
                     axis=1,
@@ -349,7 +349,7 @@ class Intents(ScrapiBase):
                 len(true_deletions.columns),
                 "outcome",
                 true_deletions.apply(
-                    lambda x: "{} removed from {}".format(
+                    lambda x: "{} removed from {}".format( #pylint: disable=C0209
                         x["phrase"], x["display_name"]
                     ),
                     axis=1,
@@ -366,7 +366,7 @@ class Intents(ScrapiBase):
                 len(false_deletions.columns),
                 "outcome",
                 false_deletions.apply(
-                    lambda x: "{} not found in {}".format(
+                    lambda x: "{} not found in {}".format( #pylint: disable=C0209
                         x["phrase"], x["display_name"]
                     ),
                     axis=1,

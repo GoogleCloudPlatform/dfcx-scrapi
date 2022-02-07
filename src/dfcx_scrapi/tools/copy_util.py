@@ -1,6 +1,6 @@
 """A set of Utility methods to copy DFCX Resources."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +20,16 @@ import time
 from typing import Dict, List
 from collections import defaultdict
 
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.api_core import exceptions as core_exceptions
 
-from dfcx_scrapi.core import (scrapi_base, intents, entity_types, flows, pages,
-  webhooks, transition_route_groups)
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.intents import Intents
+from dfcx_scrapi.core.entity_types import EntityTypes
+from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.pages import Pages
+from dfcx_scrapi.core.webhooks import Webhooks
+from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
 
 # logging config
 logging.basicConfig(
@@ -33,9 +38,9 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 
-class CopyUtil(scrapi_base.ScrapiBase):
-    """Tools Utility class for copying DFCX Resources between Agents."""
-    def __init__( #pylint: disable=too-many-arguments
+class CopyUtil(ScrapiBase):
+    """Utility class for copying DFCX Resources between Agents."""
+    def __init__(
         self,
         creds_path: str = None,
         creds_dict: Dict = None,
@@ -52,17 +57,12 @@ class CopyUtil(scrapi_base.ScrapiBase):
 
         self.agent_id = agent_id
 
-
-        self.intents = intents.Intents(
-            creds=self.creds, agent_id=self.agent_id)
-        self.entities = entity_types.EntityTypes(
-            creds=self.creds, agent_id=self.agent_id)
-        self.flows = flows.Flows(
-            creds=self.creds, agent_id=self.agent_id)
-        self.pages = pages.Pages(creds=self.creds)
-        self.webhooks = webhooks.Webhooks(
-            creds=self.creds, agent_id=self.agent_id)
-        self.route_groups = transition_route_groups.TransitionRouteGroups(
+        self.intents = Intents(creds=self.creds, agent_id=self.agent_id)
+        self.entities = EntityTypes(creds=self.creds, agent_id=self.agent_id)
+        self.flows = Flows(creds=self.creds, agent_id=self.agent_id)
+        self.pages = Pages(creds=self.creds)
+        self.webhooks = Webhooks(creds=self.creds, agent_id=self.agent_id)
+        self.route_groups = TransitionRouteGroups(
             creds=self.creds, agent_id=self.agent_id)
 
     @staticmethod

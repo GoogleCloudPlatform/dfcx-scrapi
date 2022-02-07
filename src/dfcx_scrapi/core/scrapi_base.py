@@ -1,6 +1,6 @@
 """Base for other SCRAPI classes."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ class ScrapiBase:
             raise err
 
         if location != "global":
-            api_endpoint = "{}-dialogflow.googleapis.com:443".format(location)
+            api_endpoint = f"{location}-dialogflow.googleapis.com:443"
             client_options = {"api_endpoint": api_endpoint}
             return client_options
 
