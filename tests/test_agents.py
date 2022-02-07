@@ -1,6 +1,6 @@
 """Test Class for Agent Functions in SCRAPI lib."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from datetime import datetime
 # from typing import List, Dict
 
 import pytest
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import types
 
 DEV = True  # Set flag to disable some tests while in development
 
