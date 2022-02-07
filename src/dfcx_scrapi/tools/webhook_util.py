@@ -1,6 +1,6 @@
 """Util class for building DFCX webhook payloads."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-class WebhookUtils():
+class WebhookUtil():
     """Utils class for quickly building DFCX webhook payloads."""
 
     @staticmethod
