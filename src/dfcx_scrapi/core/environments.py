@@ -14,15 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
+from typing import List, Dict, Tuple
 import logging
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
-from dfcx_scrapi.core.flows import Flows
-from dfcx_scrapi.core.versions import Versions
+from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import flows
+from dfcx_scrapi.core import versions
 
 # logging config
 logging.basicConfig(
@@ -32,13 +31,13 @@ logging.basicConfig(
 )
 
 
-class Environments(ScrapiBase):
+class Environments(scrapi_base.ScrapiBase):
     """Core Class for CX Environments Resource functions."""
 
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: dict = None,
+        creds_dict: Dict[str,str] = None,
         creds=None,
         agent_id: str = None,
     ):
@@ -51,13 +50,13 @@ class Environments(ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
 
-        self._versions = Versions(creds=self.creds)
-        self._flows = Flows(creds=self.creds)
+        self._versions = versions.Versions(creds=self.creds)
+        self._flows = flows.Flows(creds=self.creds)
 
     @staticmethod
     def _get_flow_version_id(
-        input_tuple: tuple[str,str],
-        flow_versions_list: list[types.Version]):
+        input_tuple: Tuple[str,str],
+        flow_versions_list: List[types.Version]):
         """Parse Version ID based on Tuple inputs."""
         for version in flow_versions_list:
             if version.name.split("/")[-1] == str(input_tuple[1]):
@@ -203,7 +202,7 @@ class Environments(ScrapiBase):
     def create_environment_by_display_name(
         self,
         display_name:str,
-        version_configs:list[tuple(str,str)],
+        version_configs:List[Tuple[str,str]],
         description:str=None,
         agent_id:str=None):
         """Create a new environment for a specified agent.
@@ -221,8 +220,8 @@ class Environments(ScrapiBase):
             projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>
 
         Returns:
-          response: An object representing a long-running operation (LRO).
-            View the result by inspecting response.result()
+          An object representing a long-running operation (LRO). View the
+            result by inspecting response.result()
         """
 
         if not agent_id:
@@ -349,7 +348,7 @@ class Environments(ScrapiBase):
 
     def lookup_environment_history(
         self,
-        environment_id:str) -> list[types.Environment]:
+        environment_id:str) -> List[types.Environment]:
         """Looks up the history of the specified environment.
 
         Args:
@@ -358,7 +357,7 @@ class Environments(ScrapiBase):
             <Agent ID>/environments/<Environment ID>.
 
         Returns:
-          history: List of Environment objects with historical timestamps
+          List of Environment objects with historical timestamps
         """
         request = types.environment.LookupEnvironmentHistoryRequest(
             name = environment_id
@@ -387,7 +386,7 @@ class Environments(ScrapiBase):
             <Agent ID>/environments/<Environment ID>.
 
         Returns:
-          test_results: List of types.ContinuousTestResult
+          List of types.ContinuousTestResult
         """
 
         request = types.environment.ListContinuousTestResultsRequest(
