@@ -14,14 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
+from typing import Dict
 import json
 import logging
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 
 # logging config
@@ -31,13 +30,13 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-class SecuritySettings(ScrapiBase):
+class SecuritySettings(scrapi_base.ScrapiBase):
     """Core Class for CCAI Security Settings."""
 
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: dict = None,
+        creds_dict: Dict[str,str] = None,
         creds=None,
         scope=False,
         agent_id: str = None
@@ -63,7 +62,7 @@ class SecuritySettings(ScrapiBase):
             projects/<PROJECT ID>/locations/<LOCATION ID>/
 
         Returns:
-            results: Dict of results
+            Dict of results
         """
 
         request = self.ss_types.ListSecuritySettingsRequest()
@@ -93,8 +92,7 @@ class SecuritySettings(ScrapiBase):
                 securitySettings/<SECURITY SETTINGS ID>
 
         Returns:
-            response: a single Security Settings object of
-              types.SecuritySettings
+            A single Security Settings object of types.SecuritySettings
         """
 
         request = self.ss_types.GetSecuritySettingsRequest()
@@ -113,7 +111,7 @@ class SecuritySettings(ScrapiBase):
         self,
         location_id: str,
         obj: types.SecuritySettings = None,
-        security_settings_dict: dict[str,str] = None):
+        security_settings_dict: Dict[str,str] = None):
         """Create CCAI Security Settings profile in the specified project.
 
         One of `obj` or `security_settings_dict` should be provided to create a
@@ -129,8 +127,7 @@ class SecuritySettings(ScrapiBase):
             new Security Settings profile
 
         Returns:
-            response: a single Security Settings object of
-              types.SecuritySettings
+            A single Security Settings object of types.SecuritySettings
         """
 
         if obj and security_settings_dict:
@@ -170,8 +167,7 @@ class SecuritySettings(ScrapiBase):
                 securitySettings/<SECURITY SETTINGS ID>
 
         Returns:
-            response: a single Security Settings object of
-              types.SecuritySettings
+            A single Security Settings object of types.SecuritySettings
         """
 
         security_settings = self.get_security_settings(security_setting_id)
