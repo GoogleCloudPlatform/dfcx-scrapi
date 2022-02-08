@@ -17,10 +17,11 @@
 import logging
 import string
 import pandas as pd
-from typing import List
+from typing import List, Dict
+from google.oauth2 import service_account
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import intents
-from dfcx_scrapi.core_ml.utterance_generator import UtteranceGenerator
+from dfcx_scrapi.core_ml import utterance_generator
 
 # logging config
 logging.basicConfig(
@@ -39,8 +40,8 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: dict = None,
-        creds=None,
+        creds_dict: Dict[str,str] = None,
+        creds: service_account.Credentials = None,
         scope=False,
     ):
 
@@ -54,7 +55,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         logging.info("setting up utils....")
         self.intents = intents.Intents(creds_path, creds_dict)
         logging.info("downloading model....")
-        self.utterance_generator = UtteranceGenerator()
+        self.utterance_generator = utterance_generator.UtteranceGenerator()
         logging.info("utterance generator utils setup")
 
     @staticmethod
