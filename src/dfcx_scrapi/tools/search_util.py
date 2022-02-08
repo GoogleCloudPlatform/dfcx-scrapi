@@ -14,17 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import time
+import logging, time
 from typing import Dict
 
 import pandas as pd
 
-from dfcx_scrapi.core.entity_types import EntityTypes
-from dfcx_scrapi.core.flows import Flows
-from dfcx_scrapi.core.intents import Intents
-from dfcx_scrapi.core.pages import Pages
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import entity_types, flows, intents, pages, scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -34,8 +29,8 @@ logging.basicConfig(
 )
 
 
-class SearchUtil(ScrapiBase):
-    """class for searching items"""
+class SearchUtil(scrapi_base.ScrapiBase):
+    """Class for searching items including event handlers and routes."""
 
     def __init__(
         self,
@@ -52,12 +47,12 @@ class SearchUtil(ScrapiBase):
             scope=scope,
         )
 
-        self.intents = Intents(creds_path=creds_path, creds_dict=creds_dict)
-        self.entities = EntityTypes(
+        self.intents = intents.Intents(creds_path=creds_path, creds_dict=creds_dict)
+        self.entities = entity_types.EntityTypes(
             creds_path=creds_path, creds_dict=creds_dict
         )
-        self.flows = Flows(creds_path=creds_path, creds_dict=creds_dict)
-        self.pages = Pages(creds_path=creds_path, creds_dict=creds_dict)
+        self.flows = flows.Flows(creds_path=creds_path, creds_dict=creds_dict)
+        self.pages = pages.Pages(creds_path=creds_path, creds_dict=creds_dict)
 
         if agent_id:
             self.agent_id = agent_id
@@ -65,60 +60,47 @@ class SearchUtil(ScrapiBase):
                 agent_id=agent_id, reverse=True
             )
             self.client_options = self._set_region(agent_id)
+    
+    def find_event_handlers(self, agent_id: str):
+        """Extracts event handlers at flow, page, and parameter levels.
 
-    def _find_true_routes_flow_level(self, flow_display_name, flow_map):
-        flow_id = flow_map[flow_display_name]
-        start_page = self.flows.get_flow(flow_id) # pylint: disable=W0612
-        other_pages = self.pages.list_pages(flow_id)
+        This method extracts event handlers at the flow, page, and parameter
+        level and displays data about their associated event. A user can use
+        this data to spot patterns in event types and look for detrimental
+        patterns.
 
-        # Start page - no entry fulfillment
-        pages_dataframe = pd.DataFrame()
-        for page in other_pages:
-            display_name = page.display_name
+        Args:
+            agent_id: id of the DFCX agent to pull event handlers from.
 
-            webhook = False
-            if page.entry_fulfillment.webhook:
-                webhook = True
+        Returns:
+            dictionary with flow, page and parameter event dataframes
+        """
+        event_handler_scan = {
+            "flow": self.flow_level_handlers(agent_id),
+            "page": self.page_level_handlers(agent_id),
+            "parameter": self.parameter_level_handlers(agent_id),
+        }
 
-            has_parameters = False
-            if page.form.parameters:
-                has_parameters = True
+        return event_handler_scan
 
-            has_true_route = False
-            has_true_final_route = False
-            for route in page.transition_routes:
-                if route.condition == "true":
-                    has_true_route = True
+    def flow_level_handlers(self, agent_id:str):
+        """ Pulls event handlers set on flows.
 
-                if route.condition == '$page.params.status = "FINAL" AND true':
-                    has_true_final_route = True
+            Pulls flow event handlers and returns them in a dataframe with 1 
+            row per event handler. 
 
-            page_dataframe = pd.DataFrame(
-                columns=[
-                    "flow_display_name",
-                    "page_display_name",
-                    "webhook_entry_fullfillment",
-                    "has_parameters",
-                    "has_true_route",
-                    "has_true_and_final_route",
-                ],
-                data=[
-                    [
-                        flow_display_name,
-                        display_name,
-                        webhook,
-                        has_parameters,
-                        has_true_route,
-                        has_true_final_route,
-                    ]
-                ],
-            )
-            pages_dataframe = pages_dataframe.append(page_dataframe)
+            Args:
+                agent_id: id of the dfcx agent to pull from.
 
-        return pages_dataframe
-
-    # Flows - event handlers
-    def flow_level_handlers(self, agent_id):
+            Returns:
+                dataframe with columns:
+                    flow: flow name.
+                    event: event type, such as 'sys.no-input-1'.
+                    messages: protobug repeated composite of fulfillment.
+                    transition_flow: target flow id.
+                    transition_page: target page id.
+        """ 
+        
         flowlist = self.flows.list_flows(agent_id)
         df = pd.DataFrame([
             { 'flow_name': flow.display_name,
@@ -139,8 +121,25 @@ class SearchUtil(ScrapiBase):
 
         return df
 
-    # Pages - event handlers
-    def page_level_handlers(self, agent_id):
+    def page_level_handlers(self, agent_id: str):
+        """ Pulls event handlers set on pages.
+
+            Pulls page event handlers and returns them in a dataframe with 1 
+            row per event handler. 
+
+            Args:
+                agent_id: id of the dfcx agent to pull from.
+
+            Returns:
+                dataframe with columns:
+                    flow: flow name
+                    page: page name
+                    event: event type, such as 'sys.no-input-1'
+                    messages: protobug repeated composite of fulfillment
+                    transition_flow: target flow id
+                    transition_page: target page id
+       """ 
+        
         df = pd.concat([
             pd.DataFrame([{
                 'flow': flow.display_name,
@@ -161,10 +160,25 @@ class SearchUtil(ScrapiBase):
         ).drop(columns='page_event_handlers')
         return df
 
+    def parameter_level_handlers(self, agent_id:str):
+        """ Pulls reprompt event handlers for parameters.
 
-    # Parameters - event handlers
-    def parameter_level_handlers(self, agent_id):
-        
+            Pulls reprompt event handlers for parameters and returns them in a
+            dataframe with 1 row per event handler. 
+
+            Args:
+                agent_id: id of the dfcx agent to pull from.
+
+            Returns:
+                dataframe with columns:
+                    flow: flow name
+                    page: page name
+                    parameter: parameter name
+                    event: event type, such as 'sys.no-input-1'
+                    messages: protobug repeated composite of fulfillment
+                    transition_flow: target flow id
+                    transition_page: target page id
+        """
         df = pd.concat([
             pd.DataFrame([{
                 'flow': flow.display_name,
@@ -193,9 +207,8 @@ class SearchUtil(ScrapiBase):
         
         return df
 
-    def find_list_parameters(self, agent_id):
-        """This method extracts Parameters set at a page level that are
-        designated as "lists".
+    def find_list_parameters(self, agent_id:str) -> Dict:
+        """Extracts page level parameters designated as lists.
 
         Page level parameters are tied to Entity Types and can be returned
         as String or List types. If the user selects "list" at the page
@@ -204,11 +217,11 @@ class SearchUtil(ScrapiBase):
         all instances of parameters being used as lists on pages.
 
         Args:
-          - agent_id, the Agent ID string in the following format:
+            agent_id, the Agent ID string in the following format:
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
 
         Returns:
-          - params_map, a Dict of parameter names and Pages they belong to
+            a dict of parameter names and Pages they belong to.
         """
 
         # entities = self.dfcx.list_entity_types(agent_id)
@@ -224,75 +237,27 @@ class SearchUtil(ScrapiBase):
                         params_list.append(param.display_name)
 
         return params_list
-
-    def search_conditionals_page(self, page_id, search):
-        """search page for an exact string in conditional routes
-
-        Args:
-          - page_id, the formatted CX Page ID to use
-          - search, string to search
-
-        Returns:
-          - locator, dataframe of the results of where this string was found
-        """
-
-        locator = pd.DataFrame()
-        page = self.pages.get_page(page_id=page_id)
-        i = 1
-        for route in page.transition_routes:
-            if search.lower() in route.condition.lower():
-                iter_frame = pd.DataFrame(
-                    columns=["resource_id", "condition", "route_id"],
-                    data=[[page_id, route.condition, i]],
-                )
-                locator = locator.append(iter_frame)
-            i += 1
-
-        return locator
-
-    def search_conditionals_flow(self, flow_id, search):
-        """search flow for an exact string in conditional routes
-
-        Args:
-        - flow_id, the formatted CX Flow ID to use
-        - search, string to search
-
-        Returns:
-        - locator, dataframe of the results of where this string was found
-        """
-
-        locator = pd.DataFrame()
-        flow = self.flows.get_flow(flow_id=flow_id)
-        i = 1
-        for route in flow.transition_routes:
-            if search.lower() in route.condition.lower():
-                iter_frame = pd.DataFrame(
-                    columns=["resource_id", "condition", "route_id"],
-                    data=[[flow_id, route.condition, i]],
-                )
-                locator = locator.append(iter_frame)
-            i += 1
-
-        return locator
-
+    
     def search_conditionals(
         self,
-        search,
-        agent_id,
-        flow_name=None,
-        page_name=None,
-        flag_search_all=False,
-    ):
-        """This is the master function where a user can search across
-        all pages in a flow, an entire agent etc.
-        Search conditionals for an exact string in conditional routes.
+        search: str,
+        agent_id: str,
+        flow_name:str = None,
+        page_name:str = None,
+        flag_search_all:bool = False,
+    ) -> pd.DataFrame:
+        """Top-level function for searching for conditionals. 
+        
+        Top-level function where a user can search across all pages in a flow,
+        an entire agent etc. Search conditionals for an exact string in 
+        conditional routes.
 
         Args:
-            - search, string to search
-            - agent_id, the formatted CX Agent ID to use
-            - flow_name, (optional) the display name of the flow to search
-            - page_name,  (optional) the display name of the page to search
-            - flag_search_all, (optional)
+            search, string to search
+            agent_id, the formatted CX Agent ID to use
+            flow_name, (optional) the display name of the flow to search
+            page_name,  (optional) the display name of the page to search
+            flag_search_all, (optional)
                 When set to True:
                     -if just an agent_id then entire agent is searched
                     -if just an agent_id and flow_name are specified
@@ -305,7 +270,7 @@ class SearchUtil(ScrapiBase):
                     -if an agent_id, flow_name and page_name are specified
                         a page is searched
         Returns:
-            - locator, dataframe of the results of where this string was found
+            dataframe of the results of where this string was found
         """
 
         if page_name:
@@ -400,18 +365,69 @@ class SearchUtil(ScrapiBase):
         # not found
         return None
 
+    def search_conditionals_flow(self, flow_id:str , search:str):
+        """Search flow for an exact string in conditional routes. 
 
-    def find_true_routes(self, agent_id: str = None):
-        """This method extracts data to see if routes with no parameters have a
+        Args:
+            flow_id, the formatted CX Flow ID to use.
+            search, string to search.
+
+        Returns:
+            dataframe of the results of where this string was found
+        """
+
+        locator = pd.DataFrame()
+        flow = self.flows.get_flow(flow_id=flow_id)
+        i = 1
+        for route in flow.transition_routes:
+            if search.lower() in route.condition.lower():
+                iter_frame = pd.DataFrame(
+                    columns=["resource_id", "condition", "route_id"],
+                    data=[[flow_id, route.condition, i]],
+                )
+                locator = locator.append(iter_frame)
+            i += 1
+
+        return locator
+    
+    def search_conditionals_page(self, page_id:str, search:str) -> pd.DataFrame:
+        """Search page for an exact string in conditional routes.
+
+        Args:
+            page_id, the formatted CX Page ID to use.
+            search, string to search.
+
+        Returns:
+            dataframe of the results of where this string was found.
+        """
+
+        locator = pd.DataFrame()
+        page = self.pages.get_page(page_id=page_id)
+        i = 1
+        for route in page.transition_routes:
+            if search.lower() in route.condition.lower():
+                iter_frame = pd.DataFrame(
+                    columns=["resource_id", "condition", "route_id"],
+                    data=[[page_id, route.condition, i]],
+                )
+                locator = locator.append(iter_frame)
+            i += 1
+
+        return locator
+
+    def find_true_routes(self, agent_id: str):
+        """Finds true and final routes. 
+
+        This method extracts data to see if routes with no parameters have a
         true route or pages with parameters have a true route +
         page.params.status = "Final" route. Having these routes ensure a user
         can escape this page no matter what.
 
         Args:
-          - agent_id: The properly formatted CX Agent ID
+            agent_id: The properly formatted CX Agent ID
 
         Returns:
-          - agent_results: dataframe with:
+            agent_results: dataframe with:
               flow_display_name: display name of the associated page
               page_display_name: display name of the page with the associated
                 data
@@ -422,9 +438,6 @@ class SearchUtil(ScrapiBase):
               has_true_and_final_route: True if a page has a route with true
                 + page.params.status=Final else False
         """
-
-        if not agent_id:
-            agent_id = self.agent_id
 
         agent_results = pd.DataFrame()
         flow_map = self.flows.get_flows_map(
@@ -438,24 +451,70 @@ class SearchUtil(ScrapiBase):
             agent_results = agent_results.append(flow_scan)
         return agent_results
 
-
-    # Event handlers Main Function
-    def find_event_handlers(self, agent_id):
-        """This method extracts event handlers at the flow, page and parameter
-        level and displays data about their associated event. A user can use
-        this data to spot patterns in event types and look for detrimental
-        patterns.
+    def _find_true_routes_flow_level(
+        self, flow_display_name: str, flow_map: Dict) -> pd.DataFrame:
+        """Searches for flow-level final or true routes.
 
         Args:
-          - agent_id must specify agent id when instantiating the class
+            flow_display_name: flow to search for routes.
+            flow_map: dict of flow_name:flow_id
 
-        Returns:
-          - dictionary with flow, page and parameter events
+        Returns: 
+            dataframe with columns:
+                flow_display_name,
+                page_display_name,
+                webhook_entry_fulfillment,
+                has_parameters,
+                has_true_route,
+                has_true_and_final_foute
         """
-        event_handler_scan = {
-            "flow": self.flow_level_handlers(agent_id),
-            "page": self.page_level_handlers(agent_id),
-            "parameter": self.parameter_level_handlers(agent_id),
-        }
+        flow_id = flow_map[flow_display_name]
+        start_page = self.flows.get_flow(flow_id) # pylint: disable=W0612
+        other_pages = self.pages.list_pages(flow_id)
 
-        return event_handler_scan
+        # Start page - no entry fulfillment
+        pages_dataframe = pd.DataFrame()
+        for page in other_pages:
+            display_name = page.display_name
+
+            webhook = False
+            if page.entry_fulfillment.webhook:
+                webhook = True
+
+            has_parameters = False
+            if page.form.parameters:
+                has_parameters = True
+
+            has_true_route = False
+            has_true_final_route = False
+            for route in page.transition_routes:
+                if route.condition == "true":
+                    has_true_route = True
+
+                if route.condition == '$page.params.status = "FINAL" AND true':
+                    has_true_final_route = True
+
+            page_dataframe = pd.DataFrame(
+                columns=[
+                    "flow_display_name",
+                    "page_display_name",
+                    "webhook_entry_fullfillment",
+                    "has_parameters",
+                    "has_true_route",
+                    "has_true_and_final_route",
+                ],
+                data=[
+                    [
+                        flow_display_name,
+                        display_name,
+                        webhook,
+                        has_parameters,
+                        has_true_route,
+                        has_true_final_route,
+                    ]
+                ],
+            )
+            pages_dataframe = pages_dataframe.append(page_dataframe)
+
+        return pages_dataframe
+
