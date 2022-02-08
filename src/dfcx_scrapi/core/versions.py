@@ -16,6 +16,7 @@
 
 import logging
 from typing import Dict
+from google.oauth2 import service_account
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from dfcx_scrapi.core import scrapi_base
@@ -34,8 +35,8 @@ class Versions(scrapi_base.ScrapiBase):
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: Dict = None,
-        creds=None,
+        creds_dict: Dict[str,str] = None,
+        creds: service_account.Credentials = None,
         flow_id: str = None,
     ):
         super().__init__(
@@ -157,7 +158,7 @@ class Versions(scrapi_base.ScrapiBase):
               flows/<Flow ID>
 
         Returns:
-            An object representing a long-running operation (LRO)
+            An object representing a long-running operation (LRO).
         """
 
         if not flow_id:
@@ -191,7 +192,7 @@ class Versions(scrapi_base.ScrapiBase):
           description: Additional description details for the Version created.
 
         Returns:
-            An object representing a long-running operation (LRO)
+            An object representing a long-running operation (LRO).
         """
 
         request = types.version.CreateVersionRequest()
@@ -252,7 +253,7 @@ class Versions(scrapi_base.ScrapiBase):
             agents/<Agent ID>/flows/<Flow ID>
 
         Returns:
-            types.CompareVersionsRequest Object
+            types.CompareVersionsRequest Object.
         """
         if not flow_id:
             flow_id = self.flow_id

@@ -35,8 +35,8 @@ class ScrapiBase:
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: Dict = None,
-        creds=None,
+        creds_dict: Dict[str,str] = None,
+        creds: service_account.Credentials =None,
         scope=False,
         agent_path=None,
     ):
