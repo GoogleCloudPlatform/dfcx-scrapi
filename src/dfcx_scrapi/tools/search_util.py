@@ -118,131 +118,80 @@ class SearchUtil(ScrapiBase):
         return pages_dataframe
 
     # Flows - event handlers
-    def _flow_level_handlers(self):
-        flows_in_agent = self.flows.list_flows(self.agent_id)
+    def flow_level_handlers(self, agent_id):
+        flowlist = self.flows.list_flows(agent_id)
+        df = pd.DataFrame([
+            { 'flow_name': flow.display_name,
+                'handlers': flow.event_handlers #list 
+            } for flow in flowlist 
+        ])
 
-        flow_event_handler_data = pd.DataFrame()
-        for flow in flows_in_agent:
-            flow_level_event_handlers = flow.event_handlers
-            flow_level_event_handlers_dataframe = pd.DataFrame()
+        df = df.explode(column='handlers').reset_index(drop=True)
 
-            for handler in flow_level_event_handlers:
-                flow_level_event_handlers_dataframe = (
-                    flow_level_event_handlers_dataframe.append(
-                        pd.DataFrame(
-                            columns=[
-                                "flow",
-                                "event",
-                                "messages",
-                                "transition_flow",
-                                "transition_page",
-                            ],
-                            data=[
-                                [
-                                    flow.display_name,
-                                    handler.event,
-                                    handler.trigger_fulfillment.messages,
-                                    handler.target_flow,
-                                    handler.target_page,
-                                ]
-                            ],
-                        )
-                    )
-                )
-                flow_event_handler_data = flow_event_handler_data.append(
-                    flow_level_event_handlers_dataframe
-                )
+        df = df.assign(
+            event = df.handlers.apply(lambda eh: eh.event),
+            messages = df.handlers.apply(
+                lambda eh: eh.trigger_fulfillment.messages
+            ),
+            transition_flow = df.handlers.apply(lambda eh: eh.target_flow),
+            transition_page = df.handlers.apply(lambda eh: eh.target_page),
+        ).drop(columns='handlers')
 
-        return flow_event_handler_data
+        return df
 
     # Pages - event handlers
-    def _page_level_handlers(self):
-        page_level_event_handlers_all_dataframe = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(self.agent_id)
-        for flow_ in flow_map.keys():
-            pages_in_flow = self.pages.list_pages(flow_)
+    def page_level_handlers(self, agent_id):
+        df = pd.concat([
+            pd.DataFrame([{
+                'flow': flow.display_name,
+                'page': p.display_name,
+                'page_event_handlers': p.event_handlers #list
+            } for p in  self.pages.list_pages(flow.name)])
+        for flow in self.flows.list_flows(agent_id)], ignore_index=True)
 
-            for page in pages_in_flow:
-                page_level_event_handlers = page.event_handlers
-                page_level_event_handlers_dataframe = pd.DataFrame()
-                for handler in page_level_event_handlers:
-                    page_level_event_handlers_dataframe = (
-                        page_level_event_handlers_dataframe.append(
-                            pd.DataFrame(
-                                columns=[
-                                    "flow",
-                                    "page",
-                                    "event",
-                                    "messages",
-                                    "transition_flow",
-                                    "transition_page",
-                                ],
-                                data=[
-                                    [
-                                        flow_map[flow_],
-                                        page.display_name,
-                                        handler.event,
-                                        handler.trigger_fulfillment.messages,
-                                        handler.target_flow,
-                                        handler.target_page,
-                                    ]
-                                ],
-                            )
-                        )
-                    )
+        df = df.explode(column='page_event_handlers').dropna(
+            axis=0, subset=['page_event_handlers']
+        )
 
-                page_level_event_handlers_all_dataframe = (
-                    page_level_event_handlers_all_dataframe.append(
-                        page_level_event_handlers_dataframe
-                    )
-                )
-        return page_level_event_handlers_all_dataframe
+        df = df.assign(
+            event = df.page_event_handlers.apply(lambda h: h.event),
+            messages = df.page_event_handlers.apply(lambda h: h.trigger_fulfillment.messages),
+            transition_flow = df.page_event_handlers.apply(lambda h: h.target_flow),
+            transition_page = df.page_event_handlers.apply(lambda h: h.target_page),
+        ).drop(columns='page_event_handlers')
+        return df
+
 
     # Parameters - event handlers
-    def _parameter_level_handlers(self):
-        parameter_level_event_handlers_all_dataframe = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(self.agent_id)
-        for flow_ in flow_map.keys():
-            pages_in_flow = self.pages.list_pages(flow_)
-            for page in pages_in_flow:
-                parameters = page.form.parameters
-                for parameter in parameters:
-                    parameter_event_handlers = (
-                        parameter.fill_behavior.reprompt_event_handlers
-                    )
-                    param_lvl_event_df = pd.DataFrame()
-                    for handler in parameter_event_handlers:
-                        param_lvl_event_df = param_lvl_event_df.append(
-                            pd.DataFrame(
-                                columns=[
-                                    "flow",
-                                    "page",
-                                    "parameter",
-                                    "event",
-                                    "messages",
-                                    "transition_flow",
-                                    "transition_page",
-                                ],
-                                data=[
-                                    [
-                                        flow_map[flow_],
-                                        page.display_name,
-                                        parameter.display_name,
-                                        handler.event,
-                                        handler.trigger_fulfillment.messages,
-                                        handler.target_flow,
-                                        handler.target_page,
-                                    ]
-                                ],
-                            )
-                        )
-                    parameter_level_event_handlers_all_dataframe = (
-                        parameter_level_event_handlers_all_dataframe.append(
-                            param_lvl_event_df
-                        )
-                    )
-        return parameter_level_event_handlers_all_dataframe
-
+    def parameter_level_handlers(self, agent_id):
+        
+        df = pd.concat([
+            pd.DataFrame([{
+                'flow': flow.display_name,
+                'page': p.display_name,
+                'params': p.form.parameters
+            } for p in  self.pages.list_pages(flow.name)])
+        for flow in self.flows.list_flows(agent_id)], ignore_index=True)
+        
+        df = df.explode(
+            column='params', ignore_index=True).dropna(axis=0, subset=['params'])
+        
+        df = df.assign(
+            parameter = df.params.apply(lambda p: p.display_name),
+            e_handlers = df.params.apply(lambda p: p.fill_behavior.reprompt_event_handlers)
+        ).drop(columns='params')
+        
+        df = df.explode(column='e_handlers', ignore_index=True).dropna(
+            axis=0, subset=['e_handlers'])
+        
+        df = df.assign(
+            event = df.e_handlers.apply(lambda eh: eh.event),
+            messages = df.e_handlers.apply(lambda eh: eh.trigger_fulfillment.messages),
+            transition_flow = df.e_handlers.apply(lambda eh: eh.target_flow),
+            transition_page = df.e_handlers.apply(lambda eh: eh.target_page)
+        ).drop(columns='e_handlers')
+        
+        return df
 
     def find_list_parameters(self, agent_id):
         """This method extracts Parameters set at a page level that are
@@ -491,7 +440,7 @@ class SearchUtil(ScrapiBase):
 
 
     # Event handlers Main Function
-    def find_event_handlers(self):
+    def find_event_handlers(self, agent_id):
         """This method extracts event handlers at the flow, page and parameter
         level and displays data about their associated event. A user can use
         this data to spot patterns in event types and look for detrimental
@@ -504,9 +453,9 @@ class SearchUtil(ScrapiBase):
           - dictionary with flow, page and parameter events
         """
         event_handler_scan = {
-            "flow": self._flow_level_handlers(),
-            "page": self._page_level_handlers(),
-            "parameter": self._parameter_level_handlers(),
+            "flow": self.flow_level_handlers(agent_id),
+            "page": self.page_level_handlers(agent_id),
+            "parameter": self.parameter_level_handlers(agent_id),
         }
 
         return event_handler_scan
