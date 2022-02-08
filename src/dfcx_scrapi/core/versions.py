@@ -18,7 +18,7 @@ import logging
 from typing import Dict
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -28,7 +28,7 @@ logging.basicConfig(
 )
 
 
-class Versions(ScrapiBase):
+class Versions(scrapi_base.ScrapiBase):
     """Core Class for CX Versions Resource functions."""
 
     def __init__(
@@ -55,7 +55,7 @@ class Versions(ScrapiBase):
             projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>
               /flows/<Flow ID>
 
-        returns:
+        Returns:
             List of Version objects.
         """
         if not flow_id:
@@ -252,7 +252,7 @@ class Versions(ScrapiBase):
             agents/<Agent ID>/flows/<Flow ID>
 
         Returns:
-            dialogflowcx_v3beta1.types.CompareVersionsRequest Object
+            types.CompareVersionsRequest Object
         """
         if not flow_id:
             flow_id = self.flow_id
