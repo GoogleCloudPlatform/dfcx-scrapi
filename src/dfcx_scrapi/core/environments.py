@@ -16,6 +16,7 @@
 
 from typing import List, Dict, Tuple
 import logging
+from google.oauth2 import service_account
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
@@ -38,7 +39,7 @@ class Environments(scrapi_base.ScrapiBase):
         self,
         creds_path: str = None,
         creds_dict: Dict[str,str] = None,
-        creds=None,
+        creds: service_account.Credentials = None,
         agent_id: str = None,
     ):
         super().__init__(
@@ -357,7 +358,7 @@ class Environments(scrapi_base.ScrapiBase):
             <Agent ID>/environments/<Environment ID>.
 
         Returns:
-          List of Environment objects with historical timestamps
+          List of Environment objects with historical timestamps.
         """
         request = types.environment.LookupEnvironmentHistoryRequest(
             name = environment_id
@@ -386,7 +387,7 @@ class Environments(scrapi_base.ScrapiBase):
             <Agent ID>/environments/<Environment ID>.
 
         Returns:
-          List of types.ContinuousTestResult
+          List of types.ContinuousTestResult.
         """
 
         request = types.environment.ListContinuousTestResultsRequest(
