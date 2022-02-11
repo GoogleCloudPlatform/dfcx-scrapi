@@ -20,6 +20,7 @@ from typing import Dict
 import pandas as pd
 
 from dfcx_scrapi.core import entity_types, flows, intents, pages, scrapi_base
+from google.oauth2 import service_account
 
 # logging config
 logging.basicConfig(
@@ -35,9 +36,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: Dict = None,
-        creds=None,
-        scope=False,
+        creds_dict: Dict[str, str] = None,
+        creds: service_account.Credentials = None,
+        scope: bool = False,
         agent_id: str = None,
     ):
         super().__init__(
@@ -56,11 +57,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         if agent_id:
             self.agent_id = agent_id
-            self.flow_map = self.flows.get_flows_map(
-                agent_id=agent_id, reverse=True
-            )
+            self.flow_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
             self.client_options = self._set_region(agent_id)
-    
+
     def find_event_handlers(self, agent_id: str):
         """Extracts event handlers at flow, page, and parameter levels.
 
@@ -83,131 +82,157 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         return event_handler_scan
 
-    def flow_level_handlers(self, agent_id:str):
-        """ Pulls event handlers set on flows.
+    def flow_level_handlers(self, agent_id: str):
+        """Pulls event handlers set on flows.
 
-            Pulls flow event handlers and returns them in a dataframe with 1 
-            row per event handler. 
+        Pulls flow event handlers and returns them in a dataframe with 1
+        row per event handler.
 
-            Args:
-                agent_id: id of the dfcx agent to pull from.
+        Args:
+            agent_id: id of the dfcx agent to pull from.
 
-            Returns:
-                dataframe with columns:
-                    flow: flow name.
-                    event: event type, such as 'sys.no-input-1'.
-                    messages: protobug repeated composite of fulfillment.
-                    transition_flow: target flow id.
-                    transition_page: target page id.
-        """ 
-        
+        Returns:
+            dataframe with columns:
+                flow: flow name.
+                event: event type, such as 'sys.no-input-1'.
+                messages: protobug repeated composite of fulfillment.
+                transition_flow: target flow id.
+                transition_page: target page id.
+        """
+
         flowlist = self.flows.list_flows(agent_id)
-        df = pd.DataFrame([
-            { 'flow_name': flow.display_name,
-                'handlers': flow.event_handlers #list 
-            } for flow in flowlist 
-        ])
+        df = pd.DataFrame(
+            [
+                {
+                    "flow_name": flow.display_name,
+                    "handlers": flow.event_handlers,  # list
+                }
+                for flow in flowlist
+            ]
+        )
 
-        df = df.explode(column='handlers').reset_index(drop=True)
+        df = df.explode(column="handlers").reset_index(drop=True)
 
         df = df.assign(
-            event = df.handlers.apply(lambda eh: eh.event),
-            messages = df.handlers.apply(
-                lambda eh: eh.trigger_fulfillment.messages
-            ),
-            transition_flow = df.handlers.apply(lambda eh: eh.target_flow),
-            transition_page = df.handlers.apply(lambda eh: eh.target_page),
-        ).drop(columns='handlers')
+            event=df.handlers.apply(lambda eh: eh.event),
+            messages=df.handlers.apply(lambda eh: eh.trigger_fulfillment.messages),
+            transition_flow=df.handlers.apply(lambda eh: eh.target_flow),
+            transition_page=df.handlers.apply(lambda eh: eh.target_page),
+        ).drop(columns="handlers")
 
         return df
 
     def page_level_handlers(self, agent_id: str):
-        """ Pulls event handlers set on pages.
+        """Pulls event handlers set on pages.
 
-            Pulls page event handlers and returns them in a dataframe with 1 
-            row per event handler. 
+        Pulls page event handlers and returns them in a dataframe with 1
+        row per event handler.
 
-            Args:
-                agent_id: id of the dfcx agent to pull from.
+        Args:
+            agent_id: id of the dfcx agent to pull from.
 
-            Returns:
-                dataframe with columns:
-                    flow: flow name
-                    page: page name
-                    event: event type, such as 'sys.no-input-1'
-                    messages: protobug repeated composite of fulfillment
-                    transition_flow: target flow id
-                    transition_page: target page id
-       """ 
-        
-        df = pd.concat([
-            pd.DataFrame([{
-                'flow': flow.display_name,
-                'page': p.display_name,
-                'page_event_handlers': p.event_handlers #list
-            } for p in  self.pages.list_pages(flow.name)])
-        for flow in self.flows.list_flows(agent_id)], ignore_index=True)
+        Returns:
+            dataframe with columns:
+                flow: flow name
+                page: page name
+                event: event type, such as 'sys.no-input-1'
+                messages: protobug repeated composite of fulfillment
+                transition_flow: target flow id
+                transition_page: target page id
+        """
 
-        df = df.explode(column='page_event_handlers').dropna(
-            axis=0, subset=['page_event_handlers']
+        df = pd.concat(
+            [
+                pd.DataFrame(
+                    [
+                        {
+                            "flow": flow.display_name,
+                            "page": p.display_name,
+                            "page_event_handlers": p.event_handlers,  # list
+                        }
+                        for p in self.pages.list_pages(flow.name)
+                    ]
+                )
+                for flow in self.flows.list_flows(agent_id)
+            ],
+            ignore_index=True,
+        )
+
+        df = df.explode(column="page_event_handlers").dropna(
+            axis=0, subset=["page_event_handlers"]
         )
 
         df = df.assign(
-            event = df.page_event_handlers.apply(lambda h: h.event),
-            messages = df.page_event_handlers.apply(lambda h: h.trigger_fulfillment.messages),
-            transition_flow = df.page_event_handlers.apply(lambda h: h.target_flow),
-            transition_page = df.page_event_handlers.apply(lambda h: h.target_page),
-        ).drop(columns='page_event_handlers')
+            event=df.page_event_handlers.apply(lambda h: h.event),
+            messages=df.page_event_handlers.apply(
+                lambda h: h.trigger_fulfillment.messages
+            ),
+            transition_flow=df.page_event_handlers.apply(lambda h: h.target_flow),
+            transition_page=df.page_event_handlers.apply(lambda h: h.target_page),
+        ).drop(columns="page_event_handlers")
         return df
 
-    def parameter_level_handlers(self, agent_id:str):
-        """ Pulls reprompt event handlers for parameters.
+    def parameter_level_handlers(self, agent_id: str):
+        """Pulls reprompt event handlers for parameters.
 
-            Pulls reprompt event handlers for parameters and returns them in a
-            dataframe with 1 row per event handler. 
+        Pulls reprompt event handlers for parameters and returns them in a
+        dataframe with 1 row per event handler.
 
-            Args:
-                agent_id: id of the dfcx agent to pull from.
+        Args:
+            agent_id: id of the dfcx agent to pull from.
 
-            Returns:
-                dataframe with columns:
-                    flow: flow name
-                    page: page name
-                    parameter: parameter name
-                    event: event type, such as 'sys.no-input-1'
-                    messages: protobug repeated composite of fulfillment
-                    transition_flow: target flow id
-                    transition_page: target page id
+        Returns:
+            dataframe with columns:
+                flow: flow name
+                page: page name
+                parameter: parameter name
+                event: event type, such as 'sys.no-input-1'
+                messages: protobug repeated composite of fulfillment
+                transition_flow: target flow id
+                transition_page: target page id
         """
-        df = pd.concat([
-            pd.DataFrame([{
-                'flow': flow.display_name,
-                'page': p.display_name,
-                'params': p.form.parameters
-            } for p in  self.pages.list_pages(flow.name)])
-        for flow in self.flows.list_flows(agent_id)], ignore_index=True)
-        
-        df = df.explode(
-            column='params', ignore_index=True).dropna(axis=0, subset=['params'])
-        
+        df = pd.concat(
+            [
+                pd.DataFrame(
+                    [
+                        {
+                            "flow": flow.display_name,
+                            "page": p.display_name,
+                            "params": p.form.parameters,
+                        }
+                        for p in self.pages.list_pages(flow.name)
+                    ]
+                )
+                for flow in self.flows.list_flows(agent_id)
+            ],
+            ignore_index=True,
+        )
+
+        df = df.explode(column="params", ignore_index=True).dropna(
+            axis=0, subset=["params"]
+        )
+
         df = df.assign(
-            parameter = df.params.apply(lambda p: p.display_name),
-            e_handlers = df.params.apply(lambda p: p.fill_behavior.reprompt_event_handlers)
-        ).drop(columns='params')
-        
-        df = df.explode(column='e_handlers', ignore_index=True).dropna(
-            axis=0, subset=['e_handlers'])
-        
+            parameter=df.params.apply(lambda p: p.display_name),
+            e_handlers=df.params.apply(
+                lambda p: p.fill_behavior.reprompt_event_handlers
+            ),
+        ).drop(columns="params")
+
+        df = df.explode(column="e_handlers", ignore_index=True).dropna(
+            axis=0, subset=["e_handlers"]
+        )
+
         df = df.assign(
-            event = df.e_handlers.apply(lambda eh: eh.event),
-            messages = df.e_handlers.apply(lambda eh: eh.trigger_fulfillment.messages),
-            transition_flow = df.e_handlers.apply(lambda eh: eh.target_flow),
-            transition_page = df.e_handlers.apply(lambda eh: eh.target_page)
-        ).drop(columns='e_handlers')
-        
+            event=df.e_handlers.apply(lambda eh: eh.event),
+            messages=df.e_handlers.apply(lambda eh: eh.trigger_fulfillment.messages),
+            transition_flow=df.e_handlers.apply(lambda eh: eh.target_flow),
+            transition_page=df.e_handlers.apply(lambda eh: eh.target_page),
+        ).drop(columns="e_handlers")
+
         return df
 
-    def find_list_parameters(self, agent_id:str) -> Dict:
+    def find_list_parameters(self, agent_id: str) -> Dict:
         """Extracts page level parameters designated as lists.
 
         Page level parameters are tied to Entity Types and can be returned
@@ -237,19 +262,19 @@ class SearchUtil(scrapi_base.ScrapiBase):
                         params_list.append(param.display_name)
 
         return params_list
-    
+
     def search_conditionals(
         self,
         search: str,
         agent_id: str,
-        flow_name:str = None,
-        page_name:str = None,
-        flag_search_all:bool = False,
+        flow_name: str = None,
+        page_name: str = None,
+        flag_search_all: bool = False,
     ) -> pd.DataFrame:
-        """Top-level function for searching for conditionals. 
-        
+        """Top-level function for searching for conditionals.
+
         Top-level function where a user can search across all pages in a flow,
-        an entire agent etc. Search conditionals for an exact string in 
+        an entire agent etc. Search conditionals for an exact string in
         conditional routes.
 
         Args:
@@ -275,9 +300,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         if page_name:
             try:
-                flows_map = self.flows.get_flows_map(
-                    agent_id=agent_id, reverse=True
-                )
+                flows_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
             # check - maybe other error types here
             except ValueError:
                 logging.error(
@@ -304,9 +327,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         if flow_name:
             locator = pd.DataFrame()
             try:
-                flows_map = self.flows.get_flows_map(
-                    agent_id=agent_id, reverse=True
-                )
+                flows_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
                 flow_search = self.search_conditionals_flow(
                     flow_id=flows_map[flow_name], search=search
                 )
@@ -339,9 +360,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         if flow_name is None and page_name is None and flag_search_all is True:
             locator = pd.DataFrame()
 
-            flows_map = self.flows.get_flows_map(
-                agent_id=agent_id, reverse=True
-            )
+            flows_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
             for flow in flows_map:
                 flow_search = self.search_conditionals_flow(
                     flow_id=flows_map[flow], search=search
@@ -365,8 +384,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
         # not found
         return None
 
-    def search_conditionals_flow(self, flow_id:str , search:str):
-        """Search flow for an exact string in conditional routes. 
+    def search_conditionals_flow(self, flow_id: str, search: str):
+        """Search flow for an exact string in conditional routes.
 
         Args:
             flow_id, the formatted CX Flow ID to use.
@@ -389,8 +408,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
             i += 1
 
         return locator
-    
-    def search_conditionals_page(self, page_id:str, search:str) -> pd.DataFrame:
+
+    def search_conditionals_page(self, page_id: str, search: str) -> pd.DataFrame:
         """Search page for an exact string in conditional routes.
 
         Args:
@@ -416,7 +435,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         return locator
 
     def find_true_routes(self, agent_id: str):
-        """Finds true and final routes. 
+        """Finds true and final routes.
 
         This method extracts data to see if routes with no parameters have a
         true route or pages with parameters have a true route +
@@ -440,26 +459,23 @@ class SearchUtil(scrapi_base.ScrapiBase):
         """
 
         agent_results = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(
-                agent_id=agent_id, reverse=True
-            )
+        flow_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
 
         for flow_display_name in flow_map.keys():
-            flow_scan = self._find_true_routes_flow_level(
-                flow_display_name, flow_map
-            )
+            flow_scan = self._find_true_routes_flow_level(flow_display_name, flow_map)
             agent_results = agent_results.append(flow_scan)
         return agent_results
 
     def _find_true_routes_flow_level(
-        self, flow_display_name: str, flow_map: Dict) -> pd.DataFrame:
+        self, flow_display_name: str, flow_map: Dict
+    ) -> pd.DataFrame:
         """Searches for flow-level final or true routes.
 
         Args:
             flow_display_name: flow to search for routes.
             flow_map: dict of flow_name:flow_id
 
-        Returns: 
+        Returns:
             dataframe with columns:
                 flow_display_name,
                 page_display_name,
@@ -469,7 +485,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 has_true_and_final_foute
         """
         flow_id = flow_map[flow_display_name]
-        start_page = self.flows.get_flow(flow_id) # pylint: disable=W0612
+        start_page = self.flows.get_flow(flow_id)  # pylint: disable=W0612
         other_pages = self.pages.list_pages(flow_id)
 
         # Start page - no entry fulfillment
@@ -517,4 +533,3 @@ class SearchUtil(scrapi_base.ScrapiBase):
             pages_dataframe = pages_dataframe.append(page_dataframe)
 
         return pages_dataframe
-
