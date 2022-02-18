@@ -80,6 +80,20 @@ class DialogflowConversation(ScrapiBase):
         self.pages = Pages(creds=self.creds)
 
     @staticmethod
+    def _get_match_type_from_map(match_type:int):
+        match_type_map = {
+            0: 'MATCH_TYPE_UNSPECIFIED',
+            1: 'INTENT',
+            2: 'DIRECT_INTENT',
+            3: 'PARAMETER_FILLING',
+            4: 'NO_MATCH',
+            5: 'NO_INPUT',
+            6: 'EVENT'
+        }
+
+        return match_type_map[match_type]
+
+    @staticmethod
     def _validate_test_set_input(test_set: pd.DataFrame):
         mask = test_set.page_id.isna().to_list()
         invalid_pages = set(test_set.page_display_name[mask].to_list())
@@ -144,7 +158,7 @@ class DialogflowConversation(ScrapiBase):
         confidence = response["confidence"]
         target_page = response["page_name"]
 
-        results["detected_intent"][i] = intent or "no match"
+        results["detected_intent"][i] = intent or "NO_MATCH"
         results["confidence"][i] = confidence
         results["target_page"][i] = target_page
 
@@ -261,12 +275,9 @@ class DialogflowConversation(ScrapiBase):
         )
         session_path = f"{self.agent_path}/sessions/{self.session_id}"
 
-        # projects/*/locations/*/agents/*/environments/*/sessions/*
         custom_environment = self.agent_env.get("environment")
 
         if custom_environment:
-            # just the environment and NOT experiment
-            # (change to elif if experiment comes back)
             logging.info("req using env: %s", custom_environment)
             session_path = f"{self.agent_path}/environments/"\
             f"{custom_environment}/sessions/{self.session_id}"
@@ -307,7 +318,6 @@ class DialogflowConversation(ScrapiBase):
                 language_code=self.language_code,
             )
 
-        # self.checkpoint("<< prepared request")
         request = session.DetectIntentRequest(
             session=session_path,
             query_input=query_input,
@@ -344,45 +354,38 @@ class DialogflowConversation(ScrapiBase):
             logging.error(traceback.print_exc())
             retries += 1
             if retries < MAX_RETRIES:
-                # TODO - increase back off / delay? not needed for 3 retries
                 logging.error("retrying")
                 return self.reply(
                     send_obj, restart=restart, raw=raw, retries=retries
                 )
             else:
                 logging.error("MAX_RETRIES exceeded")
-                # try to continue but this may crash somewhere else
                 return {}
-                # raise err
-                # return None ## try next one
 
-        # format reply
+
         if checkpoints:
             self.checkpoint("<< got response")
         query_result = response.query_result
         logging.debug("dfcx>qr %s", query_result)
-        self.query_result = query_result  # for debugging
+        self.query_result = query_result
         reply = {}
 
         # flatten array of text responses
         texts = []
         for msg in query_result.response_messages:
             if msg.payload:
-                reply["payload"] = ScrapiBase.extract_payload(msg)
+                # reply["text"] = ScrapiBase.extract_payload(msg)
+                texts.append(str(ScrapiBase.extract_payload(msg)))
             if (len(msg.text.text)) > 0:
-                text = msg.text.text[-1]  # this could be multiple lines too?
-                # print("text", text)
+                text = msg.text.text[-1]
                 texts.append(text)
 
         # flatten params struct
         params = {}
-        # print("parameters", json.dumps(qr.parameters))  ## not JSON
         if query_result.parameters:
             for param in query_result.parameters:
-                # turn into key: value pairs
                 val = query_result.parameters[param]
                 try:
-                    # protobuf array - we flatten as a string with spaces
                     if isinstance(val, RepeatedComposite):
                         val = " ".join(val)
 
@@ -401,18 +404,13 @@ class DialogflowConversation(ScrapiBase):
         reply["confidence"] = query_result.intent_detection_confidence
         reply["page_name"] = query_result.current_page.display_name
         reply["intent_name"] = query_result.intent.display_name
+        reply["match_type"] = self._get_match_type_from_map(
+            query_result.match.match_type)
         reply["other_intents"] = self.format_other_intents(query_result)
         reply["params"] = params
 
-        if DEBUG_LEVEL == "silly":
-            blob = ScrapiBase.cx_object_to_json(query_result)
-            logging.info(
-                "response: %s", json.dumps(blob, indent=2)
-            )  # do NOT deploy
-            # logging.debug("response: %s", blob)
-
-        # self.checkpoint("<< formatted response")
         logging.debug("reply %s", reply)
+
         return reply
 
     def format_other_intents(self, query_result):
@@ -431,8 +429,8 @@ class DialogflowConversation(ScrapiBase):
                 }
             )
             rank += 1
-        # intents_map[alt["DisplayName"]] = alt["Score"]
-        if self:  # keep as instance method and silence linter
+
+        if self:
             return items
 
         return None
