@@ -339,7 +339,12 @@ class Agents(ScrapiBase):
         return val_results_dict
 
 
-    def export_agent(self, agent_id: str, gcs_bucket_uri: str, environment: str = 'draft') -> str:
+    def export_agent(
+        self,
+        agent_id: str,
+        gcs_bucket_uri: str,
+        environment: str = None
+    ) -> str:
         """Exports the specified CX agent to Google Cloud Storage bucket.
 
         Args:
@@ -348,7 +353,10 @@ class Agents(ScrapiBase):
           gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
             agent to in the following format:
               `gs://<bucket-name>/<object-name>`
-          environment: CX Agent environment as a string
+          environment: (Optional) CX Agent environment ID string. If not set,
+            draft environment is assumed. Format:
+              `projects/<Project ID>/locations/<Location ID>/agents/
+              <Agent ID>/environments/<Environment ID>`
 
         Returns:
           response: A Long Running Operation (LRO) ID that can be used to
