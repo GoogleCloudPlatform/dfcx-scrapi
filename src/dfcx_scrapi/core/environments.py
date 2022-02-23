@@ -411,7 +411,7 @@ class Environments(scrapi_base.ScrapiBase):
     def get_environments_map(
         self,
         agent_id: str = None,
-        reverse=False
+        reverse: bool = False
     ) -> Dict[str, str]:
         """Exports Agent environment display names and UUIDs
         into a user friendly dict.
