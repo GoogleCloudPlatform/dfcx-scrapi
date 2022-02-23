@@ -21,6 +21,7 @@ from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import environments
 
 # logging config
 logging.basicConfig(
@@ -353,10 +354,8 @@ class Agents(ScrapiBase):
           gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
             agent to in the following format:
               `gs://<bucket-name>/<object-name>`
-          environment: (Optional) CX Agent environment ID string. If not set,
-            draft environment is assumed. Format:
-              `projects/<Project ID>/locations/<Location ID>/agents/
-              <Agent ID>/environments/<Environment ID>`
+          environment: (Optional) CX Agent environment display name string.
+            If not set, DRAFT environment is assumed.
 
         Returns:
           response: A Long Running Operation (LRO) ID that can be used to
@@ -367,7 +366,11 @@ class Agents(ScrapiBase):
         request = types.agent.ExportAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
-        request.environment = environment
+        if environment:
+            self._environments = environments.Environments(creds=self.creds)
+            request.environment = self._environments.get_environments_map(
+                agent_id=agent_id, reverse=True
+            ).get(environment)
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
