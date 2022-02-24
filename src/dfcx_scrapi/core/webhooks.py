@@ -19,7 +19,7 @@ from typing import Dict
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
-
+from google.protobuf import field_mask_pb2
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 # logging config
@@ -56,15 +56,18 @@ class Webhooks(ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
 
-    def get_webhooks_map(self, agent_id: str = None, reverse=False):
+    def get_webhooks_map(
+        self,
+        agent_id: str = None,
+        reverse=False):
         """Exports Agent Webhook Names and UUIDs into a user friendly dict.
 
         Args:
-          - agent_id, the formatted CX Agent ID to use
-          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+          agent_id: the formatted CX Agent ID to use
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          - webhooks_map, Dictionary containing Webhook UUIDs as keys and
+          webhooks_map: Dictionary containing Webhook UUIDs as keys and
               webhook.display_name as values
         """
         if not agent_id:
@@ -84,14 +87,15 @@ class Webhooks(ScrapiBase):
 
         return webhooks_dict
 
+
     def list_webhooks(self, agent_id: str = None):
         """List all Webhooks in the specified CX Agent.
 
         Args:
-          agent_id, the formated CX Agent ID to use
+          agent_id: the formated CX Agent ID to use
 
         Returns:
-          cx_webhooks, List of webhook objects
+          cx_webhooks: List of webhook objects
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -113,17 +117,19 @@ class Webhooks(ScrapiBase):
         return cx_webhooks
 
     def create_webhook(
-        self, agent_id: str = None, obj: types.Webhook = None, **kwargs
-    ):
+        self,
+        agent_id: str = None,
+        obj: types.Webhook = None,
+        **kwargs):
         """Create a single webhook resource on a given CX Agent.
 
         Args:
-          agent_id, the formatted CX Agent ID to create the webhook on
-          obj, (Optional) the Webhook object of type
+          agent_id: the formatted CX Agent ID to create the webhook on
+          obj: (Optional) the Webhook object of type
             types.Webhook that you want to create the webhook from
 
         Returns:
-          response, a copy of the successfully created webhook object
+          response: a copy of the successfully created webhook object
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -142,5 +148,81 @@ class Webhooks(ScrapiBase):
         client = services.webhooks.WebhooksClient(
             client_options=client_options, credentials=self.creds)
         response = client.create_webhook(parent=agent_id, webhook=webhook)
+
+        return response
+
+
+    def get_webhook(
+        self,
+        webhook_id:str,
+        agent_id:str = None):
+        """Retrieves the specified webhook.
+
+        Args:
+          agent_id: Optional. The formatted CX Agent ID to create the webhook on.
+            Defaults to agent ID defined for the Webhooks instance.
+          webhook_id: The ID of the webhook. Format:
+            projects/<Project ID>/locations/<Location ID>/agents/
+            <Agent ID>/webhooks/<Webhook
+
+        Returns:
+          types.Webhook object.
+        """
+
+        if not agent_id:
+            agent_id = self.agent_id
+
+        request = types.webhook.GetWebhookRequest()
+        request.name = webhook_id
+
+        client_options = self._set_region(agent_id)
+        client = services.webhooks.WebhooksClient(
+            client_options=client_options, credentials=self.creds)
+
+        response = client.get_webhook(request)
+        return response
+
+
+    def update_webhook(
+        self,
+        agent_id:str,
+        webhook_id:str,
+        webhook_obj:types.Webhook = None,
+        **kwargs):
+        """Update the values of an existing webhook.
+
+        Args:
+          agent_id: the formatted CX Agent ID to create the webhook on
+          webhook_id: The ID of the webhook. Format:
+            projects/<Project ID>/locations/<Location ID>/agents/
+            <Agent ID>/webhooks/<Webhook
+          webhook_obj: Optional Webhook object of types.Webhook
+            that can be provided when you are planning to replace the full
+            object vs. just partial updates.
+          kwargs: Any values to replace within the webhook.
+
+        Returns:
+          types.Webhook object with specified changes.
+        """
+        if not webhook_obj:
+            webhook_obj = types.Webhook()
+
+        webhook_obj.name = webhook_id
+
+        # set environment attributes from kwargs
+        for key, value in kwargs.items():
+            setattr(webhook_obj, key, value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+
+        client_options = self._set_region(agent_id)
+        client = services.webhooks.WebhooksClient(
+            client_options=client_options, credentials=self.creds)
+
+        request = types.webhook.UpdateWebhookRequest()
+        request.webhook = webhook_obj
+        request.update_mask = mask
+
+        response = client.update_webhook(request)
 
         return response
