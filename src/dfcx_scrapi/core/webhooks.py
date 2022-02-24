@@ -182,6 +182,28 @@ class Webhooks(ScrapiBase):
         response = client.get_webhook(request)
         return response
 
+    def get_webhook_by_display_name(
+        self,
+        webhook_name:str,
+        agent_id:str = None):
+        """Retrieves the specified webhook.
+
+        Args:
+          agent_id: Optional. The formatted CX Agent ID to create the webhook on.
+            Defaults to agent ID defined for the Webhooks instance.
+          webhook_webhook_name: The display name of the webhook.
+
+        Returns:
+          types.Webhook object.
+        """
+
+        if not agent_id:
+            agent_id = self.agent_id
+
+        webhook_map = self.get_webhooks_map(agent_id=agent_id,reverse=True)
+        webhook_obj = self.get_webhook(webhook_map[webhook_name])
+
+        return webhook_obj
 
     def update_webhook(
         self,
