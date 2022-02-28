@@ -20,7 +20,7 @@ from typing import Dict
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 
 
-class Webhooks(ScrapiBase):
+class Webhooks(scrapi_base.ScrapiBase):
     """Core Class for CX Webhook Resource functions."""
 
     def __init__(
@@ -184,7 +184,7 @@ class Webhooks(ScrapiBase):
 
     def get_webhook_by_display_name(
         self,
-        webhook_name:str,
+        webhook_display_name:str,
         agent_id:str = None):
         """Retrieves the specified webhook.
 
@@ -194,14 +194,19 @@ class Webhooks(ScrapiBase):
           webhook_webhook_name: The display name of the webhook.
 
         Returns:
-          types.Webhook object.
+          Returns types.Webhook object of the specified webhook.
+          Returns None when webhook is not found.
         """
 
         if not agent_id:
             agent_id = self.agent_id
 
         webhook_map = self.get_webhooks_map(agent_id=agent_id,reverse=True)
-        webhook_obj = self.get_webhook(webhook_map[webhook_name])
+
+        if webhook_display_name in webhook_map:
+            webhook_obj = self.get_webhook(webhook_map[webhook_display_name])
+        else:
+            webhook_obj = None
 
         return webhook_obj
 
@@ -248,3 +253,4 @@ class Webhooks(ScrapiBase):
         response = client.update_webhook(request)
 
         return response
+
