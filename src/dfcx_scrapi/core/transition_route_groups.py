@@ -1,6 +1,6 @@
 """CX Transition Route Group Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 import logging
 from typing import Dict
 import pandas as pd
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
+import google.cloud.dialogflowcx_v3beta1.services as services
+import google.cloud.dialogflowcx_v3beta1.types as types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.flows import Flows
@@ -316,9 +316,18 @@ class TransitionRouteGroups(ScrapiBase):
                     temp_dict.update(
                         {"route_group_name": route_group.display_name}
                     )
+
                     temp_dict.update(
-                        {"intent": intent_dict[route.intent.split("/")[-1]]}
+                        {"target_page": route.target_page}
                     )
+                 
+                    try:
+                      temp_dict.update(
+                          {"intent": intent_dict[route.intent.split("/")[-1]]}      
+                      )
+                    except Exception as e:
+                          pass
+
 
                     if route.trigger_fulfillment.webhook:
                         temp_dict.update(
@@ -345,3 +354,4 @@ class TransitionRouteGroups(ScrapiBase):
         final_dataframe = pd.DataFrame(rows_list)
 
         return final_dataframe
+
