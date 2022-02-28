@@ -368,9 +368,16 @@ class Agents(ScrapiBase):
         request.agent_uri = gcs_bucket_uri
         if environment_display_name:
             self._environments = environments.Environments(creds=self.creds)
-            request.environment = self._environments.get_environments_map(
+            possible_environment = self._environments.get_environments_map(
                 agent_id=agent_id, reverse=True
             ).get(environment_display_name)
+            if possible_environment:
+                request.environment = possible_environment
+            else:
+                raise ValueError(
+                    "Invalid environment_display_name."
+                    f" {environment_display_name} does not exist!"
+                )
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
