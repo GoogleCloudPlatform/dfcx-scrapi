@@ -195,20 +195,25 @@ class Webhooks(scrapi_base.ScrapiBase):
 
         Returns:
           Returns types.Webhook object of the specified webhook.
-          Returns None when webhook is not found.
         """
 
         if not agent_id:
             agent_id = self.agent_id
 
         webhook_map = self.get_webhooks_map(agent_id=agent_id,reverse=True)
+        webhook_obj = None
 
         if webhook_display_name in webhook_map:
             webhook_obj = self.get_webhook(webhook_map[webhook_display_name])
+
         else:
-            webhook_obj = None
+            logging.warning(
+                "Webhook \"%s\" does not exist in the specified Agent.",
+                webhook_display_name
+            )
 
         return webhook_obj
+
 
     def update_webhook(
         self,
