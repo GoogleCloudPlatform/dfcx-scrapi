@@ -67,7 +67,7 @@ class Webhooks(scrapi_base.ScrapiBase):
           reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          webhooks_map: Dictionary containing Webhook UUIDs as keys and
+          Dictionary containing Webhook UUIDs as keys and
               webhook.display_name as values
         """
         if not agent_id:
@@ -95,7 +95,7 @@ class Webhooks(scrapi_base.ScrapiBase):
           agent_id: the formated CX Agent ID to use
 
         Returns:
-          cx_webhooks: List of webhook objects
+          List of webhook objects
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -118,7 +118,7 @@ class Webhooks(scrapi_base.ScrapiBase):
 
     def create_webhook(
         self,
-        agent_id: str = None,
+        agent_id: str,
         obj: types.Webhook = None,
         **kwargs):
         """Create a single webhook resource on a given CX Agent.
@@ -129,11 +129,8 @@ class Webhooks(scrapi_base.ScrapiBase):
             types.Webhook that you want to create the webhook from
 
         Returns:
-          response: a copy of the successfully created webhook object
+          The successfully created webhook object
         """
-        if not agent_id:
-            agent_id = self.agent_id
-
         if obj:
             webhook = obj
             webhook.name = ""
@@ -152,15 +149,10 @@ class Webhooks(scrapi_base.ScrapiBase):
         return response
 
 
-    def get_webhook(
-        self,
-        webhook_id:str,
-        agent_id:str = None):
+    def get_webhook(self, webhook_id:str):
         """Retrieves the specified webhook.
 
         Args:
-          agent_id: Optional. The formatted CX Agent ID to create the webhook on.
-            Defaults to agent ID defined for the Webhooks instance.
           webhook_id: The ID of the webhook. Format:
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/webhooks/<Webhook
@@ -168,18 +160,15 @@ class Webhooks(scrapi_base.ScrapiBase):
         Returns:
           types.Webhook object.
         """
-
-        if not agent_id:
-            agent_id = self.agent_id
-
         request = types.webhook.GetWebhookRequest()
         request.name = webhook_id
 
-        client_options = self._set_region(agent_id)
+        client_options = self._set_region(webhook_id)
         client = services.webhooks.WebhooksClient(
             client_options=client_options, credentials=self.creds)
 
         response = client.get_webhook(request)
+
         return response
 
     def get_webhook_by_display_name(
@@ -189,19 +178,17 @@ class Webhooks(scrapi_base.ScrapiBase):
         """Retrieves the specified webhook.
 
         Args:
-          agent_id: Optional. The formatted CX Agent ID to create the webhook on.
-            Defaults to agent ID defined for the Webhooks instance.
           webhook_webhook_name: The display name of the webhook.
+         agent_id: Optional. The formatted CX Agent ID.
 
         Returns:
-          Returns types.Webhook object of the specified webhook.
+          types.Webhook object of the specified webhook.
         """
 
         if not agent_id:
             agent_id = self.agent_id
 
         webhook_map = self.get_webhooks_map(agent_id=agent_id,reverse=True)
-        webhook_obj = None
 
         if webhook_display_name in webhook_map:
             webhook_obj = self.get_webhook(webhook_map[webhook_display_name])
@@ -217,21 +204,18 @@ class Webhooks(scrapi_base.ScrapiBase):
 
     def update_webhook(
         self,
-        agent_id:str,
         webhook_id:str,
         webhook_obj:types.Webhook = None,
         **kwargs):
         """Update the values of an existing webhook.
 
         Args:
-          agent_id: the formatted CX Agent ID to create the webhook on
           webhook_id: The ID of the webhook. Format:
             projects/<Project ID>/locations/<Location ID>/agents/
-            <Agent ID>/webhooks/<Webhook
+            <Agent ID>/webhooks/<Webhook ID>
           webhook_obj: Optional Webhook object of types.Webhook
             that can be provided when you are planning to replace the full
             object vs. just partial updates.
-          kwargs: Any values to replace within the webhook.
 
         Returns:
           types.Webhook object with specified changes.
@@ -247,7 +231,7 @@ class Webhooks(scrapi_base.ScrapiBase):
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
 
-        client_options = self._set_region(agent_id)
+        client_options = self._set_region(webhook_id)
         client = services.webhooks.WebhooksClient(
             client_options=client_options, credentials=self.creds)
 
@@ -258,4 +242,3 @@ class Webhooks(scrapi_base.ScrapiBase):
         response = client.update_webhook(request)
 
         return response
-
