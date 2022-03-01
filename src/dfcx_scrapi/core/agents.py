@@ -20,7 +20,7 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import environments
 
 # logging config
@@ -31,7 +31,7 @@ logging.basicConfig(
 )
 
 
-class Agents(ScrapiBase):
+class Agents(scrapi_base.ScrapiBase):
     """Core Class for CX Agent Resource functions."""
 
     def __init__(
