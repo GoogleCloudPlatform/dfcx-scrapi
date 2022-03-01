@@ -207,10 +207,10 @@ class Webhooks(scrapi_base.ScrapiBase):
             webhook_obj = self.get_webhook(webhook_map[webhook_display_name])
 
         else:
-            logging.warning(
-                "Webhook \"%s\" does not exist in the specified Agent.",
-                webhook_display_name
-            )
+            raise ValueError(
+                "Webhook \"{}\" does not exist in the specified Agent.".format(
+                    webhook_display_name)
+                )
 
         return webhook_obj
 
