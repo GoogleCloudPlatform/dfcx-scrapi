@@ -97,6 +97,38 @@ class Environments(scrapi_base.ScrapiBase):
 
         return final_versions
 
+    def get_environments_map(
+        self,
+        agent_id: str = None,
+        reverse: bool = False
+    ) -> Dict[str, str]:
+        """Exports Agent environment display names and UUIDs
+        into a user friendly dict.
+
+        Args:
+          agent_id, the formatted CX Agent ID to use
+          reverse, (Optional) Boolean flag to swap key:value -> value:key
+
+        Returns:
+          Dictionary containing Environment UUIDs as keys and environment
+            display name as values.
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        if reverse:
+            environments_dict = {
+                environment.display_name: environment.name
+                for environment in self.list_environments(agent_id)
+            }
+        else:
+            environments_dict = {
+                environment.name: environment.display_name
+                for environment in self.list_environments(agent_id)
+            }
+
+        return environments_dict
+
     def list_environments(self, agent_id:str=None):
         """List all Versions for a given Flow"""
 
@@ -407,35 +439,3 @@ class Environments(scrapi_base.ScrapiBase):
                 test_results.append(test)
 
         return test_results
-
-    def get_environments_map(
-        self,
-        agent_id: str = None,
-        reverse: bool = False
-    ) -> Dict[str, str]:
-        """Exports Agent environment display names and UUIDs
-        into a user friendly dict.
-
-        Args:
-          agent_id, the formatted CX Agent ID to use
-          reverse, (Optional) Boolean flag to swap key:value -> value:key
-
-        Returns:
-          environments_map, Dictionary containing Environment UUIDs as keys and
-              environment display name as values.
-        """
-        if not agent_id:
-            agent_id = self.agent_id
-
-        if reverse:
-            environments_dict = {
-                environment.display_name: environment.name
-                for environment in self.list_environments(agent_id)
-            }
-        else:
-            environments_dict = {
-                environment.name: environment.display_name
-                for environment in self.list_environments(agent_id)
-            }
-
-        return environments_dict
