@@ -19,8 +19,7 @@ from typing import Dict
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
-
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -30,7 +29,7 @@ logging.basicConfig(
 )
 
 
-class Flows(ScrapiBase):
+class Flows(scrapi_base.ScrapiBase):
     """Core Class for CX Flow Resource functions."""
 
     def __init__(
@@ -54,7 +53,11 @@ class Flows(ScrapiBase):
 
         self.agent_id = agent_id
 
-    def get_flows_map(self, agent_id: str = None, reverse=False):
+    def get_flows_map(
+        self,
+        agent_id: str,
+        reverse=False
+    ):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
@@ -65,8 +68,6 @@ class Flows(ScrapiBase):
             - flows_dict, Dictionary containing flow UUIDs as keys and
                 flow.display_name as values
         """
-        if not agent_id:
-            agent_id = self.agent_id
 
         if reverse:
             flows_dict = {
@@ -82,7 +83,7 @@ class Flows(ScrapiBase):
 
         return flows_dict
 
-    def train_flow(self, flow_id: str = None):
+    def train_flow(self, flow_id: str) -> str:
         """trains the specified flow.
 
         Args:
@@ -95,8 +96,6 @@ class Flows(ScrapiBase):
             check the status of the export using
               dfcx_scrapi.core.operations->get_lro()
         """
-        if not flow_id:
-            flow_id = self.flow_id
 
         request = types.flow.TrainFlowRequest()
         request.name = flow_id
@@ -109,7 +108,10 @@ class Flows(ScrapiBase):
 
         return response
 
-    def list_flows(self, agent_id: str = None):
+    def list_flows(
+        self,
+        agent_id: str
+    ) -> [types.flow.Flow]:
         """Get a List of all Flows in the current Agent.
 
         Args:
@@ -117,10 +119,8 @@ class Flows(ScrapiBase):
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
 
         Returns:
-          flows, a List of Flow objects
+          List of Flow objects
         """
-        if not agent_id:
-            agent_id = self.agent_id
 
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
@@ -135,19 +135,47 @@ class Flows(ScrapiBase):
         for page in response.pages:
             for flow in page.flows:
                 flows.append(flow)
-
         return flows
 
-    def get_flow(self, flow_id: str = None):
+    def get_flow_by_display_name(
+        self,
+        display_name: str,
+        agent_id: str
+    ) -> types.flow.Flow:
+        """Get a single CX Flow object based on its display name.
+
+        Args:
+          display_name: The display name of the desired Flow.
+          agent_id: CX Agent ID in which the flow exists.
+
+        Returns:
+          a single CX Flow object"""
+
+        flows_map = self.get_flows_map(
+            agent_id = agent_id,
+            reverse = True
+        )
+
+        if display_name in flows_map:
+            flow_id = flows_map[display_name]
+        else:
+            raise ValueError(
+                f"Flow \"{display_name}\" " \
+                f"does not exist in the specified agent."
+            )
+
+        flow = self.get_flow(flow_id=flow_id)
+
+        return flow
+
+    def get_flow(self, flow_id: str) -> types.flow.Flow:
         """Get a single CX Flow object.
 
         Args:
-          flow_id, CX Flow ID in the proper format
+          flow_id: CX Flow ID in the proper format
 
         Returns:
-          response, a single CX Flow object"""
-        if not flow_id:
-            flow_id = self.flow_id
+          response: a single CX Flow object"""
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
@@ -158,8 +186,11 @@ class Flows(ScrapiBase):
         return response
 
     def update_flow(
-        self, flow_id: str = None, obj: types.Flow = None, **kwargs
-    ):
+        self,
+        flow_id: str,
+        obj: types.Flow = None,
+        **kwargs
+    ) -> types.flow.Flow:
         """Update a single specific CX Flow object.
 
         Args:
@@ -174,8 +205,6 @@ class Flows(ScrapiBase):
             flow = obj
             flow.name = flow_id
         else:
-            if not flow_id:
-                flow_id = self.flow_id
             flow = self.get_flow(flow_id)
 
         # set flow attributes to args
@@ -213,7 +242,8 @@ class Flows(ScrapiBase):
         self,
         flow_id: str,
         gcs_path: str,
-        ref_flows: bool = True) -> Dict[str, str]:
+        ref_flows: bool = True
+    ) -> Dict[str, str]:
         """Exports DFCX Flow(s) into GCS bucket.
 
         Args:
@@ -247,7 +277,8 @@ class Flows(ScrapiBase):
         self,
         agent_id: str,
         gcs_path: str,
-        import_option: str = "KEEP") -> Dict[str, str]:
+        import_option: str = "KEEP"
+    ) -> Dict[str, str]:
         """Imports a DFCX Flow from GCS bucket to CX Agent.
 
         Args:
@@ -275,7 +306,11 @@ class Flows(ScrapiBase):
 
         return response
 
-    def delete_flow(self, flow_id: str = None, force: bool = False) -> None:
+    def delete_flow(
+        self,
+        flow_id: str,
+        force: bool = False
+    ):
         """Deletes a single CX Flow Object resources.
 
         Args:
@@ -283,8 +318,6 @@ class Flows(ScrapiBase):
           force: False means a flow will not be deleted if a route to the flow
             exists, True means the flow will be deleted and all
         """
-        if not flow_id:
-            flow_id = self.flow_id
 
         request = types.DeleteFlowRequest()
         request.name = flow_id
@@ -296,3 +329,4 @@ class Flows(ScrapiBase):
         )
 
         client.delete_flow(request)
+
