@@ -1,6 +1,6 @@
 """CX Transition Route Group Resource functions."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,16 +15,19 @@
 # limitations under the License.
 
 import logging
+import time
 from typing import Dict
 import pandas as pd
-import google.cloud.dialogflowcx_v3beta1.services as services
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.flows import Flows
-from dfcx_scrapi.core.intents import Intents
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
-from dfcx_scrapi.core.webhooks import Webhooks
+from dfcx_scrapi.core import flows
+from dfcx_scrapi.core import intents
+from dfcx_scrapi.core import pages
+from dfcx_scrapi.core import webhooks
+from dfcx_scrapi.core import scrapi_base
+
 
 # logging config
 logging.basicConfig(
@@ -34,7 +37,7 @@ logging.basicConfig(
 )
 
 
-class TransitionRouteGroups(ScrapiBase):
+class TransitionRouteGroups(scrapi_base.ScrapiBase):
     """Core Class for CX Transition Route Group functions."""
 
     def __init__(
@@ -54,9 +57,10 @@ class TransitionRouteGroups(ScrapiBase):
             scope=scope,
         )
 
-        self.flows = Flows(creds=self.creds)
-        self.intents = Intents(creds=self.creds)
-        self.webhooks = Webhooks(creds=self.creds)
+        self.flows = flows.Flows(creds=self.creds)
+        self.intents = intents.Intents(creds=self.creds)
+        self.pages = pages.Pages(creds=self.creds)
+        self.webhooks = webhooks.Webhooks(creds=self.creds)
 
         if route_group_id:
             self.route_group_id = route_group_id
@@ -265,7 +269,10 @@ class TransitionRouteGroups(ScrapiBase):
 
         return response
 
-    def route_groups_to_dataframe(self, agent_id: str = None):
+    def route_groups_to_dataframe(
+        self,
+        agent_id: str = None,
+        rate_limit: float = 0.5):
         """Extracts the Transition Route Groups from a given Agent and
          returns key information about the Route Groups in a Pandas Dataframe
 
@@ -277,81 +284,68 @@ class TransitionRouteGroups(ScrapiBase):
         Dataframe and return this to the user.
 
         Args:
-          - agent_id, the Agent ID string in the following format:
+          agent_id: the Agent ID string in the following format:
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
+          rate_limit: Time in seconds to wait between each API call. Use this
+            to control hitting Quota limits on your project.
 
         Returns:
-          - final_dataframe, a Pandas Dataframe
+          a Pandas Dataframe
         """
         if not agent_id:
             agent_id = self.agent_id
 
-        flows_dict = {
-            flow.display_name: flow.name
-            for flow in self.flows.list_flows(agent_id)
-        }
+        flows_map = self.flows.get_flows_map(agent_id)
+        intents_map = self.intents.get_intents_map(agent_id)
+        webhooks_map = self.webhooks.get_webhooks_map(agent_id)
+        all_pages_map = {}
+        all_rgs = []
 
-        intent_dict = {
-            intent.name.split("/")[-1]: intent.display_name
-            for intent in self.intents.list_intents(agent_id)
-        }
-
-        webhooks_dict = {
-            webhook.name.split("/")[-1]: webhook.display_name
-            for webhook in self.webhooks.list_webhooks(agent_id)
-        }
-
-        route_groups_dict = {
-            flow: self.list_transition_route_groups(flows_dict[flow])
-            for flow in flows_dict
-        }
+        for flow in flows_map:
+            all_pages_map.update(self.pages.get_pages_map(flow))
+            all_rgs.extend(self.list_transition_route_groups(flow))
+            time.sleep(rate_limit)
 
         rows_list = []
-        for flow in route_groups_dict:
-            for route_group in route_groups_dict[flow]:
-                for route in route_group.transition_routes:
-                    temp_dict = {}
+        for route_group in all_rgs:
+            flow = '/'.join(route_group.name.split('/')[0:8])
+            for route in route_group.transition_routes:
+                temp_dict = {}
 
-                    temp_dict.update({"flow": flow})
+                temp_dict.update({"flow": flows_map[flow]})
+                temp_dict.update(
+                    {"route_group_name": route_group.display_name}
+                )
+
+                if route.target_page:
                     temp_dict.update(
-                        {"route_group_name": route_group.display_name}
-                    )
-
-                    temp_dict.update(
-                        {"target_page": route.target_page}
-                    )
-                 
-                    try:
-                      temp_dict.update(
-                          {"intent": intent_dict[route.intent.split("/")[-1]]}      
-                      )
-                    except Exception as e:
-                          pass
-
-
-                    if route.trigger_fulfillment.webhook:
-                        temp_dict.update(
-                            {
-                                "webhook": webhooks_dict[
-                                    route.trigger_fulfillment.webhook.split(
-                                        "/"
-                                    )[-1]
-                                ]
-                            }
+                        {"target_page": all_pages_map[route.target_page]}
                         )
+
+                if route.intent:
+                    temp_dict.update({"intent": intents_map[route.intent]})
+
+                if route.condition:
+                    temp_dict.update({"condition": route.condition})
+
+
+                if route.trigger_fulfillment.webhook:
+                    temp_dict.update(
+                        {"webhook":
+                        webhooks_map[route.trigger_fulfillment.webhook]})
 
                     temp_dict.update(
                         {"webhook_tag": route.trigger_fulfillment.tag}
                     )
 
+                if route.trigger_fulfillment.messages:
                     for element in route.trigger_fulfillment.messages:
                         temp_dict = self._rg_temp_dict_update(
                             temp_dict, element
                         )
 
-                    rows_list.append(temp_dict)
+                rows_list.append(temp_dict)
 
         final_dataframe = pd.DataFrame(rows_list)
 
         return final_dataframe
-
