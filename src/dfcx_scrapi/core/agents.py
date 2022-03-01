@@ -84,7 +84,7 @@ class Agents(scrapi_base.ScrapiBase):
               `projects/my-gcp-project/locations/us-central1`
           project_id: The GCP Project ID as a string
         Returns:
-          agents: List of Agent objects
+          List of Agent objects
         """
 
         if project_id:
@@ -125,7 +125,15 @@ class Agents(scrapi_base.ScrapiBase):
         return agents
 
     def get_agent(self, agent_id: str) -> types.Agent:
-        """Retrieves a single CX agent resource object."""
+        """Retrieves a single CX agent resource object.
+
+        Args:
+          agent_id: The formatted CX Agent ID
+
+        Returns:
+        A single types.Agent object
+        """
+
         request = types.agent.GetAgentRequest()
         request.name = agent_id
 
@@ -164,8 +172,7 @@ class Agents(scrapi_base.ScrapiBase):
               Syntax for region ID can be found here:
               https://cloud.google.com/dialogflow/cx/docs/concept/region#avail
         Returns:
-          Agents: CX agent resource object. If no agent is found,
-              returns None.
+          CX agent resource object. If no agent is found, returns None.
         """
 
         if location_id:
@@ -229,7 +236,7 @@ class Agents(scrapi_base.ScrapiBase):
           obj: (Optional) Agent object to create new agent from
 
         Returns:
-          response
+          A single types.Agent resource.
         """
 
         if obj:
@@ -272,8 +279,7 @@ class Agents(scrapi_base.ScrapiBase):
           timeout: (Optional) The timeout for this request
 
         Returns:
-          results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
+          Dictionary of Validation results for the entire Agent.
         """
 
         if not agent_id:
@@ -316,8 +322,7 @@ class Agents(scrapi_base.ScrapiBase):
         timeout: (Optional) The timeout for this request
 
         Returns:
-        results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
+        Dictionary of Validation results for the entire Agent.
         """
 
         if not agent_id:
@@ -358,14 +363,14 @@ class Agents(scrapi_base.ScrapiBase):
             as string. If not set, DRAFT environment is assumed.
 
         Returns:
-          response: A Long Running Operation (LRO) ID that can be used to
+          A Long Running Operation (LRO) ID that can be used to
             check the status of the export using
               dfcx_scrapi.core.operations->get_lro()
         """
-
         request = types.agent.ExportAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
+
         if environment_display_name:
             self._environments = environments.Environments(creds=self.creds)
             possible_environment = self._environments.get_environments_map(
@@ -401,7 +406,7 @@ class Agents(scrapi_base.ScrapiBase):
               `gs://<bucket-name>/<object-name>`
 
         Returns:
-          response: A Long Running Operation (LRO) ID that can be used to
+          A Long Running Operation (LRO) ID that can be used to
             check the status of the import using
               dfcx_scrapi.core.operations->get_lro()
         """
