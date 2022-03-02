@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging, time
+import logging
+import time
 from typing import Dict
 
 import pandas as pd
@@ -48,7 +49,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
             scope=scope,
         )
 
-        self.intents = intents.Intents(creds_path=creds_path, creds_dict=creds_dict)
+        self.intents = intents.Intents(
+            creds_path=creds_path, creds_dict=creds_dict
+        )
         self.entities = entity_types.EntityTypes(
             creds_path=creds_path, creds_dict=creds_dict
         )
@@ -57,7 +60,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         if agent_id:
             self.agent_id = agent_id
-            self.flow_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
+            self.flow_map = self.flows.get_flows_map(
+                agent_id=agent_id, reverse=True
+            )
             self.client_options = self._set_region(agent_id)
 
     def find_event_handlers(self, agent_id: str):
@@ -115,7 +120,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         df = df.assign(
             event=df.handlers.apply(lambda eh: eh.event),
-            messages=df.handlers.apply(lambda eh: eh.trigger_fulfillment.messages),
+            messages=df.handlers.apply(
+                lambda eh: eh.trigger_fulfillment.messages
+            ),
             transition_flow=df.handlers.apply(lambda eh: eh.target_flow),
             transition_page=df.handlers.apply(lambda eh: eh.target_page),
         ).drop(columns="handlers")
@@ -167,8 +174,12 @@ class SearchUtil(scrapi_base.ScrapiBase):
             messages=df.page_event_handlers.apply(
                 lambda h: h.trigger_fulfillment.messages
             ),
-            transition_flow=df.page_event_handlers.apply(lambda h: h.target_flow),
-            transition_page=df.page_event_handlers.apply(lambda h: h.target_page),
+            transition_flow=df.page_event_handlers.apply(
+                lambda h: h.target_flow
+            ),
+            transition_page=df.page_event_handlers.apply(
+                lambda h: h.target_page
+            ),
         ).drop(columns="page_event_handlers")
         return df
 
@@ -225,7 +236,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         df = df.assign(
             event=df.e_handlers.apply(lambda eh: eh.event),
-            messages=df.e_handlers.apply(lambda eh: eh.trigger_fulfillment.messages),
+            messages=df.e_handlers.apply(
+                lambda eh: eh.trigger_fulfillment.messages
+            ),
             transition_flow=df.e_handlers.apply(lambda eh: eh.target_flow),
             transition_page=df.e_handlers.apply(lambda eh: eh.target_page),
         ).drop(columns="e_handlers")
@@ -300,7 +313,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         if page_name:
             try:
-                flows_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
+                flows_map = self.flows.get_flows_map(
+                    agent_id=agent_id, reverse=True
+                )
             # check - maybe other error types here
             except ValueError:
                 logging.error(
@@ -327,7 +342,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
         if flow_name:
             locator = pd.DataFrame()
             try:
-                flows_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
+                flows_map = self.flows.get_flows_map(
+                    agent_id=agent_id, reverse=True
+                )
                 flow_search = self.search_conditionals_flow(
                     flow_id=flows_map[flow_name], search=search
                 )
@@ -360,7 +377,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
         if flow_name is None and page_name is None and flag_search_all is True:
             locator = pd.DataFrame()
 
-            flows_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
+            flows_map = self.flows.get_flows_map(
+                agent_id=agent_id, reverse=True
+            )
             for flow in flows_map:
                 flow_search = self.search_conditionals_flow(
                     flow_id=flows_map[flow], search=search
@@ -409,7 +428,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         return locator
 
-    def search_conditionals_page(self, page_id: str, search: str) -> pd.DataFrame:
+    def search_conditionals_page(
+        self, page_id: str, search: str
+    ) -> pd.DataFrame:
         """Search page for an exact string in conditional routes.
 
         Args:
@@ -462,7 +483,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
         flow_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
 
         for flow_display_name in flow_map.keys():
-            flow_scan = self._find_true_routes_flow_level(flow_display_name, flow_map)
+            flow_scan = self._find_true_routes_flow_level(
+                flow_display_name, flow_map
+            )
             agent_results = agent_results.append(flow_scan)
         return agent_results
 
