@@ -352,8 +352,8 @@ class Fulfillments(scrapi_base.ScrapiBase):
                 resource_name=route_group_name,
                 routes=routes,
             )
-            route_group_fulfillments_df = route_group_fulfillments_df.append(
-                route_group_fulfillment_df
+            route_group_fulfillments_df = pd.concat(
+                [route_group_fulfillments_df, route_group_fulfillment_df]
             )
         return route_group_fulfillments_df
 
@@ -381,9 +381,14 @@ class Fulfillments(scrapi_base.ScrapiBase):
         )
         route_group_fulfillments = self.get_route_group_fulfillments(flow_dictionary)
 
-        flow_fufillments = flow_fufillments.append(route_fulfillments)
-        flow_fufillments = flow_fufillments.append(event_fulfillments)
-        flow_fufillments = flow_fufillments.append(route_group_fulfillments)
+        flow_fufillments = pd.concat(
+            [
+                flow_fufillments, 
+                route_fulfillments, 
+                event_fulfillments, 
+                route_group_fulfillments
+            ]
+        )
         return flow_fufillments
 
     # TODO type hints
@@ -410,7 +415,9 @@ class Fulfillments(scrapi_base.ScrapiBase):
                 page_dictionary["display_name"],
                 entry_fulfillment,
             )
-            page_fulfillments = page_fulfillments.append(entry_fulfillments)
+            page_fulfillments = pd.concat(
+                [page_fulfillments, entry_fulfillments]
+            )
 
         route_fulfillments = self.get_transition_route_fulfillments(
             flow_display_name,
@@ -422,9 +429,10 @@ class Fulfillments(scrapi_base.ScrapiBase):
             flow_display_name, page_obj.display_name, event_handlers
         )
 
-        page_fulfillments = page_fulfillments.append(route_fulfillments)
-        page_fulfillments = page_fulfillments.append(event_fulfillments)
-        return page_fulfillments
+        fulfillments = pd.concat(
+            [page_fulfillments, route_fulfillments, event_fulfillments]
+        )
+        return fulfillments
 
     # Agent Level
     def get_agent_fulfillments(self, agent_id: str):
@@ -452,13 +460,15 @@ class Fulfillments(scrapi_base.ScrapiBase):
         agent_fulfillments = pd.DataFrame()
         for flow_obj in flow_list:
             flow_data = self.get_flow_fufillments(flow_obj=flow_obj)
-            agent_fulfillments = agent_fulfillments.append(flow_data)
+            agent_fulfillments = pd.concat(
+                [agent_fulfillments, flow_data]
+            )
             page_list = self.pages.list_pages(flow_obj.name)
             for page in page_list:
                 page_data = self.get_page_fulfillments(
                     flow_obj.display_name, page_obj=page
                 )
-                agent_fulfillments = agent_fulfillments.append(page_data)
+                agent_fulfillments = pd.concat([agent_fulfillments, page_data])
 
         column_order = [
             "flow",
