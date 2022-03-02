@@ -1,6 +1,6 @@
-"""Utility file for working with fulfillments from dialogflow cx."""
+"""Utility file for working with fulfillments from Dialogflow CX."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ from dfcx_scrapi.core import (
     intents,
     flows,
     pages,
-    transition_route_groups,
+    transition_route_groups
 )
 
 
@@ -37,7 +37,7 @@ logging.basicConfig(
 
 
 class Fulfillments(scrapi_base.ScrapiBase):
-    """Class that supports fulfillment functions in DFCX."""
+    """Class that supports fulfillment-pulling functions in DFCX."""
 
     def __init__(
         self,
@@ -68,14 +68,16 @@ class Fulfillments(scrapi_base.ScrapiBase):
             self.intents_map = self.intents.get_intents_map(agent_id)
 
     @staticmethod
-    def combine_dataframes(main: pd.DataFrame, component: pd.DataFrame):
-        """Join two dataframes"""
-        main = main.append(component)
-        return main
-
-    @staticmethod
-    def get_message_fulfillments(messages: list):
-        """get fulfillments from messages dictionary"""
+    #TODO (greenford) list of what? possibly protobuff type
+    def get_message_fulfillments(messages: List):
+        """
+        Gets fulfillments from messages dictionary.
+        
+        Args:
+            messages: #TODO.
+        Returns:
+            a simple list of fulfillment strings. 
+        """
         text_fulfillments_list = list()
         for message in messages:
             text_fulfillments = message.get("text", dict()).get("text")
@@ -85,8 +87,15 @@ class Fulfillments(scrapi_base.ScrapiBase):
         return text_fulfillments_list
 
     @staticmethod
-    def get_conditional_case_fulfilments(case_content: list):
-        """get conditinal fulfillments from case content dictionary"""
+    def get_conditional_case_fulfillments(case_content: List):
+        """
+        Gets conditinal fulfillments from case content dictionary.
+        
+        Args:
+            case_contents: #TODO also above in type hint
+        Returns: 
+            a simple list of fulfillment strings.
+        """
         text_fulfillments_list = list()
         for content in case_content:
             message = content.get("message", False)
@@ -97,11 +106,34 @@ class Fulfillments(scrapi_base.ScrapiBase):
                         text_fulfillments_list.append(text_fulfillment)
         return text_fulfillments_list
 
-    # Look in transition routes
+    #TODO (greenford) test function - has dubious dateframe inserts
     def get_transition_route_fulfillments(
-        self, flow_display_name, resource_type, resource_name, routes
+        self, 
+        flow_display_name: str, 
+        resource_type: str, 
+        resource_name: str, 
+        routes: List
     ):
-        """get fulfullments from routes list"""
+        """
+        Gets fulfillments from routes list.
+        
+        Args: #TODO confirm arg types
+            flow_display_name: origin of routes list
+            resource_type: #TODO
+            resource_name: #TODO
+            routes: #TODO
+        Returns: 
+            Dataframe with columns:
+                fulfillment
+                identifier
+                response_type
+                consition
+                flow
+                resource_type
+                resource_name
+                fulfillment_type
+                identifier_type
+        """
 
         routes_fulfillments = pd.DataFrame()
         for route in routes:
@@ -117,9 +149,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
                 route_dataframe["response_type"] = "text"
                 route_dataframe["condition"] = "N/A"
 
-                routes_fulfillments = self.combine_dataframes(
-                    routes_fulfillments, route_dataframe
-                )
+                routes_fulfillments = pd.concat([routes_fulfillments, route_dataframe])
 
             # conditional cases
             conditional_cases = route.get("trigger_fulfillment", {}).get(
@@ -133,7 +163,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
                             condition = "else"
                         case_content = case.get("case_content", False)
                         if case_content:
-                            text_fulfillments = self.get_conditional_case_fulfilments(
+                            text_fulfillments = self.get_conditional_case_fulfillments(
                                 case_content
                             )
                             route_dataframe = pd.DataFrame()
@@ -142,9 +172,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
                             route_dataframe["response_type"] = "conditional"
                             route_dataframe["condition"] = condition
 
-                            routes_fulfillments = self.combine_dataframes(
-                                routes_fulfillments, route_dataframe
-                            )
+                            routes_fulfillments = pd.concat([routes_fulfillments, route_dataframe])
 
         routes_fulfillments["flow"] = flow_display_name
         routes_fulfillments["resource_type"] = resource_type
@@ -154,11 +182,31 @@ class Fulfillments(scrapi_base.ScrapiBase):
 
         return routes_fulfillments
 
-    # Look in event handlers
     def get_event_handler_fulfillments(
-        self, flow_display_name, page_display_name, event_handlers
+        self, 
+        flow_display_name: str, 
+        page_display_name: str, 
+        event_handlers: List #TODO
     ):
-        """get fulfillments from event handlers"""
+        """
+        Gets fulfillments from event handlers.
+        
+        Args:
+            flow_display_name: origin flow of the event handler fulfillments.
+            page_display_name: origin page of the event handler fulfillments.
+            event_handlers: list of event handlers.
+        Returns:
+            Dataframe with columns:
+                fulfillment
+                identifier
+                response_type
+                condition
+                flow
+                resource_type
+                resource_name
+                fulfillment_type
+                identifier_type
+        """
         event_handler_fulfillments = pd.DataFrame()
         for event_handler in event_handlers:
             # non-conditional cases
@@ -173,9 +221,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
                 event_handler_dataframe["response_type"] = "text"
                 event_handler_dataframe["condition"] = "N/A"
 
-                event_handler_fulfillments = self.combine_dataframes(
-                    event_handler_fulfillments, event_handler_dataframe
-                )
+                event_handler_fulfillments = pd.concat([event_handler_fulfillments, event_handler_dataframe])
 
             # conditional cases
             conditional_cases = event_handler.get("trigger_fulfillment", {}).get(
@@ -189,7 +235,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
                             condition = "else"
                         case_content = case.get("case_content", False)
                         if case_content:
-                            text_fulfillments = self.get_conditional_case_fulfilments(
+                            text_fulfillments = self.get_conditional_case_fulfillments(
                                 case_content
                             )
                             event_handler_dataframe = pd.DataFrame()
@@ -198,10 +244,9 @@ class Fulfillments(scrapi_base.ScrapiBase):
                             event_handler_dataframe["response_type"] = "conditional"
                             event_handler_dataframe["condition"] = condition
 
-                            event_handler_fulfillments = self.combine_dataframes(
-                                event_handler_fulfillments,
-                                event_handler_dataframe,
-                            )
+                            event_handler_fulfillments = pd.concat([
+                                event_handler_fulfillments, event_handler_dataframe
+                            ])
 
         event_handler_fulfillments["flow"] = flow_display_name
         event_handler_fulfillments["resource_type"] = "page"
@@ -212,10 +257,31 @@ class Fulfillments(scrapi_base.ScrapiBase):
         return event_handler_fulfillments
 
     # entry fulfillments
-    def get_entry_fulfillment_fulfillments(
-        self, flow_display_name, object_display_name, entry_fulfillment
+    def get_entry_fulfillments(
+            self, 
+            flow_display_name: str, 
+            object_display_name: str, 
+            entry_fulfillment: Dict #TODO
     ):
-        """get fulfillments from entry fulfillments dicitonary on a page"""
+        """
+        Gets fulfillments from entry fulfillments dictionary on a page.
+        
+        Args: 
+            flow_display_name: origin flow of entry_fulfillment
+            object_display_name: origin object of entry_fulfillment
+            entry_fulfillment: #TODO
+        Returns:
+            Dataframe with columns:
+                fulfillment
+                identifier
+                response_type
+                condition
+                flow
+                resource_type
+                resource_name
+                fulfillment_type
+                identifier_type
+        """
         entry_fulfillments = pd.DataFrame()
 
         # non-conditionals
@@ -229,9 +295,9 @@ class Fulfillments(scrapi_base.ScrapiBase):
             entry_fulfillments_dataframe["response_type"] = "text"
             entry_fulfillments_dataframe["condition"] = "N/A"
 
-            entry_fulfillments = self.combine_dataframes(
+            entry_fulfillments = pd.concat([
                 entry_fulfillments, entry_fulfillments_dataframe
-            )
+            ])
 
         # conditionals
         conditional_cases = entry_fulfillment.get("conditional_cases", False)
@@ -243,7 +309,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
                         condition = "else"
                     case_content = case.get("case_content", False)
                     if case_content:
-                        text_fulfillments = self.get_conditional_case_fulfilments(
+                        text_fulfillments = self.get_conditional_case_fulfillments(
                             case_content
                         )
                         entry_fulfillments_dataframe = pd.DataFrame()
@@ -252,9 +318,9 @@ class Fulfillments(scrapi_base.ScrapiBase):
                         entry_fulfillments_dataframe["response_type"] = "conditional"
                         entry_fulfillments_dataframe["condition"] = condition
 
-                        entry_fulfillments = self.combine_dataframes(
+                        entry_fulfillments = pd.concat([
                             entry_fulfillments, entry_fulfillments_dataframe
-                        )
+                        ])
 
         entry_fulfillments["flow"] = flow_display_name
         entry_fulfillments["resource_type"] = "page"
@@ -265,8 +331,15 @@ class Fulfillments(scrapi_base.ScrapiBase):
 
         # route groups
 
-    def get_route_group_fulfillments(self, flow_dictionary):
-        """get fulfillments from route groups in a flow"""
+    def get_route_group_fulfillments(self, flow_dictionary: Dict):
+        """
+        Gets fulfillments from route groups in a flow.
+        
+        Args: 
+            flow_dictionary: #TODO
+        Returns:
+            Dataframe with columns: #TODO
+        """
         route_group_fulfillments_df = pd.DataFrame()
         route_groups_flow = self.route_groups.list_transition_route_groups(
             flow_id=flow_dictionary["name"]
@@ -286,9 +359,15 @@ class Fulfillments(scrapi_base.ScrapiBase):
             )
         return route_group_fulfillments_df
 
-    # Flows
+    # TODO type
     def get_flow_fufillments(self, flow_obj):
-        """get all fulfillments from a flow object"""
+        """Get all fulfillments from a flow object.
+        
+        Args:
+            flow_obj: #TODO
+        Returns:
+            Dataframe with columns: #TODO
+        """
         flow_fufillments = pd.DataFrame()
         flow_dictionary = types.Flow.to_dict(flow_obj)
         transition_routes = flow_dictionary["transition_routes"]
@@ -309,9 +388,17 @@ class Fulfillments(scrapi_base.ScrapiBase):
         flow_fufillments = flow_fufillments.append(route_group_fulfillments)
         return flow_fufillments
 
-    # Pages
-    def get_page_fulfillments(self, flow_display_name, page_obj):
-        """get all fulfillments form a page object"""
+    # TODO type hints
+    def get_page_fulfillments(self, flow_display_name: str, page_obj):
+        """
+        Gets all fulfillments from a page object.
+        
+        Args: 
+            flow_display_name: origin flow of the page_obj.
+            page_obj: #TODO
+        Returns: 
+            Dataframe with columns: #TODO
+        """
         page_fulfillments = pd.DataFrame()
         page_dictionary = types.Page.to_dict(page_obj)
 
@@ -320,7 +407,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
         event_handlers = page_dictionary["event_handlers"]
 
         if entry_fulfillment:
-            entry_fulfillments = self.get_entry_fulfillment_fulfillments(
+            entry_fulfillments = self.get_entry_fulfillments(
                 flow_display_name,
                 page_dictionary["display_name"],
                 entry_fulfillment,
@@ -342,21 +429,24 @@ class Fulfillments(scrapi_base.ScrapiBase):
         return page_fulfillments
 
     # Agent Level
-    def get_agent_fulfillments(self, agent_id: str = None):
-        """get fulfillment messages and conditional responses
-        into a dataframe object from a particular agent.
+    def get_agent_fulfillments(self, agent_id: str):
+        """Gets all fulfillments, conditional responses from an agent.
 
         Args:
-          agent_id (str): agent to pull fulfillments from.
+          agent_id: if of agent to pull fulfillments from.
 
         Returns:
-          agent_fulfillments (dataframe): agent fulfillments
-          as well as identifiers which help users locate the
-          position of fulfillments in an agent
+          dataframe of agent fulfillments as well as identifiers which help
+          users locate the position of fulfillments in an agent. Has columns:
+            flow
+            resource_type
+            resource_name
+            fulfillment_type
+            identifier_type
+            identifier
+            response_type
+            condition
         """
-        if not agent_id:
-            agent_id = self.agent_id
-
         flow_list = self.flows.list_flows(agent_id)
         if not self.intents_map:
             self.intents_map = self.intents.get_intents_map(agent_id)
