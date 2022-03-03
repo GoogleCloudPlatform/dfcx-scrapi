@@ -16,27 +16,29 @@
 
 import json
 import logging
+import time
+import uuid
+
 import pandas as pd
 from typing import Dict
-import uuid
 from threading import Thread
-import time
 import traceback
-from google.cloud.dialogflowcx_v3beta1.services.sessions import SessionsClient
-from google.cloud.dialogflowcx_v3beta1.types import session
+
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.api_core import exceptions as core_exceptions
 from proto.marshal.collections.repeated import RepeatedComposite
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
-from dfcx_scrapi.core.flows import Flows
-from dfcx_scrapi.core.pages import Pages
+from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import flows
+from dfcx_scrapi.core import pages
 
 logging.basicConfig(format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO)
 
 MAX_RETRIES = 3
 
 
-class DialogflowConversation(ScrapiBase):
+class DialogflowConversation(scrapi_base.ScrapiBase):
     """Class that wraps the SessionsClient to hold end to end conversations
     and maintain internal session state
     """
@@ -59,9 +61,8 @@ class DialogflowConversation(ScrapiBase):
         )
 
         logging.info(
-            "create conversation with creds_path: %s | agent_path: %s",
-            creds_path,
-            agent_id,
+            f"create conversation with creds_path: \
+                {creds_path} | agent_id: {agent_id}",
         )
 
         if agent_id or config["agent_path"]:
@@ -75,8 +76,8 @@ class DialogflowConversation(ScrapiBase):
         self.turn_count = None
         self.agent_env = {}  # empty
         self.restart()
-        self.flows = Flows(creds=self.creds)
-        self.pages = Pages(creds=self.creds)
+        self.flows = flows.Flows(creds=self.creds)
+        self.pages = pages.Pages(creds=self.creds)
 
     @staticmethod
     def _get_match_type_from_map(match_type:int):
@@ -272,7 +273,7 @@ class DialogflowConversation(ScrapiBase):
             self.restart()
 
         client_options = self._set_region(self.agent_id)
-        session_client = SessionsClient(
+        session_client = services.sessions.SessionsClient(
             credentials=self.creds, client_options=client_options
         )
         session_path = f"{self.agent_id}/sessions/{self.session_id}"
@@ -287,40 +288,40 @@ class DialogflowConversation(ScrapiBase):
         disable_webhook = self.agent_env.get("disable_webhook") or False
 
         if send_params and current_page:
-            query_params = session.QueryParameters(
+            query_params = types.session.QueryParameters(
                 disable_webhook=disable_webhook,
                 parameters=send_params,
                 current_page=current_page,
             )
         elif send_params and not current_page:
-            query_params = session.QueryParameters(
+            query_params = types.session.QueryParameters(
                 disable_webhook=disable_webhook, parameters=send_params
             )
         elif not send_params and current_page:
-            query_params = session.QueryParameters(
+            query_params = types.session.QueryParameters(
                 disable_webhook=disable_webhook, current_page=current_page
             )
         else:
-            query_params = session.QueryParameters(
+            query_params = types.session.QueryParameters(
                 disable_webhook=disable_webhook,
             )
 
         dtmf = send_obj.get("dtmf")
         if dtmf:
-            dtmf_input = session.DtmfInput(digits=dtmf)
-            query_input = session.QueryInput(
+            dtmf_input = types.session.DtmfInput(digits=dtmf)
+            query_input = types.session.QueryInput(
                 dtmf=dtmf_input,
                 language_code=self.language_code,
             )
         else:
             logging.debug("text: %s", text)
-            text_input = session.TextInput(text=text)
-            query_input = session.QueryInput(
+            text_input = types.session.TextInput(text=text)
+            query_input = types.session.QueryInput(
                 text=text_input,
                 language_code=self.language_code,
             )
 
-        request = session.DetectIntentRequest(
+        request = types.session.DetectIntentRequest(
             session=session_path,
             query_input=query_input,
             query_params=query_params,
@@ -376,8 +377,7 @@ class DialogflowConversation(ScrapiBase):
         texts = []
         for msg in query_result.response_messages:
             if msg.payload:
-                # reply["text"] = ScrapiBase.extract_payload(msg)
-                texts.append(str(ScrapiBase.extract_payload(msg)))
+                texts.append(str(scrapi_base.ScrapiBase.extract_payload(msg)))
             if (len(msg.text.text)) > 0:
                 text = msg.text.text[-1]
                 texts.append(text)
