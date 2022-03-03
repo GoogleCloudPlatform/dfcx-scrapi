@@ -16,7 +16,10 @@
 
 import logging
 import google.cloud.dialogflowcx_v3beta1.types as types
+from google.oauth2 import service_account
 import pandas as pd
+from typing import Dict
+from collections import Sequence
 
 
 from dfcx_scrapi.core import scrapi_base, intents, flows, pages, transition_route_groups
@@ -36,9 +39,9 @@ class Fulfillments(scrapi_base.ScrapiBase):
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: dict = None,
-        creds=None,
-        scope=False,
+        creds_dict: Dict[str,str] = None,
+        creds: service_account.Credentials = None,
+        scope = False, #TODO type hint
         agent_id: str = None,
     ):
         super().__init__(
@@ -62,8 +65,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
             self.intents_map = self.intents.get_intents_map(agent_id)
 
     @staticmethod
-    # TODO (greenford) list of what? possibly protobuff type
-    def get_message_fulfillments(messages: List):
+    def get_message_fulfillments(messages: Sequence[types.ResponseMessage]):
         """
         Gets fulfillments from messages dictionary.
 
@@ -81,12 +83,15 @@ class Fulfillments(scrapi_base.ScrapiBase):
         return text_fulfillments_list
 
     @staticmethod
-    def get_conditional_case_fulfillments(case_content: List):
+    def get_conditional_case_fulfillments(
+        case_content: 
+            Sequence[types.Fulfillment.ConditionalCases.Case.CaseContent]
+    ):
         """
         Gets conditinal fulfillments from case content dictionary.
 
         Args:
-            case_contents: #TODO also above in type hint
+            case_content: #TODO 
         Returns:
             a simple list of fulfillment strings.
         """
@@ -106,7 +111,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
         flow_display_name: str,
         resource_type: str,
         resource_name: str,
-        routes: List,
+        routes: Sequence[types.TransitionRouteGroup]
     ):
         """
         Gets fulfillments from routes list.
@@ -182,7 +187,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
         self,
         flow_display_name: str,
         page_display_name: str,
-        event_handlers: List,  # TODO
+        event_handlers: Sequence[types.EventHandler]
     ):
         """
         Gets fulfillments from event handlers.
@@ -254,12 +259,11 @@ class Fulfillments(scrapi_base.ScrapiBase):
 
         return event_handler_fulfillments
 
-    # entry fulfillments
     def get_entry_fulfillments(
         self,
         flow_display_name: str,
         object_display_name: str,
-        entry_fulfillment: Dict,  # TODO
+        entry_fulfillment: types.Fulfillment,
     ):
         """
         Gets fulfillments from entry fulfillments dictionary on a page.
@@ -327,8 +331,6 @@ class Fulfillments(scrapi_base.ScrapiBase):
         entry_fulfillments["identifier_type"] = "page name"
         return entry_fulfillments
 
-        # route groups
-
     def get_route_group_fulfillments(self, flow_dictionary: Dict):
         """
         Gets fulfillments from route groups in a flow.
@@ -357,8 +359,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
             )
         return route_group_fulfillments_df
 
-    # TODO type
-    def get_flow_fufillments(self, flow_obj):
+    def get_flow_fufillments(self, flow_obj: types.Flow):
         """Get all fulfillments from a flow object.
 
         Args:
@@ -391,8 +392,9 @@ class Fulfillments(scrapi_base.ScrapiBase):
         )
         return flow_fufillments
 
-    # TODO type hints
-    def get_page_fulfillments(self, flow_display_name: str, page_obj):
+    def get_page_fulfillments(
+        self, flow_display_name: str, page_obj: types.Page
+    ):
         """
         Gets all fulfillments from a page object.
 
@@ -434,7 +436,6 @@ class Fulfillments(scrapi_base.ScrapiBase):
         )
         return fulfillments
 
-    # Agent Level
     def get_agent_fulfillments(self, agent_id: str):
         """Gets all fulfillments, conditional responses from an agent.
 
