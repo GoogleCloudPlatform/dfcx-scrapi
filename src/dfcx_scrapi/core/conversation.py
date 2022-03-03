@@ -47,7 +47,7 @@ class DialogflowConversation(ScrapiBase):
         creds_path: str = None,
         creds_dict: Dict = None,
         creds=None,
-        agent_path: str = None,
+        agent_id: str = None,
         language_code: str = "en",
     ):
 
@@ -55,18 +55,20 @@ class DialogflowConversation(ScrapiBase):
             creds_path=creds_path,
             creds_dict=creds_dict,
             creds=creds,
-            agent_path=agent_path,
+            agent_id=agent_id,
         )
 
         logging.info(
             "create conversation with creds_path: %s | agent_path: %s",
             creds_path,
-            agent_path,
+            agent_id,
         )
 
-        # format: projects/*/locations/*/agents/*/
-        self.agent_path = agent_path or config["agent_path"]
+        if agent_id or config["agent_path"]:
+            self.agent_id = agent_id or config["agent_path"]
+
         self.language_code = language_code or config["language_code"]
+
         self.start_time = None
         self.query_result = None
         self.session_id = None
@@ -113,7 +115,7 @@ class DialogflowConversation(ScrapiBase):
 
     def _page_id_mapper(self):
         agent_pages_map = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(agent_id=self.agent_path)
+        flow_map = self.flows.get_flows_map(agent_id=self.agent_id)
         for flow_id in flow_map.keys():
 
             page_map = self.pages.get_pages_map(flow_id=flow_id)
@@ -269,17 +271,17 @@ class DialogflowConversation(ScrapiBase):
         if restart:
             self.restart()
 
-        client_options = self._set_region(self.agent_path)
+        client_options = self._set_region(self.agent_id)
         session_client = SessionsClient(
             credentials=self.creds, client_options=client_options
         )
-        session_path = f"{self.agent_path}/sessions/{self.session_id}"
+        session_path = f"{self.agent_id}/sessions/{self.session_id}"
 
         custom_environment = self.agent_env.get("environment")
 
         if custom_environment:
             logging.info("req using env: %s", custom_environment)
-            session_path = f"{self.agent_path}/environments/"\
+            session_path = f"{self.agent_id}/environments/"\
             f"{custom_environment}/sessions/{self.session_id}"
 
         disable_webhook = self.agent_env.get("disable_webhook") or False

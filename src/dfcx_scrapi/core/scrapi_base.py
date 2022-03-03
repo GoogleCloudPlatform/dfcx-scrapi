@@ -38,7 +38,7 @@ class ScrapiBase:
         creds_dict: Dict[str,str] = None,
         creds: service_account.Credentials =None,
         scope=False,
-        agent_path=None,
+        agent_id=None,
     ):
 
         self.scopes = ScrapiBase.global_scopes
@@ -65,8 +65,8 @@ class ScrapiBase:
             self.creds = None
             self.token = None
 
-        if agent_path:
-            self.agent_path = agent_path
+        if agent_id:
+            self.agent_id = agent_id
 
     @staticmethod
     def _set_region(item_id):
