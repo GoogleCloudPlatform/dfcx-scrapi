@@ -31,12 +31,9 @@ from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.pages import Pages
 
-logger = logging
-
-logging.basicConfig(format="[dfcx] %(levelname)s:%(message)s", level=None)
+logging.basicConfig(format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO)
 
 MAX_RETRIES = 3
-DEBUG_LEVEL = "info"
 
 
 class DialogflowConversation(ScrapiBase):
@@ -255,11 +252,13 @@ class DialogflowConversation(ScrapiBase):
         """
         text = send_obj.get("text")
         if not text:
-            logger.warning("trying to reply to empty message %s", send_obj)
+            logging.warning("trying to reply to empty message %s", send_obj)
 
-        if text and len(text) > 250:
-            logging.error("text is too long %s", text)
-            text = text[0:250]
+        if text and len(text) > 256:
+            logging.warning("Text input is too long. Truncating to 256 characters.")
+            text = text[0:256]
+            logging.warning(f"TRUNCATED TEXT: {text}")
+
 
         send_params = send_obj.get("params")
 
