@@ -230,21 +230,22 @@ class DialogflowConversation(ScrapiBase):
 
     def reply(
         self,
-        send_obj,
+        send_obj: Dict[str,str],
         restart: bool = False,
-        raw: bool = False,
         retries: int = 0,
         current_page: str = None,
         checkpoints: bool = False
     ):
         """
         args:
-            send_obj  {text, params, dtmf}
+            send_obj: Dictionary with the following structure:
+              {'text': str, 
+               'params': Dict[str,str],
+               'dtmf': str}
             restart: Boolean flag that determines whether to use the existing
               session ID or start a new conversation with a new session ID.
               Passing True will create a new session ID on subsequent calls.
               Defaults to False.
-            raw: boolean
             retries: used for recurse calling this func if API fails
             current_page: Specify the page id to start the conversation from
             checkpoints: Boolean flag to enable/disable Checkpoint timer
@@ -355,7 +356,7 @@ class DialogflowConversation(ScrapiBase):
             if retries < MAX_RETRIES:
                 logging.error("retrying")
                 return self.reply(
-                    send_obj, restart=restart, raw=raw, retries=retries
+                    send_obj, restart=restart, retries=retries
                 )
             else:
                 logging.error("MAX_RETRIES exceeded")
