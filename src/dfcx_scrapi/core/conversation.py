@@ -253,7 +253,7 @@ class DialogflowConversation(ScrapiBase):
         """
         text = send_obj.get("text")
         if not text:
-            logging.warning("trying to reply to empty message %s", send_obj)
+            logging.warning(f"Input Text is empty. {send_obj}")
 
         if text and len(text) > 256:
             logging.warning("Text input is too long. Truncating to 256 characters.")
