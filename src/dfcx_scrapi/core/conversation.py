@@ -27,7 +27,8 @@ import traceback
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.api_core import exceptions as core_exceptions
-from proto.marshal.collections.repeated import RepeatedComposite
+from proto.marshal.collections import repeated
+from proto.marshal.collections import maps
 
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import flows
@@ -113,6 +114,59 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         print(f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent}%",
           end="\r")
 
+    @staticmethod
+    def _gather_text_responses(text_message):
+
+        flat_texts = '\n'.join(text_message.text)
+
+        return flat_texts
+
+    def _gather_response_messages(self, response_messages):
+        rm_gathered = []
+        for msg in response_messages:
+            if msg.payload:
+                msg = {'payload': self.recurse_proto_marshal_to_dict(
+                    msg.payload)}
+
+            elif msg.play_audio:
+                msg = {'play_audio': {
+                    'audio_uri': msg.play_audio.audio_uri}}
+
+            elif msg.live_agent_handoff:
+                msg = {'live_agent_handoff': 
+                self.recurse_proto_marshal_to_dict(msg.live_agent_handoff.metadata)}
+
+            elif msg.conversation_success:
+                msg = {'conversation_success': 
+                self.recurse_proto_marshal_to_dict(msg.conversation_success.metadata)}
+
+            elif msg.output_audio_text:
+                msg = {'output_audio_text': msg.output_audio_text.text}
+
+            elif msg.text:
+                msg = {'text': self._gather_text_responses(msg.text)}
+
+            rm_gathered.append(msg)
+
+        return rm_gathered
+
+    def _gather_query_result_parameters(self, input_parameters):
+        output_parameters = {}
+        for param in input_parameters:
+            val = input_parameters[param]
+
+            # If we find a RepeatedComposite (i.e. List) we will recurse
+            # down and convert to lists/dics/str as needed.
+            if isinstance(val, repeated.RepeatedComposite):
+                val = self.recurse_proto_repeated_composite(val)
+
+            elif isinstance(val, maps.MapComposite):    
+                val = self.recurse_proto_marshal_to_dict(val)
+
+            output_parameters[param] = val
+
+        return output_parameters
+
 
     def _page_id_mapper(self):
         agent_pages_map = pd.DataFrame()
@@ -128,15 +182,15 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
             # add start page
             start_page_id = flow_id + "/pages/START_PAGE"
-            flow_mapped = flow_mapped.append(
+            flow_mapped = pd.concat([flow_mapped,
                 pd.DataFrame(
                     columns=["page_display_name", "page_id"],
                     data=[["START_PAGE", start_page_id]],
                 )
-            )
+            ])
 
             flow_mapped.insert(0, "flow_display_name", flow_map[flow_id])
-            agent_pages_map = agent_pages_map.append(flow_mapped)
+            agent_pages_map = pd.concat([agent_pages_map, flow_mapped])
 
         self.agent_pages_map = agent_pages_map.reset_index(drop=True)
 
@@ -237,8 +291,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         restart: bool = False,
         retries: int = 0,
         current_page: str = None,
-        checkpoints: bool = False
-    ):
+        checkpoints: bool = False):
         """
         args:
             send_obj: Dictionary with the following structure:
@@ -373,36 +426,22 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.query_result = query_result
         reply = {}
 
-        # flatten array of text responses
-        texts = []
-        for msg in query_result.response_messages:
-            if msg.payload:
-                texts.append(str(scrapi_base.ScrapiBase.extract_payload(msg)))
-            if (len(msg.text.text)) > 0:
-                text = msg.text.text[-1]
-                texts.append(text)
+        # Gather Response Messages into List of Dicts
+        if query_result.response_messages:
+            response_messages = self._gather_response_messages(
+                query_result.response_messages)
+        else:
+            response_messages = None
 
-        # flatten params struct
-        params = {}
+
+        # Convert params structures from Proto to standard python data types
         if query_result.parameters:
-            for param in query_result.parameters:
-                val = query_result.parameters[param]
-                try:
-                    if isinstance(val, RepeatedComposite):
-                        val = " ".join(val)
+            params = self._gather_query_result_parameters(
+                query_result.parameters)
+        else:
+            params = None
 
-                except TypeError as err:
-                    logging.error("Exception on CX.detect %s", err)
-                    template = (
-                        "An exception of type {0} occurred. Arguments:\n{1!r}"
-                    )
-                    message = template.format(type(err).__name__, err.args)
-                    logging.error(message)
-                    logging.error("failed to extract params for: %s", text)
-
-                params[param] = val
-
-        reply["text"] = "\n".join(texts)
+        reply["response_messages"] = response_messages
         reply["confidence"] = query_result.intent_detection_confidence
         reply["page_name"] = query_result.current_page.display_name
         reply["intent_name"] = query_result.intent.display_name
@@ -498,7 +537,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         for start in range(0, test_set.shape[0], chunk_size):
             test_set_chunk = test_set.iloc[start:start + chunk_size]
             result_chunk = self._get_intent_detection(test_set=test_set_chunk)
-            result = result.append(result_chunk)
+            result = pd.concat([result, result_chunk])
             self.progress_bar(start, test_set.shape[0])
             time.sleep(rate_limit)
 
