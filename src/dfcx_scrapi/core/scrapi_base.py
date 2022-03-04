@@ -20,6 +20,8 @@ import json
 from typing import Dict
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+from proto.marshal.collections import repeated
+from proto.marshal.collections import maps
 
 from google.protobuf import json_format  # type: ignore
 
@@ -110,10 +112,35 @@ class ScrapiBase:
     @staticmethod
     def cx_object_to_dict(cx_object):
         """response objects have a magical _pb field attached"""
-        return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
+        return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212       
 
     @staticmethod
     def extract_payload(msg):
         """convert to json so we can get at the object"""
         blob = ScrapiBase.cx_object_to_dict(msg)
         return blob.get("payload")  # deref for nesting
+
+    def recurse_proto_repeated_composite(self, repeated_object):
+        repeated_list = []
+        for item in repeated_object:
+            if isinstance(item, repeated.RepeatedComposite):
+                item = self.recurse_proto_repeated_composite(item)
+                repeated_list.append(item)
+            elif isinstance(item, maps.MapComposite):
+                item = self.recurse_proto_marshal_to_dict(item)
+                repeated_list.append(item)
+            else:
+                repeated_list.append(item)
+
+        return repeated_list
+
+    def recurse_proto_marshal_to_dict(self, marshal_object):
+        new_dict = {}
+        for k,v in marshal_object.items():
+            if isinstance(v, maps.MapComposite):
+                v = self.recurse_proto_marshal_to_dict(v)
+            elif isinstance(v, repeated.RepeatedComposite):
+                v = self.recurse_proto_repeated_composite(v)
+            new_dict[k] = v
+
+        return new_dict  
