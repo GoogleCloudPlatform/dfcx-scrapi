@@ -32,8 +32,9 @@ class GoogleSheetsConnector:
         "https://www.googleapis.com/auth/drive",
     ]
 
-    def __init__(self, creds_path: str = None, creds_dict: dict = None, scope=False):
-        scopes = GoogleDriveConnector.global_scopes
+    def __init__(self, creds_path: str = None, creds_dict: dict = None,
+                 scope=False):
+        scopes = GoogleSheetsConnector.global_scopes
         if scope:
             scopes += scope
 
@@ -92,8 +93,8 @@ class GoogleSheetsConnector:
         g_sheets.share(email, role=role, perm_type=perm_type, notify=notify)
 
     def add_worksheet(
-        self, sheet_name: str, worksheet_name: str, rows: int = 100, cols: int = 26
-    ):
+        self, sheet_name: str, worksheet_name: str, rows: int = 100, cols:
+            int = 26):
         """Adds worksheet to an existing Google Sheet.
 
         Args:
