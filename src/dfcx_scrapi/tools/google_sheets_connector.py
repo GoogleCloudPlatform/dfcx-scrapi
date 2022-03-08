@@ -32,9 +32,7 @@ class GoogleSheetsConnector:
         "https://www.googleapis.com/auth/drive",
     ]
 
-    def __init__(
-        self, creds_path: str = None, creds_dict: dict = None, scope=False
-    ):
+    def __init__(self, creds_path: str = None, creds_dict: dict = None, scope=False):
         scopes = GoogleDriveConnector.global_scopes
         if scope:
             scopes += scope
@@ -53,8 +51,7 @@ class GoogleSheetsConnector:
         self.client = gspread.authorize(creds)
 
     def create_google_sheet(self, sheet_name: str):
-        """Creates new Google Sheet object. 
-        
+        """Creates new Google Sheet object.
         This sheet is created under service account drive account and must be
         shared to an account to view it from that account.
 
@@ -78,7 +75,7 @@ class GoogleSheetsConnector:
         email: str,
         role: str = "writer",
         perm_type: str = "user",
-        notify: bool = True
+        notify: bool = True,
     ):
         """Shares an existing Google Sheet with emails.
 
@@ -95,11 +92,7 @@ class GoogleSheetsConnector:
         g_sheets.share(email, role=role, perm_type=perm_type, notify=notify)
 
     def add_worksheet(
-        self,
-        sheet_name: str,
-        worksheet_name: str,
-        rows: int = 100,
-        cols: int = 26
+        self, sheet_name: str, worksheet_name: str, rows: int = 100, cols: int = 26
     ):
         """Adds worksheet to an existing Google Sheet.
 
@@ -135,7 +128,7 @@ class GoogleSheetsConnector:
         g_sheets = self.client.open(sheet_name)
         permissions = g_sheets.list_permissions()
         return permissions
-    
+
     def dataframe_to_new_sheet(
         self,
         sheet_name: str,
@@ -162,9 +155,13 @@ class GoogleSheetsConnector:
         for email in emails:
             self.share_sheet(sheet_name, email)
             time.sleep(1)
-        logging.info("Added data to %s - %s shared with emails: %s",
-                     sheet_name, worksheet_name, emails)
-    
+        logging.info(
+            "Added data to %s - %s shared with emails: %s",
+            sheet_name,
+            worksheet_name,
+            emails,
+        )
+
     def dataframe_to_existing_sheet(
         self, sheet_name: str, worksheet_name: str, dataframe: pd.DataFrame
     ):
@@ -182,17 +179,15 @@ class GoogleSheetsConnector:
 
     def sheets_to_dataframe(self, sheet_name: str, worksheet_name: str):
         """Moves Intent/TP data from Google Sheets to a DataFrame.
-        
         Args:
             sheet_name: name of the sheets object to pull data from.
             worksheet_name: name of the worksheet/tab to pull data from.
 
         Returns:
-            pandas dataframe containing the data in the g-sheet and worksheet specified
-        """
+            pandas dataframe containing the data in the g-sheet and
+            worksheet specified"""
         g_sheets = self.client.open(sheet_name)
         sheet = g_sheets.worksheet(worksheet_name)
         data_pull = sheet.get_all_values()
         data = pd.DataFrame(columns=data_pull[0], data=data_pull[1:])
         return data
-
