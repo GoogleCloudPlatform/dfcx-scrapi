@@ -240,9 +240,14 @@ class DataframeFunctions(ScrapiBase):
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
-                    part = {
-                        "text": row["text"],
-                        "parameter_id": row["parameter_id"],
+                    if pd.isna(row["parameter_id"]):
+                        part = {
+                            "text": row["text"],
+                        }
+                    else:
+                        part = {
+                            "text": row["text"],
+                            "parameter_id": row["parameter_id"],
                     }
                     parts.append(part)
 
@@ -560,10 +565,15 @@ class DataframeFunctions(ScrapiBase):
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
-                    part = {
-                        "text": row["text"],
-                        "parameter_id": row["parameter_id"],
-                    }
+                    if pd.isna(row["parameter_id"]):
+                        part = {
+                            "text": row["text"],
+                        }
+                    else:
+                        part = {
+                            "text": row["text"],
+                            "parameter_id": row["parameter_id"],
+                        }
                     parts.append(part)
 
                 training_phrase = {"parts": parts, "repeat_count": 1, "id": ""}
@@ -582,7 +592,7 @@ class DataframeFunctions(ScrapiBase):
 
             if parameters:
                 intent["parameters"] = parameters
-
+                
         elif mode == "basic":
             training_phrases = []
             for _, row in tp_df.iterrows():
@@ -593,7 +603,7 @@ class DataframeFunctions(ScrapiBase):
             intent["training_phrases"] = training_phrases
         else:
             raise ValueError("mode must be basic or advanced")
-
+        
         json_intent = json.dumps(intent)
         intent_pb = types.Intent.from_json(json_intent)
 
