@@ -15,11 +15,11 @@
 # limitations under the License.
 
 import logging
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 import pandas as pd
 from typing import Dict
-from collections import Sequence
+from collections.abc import Sequence
 
 
 from dfcx_scrapi.core import scrapi_base, intents, flows, pages, transition_route_groups
@@ -65,12 +65,12 @@ class Fulfillments(scrapi_base.ScrapiBase):
             self.intents_map = self.intents.get_intents_map(agent_id)
 
     @staticmethod
-    def get_message_fulfillments(messages: Sequence[types.ResponseMessage]):
+    def _get_message_fulfillments(messages: Sequence[types.ResponseMessage]):
         """
         Gets fulfillments from messages dictionary.
 
         Args:
-            messages: #TODO.
+            messages: object to extract fulfillments from.
         Returns:
             a simple list of fulfillment strings.
         """
@@ -83,7 +83,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
         return text_fulfillments_list
 
     @staticmethod
-    def get_conditional_case_fulfillments(
+    def _get_conditional_case_fulfillments(
         case_content: 
             Sequence[types.Fulfillment.ConditionalCases.Case.CaseContent]
     ):
@@ -105,8 +105,8 @@ class Fulfillments(scrapi_base.ScrapiBase):
                         text_fulfillments_list.append(text_fulfillment)
         return text_fulfillments_list
 
-    # TODO (greenford) test function - has dubious dateframe inserts
-    def get_transition_route_fulfillments(
+    TODO test function - has dubious dateframe inserts
+    def _get_transition_route_fulfillments(
         self,
         flow_display_name: str,
         resource_type: str,
@@ -142,7 +142,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
             intent_triggered = self.intents_map.get(route["intent"], "")
             if route.get("trigger_fulfillment", False):
                 messages = route["trigger_fulfillment"]["messages"]
-                text_fulfillments = self.get_message_fulfillments(messages)
+                text_fulfillments = self._get_message_fulfillments(messages)
                 route_dataframe["fulfillment"] = text_fulfillments
                 route_dataframe["identifier"] = intent_triggered
                 route_dataframe["response_type"] = "text"
@@ -162,7 +162,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
                             condition = "else"
                         case_content = case.get("case_content", False)
                         if case_content:
-                            text_fulfillments = self.get_conditional_case_fulfillments(
+                            text_fulfillments = self._(
                                 case_content
                             )
                             route_dataframe = pd.DataFrame()
@@ -183,7 +183,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
 
         return routes_fulfillments
 
-    def get_event_handler_fulfillments(
+    def _get_event_handler_fulfillments(
         self,
         flow_display_name: str,
         page_display_name: str,
@@ -215,7 +215,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
             event_handler_name = event_handler.get("event", "")
             if event_handler.get("trigger_fulfillment", False):
                 messages = event_handler["trigger_fulfillment"]["messages"]
-                text_fulfillments = self.get_message_fulfillments(messages)
+                text_fulfillments = self._get_message_fulfillments(messages)
 
                 event_handler_dataframe["fulfillment"] = text_fulfillments
                 event_handler_dataframe["identifier"] = event_handler_name
@@ -238,7 +238,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
                             condition = "else"
                         case_content = case.get("case_content", False)
                         if case_content:
-                            text_fulfillments = self.get_conditional_case_fulfillments(
+                            text_fulfillments = self._(
                                 case_content
                             )
                             event_handler_dataframe = pd.DataFrame()
@@ -259,7 +259,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
 
         return event_handler_fulfillments
 
-    def get_entry_fulfillments(
+    def _get_entry_fulfillments(
         self,
         flow_display_name: str,
         object_display_name: str,
@@ -269,9 +269,9 @@ class Fulfillments(scrapi_base.ScrapiBase):
         Gets fulfillments from entry fulfillments dictionary on a page.
 
         Args:
-            flow_display_name: origin flow of entry_fulfillment
-            object_display_name: origin object of entry_fulfillment
-            entry_fulfillment: #TODO
+            flow_display_name: origin flow of entry_fulfillment.
+            object_display_name: origin object of entry_fulfillment.
+            entry_fulfillment: object to pull fulfillments from.
         Returns:
             Dataframe with columns:
                 fulfillment
@@ -290,7 +290,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
         entry_fulfillments_dataframe = pd.DataFrame()
         if entry_fulfillment.get("trigger_fulfillment", False):
             messages = entry_fulfillment["trigger_fulfillment"]["messages"]
-            text_fulfillments = self.get_message_fulfillments(messages)
+            text_fulfillments = self._get_message_fulfillments(messages)
 
             entry_fulfillments_dataframe["fulfillment"] = text_fulfillments
             entry_fulfillments_dataframe["identifier"] = object_display_name
@@ -311,7 +311,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
                         condition = "else"
                     case_content = case.get("case_content", False)
                     if case_content:
-                        text_fulfillments = self.get_conditional_case_fulfillments(
+                        text_fulfillments = self._(
                             case_content
                         )
                         entry_fulfillments_dataframe = pd.DataFrame()
@@ -331,7 +331,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
         entry_fulfillments["identifier_type"] = "page name"
         return entry_fulfillments
 
-    def get_route_group_fulfillments(self, flow_dictionary: Dict):
+    def _get_route_group_fulfillments(self, flow_dictionary: Dict):
         """
         Gets fulfillments from route groups in a flow.
 
@@ -348,7 +348,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
             route_group_flow = types.TransitionRouteGroup.to_dict(route_group_flow)
             route_group_name = route_group_flow["display_name"]
             routes = route_group_flow["transition_routes"]
-            route_group_fulfillment_df = self.get_transition_route_fulfillments(
+            route_group_fulfillment_df = self._get_transition_route_fulfillments(
                 flow_dictionary["display_name"],
                 resource_type="route group",
                 resource_name=route_group_name,
@@ -371,16 +371,16 @@ class Fulfillments(scrapi_base.ScrapiBase):
         flow_dictionary = types.Flow.to_dict(flow_obj)
         transition_routes = flow_dictionary["transition_routes"]
         event_handlers = flow_dictionary["event_handlers"]
-        route_fulfillments = self.get_transition_route_fulfillments(
+        route_fulfillments = self._get_transition_route_fulfillments(
             flow_obj.display_name,
             resource_type="page",
             resource_name="START_PAGE",
             routes=transition_routes,
         )
-        event_fulfillments = self.get_event_handler_fulfillments(
+        event_fulfillments = self._get_event_handler_fulfillments(
             flow_obj.display_name, "START_PAGE", event_handlers
         )
-        route_group_fulfillments = self.get_route_group_fulfillments(flow_dictionary)
+        route_group_fulfillments = self._get_route_group_fulfillments(flow_dictionary)
 
         flow_fufillments = pd.concat(
             [
@@ -392,7 +392,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
         )
         return flow_fufillments
 
-    def get_page_fulfillments(
+    def _get_page_fulfillments(
         self, flow_display_name: str, page_obj: types.Page
     ):
         """
@@ -412,7 +412,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
         event_handlers = page_dictionary["event_handlers"]
 
         if entry_fulfillment:
-            entry_fulfillments = self.get_entry_fulfillments(
+            entry_fulfillments = self._get_entry_fulfillments(
                 flow_display_name,
                 page_dictionary["display_name"],
                 entry_fulfillment,
@@ -421,13 +421,13 @@ class Fulfillments(scrapi_base.ScrapiBase):
                 [page_fulfillments, entry_fulfillments]
             )
 
-        route_fulfillments = self.get_transition_route_fulfillments(
+        route_fulfillments = self._get_transition_route_fulfillments(
             flow_display_name,
             resource_type="page",
             resource_name=page_obj.display_name,
             routes=transition_routes,
         )
-        event_fulfillments = self.get_event_handler_fulfillments(
+        event_fulfillments = self._get_event_handler_fulfillments(
             flow_display_name, page_obj.display_name, event_handlers
         )
 
@@ -466,7 +466,7 @@ class Fulfillments(scrapi_base.ScrapiBase):
             )
             page_list = self.pages.list_pages(flow_obj.name)
             for page in page_list:
-                page_data = self.get_page_fulfillments(
+                page_data = self._get_page_fulfillments(
                     flow_obj.display_name, page_obj=page
                 )
                 agent_fulfillments = pd.concat([agent_fulfillments, page_data])
