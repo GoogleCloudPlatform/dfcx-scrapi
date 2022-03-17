@@ -15,7 +15,8 @@
 # limitations under the License.
 
 import logging
-from typing import Dict
+from typing import Dict, List
+
 import pandas as pd
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -111,6 +112,63 @@ class EntityTypes(ScrapiBase):
                     excluded_phrases_dict, ignore_index=True
                 )
 
+            return {
+                "entity_types": main_df, "excluded_phrases": excluded_phrases_df
+            }
+
+        else:
+            raise ValueError("Mode types: [basic, advanced]")
+
+    def bulk_entity_type_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        entity_type_subset: List[str] = None) -> pd.DataFrame:
+        """Extracts all Intents and Training Phrases into a Pandas DataFrame.
+
+        Args:
+          agent_id, agent to pull list of intents
+          mode: (Optional) basic returns display_name, value of entity type and
+            it's synonyms.
+          advanced returns entity types and excluded phrases in a comprehensive
+            format.
+          entity_type_subset: (Optional) A list of entities to pull
+            If it's None, grab all the entity_types
+        """
+
+        if not agent_id:
+            agent_id = self.agent_id
+
+        entity_types = self.list_entity_types(agent_id)
+        if mode == "basic":
+            main_df = pd.DataFrame()
+            for obj in entity_types:
+                if (entity_type_subset and
+                        obj.display_name not in entity_type_subset):
+                    continue
+
+                single_entity_df = self.entity_type_proto_to_dataframe(
+                    obj, mode=mode
+                )
+                main_df = main_df.append(single_entity_df)
+            main_df = main_df.sort_values(
+                ["display_name", "entity_value"])
+            return main_df
+
+        elif mode == "advanced":
+            main_df = pd.DataFrame()
+            excluded_phrases_df = pd.DataFrame()
+            for obj in entity_types:
+                if (entity_type_subset and
+                        obj.display_name not in entity_type_subset):
+                    continue
+                single_entity_dict = self.entity_type_proto_to_dataframe(
+                    obj, mode=mode
+                )
+                main_df = main_df.append(single_entity_dict["entity_types"])
+                excluded_phrases_df = excluded_phrases_df.append(
+                    single_entity_dict["excluded_phrases"]
+                )
             return {
                 "entity_types": main_df, "excluded_phrases": excluded_phrases_df
             }
