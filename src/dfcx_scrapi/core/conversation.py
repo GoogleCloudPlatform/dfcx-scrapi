@@ -114,6 +114,48 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
           end="\r")
 
     @staticmethod
+    def _build_query_params_object(parameters, current_page, disable_webhook):
+        if parameters:
+            query_params = types.session.QueryParameters(
+                disable_webhook=disable_webhook,
+                parameters=parameters,
+                current_page=current_page,
+                )
+        else:
+            query_params = types.session.QueryParameters(
+                disable_webhook=disable_webhook,
+                current_page=current_page
+                )
+
+        return query_params
+
+    @staticmethod
+    def _build_query_input_object(input_obj, language_code):
+        if 'dtmf' in input_obj:
+            digits = input_obj['dtmf']
+
+            if 'finish_digit' in input_obj:
+                finish_digit = input_obj['dtmf_finish']
+
+            dtmf_input = types.session.DtmfInput(
+                digits=digits, finish_digit=finish_digit)
+            query_input = types.session.QueryInput(
+                dtmf=dtmf_input,
+                language_code=language_code,
+                )
+                
+        elif 'text' in input_obj:
+            text = input_obj['text']
+            logging.debug("Input text: %s", text)
+            text_input = types.session.TextInput(text=text)
+            query_input = types.session.QueryInput(
+                text=text_input,
+                language_code=language_code,
+                )
+
+        return query_input
+
+    @staticmethod
     def _gather_text_responses(text_message):
 
         flat_texts = '\n'.join(text_message.text)
@@ -307,6 +349,9 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
               debugging. Defaults to False.
         """
         text = send_obj.get("text")
+        send_params = send_obj.get("params")
+        dtmf = send_obj.get("dtmf")
+
         if not text:
             logging.warning(f"Input Text is empty. {send_obj}")
 
@@ -316,7 +361,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             logging.warning(f"TRUNCATED TEXT: {text}")
 
 
-        send_params = send_obj.get("params")
+        custom_environment = self.agent_env.get("environment")
+        disable_webhook = self.agent_env.get("disable_webhook") or False
 
         if checkpoints:
             self.checkpoint(start=True)
@@ -330,48 +376,18 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         )
         session_path = f"{self.agent_id}/sessions/{self.session_id}"
 
-        custom_environment = self.agent_env.get("environment")
-
         if custom_environment:
             logging.info("req using env: %s", custom_environment)
             session_path = f"{self.agent_id}/environments/"\
             f"{custom_environment}/sessions/{self.session_id}"
 
-        disable_webhook = self.agent_env.get("disable_webhook") or False
+        # Build Query Params object
+        query_params = self._build_query_params_object(
+            send_params, current_page, disable_webhook)
 
-        if send_params and current_page:
-            query_params = types.session.QueryParameters(
-                disable_webhook=disable_webhook,
-                parameters=send_params,
-                current_page=current_page,
-            )
-        elif send_params and not current_page:
-            query_params = types.session.QueryParameters(
-                disable_webhook=disable_webhook, parameters=send_params
-            )
-        elif not send_params and current_page:
-            query_params = types.session.QueryParameters(
-                disable_webhook=disable_webhook, current_page=current_page
-            )
-        else:
-            query_params = types.session.QueryParameters(
-                disable_webhook=disable_webhook,
-            )
-
-        dtmf = send_obj.get("dtmf")
-        if dtmf:
-            dtmf_input = types.session.DtmfInput(digits=dtmf)
-            query_input = types.session.QueryInput(
-                dtmf=dtmf_input,
-                language_code=self.language_code,
-            )
-        else:
-            logging.debug("text: %s", text)
-            text_input = types.session.TextInput(text=text)
-            query_input = types.session.QueryInput(
-                text=text_input,
-                language_code=self.language_code,
-            )
+        # Build Query Input object
+        query_input = self._build_query_input_object(
+            send_obj, self.language_code)
 
         request = types.session.DetectIntentRequest(
             session=session_path,
