@@ -16,6 +16,7 @@
 
 import logging
 from typing import Dict
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
@@ -51,6 +52,72 @@ class EntityTypes(ScrapiBase):
 
         self.entity_id = entity_id
         self.agent_id = agent_id
+
+
+    @staticmethod
+    def entity_type_proto_to_dataframe(
+        obj: types.EntityType, mode: str = "basic"
+    ):
+        """Entity Types to dataframe
+
+        Args:
+          obj, EntityType protobuf object
+          mode: (Optional) basic returns display_name, value of entity type and
+            it's synonyms.
+          advanced returns entity types and excluded phrases in a comprehensive
+            format.
+        """
+        if mode == "basic":
+            main_df = pd.DataFrame()
+
+            entity_type_dict = {}
+            entity_type_dict["display_name"] = obj.display_name
+            for entity in obj.entities:
+                entity_type_dict["entity_value"] = entity.value
+                for synonym in entity.synonyms:
+                    entity_type_dict["synonyms"] = synonym
+                    main_df = main_df.append(
+                        entity_type_dict, ignore_index=True
+                    )
+
+            return main_df
+
+        elif mode == "advanced":
+
+            main_df = pd.DataFrame()
+            excluded_phrases_df = pd.DataFrame()
+
+            entity_type_dict = {}
+            excluded_phrases_dict = {}
+            entity_type_dict["entity_type_id"] = obj.name
+            excluded_phrases_dict["entity_type_id"] = obj.name
+            entity_type_dict["display_name"] = obj.display_name
+            excluded_phrases_dict["display_name"] = obj.display_name
+            entity_type_dict["kind"] = obj.kind.name
+            entity_type_dict["auto_expansion_mode"] = obj.auto_expansion_mode
+            entity_type_dict["fuzzy_extraction"] = obj.enable_fuzzy_extraction
+            entity_type_dict["redact"] = obj.redact
+            for entity in obj.entities:
+                entity_type_dict["entity_value"] = entity.value
+                for synonym in entity.synonyms:
+                    entity_type_dict["synonyms"] = synonym
+                    main_df = main_df.append(
+                        entity_type_dict, ignore_index=True
+                    )
+
+            for excluded_phrase in obj.excluded_phrases:
+                excluded_phrases_dict["excluded_phrase"] = excluded_phrase.value
+                excluded_phrases_df = excluded_phrases_df.append(
+                    excluded_phrases_dict, ignore_index=True
+                )
+
+            return {
+                "entity_types": main_df, "excluded_phrases": excluded_phrases_df
+            }
+
+        else:
+            raise ValueError("Mode types: [basic, advanced]")
+
 
     def get_entities_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Entityt Names and UUIDs into a user friendly dict.
