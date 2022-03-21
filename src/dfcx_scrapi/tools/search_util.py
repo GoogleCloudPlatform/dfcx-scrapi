@@ -520,6 +520,96 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         return event_handler_scan
     
+    def get_agent_fulfillments(self, agent_id: str):
+        """Gets all fulfillments, conditional responses from an agent.
+
+        Args:
+          agent_id: if of agent to pull fulfillments from.
+
+        Returns:
+          dataframe of agent fulfillments as well as identifiers which help
+          users locate the position of fulfillments in an agent. Has columns:
+            flow
+            resource_type
+            resource_name
+            fulfillment_type
+            identifier_type
+            identifier
+            response_type
+            condition
+        """
+        flow_list = self.flows.list_flows(agent_id)
+        if not self.intents_map:
+            self.intents_map = self.intents.get_intents_map(agent_id)
+
+        agent_fulfillments = pd.DataFrame()
+        for flow_obj in flow_list:
+            flow_data = self.get_flow_fufillments(flow_obj=flow_obj)
+            agent_fulfillments = pd.concat(
+                [agent_fulfillments, flow_data]
+            )
+            page_list = self.pages.list_pages(flow_obj.name)
+            for page in page_list:
+                page_data = self._get_page_fulfillments(
+                    flow_obj.display_name, page_obj=page
+                )
+                agent_fulfillments = pd.concat([agent_fulfillments, page_data])
+
+        column_order = [
+            "flow",
+            "resource_type",
+            "resource_name",
+            "fulfillment_type",
+            "identifier_type",
+            "identifier",
+            "response_type",
+            "condition",
+            "fulfillment",
+        ]
+        agent_fulfillments = agent_fulfillments[column_order]
+        return agent_fulfillments
+    
+    def get_flow_fufillments(self, flow_obj: types.Flow):
+        """Get all fulfillments from a flow object.
+
+        Args:
+            flow_obj: flow object to get fulfillments from.
+        Returns:
+            Dataframe with columns:
+                flow
+                resource_type
+                resource_name
+                fulfillment_type
+                identifier_type
+                identifier
+                response_type
+                condition
+        """
+        flow_fufillments = pd.DataFrame()
+        flow_dictionary = types.Flow.to_dict(flow_obj)
+        transition_routes = flow_dictionary["transition_routes"]
+        event_handlers = flow_dictionary["event_handlers"]
+        route_fulfillments = self._get_transition_route_fulfillments(
+            flow_obj.display_name,
+            resource_type="page",
+            resource_name="START_PAGE",
+            routes=transition_routes,
+        )
+        event_fulfillments = self._get_event_handler_fulfillments(
+            flow_obj.display_name, "START_PAGE", event_handlers
+        )
+        route_group_fulfillments = self._get_route_group_fulfillments(flow_dictionary)
+
+        flow_fufillments = pd.concat(
+            [
+                flow_fufillments, 
+                route_fulfillments, 
+                event_fulfillments, 
+                route_group_fulfillments
+            ]
+        )
+        return flow_fufillments
+    
     @staticmethod
     def _get_message_fulfillments(messages: List[types.ResponseMessage]):
         """
@@ -824,46 +914,6 @@ class SearchUtil(scrapi_base.ScrapiBase):
             )
         return route_group_fulfillments_df
 
-    def get_flow_fufillments(self, flow_obj: types.Flow):
-        """Get all fulfillments from a flow object.
-
-        Args:
-            flow_obj: flow object to get fulfillments from.
-        Returns:
-            Dataframe with columns:
-                flow
-                resource_type
-                resource_name
-                fulfillment_type
-                identifier_type
-                identifier
-                response_type
-                condition
-        """
-        flow_fufillments = pd.DataFrame()
-        flow_dictionary = types.Flow.to_dict(flow_obj)
-        transition_routes = flow_dictionary["transition_routes"]
-        event_handlers = flow_dictionary["event_handlers"]
-        route_fulfillments = self._get_transition_route_fulfillments(
-            flow_obj.display_name,
-            resource_type="page",
-            resource_name="START_PAGE",
-            routes=transition_routes,
-        )
-        event_fulfillments = self._get_event_handler_fulfillments(
-            flow_obj.display_name, "START_PAGE", event_handlers
-        )
-        route_group_fulfillments = self._get_route_group_fulfillments(flow_dictionary)
-
-        flow_fufillments = pd.concat(
-            [
-                flow_fufillments, 
-                route_fulfillments, 
-                event_fulfillments, 
-                route_group_fulfillments
-            ]
-        )
-        return flow_fufillments
 
     def _get_page_fulfillments(
         self, flow_display_name: str, page_obj: types.Page
@@ -917,51 +967,3 @@ class SearchUtil(scrapi_base.ScrapiBase):
         )
         return fulfillments
 
-    def get_agent_fulfillments(self, agent_id: str):
-        """Gets all fulfillments, conditional responses from an agent.
-
-        Args:
-          agent_id: if of agent to pull fulfillments from.
-
-        Returns:
-          dataframe of agent fulfillments as well as identifiers which help
-          users locate the position of fulfillments in an agent. Has columns:
-            flow
-            resource_type
-            resource_name
-            fulfillment_type
-            identifier_type
-            identifier
-            response_type
-            condition
-        """
-        flow_list = self.flows.list_flows(agent_id)
-        if not self.intents_map:
-            self.intents_map = self.intents.get_intents_map(agent_id)
-
-        agent_fulfillments = pd.DataFrame()
-        for flow_obj in flow_list:
-            flow_data = self.get_flow_fufillments(flow_obj=flow_obj)
-            agent_fulfillments = pd.concat(
-                [agent_fulfillments, flow_data]
-            )
-            page_list = self.pages.list_pages(flow_obj.name)
-            for page in page_list:
-                page_data = self._get_page_fulfillments(
-                    flow_obj.display_name, page_obj=page
-                )
-                agent_fulfillments = pd.concat([agent_fulfillments, page_data])
-
-        column_order = [
-            "flow",
-            "resource_type",
-            "resource_name",
-            "fulfillment_type",
-            "identifier_type",
-            "identifier",
-            "response_type",
-            "condition",
-            "fulfillment",
-        ]
-        agent_fulfillments = agent_fulfillments[column_order]
-        return agent_fulfillments
