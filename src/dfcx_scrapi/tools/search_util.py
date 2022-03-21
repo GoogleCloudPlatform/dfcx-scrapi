@@ -16,8 +16,7 @@
 
 import logging
 import time
-from typing import Dict
-from collections.abc import Sequence
+from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 import pandas as pd
@@ -522,7 +521,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         return event_handler_scan
     
     @staticmethod
-    def _get_message_fulfillments(messages: Sequence[types.ResponseMessage]):
+    def _get_message_fulfillments(messages: List[types.ResponseMessage]):
         """
         Gets fulfillments from messages dictionary.
 
@@ -543,7 +542,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
     @staticmethod
     def _get_conditional_case_fulfillments(
         case_content: 
-            Sequence[types.Fulfillment.ConditionalCases.Case.CaseContent]
+            List[types.Fulfillment.ConditionalCases.Case.CaseContent]
     ):
         """
         Gets conditinal fulfillments from case content dictionary.
@@ -568,7 +567,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         flow_display_name: str,
         resource_type: str,
         resource_name: str,
-        routes: Sequence[types.TransitionRouteGroup]
+        routes: List[types.TransitionRouteGroup]
     ):
         """
         Gets fulfillments from routes list.
@@ -644,7 +643,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         self,
         flow_display_name: str,
         page_display_name: str,
-        event_handlers: Sequence[types.EventHandler]
+        event_handlers: List[types.EventHandler]
     ):
         """
         Gets fulfillments from event handlers.
