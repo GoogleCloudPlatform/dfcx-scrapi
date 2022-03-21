@@ -119,7 +119,7 @@ class EntityTypes(ScrapiBase):
         else:
             raise ValueError("Mode types: [basic, advanced]")
 
-    def bulk_entity_type_to_df(
+    def entity_types_to_df(
         self,
         agent_id: str = None,
         mode: str = "basic",
@@ -169,6 +169,13 @@ class EntityTypes(ScrapiBase):
                 excluded_phrases_df = excluded_phrases_df.append(
                     single_entity_dict["excluded_phrases"]
                 )
+            type_map = {
+                "auto_expansion_mode": bool,
+                "fuzzy_extraction": bool,
+                "redact": bool
+            }
+            main_df = main_df.astype(type_map)
+
             return {
                 "entity_types": main_df, "excluded_phrases": excluded_phrases_df
             }
