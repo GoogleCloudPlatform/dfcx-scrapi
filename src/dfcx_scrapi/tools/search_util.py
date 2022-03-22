@@ -524,7 +524,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         """Gets all fulfillments, conditional responses from an agent.
 
         Args:
-          agent_id: if of agent to pull fulfillments from.
+          agent_id: ID of agent to pull fulfillments from.
 
         Returns:
           dataframe of agent fulfillments as well as identifiers which help
@@ -544,7 +544,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         agent_fulfillments = pd.DataFrame()
         for flow_obj in flow_list:
-            flow_data = self.get_flow_fufillments(flow_obj=flow_obj)
+            flow_data = self.get_flow_fulfillments(flow_obj=flow_obj)
             agent_fulfillments = pd.concat(
                 [agent_fulfillments, flow_data]
             )
@@ -569,7 +569,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         agent_fulfillments = agent_fulfillments[column_order]
         return agent_fulfillments
     
-    def get_flow_fufillments(self, flow_obj: types.Flow):
+    def get_flow_fulfillments(self, flow_obj: types.Flow):
         """Get all fulfillments from a flow object.
 
         Args:
