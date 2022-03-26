@@ -88,16 +88,18 @@ class EntityTypes(ScrapiBase):
             main_df = pd.DataFrame()
             excluded_phrases_df = pd.DataFrame()
 
-            entity_type_dict = {}
-            excluded_phrases_dict = {}
-            entity_type_dict["entity_type_id"] = obj.name
-            excluded_phrases_dict["entity_type_id"] = obj.name
-            entity_type_dict["display_name"] = obj.display_name
-            excluded_phrases_dict["display_name"] = obj.display_name
-            entity_type_dict["kind"] = obj.kind.name
-            entity_type_dict["auto_expansion_mode"] = obj.auto_expansion_mode
-            entity_type_dict["fuzzy_extraction"] = obj.enable_fuzzy_extraction
-            entity_type_dict["redact"] = obj.redact
+            excluded_phrases_dict = {
+                "entity_type_id": obj.name,
+                "display_name": obj.display_name,
+            }
+            entity_type_dict = {
+                "entity_type_id": obj.name,
+                "display_name": obj.display_name,
+                "kind": obj.kind.name,
+                "auto_expansion_mode": obj.auto_expansion_mode,
+                "fuzzy_extraction": obj.enable_fuzzy_extraction,
+                "redact": obj.redact,
+            }
             for entity in obj.entities:
                 entity_type_dict["entity_value"] = entity.value
                 for synonym in entity.synonyms:
