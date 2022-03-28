@@ -30,8 +30,8 @@ class SearchUtilTest:
     DEV = True
     today_time = datetime.now().strftime("%d%m%Y_%H%M%S")
     AGENT_NAME = None
-    CREDS_PATH = '/home/greenford/keys/verizon-custom-ccai-external-0cf7b3083de6.json'
-    AGENT_ID = 'projects/verizon-custom-ccai-external/locations/global/agents/da604e83-c64a-4130-b65d-8245fdaae5a0'
+    CREDS_PATH = 'Edit me'
+    AGENT_ID = 'Edit me'
     scrapi_search = None
 
     def test_instantiate_SearchUtil(self):
