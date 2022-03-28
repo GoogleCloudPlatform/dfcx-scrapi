@@ -17,10 +17,12 @@
 import logging
 import time
 from typing import Dict
-
 import pandas as pd
-
-from dfcx_scrapi.core import entity_types, flows, intents, pages, scrapi_base
+from dfcx_scrapi.core import entity_types
+from dfcx_scrapi.core import flows
+from dfcx_scrapi.core import intents
+from dfcx_scrapi.core import pages
+from dfcx_scrapi.core import scrapi_base
 from google.oauth2 import service_account
 
 # logging config
