@@ -30,8 +30,8 @@ class SearchUtilTest:
     DEV = True
     today_time = datetime.now().strftime("%d%m%Y_%H%M%S")
     AGENT_NAME = None
-    CREDS_PATH = None 
-    AGENT_ID = None
+    CREDS_PATH = '/home/greenford/keys/verizon-custom-ccai-external-0cf7b3083de6.json'
+    AGENT_ID = 'projects/verizon-custom-ccai-external/locations/global/agents/da604e83-c64a-4130-b65d-8245fdaae5a0'
     scrapi_search = None
 
     def test_instantiate_SearchUtil(self):
@@ -41,18 +41,19 @@ class SearchUtilTest:
         assert self.scrapi_search.creds_path == self.CREDS_PATH
 
     def test_get_agent_fulfillments(self):
-        df = self.scrapi_search.get_agent_fulfillments(self.AGENT_ID)
+        df = self.scrapi_search.get_agent_fulfillment_message_df(self.AGENT_ID)
         cols = set(df.columns)
         assert set(df.columns) == {
-                'flow',
-                'resource_type',
-                'resource_name',
-                'fulfillment_type',
-                'identifier_type',
-                'identifier',
-                'response_type',
+                'flow_name',
+                'page_name',
+                'parameter_name',
+                'event',
+                'route_group_name',
+                'intent',
                 'condition',
-                'fulfillment'}
+                'response_message',
+                'conditional_cases',
+                'response_type'}
 
 if __name__ == "__main__":
     t = SearchUtilTest()
