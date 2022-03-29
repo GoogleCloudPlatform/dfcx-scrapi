@@ -860,8 +860,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         elif 'output_audio_text' in message:
             value = "output_audio_text"
         else:
-            raise ValueError("Message contents outside of expected values.\n Message:"
-                + str(message) + '\nMessage type:' + str(type(message)))
+            value = 'unexpected value'
         return value
 
     @staticmethod
@@ -883,7 +882,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
         Returns:
             unpacked contents of message.
         """
-        if message.payload:
+        if pd.isna(message):
+            contents = message
+        elif message.payload:
             contents = message.payload
         elif message.play_audio:
             contents = message.play_audio
