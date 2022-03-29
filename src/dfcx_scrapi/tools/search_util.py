@@ -883,9 +883,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         Returns:
             unpacked contents of message.
         """
-        if pd.isna(message):
-            contents = message
-        elif message.payload:
+        if message.payload:
             contents = message.payload
         elif message.play_audio:
             contents = message.play_audio
@@ -897,4 +895,6 @@ class SearchUtil(scrapi_base.ScrapiBase):
             contents = message.output_audio_text.text
         elif message.text:
             contents = SearchUtil._gather_text_responses(message.text)
+        else:
+            contents = message
         return contents
