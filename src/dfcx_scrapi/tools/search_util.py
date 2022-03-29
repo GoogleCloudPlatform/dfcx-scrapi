@@ -884,17 +884,19 @@ class SearchUtil(scrapi_base.ScrapiBase):
         """
         if pd.isna(message):
             contents = message
-        elif message.payload:
+        elif isinstance(message, types.ResponseMessage) and (str(message)==''):
+            contents = np.nan
+        elif 'payload' in message:
             contents = message.payload
-        elif message.play_audio:
+        elif 'play_audio' in message:
             contents = message.play_audio
-        elif message.live_agent_handoff:
+        elif 'live_agent_handoff' in message:
             contents = message.live_agent_handoff.metadata
-        elif message.conversation_success:
+        elif 'conversation_success' in message:
             contents = message.conversation_success.metadata
-        elif message.output_audio_text:
+        elif 'output_audio_text' in message:
             contents = message.output_audio_text.text
-        elif message.text:
+        elif 'text' in message:
             contents = SearchUtil._gather_text_responses(message.text)
         else:
             contents = message
