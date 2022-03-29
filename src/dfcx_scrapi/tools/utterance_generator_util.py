@@ -166,6 +166,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         """
         synthetic_instances = ( synthetic_phrases_per_intent
                 // len(training_phrases_one_intent) ) + 1
+        print(f"({synthetic_phrases_per_intent} // {len(training_phrases_one_intent)}) + 1 = {synthetic_instances}")
         existing_phrases = list(set(
             training_phrases_one_intent["training_phrase"]))
         if synthetic_instances == 1:
@@ -330,10 +331,6 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             .rename(columns={"synthetic_phrases": "utterance"})
             .reset_index(drop=True)
         )
-        # TODO:Add flow and page columns to dataframe 
-        # set empty to param for Default Start Page of a Flow
-        # to START_PAGE
-        # TODO: Check page and flow columns exist
         test_dataset["flow_display_name"] = flow_display_name
         test_dataset["page_display_name"] = page_display_name
 
