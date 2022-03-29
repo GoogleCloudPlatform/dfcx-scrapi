@@ -222,6 +222,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         Returns:
             a DataFrame of generated training phrases.
         """
+        # TODO: fix math for training phrase generation.
         synthetic_dataset = pd.DataFrame()
         intents_list = list(set(training_phrases["display_name"]))
         unique_intents_count = len(intents_list)
@@ -271,7 +272,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         )
         training_phrases = training_phrases.copy().rename(
             columns={"tp": "utterance"})
-
+        # TODO: fixc math on _generate_phrases
         test_dataset = self._generate_phrases(training_phrases, dataset_size)
         test_dataset = test_dataset[:dataset_size]
 
@@ -281,6 +282,8 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         self,
         agent_id: str,
         intent_subset: List[str],
+        flow_display_name: str = "Default Start Flow",
+        page_display_name: str = "START_PAGE",
         dataset_size: int = 100) -> pd.DataFrame:
         """Creates a test dataset for a given list of intents.
 
@@ -295,8 +298,12 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         Args:
             agent_id: name parameter of the agent to pull intents from
                 full path to agent
-            intent_subset: display names of the intents to create a test
-                for, base phrases come from the training in the intent.
+            intent_subset: a Google sheet containing a list of intent display names 
+            and the flow dispaly name and page name for testing intent detection 
+            with the following schema.
+                display_name: str
+                flow_display_name: str
+                page_display_name: str
             dataset_size: overall target size of the test set to create, may
                 be less depending if new independent phrases can be generated
                 from the data. The function tries to get even entries per
@@ -305,9 +312,16 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         Returns:
             Dataframe with columns:
                 utterance: synthesized phrases.
-                display_name: Display name of the intent the utterance was
+                intent_display_name: display name of the intent the utterance was
                   generated from; also true label.
+                flow_display_name:
+                page_display_name:
         """
+        #TODO:fix synthetic_dataset output schema -> 
+        # flow_display_name, page_display_name, and utterance.
+        # require dataframe with column names:
+            # intent, flow_display_name, page_display_name, 
+        # get intent subset from dataset display name column
         synthetic_dataset = self.create_synthetic_dataset(
             agent_id, intent_subset,
             dataset_size)
@@ -316,6 +330,12 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             .rename(columns={"synthetic_phrases": "utterance"})
             .reset_index(drop=True)
         )
+        # TODO:Add flow and page columns to dataframe 
+        # set empty to param for Default Start Page of a Flow
+        # to START_PAGE
+        # TODO: Check page and flow columns exist
+        test_dataset["flow_display_name"] = flow_display_name
+        test_dataset["page_display_name"] = page_display_name
 
         return test_dataset
 
