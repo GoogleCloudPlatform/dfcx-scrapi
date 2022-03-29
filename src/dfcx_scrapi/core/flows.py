@@ -111,7 +111,7 @@ class Flows(scrapi_base.ScrapiBase):
     def list_flows(
         self,
         agent_id: str
-    ) -> [types.flow.Flow]:
+    ) -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
         Args:
@@ -141,7 +141,7 @@ class Flows(scrapi_base.ScrapiBase):
         self,
         display_name: str,
         agent_id: str
-    ) -> types.flow.Flow:
+    ) -> types.Flow:
         """Get a single CX Flow object based on its display name.
 
         Args:
@@ -168,7 +168,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return flow
 
-    def get_flow(self, flow_id: str) -> types.flow.Flow:
+    def get_flow(self, flow_id: str) -> types.Flow:
         """Get a single CX Flow object.
 
         Args:
@@ -190,7 +190,7 @@ class Flows(scrapi_base.ScrapiBase):
         flow_id: str,
         obj: types.Flow = None,
         **kwargs
-    ) -> types.flow.Flow:
+    ) -> types.Flow:
         """Update a single specific CX Flow object.
 
         Args:
@@ -221,7 +221,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
-    def update_nlu_settings(self, flow_id, **kwargs):
+    def update_nlu_settings(self, flow_id:str, **kwargs):
         """updates flow to new NLU setting.
         Args:
             flow_id: flow id to update nlu settings for.
