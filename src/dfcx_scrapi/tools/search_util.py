@@ -845,7 +845,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         """
         if pd.isna(message):
             value = np.nan
-        elif isinstance(message, types.ResponseMessage) and (str(a)==''):
+        elif isinstance(message, types.ResponseMessage) and (str(message)==''):
             value = np.nan
         elif message.text:
             value = "text"
