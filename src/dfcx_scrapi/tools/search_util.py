@@ -843,8 +843,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
             type in {np.nan, text, custom_payload, play_audio,
             live_agent_handoff, conversation_success, output_audio_text}.
         """
-        value = 'unassigned'
         if pd.isna(message):
+            value = np.nan
+        elif isinstance(message, types.ResponseMessage) and (str(a)==''):
             value = np.nan
         elif message.text:
             value = "text"
@@ -858,8 +859,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
             value = "conversation_success"
         elif message.output_audio_text:
             value = "output_audio_text"
-        elif value == 'unassigned':
-            raise ValueError("Message contents outside of expected values: "+ str(message))
+        else:
+            raise ValueError("Message contents outside of expected values.\n Message:"
+                + str(message) + '\nMessage type:' +type(message))
         return value
 
     @staticmethod
