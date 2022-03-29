@@ -847,21 +847,21 @@ class SearchUtil(scrapi_base.ScrapiBase):
             value = np.nan
         elif isinstance(message, types.ResponseMessage) and (str(message)==''):
             value = np.nan
-        elif message.text:
+        elif 'text' in message:
             value = "text"
-        elif message.payload:
+        elif 'payload' in message:
             value = "custom_payload"
-        elif message.play_audio:
+        elif 'play_audio' in message:
             value = "play_audio"
-        elif message.live_agent_handoff:
+        elif 'live_agent_handoff' in message:
             value = "live_agent_handoff"
-        elif message.conversation_success:
+        elif 'conversation_success' in message:
             value = "conversation_success"
-        elif message.output_audio_text:
+        elif 'output_audio_text' in message:
             value = "output_audio_text"
         else:
             raise ValueError("Message contents outside of expected values.\n Message:"
-                + str(message) + '\nMessage type:' +type(message))
+                + str(message) + '\nMessage type:' + str(type(message)))
         return value
 
     @staticmethod
