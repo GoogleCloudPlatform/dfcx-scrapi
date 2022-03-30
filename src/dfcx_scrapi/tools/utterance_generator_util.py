@@ -328,10 +328,9 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         # Reformat test_dataset to fit run_intent_detection schema
         test_dataset["flow_display_name"] = flow_display_name
         test_dataset["page_display_name"] = page_display_name
+        schema_dataset = test_dataset[["flow_display_name", "page_display_name", "utterance"]]
 
-        test_dataset = test_dataset[["flow_display_name", "page_display_name", "utterance"]]
-
-        return test_dataset
+        return schema_dataset
 
     def create_new_training_phrases(
         self,
