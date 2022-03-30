@@ -166,7 +166,6 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         """
         synthetic_instances = ( synthetic_phrases_per_intent
                 // len(training_phrases_one_intent) ) + 1
-        print(f"({synthetic_phrases_per_intent} // {len(training_phrases_one_intent)}) + 1 = {synthetic_instances}")
         existing_phrases = list(set(
             training_phrases_one_intent["training_phrase"]))
         if synthetic_instances == 1:
@@ -318,11 +317,6 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
                 flow_display_name:
                 page_display_name:
         """
-        #TODO:fix synthetic_dataset output schema -> 
-        # flow_display_name, page_display_name, and utterance.
-        # require dataframe with column names:
-            # intent, flow_display_name, page_display_name, 
-        # get intent subset from dataset display name column
         synthetic_dataset = self.create_synthetic_dataset(
             agent_id, intent_subset,
             dataset_size)
@@ -331,8 +325,11 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             .rename(columns={"synthetic_phrases": "utterance"})
             .reset_index(drop=True)
         )
+        # Reformat test_dataset to fit run_intent_detection schema
         test_dataset["flow_display_name"] = flow_display_name
         test_dataset["page_display_name"] = page_display_name
+
+        test_dataset = test_dataset[["flow_display_name", "page_display_name", "utterance"]]
 
         return test_dataset
 
