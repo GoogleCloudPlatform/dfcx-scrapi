@@ -19,6 +19,8 @@ import time
 from typing import Dict, List
 from operator import attrgetter
 from google.cloud.dialogflowcx_v3beta1 import types
+from proto.marshal.collections import repeated
+from proto.marshal.collections import maps
 from google.oauth2 import service_account
 import pandas as pd
 import numpy as np
@@ -28,7 +30,6 @@ from dfcx_scrapi.core import flows
 from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import entity_types
 from dfcx_scrapi.core import transition_route_groups
-
 
 # logging config
 logging.basicConfig(
@@ -507,7 +508,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         return event_handler_scan
 
     def get_agent_fulfillment_message_df(
-        self, agent_id: str, format_message: bool = True
+        self, agent_id: str, message_format: str = "dict"
     ):
         """Gets prompts/responses from agent on a fulfillment message level.
 
@@ -531,8 +532,13 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 response_message,
                 conditional_cases
         """
+        if message_format not in {"proto", "dict", "human-readable"}:
+            raise ValueError(
+                "Arg message_format must be 'proto', 'dict', or 'human-readable'"
+            )
+
         fulfillment_df = self.get_raw_agent_fulfillment_df(agent_id)
-        fulfillment_message_df = (
+        msg_df = (
             fulfillment_df.assign(
                 response_message=lambda df: df.fulfillment.apply(
                     attrgetter("messages")
@@ -549,12 +555,18 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 )
             )
         )
-        if format_message:
-            fulfillment_message_df = fulfillment_message_df.assign(
-                response_message=lambda df: df.response_message.apply(
-                    SearchUtil._gather_response_messages
-                )
+        # no format change for 'proto'
+        if message_format == "dict" or message_format == "human-readable":
+            msg_df.response_message = msg_df.response_message.apply(
+                SearchUtil._format_response_message, args=(message_format,)
             )
+        msg_df = msg_df.assign(
+            conditional_cases=lambda df: df.conditional_cases.apply(
+                lambda cc: np.nan if cc == [] else cc
+            )
+        ).dropna(subset=["response_type", "conditional_cases"], thresh=1)
+        if message_format == "human-readable":
+            msg_df.fillna("", inplace=True)
 
         column_order = [
             "flow_name",
@@ -569,7 +581,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             "conditional_cases",
         ]
 
-        return fulfillment_message_df[column_order]
+        return msg_df[column_order]
 
     def get_raw_agent_fulfillment_df(self, agent_id: str):
         """Gets all fulfillment structures for an agent.
@@ -592,8 +604,10 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         route_group_df = self.get_route_group_df(page_df, list(flow_df.flow_id))
         route_df = SearchUtil.get_route_df(page_df, route_group_df)
-        param_df = SearchUtil.get_param_df(page_df)
+        intent_map = self.intents.get_intents_map(agent_id)
+        route_df.intent = route_df.intent.map(intent_map)
 
+        param_df = SearchUtil.get_param_df(page_df)
         param_initial_prompt_fulfillment_df = param_df[
             ["flow_name", "page_name", "parameter_name", "initial_prompt_fulfillment"]
         ]
@@ -845,22 +859,22 @@ class SearchUtil(scrapi_base.ScrapiBase):
         """
         if pd.isna(message):
             value = np.nan
-        elif isinstance(message, types.ResponseMessage) and (str(message)==''):
+        elif isinstance(message, types.ResponseMessage) and (str(message) == ""):
             value = np.nan
-        elif 'text' in message:
+        elif "text" in message:
             value = "text"
-        elif 'payload' in message:
+        elif "payload" in message:
             value = "custom_payload"
-        elif 'play_audio' in message:
+        elif "play_audio" in message:
             value = "play_audio"
-        elif 'live_agent_handoff' in message:
+        elif "live_agent_handoff" in message:
             value = "live_agent_handoff"
-        elif 'conversation_success' in message:
+        elif "conversation_success" in message:
             value = "conversation_success"
-        elif 'output_audio_text' in message:
+        elif "output_audio_text" in message:
             value = "output_audio_text"
         else:
-            value = 'unexpected value'
+            value = "unexpected value"
         return value
 
     @staticmethod
@@ -875,29 +889,62 @@ class SearchUtil(scrapi_base.ScrapiBase):
         return flat_texts
 
     @staticmethod
-    def _gather_response_messages(message: types.ResponseMessage):
+    def _format_response_message(message: types.ResponseMessage, message_format: str):
         """Conditionally unpacks message formats.
         Args:
             message: structure such as from a fulfillment.
+            message_format: 'dict' or 'human-readable'
         Returns:
             unpacked contents of message.
         """
         if pd.isna(message):
-            contents = message
-        elif isinstance(message, types.ResponseMessage) and (str(message)==''):
             contents = np.nan
-        elif 'payload' in message:
-            contents = message.payload
-        elif 'play_audio' in message:
-            contents = message.play_audio
-        elif 'live_agent_handoff' in message:
-            contents = message.live_agent_handoff.metadata
-        elif 'conversation_success' in message:
-            contents = message.conversation_success.metadata
-        elif 'output_audio_text' in message:
-            contents = message.output_audio_text.text
-        elif 'text' in message:
-            contents = SearchUtil._gather_text_responses(message.text)
+        elif isinstance(message, types.ResponseMessage) and (str(message) == ""):
+            contents = np.nan
+        elif "payload" in message:
+            c = recurse_proto_marshal_to_dict(message.payload)
+            contents = {"payload": c} if (message_format == "dict") else c
+        elif "play_audio" in message:
+            c = {"audio_uri": message.play_audio.audio_uri}
+            contents = {"play_audio": c} if (message_format == "dict") else c
+        elif "live_agent_handoff" in message:
+            c = recurse_proto_marshal_to_dict(message.live_agent_handoff.metadata)
+            contents = {"live_agent_handoff": c} if (message_format == "dict") else c
+        elif "conversation_success" in message:
+            c = recurse_proto_marshal_to_dict(message.conversation_success.metadata)
+            contents = {"conversation_success": c} if (message_format == "dict") else c
+        elif "output_audio_text" in message:
+            c = message.output_audio_text.text
+            contents = {"output_audio_text": c} if (message_format == "dict") else c
+        elif "text" in message:
+            c = SearchUtil._gather_text_responses(message.text)
+            contents = {"text": c} if (message_format == "dict") else c
         else:
             contents = message
         return contents
+
+
+def recurse_proto_repeated_composite(repeated_object):
+    repeated_list = []
+    for item in repeated_object:
+        if isinstance(item, repeated.RepeatedComposite):
+            item = recurse_proto_repeated_composite(item)
+            repeated_list.append(item)
+        elif isinstance(item, maps.MapComposite):
+            item = recurse_proto_marshal_to_dict(item)
+            repeated_list.append(item)
+        else:
+            repeated_list.append(item)
+
+    return repeated_list
+
+
+def recurse_proto_marshal_to_dict(marshal_object):
+    new_dict = {}
+    for k, v in marshal_object.items():
+        if isinstance(v, maps.MapComposite):
+            v = recurse_proto_marshal_to_dict(v)
+        elif isinstance(v, repeated.RepeatedComposite):
+            v = recurse_proto_repeated_composite(v)
+        new_dict[k] = v
+    return new_dict
