@@ -81,31 +81,6 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
         )
 
     @staticmethod
-    def _calc_dataset_size(
-        agent_id: str,
-        intent_subset: List[str],
-        desired_number_new_utterances_per_intent: int,
-    ):
-        """Calculate the dataset size in order to produce the
-        number of new training phrases per intent."""
-        max_training_phrase_value = 0
-        num_of_intents = len(intent_subset)
-
-        for intent in intent_subset:
-            existing_utterances = intents.bulk_intent_to_df(
-                agent_id=agent_id, intent_subset=[intent]
-            )["training_phrase"]
-            num_training_phrases = len(existing_utterances)
-            if num_training_phrases > max_training_phrase_value:
-                max_training_phrase_value = num_training_phrases
-
-        dataset_size = (
-            1 + desired_number_new_utterances_per_intent
-        ) * num_of_intents
-
-        return dataset_size
-
-    @staticmethod
     def _clean_string(string_raw: str) -> str:
         """Cleans a string for comparison.
 
