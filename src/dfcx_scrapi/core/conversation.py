@@ -110,7 +110,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         percent = float(current) * 100 / total
         arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
         spaces = " " * (bar_length - len(arrow))
-        print(f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent}%",
+        print(f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent:.2f}%",
           end="\r")
 
     @staticmethod
@@ -132,10 +132,11 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
     @staticmethod
     def _build_query_input_object(input_obj, language_code):
         if 'dtmf' in input_obj:
-            digits = input_obj['dtmf']
+            digits = str(input_obj['dtmf'])
 
+            finish_digit = None
             if 'finish_digit' in input_obj:
-                finish_digit = input_obj['dtmf_finish']
+                finish_digit = str(input_obj['finish_digit'])          
 
             dtmf_input = types.session.DtmfInput(
                 digits=digits, finish_digit=finish_digit)
@@ -143,6 +144,24 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
                 dtmf=dtmf_input,
                 language_code=language_code,
                 )
+        
+        elif 'intent' in input_obj:
+            intent_input = types.session.IntentInput(
+                intent=input_obj['intent']
+            )
+            query_input = types.session.QueryInput(
+                intent=intent_input,
+                language_code=language_code
+            )
+
+        elif 'event' in input_obj:
+            event_input = types.session.EventInput(
+                event=input_obj['event']
+            )
+            query_input = types.session.QueryInput(
+                event=event_input,
+                language_code=language_code
+            )
                 
         elif 'text' in input_obj:
             text = input_obj['text']
@@ -555,5 +574,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             result = pd.concat([result, result_chunk])
             self.progress_bar(start, test_set.shape[0])
             time.sleep(rate_limit)
+
+        self.progress_bar(test_set.shape[0], test_set.shape[0])
 
         return result
