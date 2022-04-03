@@ -75,6 +75,187 @@ class SearchUtil(scrapi_base.ScrapiBase):
             self.intents_map = self.intents.get_intents_map(agent_id)
             self.client_options = self._set_region(agent_id)
 
+    @staticmethod
+    def get_route_df(page_df: pd.DataFrame, route_group_df: pd.DataFrame):
+        """Gets a route dataframe from page- and route-group-dataframes.
+        Args:
+            page_df: dataframe with required columns flow_name, page_name,
+                routes (where routes are types.TransitionRoute) such as
+                from get_page_df().
+            route_group_df: dataframe woth required columns flow_name,
+                page_name, route_group_name, routes (where routes are
+                types.TransitionRoute) such as from get_route_group_df().
+        Returns:
+            routes dataframe with columns:
+                flow_name,
+                page_name,
+                route_group_name,
+                intent,
+                condition,
+                trigger_fulfillment
+        """
+        routes_df = (
+            pd.concat(
+                [page_df[["flow_name", "page_name", "routes"]], route_group_df],
+                ignore_index=True,
+            )
+            .explode("routes", ignore_index=True)
+            .dropna(subset=["routes"], axis="index")
+            .assign(
+                intent=lambda df: df.routes.apply(attrgetter("intent")),
+                condition=lambda df: df.routes.apply(attrgetter("condition")),
+                trigger_fulfillment=lambda df: df.routes.apply(
+                    attrgetter("trigger_fulfillment")
+                ),
+            )
+            .drop(columns="routes")
+        )
+        return routes_df
+
+    @staticmethod
+    def get_param_df(page_df: pd.DataFrame):
+        """Gets a parameter dataframe from an input page dataframe.
+        Args:
+            page_df: dataframe with minimum columns flow_name, page_name,
+                parameters (types.Form.Parameter), such as from get_page_df().
+        Returns:
+            dataframe with columns:
+                flow_name,
+                page_name,
+                parameter_name,
+                reprompt_event_handlers,
+                initial_prompt_fulfillment
+        """
+        param_df = (
+            page_df[["flow_name", "page_name", "parameters"]]
+            .explode("parameters", ignore_index=True)
+            .dropna(subset=["parameters"], axis="index")
+            .assign(
+                parameter_name=lambda df: df.parameters.apply(
+                    attrgetter("display_name")
+                ),
+                reprompt_event_handlers=lambda df: df.parameters.apply(
+                    attrgetter("fill_behavior.reprompt_event_handlers")
+                ),
+                initial_prompt_fulfillment=lambda df: df.parameters.apply(
+                    attrgetter("fill_behavior.initial_prompt_fulfillment")
+                ),
+            )
+            .drop(columns="parameters")
+        )
+        return param_df
+
+    @staticmethod
+    def get_event_handler_df(page_df, param_reprompt_event_handler_df):
+        """Gets an event handler dataframe from page- and parameter-dataframes.
+        Args:
+            page_df: dataframe with minimum columns flow_name, page_name,
+                event_handlers (types.EventHandler), such as from
+                get_page_df().
+            param_reprompt_event_handler_df: dataframe with minimum columns
+                flow_name, page_name, parameter_name, reprompt_event_handlers
+                (types.EventHandler), such as from get_param_df().
+        Returns:
+            dataframe with columns: flow_name, page_name, parameter_name, event,
+                trigger_fulfillment.
+        """
+        event_handler_df = (
+            pd.concat(
+                [
+                    page_df[["flow_name", "page_name", "event_handlers"]],
+                    param_reprompt_event_handler_df.rename(
+                        columns={"reprompt_event_handlers": "event_handlers"}
+                    ),
+                ],
+                ignore_index=True,
+            )
+            .explode("event_handlers", ignore_index=True)
+            .dropna(subset=["event_handlers"], axis="index")
+            .assign(
+                event=lambda df: df.event_handlers.apply(attrgetter("event")),
+                trigger_fulfillment=lambda df: df.event_handlers.apply(
+                    attrgetter("trigger_fulfillment")
+                ),
+            )
+            .drop(columns="event_handlers")
+        )
+        return event_handler_df
+
+    @staticmethod
+    def _get_msg_type(message: types.ResponseMessage):
+        """Gets the response message type for a message from a fulfillment.
+        Args:
+            message: message structure from a fulfillment.
+        Returns:
+            type in {np.nan, text, custom_payload, play_audio,
+            live_agent_handoff, conversation_success, output_audio_text}.
+        """
+        if pd.isna(message):
+            value = np.nan
+        elif isinstance(message, types.ResponseMessage) and (str(message) == ""):
+            value = np.nan
+        elif "text" in message:
+            value = "text"
+        elif "payload" in message:
+            value = "custom_payload"
+        elif "play_audio" in message:
+            value = "play_audio"
+        elif "live_agent_handoff" in message:
+            value = "live_agent_handoff"
+        elif "conversation_success" in message:
+            value = "conversation_success"
+        elif "output_audio_text" in message:
+            value = "output_audio_text"
+        else:
+            value = "unexpected value"
+        return value
+
+    @staticmethod
+    def _gather_text_responses(text_message: types.ResponseMessage.Text):
+        """Flattens a Dialogflow CX text structure.
+        Args:
+            text_message: text such as is inside types.ResponseMessage.
+        Returns:
+            flattened text in a string.
+        """
+        flat_texts = "\n".join(text_message.text)
+        return flat_texts
+
+    @staticmethod
+    def _format_response_message(message: types.ResponseMessage, message_format: str):
+        """Conditionally unpacks message formats.
+        Args:
+            message: structure such as from a fulfillment.
+            message_format: 'dict' or 'human-readable'
+        Returns:
+            unpacked contents of message.
+        """
+        if pd.isna(message):
+            contents = np.nan
+        elif isinstance(message, types.ResponseMessage) and (str(message) == ""):
+            contents = np.nan
+        elif "payload" in message:
+            c = recurse_proto_marshal_to_dict(message.payload)
+            contents = {"payload": c} if (message_format == "dict") else c
+        elif "play_audio" in message:
+            c = {"audio_uri": message.play_audio.audio_uri}
+            contents = {"play_audio": c} if (message_format == "dict") else c
+        elif "live_agent_handoff" in message:
+            c = recurse_proto_marshal_to_dict(message.live_agent_handoff.metadata)
+            contents = {"live_agent_handoff": c} if (message_format == "dict") else c
+        elif "conversation_success" in message:
+            c = recurse_proto_marshal_to_dict(message.conversation_success.metadata)
+            contents = {"conversation_success": c} if (message_format == "dict") else c
+        elif "output_audio_text" in message:
+            c = message.output_audio_text.text
+            contents = {"output_audio_text": c} if (message_format == "dict") else c
+        elif "text" in message:
+            c = SearchUtil._gather_text_responses(message.text)
+            contents = {"text": c} if (message_format == "dict") else c
+        else:
+            contents = message
+        return contents
+
     def _find_true_routes_flow_level(self, flow_display_name, flow_map):
         flow_id = flow_map[flow_display_name]
         start_page = self.flows.get_flow(flow_id)  # pylint: disable=W0612
@@ -741,188 +922,6 @@ class SearchUtil(scrapi_base.ScrapiBase):
             .drop(columns="route_groups")
         )
         return route_group_df
-
-    @staticmethod
-    def get_route_df(page_df: pd.DataFrame, route_group_df: pd.DataFrame):
-        """Gets a route dataframe from page- and route-group-dataframes.
-        Args:
-            page_df: dataframe with required columns flow_name, page_name,
-                routes (where routes are types.TransitionRoute) such as
-                from get_page_df().
-            route_group_df: dataframe woth required columns flow_name,
-                page_name, route_group_name, routes (where routes are
-                types.TransitionRoute) such as from get_route_group_df().
-        Returns:
-            routes dataframe with columns:
-                flow_name,
-                page_name,
-                route_group_name,
-                intent,
-                condition,
-                trigger_fulfillment
-        """
-        routes_df = (
-            pd.concat(
-                [page_df[["flow_name", "page_name", "routes"]], route_group_df],
-                ignore_index=True,
-            )
-            .explode("routes", ignore_index=True)
-            .dropna(subset=["routes"], axis="index")
-            .assign(
-                intent=lambda df: df.routes.apply(attrgetter("intent")),
-                condition=lambda df: df.routes.apply(attrgetter("condition")),
-                trigger_fulfillment=lambda df: df.routes.apply(
-                    attrgetter("trigger_fulfillment")
-                ),
-            )
-            .drop(columns="routes")
-        )
-        return routes_df
-
-    @staticmethod
-    def get_param_df(page_df: pd.DataFrame):
-        """Gets a parameter dataframe from an input page dataframe.
-        Args:
-            page_df: dataframe with minimum columns flow_name, page_name,
-                parameters (types.Form.Parameter), such as from get_page_df().
-        Returns:
-            dataframe with columns:
-                flow_name,
-                page_name,
-                parameter_name,
-                reprompt_event_handlers,
-                initial_prompt_fulfillment
-        """
-        param_df = (
-            page_df[["flow_name", "page_name", "parameters"]]
-            .explode("parameters", ignore_index=True)
-            .dropna(subset=["parameters"], axis="index")
-            .assign(
-                parameter_name=lambda df: df.parameters.apply(
-                    attrgetter("display_name")
-                ),
-                reprompt_event_handlers=lambda df: df.parameters.apply(
-                    attrgetter("fill_behavior.reprompt_event_handlers")
-                ),
-                initial_prompt_fulfillment=lambda df: df.parameters.apply(
-                    attrgetter("fill_behavior.initial_prompt_fulfillment")
-                ),
-            )
-            .drop(columns="parameters")
-        )
-        return param_df
-
-    @staticmethod
-    def get_event_handler_df(page_df, param_reprompt_event_handler_df):
-        """Gets an event handler dataframe from page- and parameter-dataframes.
-        Args:
-            page_df: dataframe with minimum columns flow_name, page_name,
-                event_handlers (types.EventHandler), such as from
-                get_page_df().
-            param_reprompt_event_handler_df: dataframe with minimum columns
-                flow_name, page_name, parameter_name, reprompt_event_handlers
-                (types.EventHandler), such as from get_param_df().
-        Returns:
-            dataframe with columns: flow_name, page_name, parameter_name, event,
-                trigger_fulfillment.
-        """
-        event_handler_df = (
-            pd.concat(
-                [
-                    page_df[["flow_name", "page_name", "event_handlers"]],
-                    param_reprompt_event_handler_df.rename(
-                        columns={"reprompt_event_handlers": "event_handlers"}
-                    ),
-                ],
-                ignore_index=True,
-            )
-            .explode("event_handlers", ignore_index=True)
-            .dropna(subset=["event_handlers"], axis="index")
-            .assign(
-                event=lambda df: df.event_handlers.apply(attrgetter("event")),
-                trigger_fulfillment=lambda df: df.event_handlers.apply(
-                    attrgetter("trigger_fulfillment")
-                ),
-            )
-            .drop(columns="event_handlers")
-        )
-        return event_handler_df
-
-    @staticmethod
-    def _get_msg_type(message: types.ResponseMessage):
-        """Gets the response message type for a message from a fulfillment.
-        Args:
-            message: message structure from a fulfillment.
-        Returns:
-            type in {np.nan, text, custom_payload, play_audio,
-            live_agent_handoff, conversation_success, output_audio_text}.
-        """
-        if pd.isna(message):
-            value = np.nan
-        elif isinstance(message, types.ResponseMessage) and (str(message) == ""):
-            value = np.nan
-        elif "text" in message:
-            value = "text"
-        elif "payload" in message:
-            value = "custom_payload"
-        elif "play_audio" in message:
-            value = "play_audio"
-        elif "live_agent_handoff" in message:
-            value = "live_agent_handoff"
-        elif "conversation_success" in message:
-            value = "conversation_success"
-        elif "output_audio_text" in message:
-            value = "output_audio_text"
-        else:
-            value = "unexpected value"
-        return value
-
-    @staticmethod
-    def _gather_text_responses(text_message: types.ResponseMessage.Text):
-        """Flattens a Dialogflow CX text structure.
-        Args:
-            text_message: text such as is inside types.ResponseMessage.
-        Returns:
-            flattened text in a string.
-        """
-        flat_texts = "\n".join(text_message.text)
-        return flat_texts
-
-    @staticmethod
-    def _format_response_message(message: types.ResponseMessage, message_format: str):
-        """Conditionally unpacks message formats.
-        Args:
-            message: structure such as from a fulfillment.
-            message_format: 'dict' or 'human-readable'
-        Returns:
-            unpacked contents of message.
-        """
-        if pd.isna(message):
-            contents = np.nan
-        elif isinstance(message, types.ResponseMessage) and (str(message) == ""):
-            contents = np.nan
-        elif "payload" in message:
-            c = recurse_proto_marshal_to_dict(message.payload)
-            contents = {"payload": c} if (message_format == "dict") else c
-        elif "play_audio" in message:
-            c = {"audio_uri": message.play_audio.audio_uri}
-            contents = {"play_audio": c} if (message_format == "dict") else c
-        elif "live_agent_handoff" in message:
-            c = recurse_proto_marshal_to_dict(message.live_agent_handoff.metadata)
-            contents = {"live_agent_handoff": c} if (message_format == "dict") else c
-        elif "conversation_success" in message:
-            c = recurse_proto_marshal_to_dict(message.conversation_success.metadata)
-            contents = {"conversation_success": c} if (message_format == "dict") else c
-        elif "output_audio_text" in message:
-            c = message.output_audio_text.text
-            contents = {"output_audio_text": c} if (message_format == "dict") else c
-        elif "text" in message:
-            c = SearchUtil._gather_text_responses(message.text)
-            contents = {"text": c} if (message_format == "dict") else c
-        else:
-            contents = message
-        return contents
-
 
 def recurse_proto_repeated_composite(repeated_object):
     repeated_list = []
