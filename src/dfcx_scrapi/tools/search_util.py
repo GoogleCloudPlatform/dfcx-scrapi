@@ -221,8 +221,10 @@ class SearchUtil(scrapi_base.ScrapiBase):
         flat_texts = "\n".join(text_message.text)
         return flat_texts
 
-    @staticmethod
-    def _format_response_message(message: types.ResponseMessage, message_format: str):
+    def _format_response_message(
+        self,
+        message: types.ResponseMessage,
+        message_format: str):
         """Conditionally unpacks message formats.
         Args:
             message: structure such as from a fulfillment.
@@ -235,16 +237,16 @@ class SearchUtil(scrapi_base.ScrapiBase):
         elif isinstance(message, types.ResponseMessage) and (str(message) == ""):
             contents = np.nan
         elif "payload" in message:
-            c = recurse_proto_marshal_to_dict(message.payload)
+            c = self.recurse_proto_marshal_to_dict(message.payload)
             contents = {"payload": c} if (message_format == "dict") else c
         elif "play_audio" in message:
             c = {"audio_uri": message.play_audio.audio_uri}
             contents = {"play_audio": c} if (message_format == "dict") else c
         elif "live_agent_handoff" in message:
-            c = recurse_proto_marshal_to_dict(message.live_agent_handoff.metadata)
+            c = self.recurse_proto_marshal_to_dict(message.live_agent_handoff.metadata)
             contents = {"live_agent_handoff": c} if (message_format == "dict") else c
         elif "conversation_success" in message:
-            c = recurse_proto_marshal_to_dict(message.conversation_success.metadata)
+            c = self.recurse_proto_marshal_to_dict(message.conversation_success.metadata)
             contents = {"conversation_success": c} if (message_format == "dict") else c
         elif "output_audio_text" in message:
             c = message.output_audio_text.text
@@ -922,28 +924,3 @@ class SearchUtil(scrapi_base.ScrapiBase):
             .drop(columns="route_groups")
         )
         return route_group_df
-
-def recurse_proto_repeated_composite(repeated_object):
-    repeated_list = []
-    for item in repeated_object:
-        if isinstance(item, repeated.RepeatedComposite):
-            item = recurse_proto_repeated_composite(item)
-            repeated_list.append(item)
-        elif isinstance(item, maps.MapComposite):
-            item = recurse_proto_marshal_to_dict(item)
-            repeated_list.append(item)
-        else:
-            repeated_list.append(item)
-
-    return repeated_list
-
-
-def recurse_proto_marshal_to_dict(marshal_object):
-    new_dict = {}
-    for k, v in marshal_object.items():
-        if isinstance(v, maps.MapComposite):
-            v = recurse_proto_marshal_to_dict(v)
-        elif isinstance(v, repeated.RepeatedComposite):
-            v = recurse_proto_repeated_composite(v)
-        new_dict[k] = v
-    return new_dict
