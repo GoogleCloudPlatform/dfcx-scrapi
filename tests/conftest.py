@@ -15,14 +15,11 @@
 # limitations under the License.
 
 import pytest
-from dfcx_scrapi.core import agents
-from dfcx_scrapi.core import operations
-from dfcx_scrapi.tools import search_util
 
 def pytest_addoption(parser):
     """Method to add option for creds in tests."""
     parser.addoption("--creds", action="store")
-    parser.addoption("--project", action="store")
+    parser.addoption("--project_id", action="store")
     parser.addoption("--gcs_bucket", action="store")
     parser.addoption("--agent_id", action="store")
 
