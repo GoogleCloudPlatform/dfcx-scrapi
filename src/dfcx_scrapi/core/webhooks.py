@@ -195,8 +195,8 @@ class Webhooks(scrapi_base.ScrapiBase):
 
         else:
             raise ValueError(
-                "Webhook \"{}\" does not exist in the specified Agent.".format(
-                    webhook_display_name)
+                f"Webhook \"{webhook_display_name}\" does not exist in the \
+                    specified Agent."
                 )
 
         return webhook_obj

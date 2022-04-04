@@ -20,12 +20,10 @@ import json
 from typing import Dict
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
-from proto.marshal.collections import repeated
-from proto.marshal.collections import maps
-
 from google.protobuf import json_format  # type: ignore
 
-
+from proto.marshal.collections import repeated
+from proto.marshal.collections import maps
 class ScrapiBase:
     """Core Class for managing Auth and other shared functions."""
 
@@ -112,7 +110,7 @@ class ScrapiBase:
     @staticmethod
     def cx_object_to_dict(cx_object):
         """response objects have a magical _pb field attached"""
-        return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212       
+        return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
 
     @staticmethod
     def extract_payload(msg):
@@ -143,4 +141,4 @@ class ScrapiBase:
                 v = self.recurse_proto_repeated_composite(v)
             new_dict[k] = v
 
-        return new_dict  
+        return new_dict
