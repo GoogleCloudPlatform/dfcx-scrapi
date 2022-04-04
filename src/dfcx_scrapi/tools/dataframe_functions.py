@@ -69,7 +69,7 @@ class DataframeFunctions(ScrapiBase):
 
         if scope:
             scopes += scope
-        
+
         if creds_path:
             creds = ServiceAccountCredentials.from_json_keyfile_name(
                 filename=creds_path, scopes=scopes
