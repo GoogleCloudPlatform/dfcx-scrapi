@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import logging
-from typing import Dict
+from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
@@ -329,4 +329,3 @@ class Flows(scrapi_base.ScrapiBase):
         )
 
         client.delete_flow(request)
-
