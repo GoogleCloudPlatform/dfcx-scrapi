@@ -1,6 +1,6 @@
 """Entity Types Resource functions."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 import logging
 from typing import Dict
-import google.cloud.dialogflowcx_v3beta1.services as services
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase

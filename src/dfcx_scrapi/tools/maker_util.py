@@ -1,9 +1,6 @@
-"""
-methods for creating CX object types
-such as transition routes or fulfillments
-"""
+"""Methods for creating CX object types"""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +15,7 @@ such as transition routes or fulfillments
 # limitations under the License.
 
 import logging
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import types
 
 # logging config
 logging.basicConfig(
@@ -38,7 +35,7 @@ class MakerUtil:
     @classmethod
     def make_generic(cls, obj, obj_type, default, conditionals=None):
         if conditionals is None:
-            conditionals = dict()
+            conditionals = {}
 
         if isinstance(obj, obj_type):
             return obj
@@ -74,7 +71,7 @@ class MakerUtil:
     @classmethod
     def make_seq(cls, obj, obj_type, default, conditionals=None):
         if conditionals is None:
-            conditionals = dict()
+            conditionals = {}
         assert isinstance(obj, list)
         l = []
         for x in obj:

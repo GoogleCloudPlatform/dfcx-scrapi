@@ -1,6 +1,6 @@
 """Agent Resource functions."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 import logging
 from typing import Dict, List
-import requests
 from google.cloud.dialogflowcx_v3beta1 import services
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import environments
 
 # logging config
 logging.basicConfig(
@@ -31,7 +31,7 @@ logging.basicConfig(
 )
 
 
-class Agents(ScrapiBase):
+class Agents(scrapi_base.ScrapiBase):
     """Core Class for CX Agent Resource functions."""
 
     def __init__(
@@ -84,7 +84,7 @@ class Agents(ScrapiBase):
               `projects/my-gcp-project/locations/us-central1`
           project_id: The GCP Project ID as a string
         Returns:
-          agents: List of Agent objects
+          List of Agent objects
         """
 
         if project_id:
@@ -103,10 +103,7 @@ class Agents(ScrapiBase):
 
             agents = []
             for region in region_list:
-                location_path = "projects/{}/locations/{}".format(
-                    project_id, region
-                )
-
+                location_path = f"projects/{project_id}/locations/{region}"
                 client, request = self._build_list_agents_client_request(
                     location_path
                 )
@@ -128,7 +125,15 @@ class Agents(ScrapiBase):
         return agents
 
     def get_agent(self, agent_id: str) -> types.Agent:
-        """Retrieves a single CX agent resource object."""
+        """Retrieves a single CX agent resource object.
+
+        Args:
+          agent_id: The formatted CX Agent ID
+
+        Returns:
+        A single types.Agent object
+        """
+
         request = types.agent.GetAgentRequest()
         request.name = agent_id
 
@@ -167,8 +172,7 @@ class Agents(ScrapiBase):
               Syntax for region ID can be found here:
               https://cloud.google.com/dialogflow/cx/docs/concept/region#avail
         Returns:
-          Agents: CX agent resource object. If no agent is found,
-              returns None.
+          CX agent resource object. If no agent is found, returns None.
         """
 
         if location_id:
@@ -178,9 +182,7 @@ class Agents(ScrapiBase):
 
         elif region:
             agent_list = self.list_agents(
-                location_id="projects/{}/locations/{}".format(
-                    project_id, region
-                    )
+                location_id=f"projects/{project_id}/locations/{region}"
             )
         else:
             agent_list = self.list_agents(project_id=project_id)
@@ -234,18 +236,16 @@ class Agents(ScrapiBase):
           obj: (Optional) Agent object to create new agent from
 
         Returns:
-          response
+          A single types.Agent resource.
         """
 
         if obj:
             agent = obj
-            parent = "projects/{}/location/{}".format(
-                agent.name.split("/")[1], agent.name.split("/")[3]
-            )
+            parent = f"projects/{project_id}/locations/{gcp_region}"
             agent.display_name = display_name
         else:
             agent = types.agent.Agent()
-            parent = "projects/{}/locations/{}".format(project_id, gcp_region)
+            parent = f"projects/{project_id}/locations/{gcp_region}"
             agent.display_name = display_name
 
         agent.default_language_code = "en"
@@ -279,8 +279,7 @@ class Agents(ScrapiBase):
           timeout: (Optional) The timeout for this request
 
         Returns:
-          results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
+          Dictionary of Validation results for the entire Agent.
         """
 
         if not agent_id:
@@ -323,8 +322,7 @@ class Agents(ScrapiBase):
         timeout: (Optional) The timeout for this request
 
         Returns:
-        results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
+        Dictionary of Validation results for the entire Agent.
         """
 
         if not agent_id:
@@ -347,7 +345,12 @@ class Agents(ScrapiBase):
         return val_results_dict
 
 
-    def export_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
+    def export_agent(
+        self,
+        agent_id: str,
+        gcs_bucket_uri: str,
+        environment_display_name: str = None
+    ) -> str:
         """Exports the specified CX agent to Google Cloud Storage bucket.
 
         Args:
@@ -356,16 +359,30 @@ class Agents(ScrapiBase):
           gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
             agent to in the following format:
               `gs://<bucket-name>/<object-name>`
+          environment_display_name: (Optional) CX Agent environment display name
+            as string. If not set, DRAFT environment is assumed.
 
         Returns:
-          response: A Long Running Operation (LRO) ID that can be used to
+          A Long Running Operation (LRO) ID that can be used to
             check the status of the export using
               dfcx_scrapi.core.operations->get_lro()
         """
-
         request = types.agent.ExportAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
+
+        if environment_display_name:
+            self._environments = environments.Environments(creds=self.creds)
+            possible_environment = self._environments.get_environments_map(
+                agent_id=agent_id, reverse=True
+            ).get(environment_display_name)
+            if possible_environment:
+                request.environment = possible_environment
+            else:
+                raise ValueError(
+                    "Invalid environment_display_name."
+                    f" {environment_display_name} does not exist!"
+                )
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
@@ -389,7 +406,7 @@ class Agents(ScrapiBase):
               `gs://<bucket-name>/<object-name>`
 
         Returns:
-          response: A Long Running Operation (LRO) ID that can be used to
+          A Long Running Operation (LRO) ID that can be used to
             check the status of the import using
               dfcx_scrapi.core.operations->get_lro()
         """
@@ -451,100 +468,4 @@ class Agents(ScrapiBase):
         )
         client.delete_agent(name=agent_id)
 
-        return "Agent '{}' successfully deleted.".format(agent_id)
-
-
-    def validate_agent_rest(self, agent_id: str) -> Dict:
-        """Initiates the Validation of the CX Agent or Flow.
-        *NOTE* THIS METHOD IS BEING DEPRECATED SOON (8/15/21)
-
-        This function will start the Validation feature for the given Agent
-        and then return the results as a Dict.
-
-        Args:
-        agent_id: CX Agent ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-
-        Returns:
-        results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
-        """
-        location = agent_id.split("/")[3]
-        if location != "global":
-            base_url = "https://{}-dialogflow.googleapis.com/v3beta1".format(
-                location
-            )
-        else:
-            base_url = "https://dialogflow.googleapis.com/v3beta1"
-
-        url = "{0}/{1}/validationResult".format(base_url, agent_id)
-        headers = {"Authorization": "Bearer {}".format(self.token)}
-
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
-
-        return results.json()
-
-
-    def get_validation_result_rest(
-        self,
-        agent_id: str,
-        flow_id: str = None) -> Dict:
-        """Extract Validation Results from CX Validation feature.
-         *NOTE* THIS METHOD IS BEING DEPRECATED SOON (8/15/21)
-
-        This function will get the LATEST validation result run for the given
-        CX Agent or CX Flow. If there has been no validation run on the Agent
-        or Flow, no result will be returned. Use `dfcx.validate` function to
-        run Validation on an Agent/Flow.
-
-        Passing in the Agent ID will provide ALL validation results for
-        ALL flows.
-        Passing in the Flow ID will provide validation results for only
-        that Flow ID.
-
-        Args:
-          agent_id: CX Agent ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-          flow_id: (Optional) CX Flow ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>/
-              flows/<FLOW ID>
-
-        Returns:
-          results: Dictionary of Validation results for the entire Agent
-            or for the specified Flow.
-        """
-
-        if flow_id:
-            location = flow_id.split("/")[3]
-            if location != "global":
-                base_url = (
-                    "https://{}-dialogflow.googleapis.com/v3beta1".format(
-                        location
-                    )
-                )
-            else:
-                base_url = "https://dialogflow.googleapis.com/v3beta1"
-
-            url = "{0}/{1}/validationResult".format(base_url, flow_id)
-        else:
-            location = agent_id.split("/")[3]
-            if location != "global":
-                base_url = (
-                    "https://{}-dialogflow.googleapis.com/v3beta1".format(
-                        location
-                    )
-                )
-            else:
-                base_url = "https://dialogflow.googleapis.com/v3beta1"
-
-            url = "{0}/{1}/validationResult".format(base_url, agent_id)
-
-        headers = {"Authorization": "Bearer {}".format(self.token)}
-
-        # Make REST call
-        results = requests.get(url, headers=headers)
-        results.raise_for_status()
-
-        return results.json()
+        return "Agent '{agent_id}' successfully deleted."

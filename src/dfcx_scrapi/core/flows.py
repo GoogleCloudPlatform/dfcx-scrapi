@@ -1,6 +1,6 @@
 """Flow Resource functions."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 
 import logging
 from typing import Dict
-import requests
-import google.cloud.dialogflowcx_v3beta1.services as services
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
@@ -214,97 +213,67 @@ class Flows(ScrapiBase):
         self,
         flow_id: str,
         gcs_path: str,
-        data_format: str = "BLOB",
-        ref_flows: bool = True,
-    ) -> Dict[str, str]:
+        ref_flows: bool = True) -> Dict[str, str]:
         """Exports DFCX Flow(s) into GCS bucket.
 
         Args:
           flow_id, the formatted CX Flow ID to export
-          gcs_path, the full GCS Bucket and File name path
-          data_format, (Optional) One of 'BLOB' or 'JSON'. Defaults to 'BLOB'.
-          ref_flows, (Optional) Bool to include referenced flows connected to
-            primary flow
+          gcs_path, The `Google Cloud Storage URI to export the flow to. The
+            format of this URI must be ``gs://<bucket-name>/<object-name>``. If
+            left unspecified, the serialized flow is returned inline.
+          ref_flows, Whether to export flows referenced by the specified flow.
 
         Returns:
-          lro, Dict with value containing a Long Running Operation UUID that
-            can be used to retrieve status of LRO from
-              dfcx_scrapi.core.operations->get_lro()
+          lro.result, If successful the LRO result will return the Google Cloud
+            Storage URI from the Export Flow request. Otherwise, it will return
+            the corresponding error.
         """
+        request = types.flow.ExportFlowRequest()
+        request.name = flow_id
+        request.include_referenced_flows = ref_flows
 
-        location = flow_id.split("/")[3]
-        if location != "global":
-            base_url = "https://{}-dialogflow.googleapis.com/v3beta1".format(
-                location
-            )
-        else:
-            base_url = "https://dialogflow.googleapis.com/v3beta1"
-        url = "{0}/{1}:export".format(base_url, flow_id)
+        if gcs_path:
+            request.flow_uri = gcs_path
 
-        body = {
-            "flow_uri": "{}".format(gcs_path),
-            "data_format": data_format,
-            "include_referenced_flows": ref_flows,
-        }
+        client_options = self._set_region(flow_id)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options
+        )
+        response = client.export_flow(request)
 
-        headers = {
-            "Authorization": "Bearer {}".format(self.token),
-            "Content-Type": "application/json; charset=utf-8",
-        }
-
-        # Make REST call
-        response = requests.post(url, json=body, headers=headers)
-        response.raise_for_status()
-
-        lro = response.json()
-
-        return lro
+        return response.result()
 
     def import_flow(
         self,
-        destination_agent_id: str,
+        agent_id: str,
         gcs_path: str,
-        import_option: str = "FALLBACK",
-    ) -> Dict[str, str]:
+        import_option: str = "KEEP") -> Dict[str, str]:
         """Imports a DFCX Flow from GCS bucket to CX Agent.
 
         Args:
-          agent_id, the DFCX formatted Agent ID
-          gcs_path, the full GCS Bucket and File name path
-          import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'FALLBACK'
+          agent_id, the CX Agent ID to import the flow into.
+          gcs_path, The `Google Cloud Storage URI to import flow from. The
+            format of this URI must be ``gs://<bucket-name>/<object-name>``.
+          import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'KEEP'
 
         Returns:
-          lro, Dict with value containing a Long Running Operation UUID that
-            can be used to retrieve status of LRO from
-              dfcx_scrapi.core.operations->get_lro()
+          lro.result, If successful the LRO result will return the Flow ID of
+            the newly imported Flow. Otherwise, it will return the
+            corresponding error.
         """
+        request = types.flow.ImportFlowRequest()
+        request.parent = agent_id
+        request.flow_uri = gcs_path
+        request.import_option = import_option
 
-        location = destination_agent_id.split("/")[3]
-        if location != "global":
-            base_url = "https://{}-dialogflow.googleapis.com/v3beta1".format(
-                location
-            )
-        else:
-            base_url = "https://dialogflow.googleapis.com/v3beta1"
-        url = "{0}/{1}/flows:import".format(base_url, destination_agent_id)
+        client_options = self._set_region(agent_id)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options
+        )
 
-        body = {
-            "flow_uri": "{}".format(gcs_path),
-            "import_option": "{}".format(import_option),
-        }
+        response = client.import_flow(request)
 
-        headers = {
-            "Authorization": "Bearer {}".format(self.token),
-            "Content-Type": "application/json; charset=utf-8",
-        }
-
-        # Make REST call
-        response = requests.post(url, json=body, headers=headers)
-        response.raise_for_status()
-
-        lro = response.json()
-
-        return lro
+        return response
 
     def delete_flow(self, flow_id: str = None, force: bool = False) -> None:
         """Deletes a single CX Flow Object resources.

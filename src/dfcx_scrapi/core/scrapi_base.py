@@ -1,6 +1,6 @@
 """Base for other SCRAPI classes."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import json
 from typing import Dict
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+from proto.marshal.collections import repeated
+from proto.marshal.collections import maps
 
 from google.protobuf import json_format  # type: ignore
 
@@ -35,10 +37,10 @@ class ScrapiBase:
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: Dict = None,
-        creds=None,
+        creds_dict: Dict[str,str] = None,
+        creds: service_account.Credentials =None,
         scope=False,
-        agent_path=None,
+        agent_id=None,
     ):
 
         self.scopes = ScrapiBase.global_scopes
@@ -65,8 +67,8 @@ class ScrapiBase:
             self.creds = None
             self.token = None
 
-        if agent_path:
-            self.agent_path = agent_path
+        if agent_id:
+            self.agent_id = agent_id
 
     @staticmethod
     def _set_region(item_id):
@@ -86,7 +88,7 @@ class ScrapiBase:
             raise err
 
         if location != "global":
-            api_endpoint = "{}-dialogflow.googleapis.com:443".format(location)
+            api_endpoint = f"{location}-dialogflow.googleapis.com:443"
             client_options = {"api_endpoint": api_endpoint}
             return client_options
 
@@ -110,10 +112,35 @@ class ScrapiBase:
     @staticmethod
     def cx_object_to_dict(cx_object):
         """response objects have a magical _pb field attached"""
-        return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
+        return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212       
 
     @staticmethod
     def extract_payload(msg):
         """convert to json so we can get at the object"""
         blob = ScrapiBase.cx_object_to_dict(msg)
         return blob.get("payload")  # deref for nesting
+
+    def recurse_proto_repeated_composite(self, repeated_object):
+        repeated_list = []
+        for item in repeated_object:
+            if isinstance(item, repeated.RepeatedComposite):
+                item = self.recurse_proto_repeated_composite(item)
+                repeated_list.append(item)
+            elif isinstance(item, maps.MapComposite):
+                item = self.recurse_proto_marshal_to_dict(item)
+                repeated_list.append(item)
+            else:
+                repeated_list.append(item)
+
+        return repeated_list
+
+    def recurse_proto_marshal_to_dict(self, marshal_object):
+        new_dict = {}
+        for k,v in marshal_object.items():
+            if isinstance(v, maps.MapComposite):
+                v = self.recurse_proto_marshal_to_dict(v)
+            elif isinstance(v, repeated.RepeatedComposite):
+                v = self.recurse_proto_repeated_composite(v)
+            new_dict[k] = v
+
+        return new_dict  

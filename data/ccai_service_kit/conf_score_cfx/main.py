@@ -1,6 +1,6 @@
 """Sample Cloud Function code to extract and return DFCX Confidence Score."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import json
 import logging
-from dfcx_scrapi.tools.webhook_utils import WebhookUtils
+from dfcx_scrapi.tools.webhook_util import WebhookUtil
 
 # logging config
 logging.basicConfig(
@@ -34,7 +34,7 @@ def conf_score(request, debugging=False):
     and
     """
     logging.info('###### [cx_webhook] - CFX Triggered! ######')
-    wu = WebhookUtils()
+    wu = WebhookUtil()
 
     if debugging:
         req = request

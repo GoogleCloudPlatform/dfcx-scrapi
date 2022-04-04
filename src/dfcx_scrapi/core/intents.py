@@ -1,6 +1,6 @@
 """Intent Resource functions."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
-import google.cloud.dialogflowcx_v3beta1.services as services
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
@@ -93,9 +93,10 @@ class Intents(ScrapiBase):
             ).transpose()
             data_frame = data_frame.stack().to_frame().reset_index(level=1)
             data_frame = data_frame.rename(
-                columns={"level_1": "intent", 0: "tp"}
+                columns={"level_1": "display_name", 0: "training_phrase"}
             ).reset_index(drop=True)
-            data_frame = data_frame.sort_values(["intent", "tp"])
+            data_frame = data_frame.sort_values(
+                ["display_name", "training_phrase"])
 
             return data_frame
 
@@ -314,7 +315,7 @@ class Intents(ScrapiBase):
                 len(true_additions.columns),
                 "outcome",
                 true_additions.apply(
-                    lambda x: "{} added to {}".format(
+                    lambda x: "{} added to {}".format( #pylint: disable=C0209
                         x["phrase"], x["display_name"]
                     ),
                     axis=1,
@@ -331,7 +332,7 @@ class Intents(ScrapiBase):
                 len(false_additions.columns),
                 "outcome",
                 false_additions.apply(
-                    lambda x: "{} already in {}".format(
+                    lambda x: "{} already in {}".format( #pylint: disable=C0209
                         x["phrase"], x["display_name"]
                     ),
                     axis=1,
@@ -348,7 +349,7 @@ class Intents(ScrapiBase):
                 len(true_deletions.columns),
                 "outcome",
                 true_deletions.apply(
-                    lambda x: "{} removed from {}".format(
+                    lambda x: "{} removed from {}".format( #pylint: disable=C0209
                         x["phrase"], x["display_name"]
                     ),
                     axis=1,
@@ -365,7 +366,7 @@ class Intents(ScrapiBase):
                 len(false_deletions.columns),
                 "outcome",
                 false_deletions.apply(
-                    lambda x: "{} not found in {}".format(
+                    lambda x: "{} not found in {}".format( #pylint: disable=C0209
                         x["phrase"], x["display_name"]
                     ),
                     axis=1,
@@ -654,7 +655,8 @@ class Intents(ScrapiBase):
 
                 data_frame = self.intent_proto_to_dataframe(obj, mode=mode)
                 main_frame = main_frame.append(data_frame)
-            main_frame = main_frame.sort_values(["intent", "tp"])
+            main_frame = main_frame.sort_values(
+                ["display_name", "training_phrase"])
             return main_frame
 
         elif mode == "advanced":
@@ -716,7 +718,8 @@ class Intents(ScrapiBase):
             intent_dict, orient="index").transpose()
         dataframe = dataframe.stack().to_frame().reset_index(level=1)
         dataframe = dataframe.rename(
-            columns={"level_1": "intent", 0: "tp"}).reset_index(drop=True)
-        dataframe = dataframe.sort_values(["intent", "tp"])
+            columns={"level_1": "display_name",
+            0: "training_phrase"}).reset_index(drop=True)
+        dataframe = dataframe.sort_values(["display_name", "training_phrase"])
 
         return dataframe, intent_dict

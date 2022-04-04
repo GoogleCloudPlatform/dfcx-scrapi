@@ -1,6 +1,6 @@
 """Util class for performing analysis on DFCX objects and data."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import pandas
 import numpy as np
 from typing import Union
 from dfcx_scrapi.core.intents import Intents
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import types
 
 # logging config
 logging.basicConfig(
@@ -27,7 +27,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S")
 
-class AnalysisUtil():
+class Levenshtein():
     """Utils class for performing analysis on DFCX data."""
 
     @staticmethod
@@ -144,14 +144,12 @@ class AnalysisUtil():
                 #print instead of logging.info is intentional.
                 #Needed to avoid spamming new lines with every percentile.
                 print(
-                    " {}% complete. \r".format(round(completed,1)),
-                    end="",
-                    flush=True
+                    f"{round(completed,1)}% complete. \r",end="",flush=True
                      )
 
             for line2 in list_comparators:
 
-                distance = AnalysisUtil.__levenshtein_ratio(
+                distance = Levenshtein.__levenshtein_ratio(
                     line1,
                     line2
                 )
@@ -187,12 +185,12 @@ class AnalysisUtil():
         stats = {"keys":{
                     "total:":total_keys,
                     "num_overlap":num_keys_overlapped,
-                    "percent_overlap":"{}%".format(key_percent_overlap)
+                    "percent_overlap":f"{key_percent_overlap}%"
                     },
                  "comparators":{
                     "total:":total_comps,
                     "num_overlap":num_comparators_overlapped,
-                    "percent_overlap":"{}%".format(comp_percent_overlap)
+                    "percent_overlap":f"{comp_percent_overlap}%"
                     }
                 }
 

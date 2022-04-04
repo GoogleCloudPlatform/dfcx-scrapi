@@ -1,6 +1,6 @@
-"""Working with built in CX validation functions"""
+"""Working with built in CX Validation featrure."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,8 +29,8 @@ SCOPES = [
 ]
 
 
-class ValidationKit(ScrapiBase):
-    """Helper for working with built in CX validation functions"""
+class ValidationUtil(ScrapiBase):
+    """Class that extends the built in CX Validation feature."""
 
     def __init__(
         self,
@@ -79,13 +79,13 @@ class ValidationKit(ScrapiBase):
 
                 if max_cols_new > max_cols_old:
                     for i in range(1, max_cols_new + 1):
-                        temp_df["resource{}".format(i)] = None
+                        temp_df[f"resource{i}"] = None
                     max_cols_old = max_cols_new
 
                 for index in temp_df.index:
                     i = 1
                     for frame in temp_df["resourceNames"][index]:
-                        temp_df["resource{}".format(i)][index] = frame[
+                        temp_df[f"resource{i}"][index] = frame[
                             "displayName"
                         ]
                         i += 1

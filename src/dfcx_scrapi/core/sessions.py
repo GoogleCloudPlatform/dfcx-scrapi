@@ -1,6 +1,6 @@
 """CX Session Resource functions."""
 
-# Copyright 2021 Google LLC
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 import logging
 from typing import Dict, List
-import google.cloud.dialogflowcx_v3beta1.services as services
-import google.cloud.dialogflowcx_v3beta1.types as types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
@@ -27,7 +27,6 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-
 
 class Sessions(ScrapiBase):
     """Core Class for CX Session Resource functions."""
@@ -81,7 +80,7 @@ class Sessions(ScrapiBase):
         session_client = services.sessions.SessionsClient(
             client_options=client_options, credentials=self.creds
         )
-        session_path = "{}/sessions/{}".format(agent_id, session_id)
+        session_path = f"{agent_id}/sessions/{session_id}"
 
         if parameters:
             query_params = types.session.QueryParameters(parameters=parameters)
@@ -109,44 +108,36 @@ class Sessions(ScrapiBase):
             query_result = response.query_result
 
             print("=" * 20)
-            print("Query text: {}".format(query_result.text))
+            print(f"Query text: {query_result.text}")
             if "intent" in query_result:
                 print(
-                    "Triggered Intent: {}".format(
-                        query_result.intent.display_name
-                    )
+                    f"Triggered Intent: {query_result.intent.display_name}"
                 )
 
             if "intent_detection_confidence" in query_result:
                 print(
-                    "Intent Confidence {}".format(
-                        query_result.intent_detection_confidence
-                    )
+                    f"Intent Confidence: \
+                        f{query_result.intent_detection_confidence}"
                 )
 
             print(
-                "Response Page: {}".format(
-                    query_result.current_page.display_name
-                )
+                f"Response Page: {query_result.current_page.display_name}"
             )
 
             for param in query_result.parameters:
                 if param == "statusMessage":
                     print(
-                        "Status Message: {}".format(
-                            query_result.parameters[param]
-                        )
+                        f"Status Message: {query_result.parameters[param]}"
                     )
 
             if response_text:
-                print("Response Text: {}\n".format(" ".join(
+                concat_messages = " ".join(
                     [
                         " ".join(response_message.text.text)
                         for response_message in query_result.response_messages
                             ]
                         )
-                    )
-                )
+                print(f"Response Text: {concat_messages}\n")
 
     def detect_intent(self, agent_id, session_id, text, parameters=None):
         """Returns the result of detect intent with texts as inputs.
@@ -158,7 +149,7 @@ class Sessions(ScrapiBase):
             client_options=client_options, credentials=self.creds
         )
 
-        session_path = "{}/sessions/{}".format(agent_id, session_id)
+        session_path = f"{agent_id}/sessions/{session_id}"
 
         if parameters:
             query_params = types.session.QueryParameters(parameters=parameters)
@@ -200,7 +191,7 @@ class Sessions(ScrapiBase):
         session_client = services.sessions.SessionsClient(
             client_options=client_options, credentials=self.creds
         )
-        session_path = "{}/sessions/{}".format(agent_id, session_id)
+        session_path = f"{agent_id}/sessions/{session_id}"
 
         query_params = types.session.QueryParameters(parameters=parameters)
         text_input = types.session.TextInput(text=None)
