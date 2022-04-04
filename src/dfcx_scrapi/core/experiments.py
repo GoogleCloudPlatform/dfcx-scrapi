@@ -43,21 +43,21 @@ class ScrapiExperiments(ScrapiBase):
         creds_dict: Dict = None,
         creds=None,
         scope=False,
-        agent_path: str = None,
+        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
             creds_dict=creds_dict,
             creds=creds,
             scope=scope,
-            agent_path=agent_path,
+            agent_id=agent_id,
         )
 
-        logging.info("created %s", self.agent_path)
+        logging.info("created %s", self.agent_id)
 
     def list_experiments(self, environment_id=None):
         """list out experiments"""
-        environment_path = f"{self.agent_path}/environments/{environment_id}"
+        environment_path = f"{self.agent_id}/environments/{environment_id}"
         logging.info("environment_path %s", environment_path)
 
         request = types.experiment.ListExperimentsRequest()

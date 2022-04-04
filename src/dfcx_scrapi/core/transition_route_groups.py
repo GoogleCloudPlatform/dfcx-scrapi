@@ -257,7 +257,9 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
             credentials=self.creds, client_options=client_options
         )
 
-        request = types.transition_route_groups.UpdateTransitionRouteGroupRequest() # pylint: disable=C0301
+        request = (
+            types.transition_route_groups.UpdateTransitionRouteGroupRequest()
+        )  # pylint: disable=C0301
 
         request.transition_route_group = route_group
         request.update_mask = mask
@@ -270,9 +272,8 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         return response
 
     def route_groups_to_dataframe(
-        self,
-        agent_id: str = None,
-        rate_limit: float = 0.5):
+        self, agent_id: str = None, rate_limit: float = 0.5
+    ):
         """Extracts the Transition Route Groups from a given Agent and
          returns key information about the Route Groups in a Pandas Dataframe
 
@@ -308,19 +309,17 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         rows_list = []
         for route_group in all_rgs:
-            flow = '/'.join(route_group.name.split('/')[0:8])
+            flow = "/".join(route_group.name.split("/")[0:8])
             for route in route_group.transition_routes:
                 temp_dict = {}
 
                 temp_dict.update({"flow": flows_map[flow]})
-                temp_dict.update(
-                    {"route_group_name": route_group.display_name}
-                )
+                temp_dict.update({"route_group_name": route_group.display_name})
 
                 if route.target_page:
                     temp_dict.update(
                         {"target_page": all_pages_map[route.target_page]}
-                        )
+                    )
 
                 if route.intent:
                     temp_dict.update({"intent": intents_map[route.intent]})
@@ -328,11 +327,14 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
                 if route.condition:
                     temp_dict.update({"condition": route.condition})
 
-
                 if route.trigger_fulfillment.webhook:
                     temp_dict.update(
-                        {"webhook":
-                        webhooks_map[route.trigger_fulfillment.webhook]})
+                        {
+                            "webhook": webhooks_map[
+                                route.trigger_fulfillment.webhook
+                            ]
+                        }
+                    )
 
                     temp_dict.update(
                         {"webhook_tag": route.trigger_fulfillment.tag}

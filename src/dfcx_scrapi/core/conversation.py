@@ -33,7 +33,9 @@ from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import flows
 from dfcx_scrapi.core import pages
 
-logging.basicConfig(format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO
+)
 
 MAX_RETRIES = 3
 
@@ -80,15 +82,15 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.pages = pages.Pages(creds=self.creds)
 
     @staticmethod
-    def _get_match_type_from_map(match_type:int):
+    def _get_match_type_from_map(match_type: int):
         match_type_map = {
-            0: 'MATCH_TYPE_UNSPECIFIED',
-            1: 'INTENT',
-            2: 'DIRECT_INTENT',
-            3: 'PARAMETER_FILLING',
-            4: 'NO_MATCH',
-            5: 'NO_INPUT',
-            6: 'EVENT'
+            0: "MATCH_TYPE_UNSPECIFIED",
+            1: "INTENT",
+            2: "DIRECT_INTENT",
+            3: "PARAMETER_FILLING",
+            4: "NO_MATCH",
+            5: "NO_INPUT",
+            6: "EVENT",
         }
 
         return match_type_map[match_type]
@@ -99,10 +101,12 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         invalid_pages = set(test_set.page_display_name[mask].to_list())
 
         if invalid_pages:
-            raise Exception("The following Pages are invalid and missing Page "
+            raise Exception(
+                "The following Pages are invalid and missing Page "
                 f"IDs: \n{invalid_pages}\n\nPlease ensure that your Page "
                 "Display Names do not contain typos.\nFor Default Start Page "
-                "use the special page display name START_PAGE.")
+                "use the special page display name START_PAGE."
+            )
 
     @staticmethod
     def progress_bar(current, total, bar_length=50, type_="Progress"):
@@ -110,8 +114,10 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         percent = float(current) * 100 / total
         arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
         spaces = " " * (bar_length - len(arrow))
-        print(f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent:.2f}%",
-          end="\r")
+        print(
+            f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent:.2f}%",
+            end="\r",
+        )
 
     @staticmethod
     def _build_query_params_object(parameters, current_page, disable_webhook):
@@ -120,64 +126,58 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
                 disable_webhook=disable_webhook,
                 parameters=parameters,
                 current_page=current_page,
-                )
+            )
         else:
             query_params = types.session.QueryParameters(
-                disable_webhook=disable_webhook,
-                current_page=current_page
-                )
+                disable_webhook=disable_webhook, current_page=current_page
+            )
 
         return query_params
 
     @staticmethod
     def _build_query_input_object(input_obj, language_code):
-        if 'dtmf' in input_obj:
-            digits = str(input_obj['dtmf'])
+        if "dtmf" in input_obj:
+            digits = str(input_obj["dtmf"])
 
             finish_digit = None
-            if 'finish_digit' in input_obj:
-                finish_digit = str(input_obj['finish_digit'])          
+            if "finish_digit" in input_obj:
+                finish_digit = str(input_obj["finish_digit"])
 
             dtmf_input = types.session.DtmfInput(
-                digits=digits, finish_digit=finish_digit)
+                digits=digits, finish_digit=finish_digit
+            )
             query_input = types.session.QueryInput(
                 dtmf=dtmf_input,
                 language_code=language_code,
-                )
-        
-        elif 'intent' in input_obj:
-            intent_input = types.session.IntentInput(
-                intent=input_obj['intent']
-            )
-            query_input = types.session.QueryInput(
-                intent=intent_input,
-                language_code=language_code
             )
 
-        elif 'event' in input_obj:
-            event_input = types.session.EventInput(
-                event=input_obj['event']
-            )
+        elif "intent" in input_obj:
+            intent_input = types.session.IntentInput(intent=input_obj["intent"])
             query_input = types.session.QueryInput(
-                event=event_input,
-                language_code=language_code
+                intent=intent_input, language_code=language_code
             )
-                
-        elif 'text' in input_obj:
-            text = input_obj['text']
+
+        elif "event" in input_obj:
+            event_input = types.session.EventInput(event=input_obj["event"])
+            query_input = types.session.QueryInput(
+                event=event_input, language_code=language_code
+            )
+
+        elif "text" in input_obj:
+            text = input_obj["text"]
             logging.debug("Input text: %s", text)
             text_input = types.session.TextInput(text=text)
             query_input = types.session.QueryInput(
                 text=text_input,
                 language_code=language_code,
-                )
+            )
 
         return query_input
 
     @staticmethod
     def _gather_text_responses(text_message):
 
-        flat_texts = '\n'.join(text_message.text)
+        flat_texts = "\n".join(text_message.text)
 
         return flat_texts
 
@@ -185,26 +185,32 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         rm_gathered = []
         for msg in response_messages:
             if msg.payload:
-                msg = {'payload': self.recurse_proto_marshal_to_dict(
-                    msg.payload)}
+                msg = {
+                    "payload": self.recurse_proto_marshal_to_dict(msg.payload)
+                }
 
             elif msg.play_audio:
-                msg = {'play_audio': {
-                    'audio_uri': msg.play_audio.audio_uri}}
+                msg = {"play_audio": {"audio_uri": msg.play_audio.audio_uri}}
 
             elif msg.live_agent_handoff:
-                msg = {'live_agent_handoff': 
-                self.recurse_proto_marshal_to_dict(msg.live_agent_handoff.metadata)}
+                msg = {
+                    "live_agent_handoff": self.recurse_proto_marshal_to_dict(
+                        msg.live_agent_handoff.metadata
+                    )
+                }
 
             elif msg.conversation_success:
-                msg = {'conversation_success': 
-                self.recurse_proto_marshal_to_dict(msg.conversation_success.metadata)}
+                msg = {
+                    "conversation_success": self.recurse_proto_marshal_to_dict(
+                        msg.conversation_success.metadata
+                    )
+                }
 
             elif msg.output_audio_text:
-                msg = {'output_audio_text': msg.output_audio_text.text}
+                msg = {"output_audio_text": msg.output_audio_text.text}
 
             elif msg.text:
-                msg = {'text': self._gather_text_responses(msg.text)}
+                msg = {"text": self._gather_text_responses(msg.text)}
 
             rm_gathered.append(msg)
 
@@ -220,13 +226,12 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             if isinstance(val, repeated.RepeatedComposite):
                 val = self.recurse_proto_repeated_composite(val)
 
-            elif isinstance(val, maps.MapComposite):    
+            elif isinstance(val, maps.MapComposite):
                 val = self.recurse_proto_marshal_to_dict(val)
 
             output_parameters[param] = val
 
         return output_parameters
-
 
     def _page_id_mapper(self):
         agent_pages_map = pd.DataFrame()
@@ -242,18 +247,20 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
             # add start page
             start_page_id = flow_id + "/pages/START_PAGE"
-            flow_mapped = pd.concat([flow_mapped,
-                pd.DataFrame(
-                    columns=["page_display_name", "page_id"],
-                    data=[["START_PAGE", start_page_id]],
-                )
-            ])
+            flow_mapped = pd.concat(
+                [
+                    flow_mapped,
+                    pd.DataFrame(
+                        columns=["page_display_name", "page_id"],
+                        data=[["START_PAGE", start_page_id]],
+                    ),
+                ]
+            )
 
             flow_mapped.insert(0, "flow_display_name", flow_map[flow_id])
             agent_pages_map = pd.concat([agent_pages_map, flow_mapped])
 
         self.agent_pages_map = agent_pages_map.reset_index(drop=True)
-
 
     def _get_reply_results(self, utterance, page_id, results, i):
         """Get results of single text utterance to CX Agent.
@@ -275,7 +282,6 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         results["detected_intent"][i] = intent or "NO_MATCH"
         results["confidence"][i] = confidence
         results["target_page"][i] = target_page
-
 
     def _get_intent_detection(self, test_set: pd.DataFrame):
         """Gets the results of a subset of Intent Detection tests.
@@ -322,7 +328,6 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         return intent_detection
 
-
     def restart(self):
         """starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
@@ -347,15 +352,16 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     def reply(
         self,
-        send_obj: Dict[str,str],
+        send_obj: Dict[str, str],
         restart: bool = False,
         retries: int = 0,
         current_page: str = None,
-        checkpoints: bool = False):
+        checkpoints: bool = False,
+    ):
         """
         args:
             send_obj: Dictionary with the following structure:
-              {'text': str, 
+              {'text': str,
                'params': Dict[str,str],
                'dtmf': str}
             restart: Boolean flag that determines whether to use the existing
@@ -369,16 +375,16 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         """
         text = send_obj.get("text")
         send_params = send_obj.get("params")
-        dtmf = send_obj.get("dtmf")
 
         if not text:
             logging.warning(f"Input Text is empty. {send_obj}")
 
         if text and len(text) > 256:
-            logging.warning("Text input is too long. Truncating to 256 characters.")
+            logging.warning(
+                "Text input is too long. Truncating to 256 characters."
+            )
             text = text[0:256]
             logging.warning(f"TRUNCATED TEXT: {text}")
-
 
         custom_environment = self.agent_env.get("environment")
         disable_webhook = self.agent_env.get("disable_webhook") or False
@@ -397,16 +403,20 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         if custom_environment:
             logging.info("req using env: %s", custom_environment)
-            session_path = f"{self.agent_id}/environments/"\
-            f"{custom_environment}/sessions/{self.session_id}"
+            session_path = (
+                f"{self.agent_id}/environments/"
+                f"{custom_environment}/sessions/{self.session_id}"
+            )
 
         # Build Query Params object
         query_params = self._build_query_params_object(
-            send_params, current_page, disable_webhook)
+            send_params, current_page, disable_webhook
+        )
 
         # Build Query Input object
         query_input = self._build_query_input_object(
-            send_obj, self.language_code)
+            send_obj, self.language_code
+        )
 
         request = types.session.DetectIntentRequest(
             session=session_path,
@@ -445,13 +455,10 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             retries += 1
             if retries < MAX_RETRIES:
                 logging.error("retrying")
-                return self.reply(
-                    send_obj, restart=restart, retries=retries
-                )
+                return self.reply(send_obj, restart=restart, retries=retries)
             else:
                 logging.error("MAX_RETRIES exceeded")
                 return {}
-
 
         if checkpoints:
             self.checkpoint("<< got response")
@@ -463,15 +470,16 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         # Gather Response Messages into List of Dicts
         if query_result.response_messages:
             response_messages = self._gather_response_messages(
-                query_result.response_messages)
+                query_result.response_messages
+            )
         else:
             response_messages = None
-
 
         # Convert params structures from Proto to standard python data types
         if query_result.parameters:
             params = self._gather_query_result_parameters(
-                query_result.parameters)
+                query_result.parameters
+            )
         else:
             params = None
 
@@ -480,7 +488,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         reply["page_name"] = query_result.current_page.display_name
         reply["intent_name"] = query_result.intent.display_name
         reply["match_type"] = self._get_match_type_from_map(
-            query_result.match.match_type)
+            query_result.match.match_type
+        )
         reply["other_intents"] = self.format_other_intents(query_result)
         reply["params"] = params
 
@@ -530,12 +539,12 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         return None
 
-
     def run_intent_detection(
         self,
         test_set: pd.DataFrame,
         chunk_size: int = 300,
-        rate_limit: float = 20):
+        rate_limit: float = 20,
+    ):
         """Tests a set of utterances for intent detection against a CX Agent.
 
         This function uses Python Threading to run tests in parallel to
@@ -569,7 +578,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         result = pd.DataFrame()
         for start in range(0, test_set.shape[0], chunk_size):
-            test_set_chunk = test_set.iloc[start:start + chunk_size]
+            test_set_chunk = test_set.iloc[start : start + chunk_size]
             result_chunk = self._get_intent_detection(test_set=test_set_chunk)
             result = pd.concat([result, result_chunk])
             self.progress_bar(start, test_set.shape[0])
