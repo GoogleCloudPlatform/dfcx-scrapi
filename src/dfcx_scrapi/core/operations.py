@@ -56,8 +56,12 @@ class Operations(ScrapiBase):
         Returns:
         response: Response status and payload from LRO
         """
+        location = lro.split("/")[3]
+        if location != "global":
+            host = f"{location}-dialogflow.googleapis.com"
+        else:
+            host = "dialogflow.googleapis.com"
 
-        host = "dialogflow.googleapis.com"
         channel = grpc_helpers.create_channel(
             host,
             credentials=self.creds
