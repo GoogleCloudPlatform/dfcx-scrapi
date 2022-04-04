@@ -1,3 +1,4 @@
+"""Unit Tests for Search Util Class"""
 # Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +16,8 @@
 import pytest
 from src.dfcx_scrapi.tools import search_util
 
-scrapi_search = None
-
 @pytest.mark.unit
-def test_instantiate_SearchUtil(creds):
-    print(creds)
+def test_instantiate_search_util(creds):
     scrapi_search = search_util.SearchUtil(creds_path=creds)
 
     assert isinstance(scrapi_search, search_util.SearchUtil)
@@ -29,7 +27,6 @@ def test_instantiate_SearchUtil(creds):
 def test_get_agent_fulfillments(creds, agent_id):
     scrapi_search = search_util.SearchUtil(creds_path=creds)
     df = scrapi_search.get_agent_fulfillment_message_df(agent_id)
-    cols = set(df.columns)
     assert set(df.columns) == {
             'flow_name',
             'page_name',

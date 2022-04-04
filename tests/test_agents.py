@@ -24,7 +24,7 @@ from src.dfcx_scrapi.core import agents
 from src.dfcx_scrapi.core import operations
 
 today_time = datetime.now().strftime("%d%m%Y_%H%M%S")
-AGENT_NAME = "DFCX SCRAPI - TEMP TEST AGENT {}".format(today_time)
+AGENT_NAME = f"DFCX SCRAPI - TEMP TEST AGENT {today_time}"
 
 pytest.temp_agent = None
 
@@ -49,7 +49,7 @@ def test_restore_agent(creds, gcs_bucket):
 
     lro = a.restore_agent(
         pytest.temp_agent.name,
-        gcs_bucket_uri="gs://{}/sample_agent.blob".format(gcs_bucket)
+        gcs_bucket_uri=f"gs://{gcs_bucket}/sample_agent.blob"
     )
 
     time.sleep(4)
@@ -112,7 +112,7 @@ def test_export_agent(creds, gcs_bucket):
     ops = operations.Operations(creds_path=creds)
     lro = a.export_agent(
         pytest.temp_agent.name,
-        "gs://{}/testing_export.json".format(gcs_bucket),
+        f"gs://{gcs_bucket}/testing_export.json"
     )
 
     time.sleep(4)
@@ -144,7 +144,7 @@ def test_delete_agent(creds):
 def test_list_agents(creds, project_id):
     """Tests the SCRAPI method list_agents from core/agents.py"""
     a = agents.Agents(creds_path=creds)
-    location_id = "projects/{}/locations/global".format(project_id)
+    location_id = f"projects/{project_id}/locations/global"
     all_agents = a.list_agents(location_id)
 
     assert isinstance(all_agents[0], types.agent.Agent)
