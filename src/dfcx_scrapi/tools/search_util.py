@@ -759,14 +759,14 @@ class SearchUtil(scrapi_base.ScrapiBase):
             .explode("response_message", ignore_index=True)
             .assign(
                 response_type=lambda df: df.response_message.apply(
-                    SearchUtil._get_msg_type
+                    self._get_msg_type
                 )
             )
         )
         # no format change for 'proto'
         if message_format in ["dict", "human-readable"]:
             msg_df.response_message = msg_df.response_message.apply(
-                SearchUtil._format_response_message, args=(message_format,)
+                self._format_response_message, args=(message_format,)
             )
         msg_df = msg_df.assign(
             conditional_cases=lambda df: df.conditional_cases.apply(
@@ -904,7 +904,12 @@ class SearchUtil(scrapi_base.ScrapiBase):
             flow_df[["flow_name", "flow_id"]]
             .assign(page_obj=flow_df.flow_id.apply(self.pages.list_pages))
             .explode("page_obj", ignore_index=True)
-            .assign(
+            )
+
+        # Handle edge case where Flow exists without Pages
+        page_df = page_df[~page_df.page_obj.isna()]
+
+        page_df = page_df.assign(
                 page_name=lambda df: df.page_obj.apply(
                     attrgetter("display_name")
                 ),
@@ -922,15 +927,15 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 ),
                 event_handlers=lambda df: df.page_obj.apply(
                     attrgetter("event_handlers")
-                ),
-            )
-            .drop(columns="page_obj")
-        )
+                ))
+
+        page_df = page_df.drop(columns="page_obj")
 
         # add in the start pages (flow objects)
         page_df = pd.concat(
             [page_df, flow_df.assign(page_name="START_PAGE")], ignore_index=True
         ).drop(columns="flow_id")
+
         return page_df
 
     def get_route_group_df(
