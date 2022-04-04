@@ -18,6 +18,7 @@ import json
 import logging
 import time
 from typing import Dict, List
+import google.auth
 import gspread
 import pandas as pd
 import numpy as np
@@ -34,7 +35,7 @@ from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.pages import Pages
 from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
 
-g_drive_scope = [
+GLOBAL_SCOPE = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
 ]
@@ -54,6 +55,7 @@ class DataframeFunctions(ScrapiBase):
         creds_path: str = None,
         creds_dict: dict = None,
         creds=None,
+        principal=False,
         scope=False,
     ):
         super().__init__(
@@ -62,6 +64,30 @@ class DataframeFunctions(ScrapiBase):
             creds=creds,
             scope=scope,
         )
+
+        scopes = GLOBAL_SCOPE
+
+        if scope:
+            scopes += scope
+
+        if creds_path:
+            creds = ServiceAccountCredentials.from_json_keyfile_name(
+                filename=creds_path, scopes=scopes
+            )
+            self.sheets_client = gspread.authorize(creds)
+
+        elif creds_dict:
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(
+                keyfile_dict=creds_dict, scopes=scopes
+            )
+            self.sheets_client = gspread.authorize(creds)
+
+        elif principal:
+            self.sheets_client = gspread.oauth()
+
+        else:
+            creds = google.auth.default(scopes=scopes)[0]
+            self.sheets_client = gspread.authorize(creds)
 
         logging.info("create dfcx creds %s", creds_path)
         self.entities = EntityTypes(creds_path, creds_dict)
@@ -1055,29 +1081,15 @@ class DataframeFunctions(ScrapiBase):
 
     def sheets_to_dataframe(self, sheet_name, worksheet_name):
         """Move Intent/TP data from Google Sheets to a DataFrame."""
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive",
-        ]
-        creds_gdrive = ServiceAccountCredentials.from_json_keyfile_name(
-            self.creds_path, scope
-        )
-        client = gspread.authorize(creds_gdrive)
-        g_sheets = client.open(sheet_name)
+        g_sheets = self.sheets_client.open(sheet_name)
         sheet = g_sheets.worksheet(worksheet_name)
         data_pull = sheet.get_all_values()
-        return pd.DataFrame(columns=data_pull[0], data=data_pull[1:])
+        data = pd.DataFrame(columns=data_pull[0], data=data_pull[1:])
+
+        return data
 
     def dataframe_to_sheets(self, sheet_name, worksheet_name, dataframe):
         """Move Intent/TP data from a DataFrame to Google Sheets."""
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive",
-        ]
-        creds_gdrive = ServiceAccountCredentials.from_json_keyfile_name(
-            self.creds_path, scope
-        )
-        client = gspread.authorize(creds_gdrive)
-        g_sheets = client.open(sheet_name)
+        g_sheets = self.sheets_client.open(sheet_name)
         worksheet = g_sheets.worksheet(worksheet_name)
         set_with_dataframe(worksheet, dataframe)
