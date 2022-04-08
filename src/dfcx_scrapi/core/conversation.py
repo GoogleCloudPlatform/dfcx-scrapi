@@ -282,6 +282,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         results["detected_intent"][i] = intent or "NO_MATCH"
         results["confidence"][i] = confidence
         results["target_page"][i] = target_page
+        results["params"][i] = response["params"]
 
     def _get_intent_detection(self, test_set: pd.DataFrame):
         """Gets the results of a subset of Intent Detection tests.
@@ -308,6 +309,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             "detected_intent": [None] * len(utterances),
             "confidence": [None] * len(utterances),
             "target_page": [None] * len(utterances),
+            "params": [None] * len(utterances),
         }
         for i, (utterance, page_id) in enumerate(zip(utterances, page_ids)):
             threads[i] = Thread(
@@ -322,6 +324,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         test_set_mapped["detected_intent"] = results["detected_intent"]
         test_set_mapped["confidence"] = results["confidence"]
         test_set_mapped["target_page"] = results["target_page"]
+        test_set_mapped["params"] = results["params"]
         test_set_mapped = test_set_mapped.drop(columns=["page_id"])
 
         intent_detection = test_set_mapped.copy()
