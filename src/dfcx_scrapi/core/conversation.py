@@ -22,6 +22,7 @@ import pandas as pd
 from typing import Dict
 from threading import Thread
 import traceback
+from operator import attrgetter
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -80,7 +81,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.restart()
         self.flows = flows.Flows(creds=self.creds)
         self.pages = pages.Pages(creds=self.creds)
-
+    
     @staticmethod
     def _get_match_type_from_map(match_type: int):
         match_type_map = {
@@ -275,14 +276,10 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             send_obj={"text": utterance}, current_page=page_id, restart=True
         )
 
-        intent = response["intent_name"]
-        confidence = response["confidence"]
         target_page = response["page_name"]
 
-        results["detected_intent"][i] = intent or "NO_MATCH"
-        results["confidence"][i] = confidence
         results["target_page"][i] = target_page
-        results["params"][i] = response["params"]
+        results["match"][i] = response["match"]
 
     def _get_intent_detection(self, test_set: pd.DataFrame):
         """Gets the results of a subset of Intent Detection tests.
@@ -306,10 +303,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         threads = [None] * len(utterances)
         results = {
-            "detected_intent": [None] * len(utterances),
-            "confidence": [None] * len(utterances),
             "target_page": [None] * len(utterances),
-            "params": [None] * len(utterances),
+            "match":[None] * len(utterances),
         }
         for i, (utterance, page_id) in enumerate(zip(utterances, page_ids)):
             threads[i] = Thread(
@@ -321,15 +316,13 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         for idx, _ in enumerate(threads):
             threads[idx].join()
 
-        test_set_mapped["detected_intent"] = results["detected_intent"]
-        test_set_mapped["confidence"] = results["confidence"]
         test_set_mapped["target_page"] = results["target_page"]
-        test_set_mapped["params"] = results["params"]
+        test_set_mapped["match"] = results["match"]
         test_set_mapped = test_set_mapped.drop(columns=["page_id"])
-
         intent_detection = test_set_mapped.copy()
 
         return intent_detection
+
 
     def restart(self):
         """starts a new session/conversation for this agent"""
@@ -493,6 +486,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         reply["match_type"] = self._get_match_type_from_map(
             query_result.match.match_type
         )
+        reply["match"] = query_result.match
         reply["other_intents"] = self.format_other_intents(query_result)
         reply["params"] = params
 
@@ -586,7 +580,37 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             result = pd.concat([result, result_chunk])
             self.progress_bar(start, test_set.shape[0])
             time.sleep(rate_limit)
-
         self.progress_bar(test_set.shape[0], test_set.shape[0])
+        
+        result = self._unpack_match(result)
+        column_order = ['flow_display_name', 'page_display_name', 'utterance', 
+            'match_type', 'detected_intent', 'parameters_set', 'confidence', 'target_page']
+        return result[column_order]
 
-        return result
+    def _unpack_match(self, df: pd.DataFrame):
+        """ Unpacks a 'match' column into four component columns.
+        Args:
+            df: dataframe containing a column named match of types.Match
+        Returns:
+            a copy of df with columns match_type, confidence, parameters_set,
+            and detected_intent instead of match. 
+        """
+        df = (
+            df
+            .copy()
+            .assign(
+                match_type = lambda df: df.match.apply(attrgetter('match_type._name_')),
+                confidence = lambda df: df.match.apply(attrgetter('confidence')),
+                parameters_set = lambda df: df.match.apply(attrgetter('parameters')),
+                detected_intent = lambda df: df.match.apply(attrgetter('intent.display_name'))
+            )
+            .assign(
+                parameters_set = lambda df: df.parameters_set.apply(
+                    lambda p: self.recurse_proto_marshal_to_dict(p) if p else '')
+
+            )
+            .drop(columns='match')
+        )
+        return df
+    
+
