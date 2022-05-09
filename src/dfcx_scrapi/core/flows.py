@@ -261,9 +261,7 @@ class Flows(scrapi_base.ScrapiBase):
         request = types.flow.ExportFlowRequest()
         request.name = flow_id
         request.include_referenced_flows = ref_flows
-
-        if gcs_path:
-            request.flow_uri = gcs_path
+        request.flow_uri = gcs_path
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
@@ -273,18 +271,48 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response.result()
 
+    def export_flow_inline(
+        self,
+        flow_id: str,
+        ref_flows: bool = True
+    ) -> Dict[str, str]:
+        """Exports DFCX Flow(s), returning uncompressed raw byte content for flow.
+
+        Args:
+          flow_id, the formatted CX Flow ID to export
+          ref_flows, Whether to export flows referenced by the specified flow.
+
+        Returns:
+          bytes representing the content of the flow.
+        """
+        request = types.flow.ExportFlowRequest()
+        request.name = flow_id
+        request.include_referenced_flows = ref_flows
+
+
+        client_options = self._set_region(flow_id)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options
+        )
+        response = client.export_flow(request)
+
+        return (response.result()).flow_content
+
     def import_flow(
         self,
         agent_id: str,
-        gcs_path: str,
+        gcs_path: str = None,
+        flow_content: bytes = None,
         import_option: str = "KEEP"
     ) -> Dict[str, str]:
-        """Imports a DFCX Flow from GCS bucket to CX Agent.
+        """Imports a DFCX Flow to CX Agent. Flow can be imported from a
+        GCS bucket or from raw bytes.
 
         Args:
           agent_id, the CX Agent ID to import the flow into.
-          gcs_path, The `Google Cloud Storage URI to import flow from. The
-            format of this URI must be ``gs://<bucket-name>/<object-name>``.
+          gcs_path, (Optional) The `Google Cloud Storage URI to import flow from.
+            the format of this URI must be ``gs://<bucket-name>/<object-name>``.
+          flow_content, (Optional) uncompressed raw byte content for flow.
           import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'KEEP'
 
         Returns:
@@ -292,9 +320,16 @@ class Flows(scrapi_base.ScrapiBase):
             the newly imported Flow. Otherwise, it will return the
             corresponding error.
         """
+
+        if (gcs_path is None) == (flow_content is None):
+            raise ValueError(
+                "gcs_path or flow_content required (But not both!)."
+            )
+
         request = types.flow.ImportFlowRequest()
         request.parent = agent_id
         request.flow_uri = gcs_path
+        request.flow_content = flow_content
         request.import_option = import_option
 
         client_options = self._set_region(agent_id)
