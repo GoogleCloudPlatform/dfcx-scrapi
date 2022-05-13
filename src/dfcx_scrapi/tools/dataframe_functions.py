@@ -240,9 +240,10 @@ class DataframeFunctions(ScrapiBase):
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
+                    param_id = row["parameter_id"]
                     part = {
                         "text": row["text"],
-                        "parameter_id": None if pd.isna(row["parameter_id"]) else row["parameter_id"],
+                        "parameter_id": None if pd.isna(param_id) else param_id,
                 }
                     parts.append(part)
 
@@ -560,9 +561,10 @@ class DataframeFunctions(ScrapiBase):
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
+                    param_id = row["parameter_id"]
                     part = {
                         "text": row["text"],
-                        "parameter_id": None if pd.isna(row["parameter_id"]) else row["parameter_id"],
+                        "parameter_id": None if pd.isna(param_id) else param_id,
                     }
                     parts.append(part)
 
