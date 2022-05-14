@@ -654,7 +654,7 @@ class Intents(ScrapiBase):
                     continue
 
                 data_frame = self.intent_proto_to_dataframe(obj, mode=mode)
-                main_frame = main_frame.append(data_frame)
+                main_frame = pd.concat([main_frame, data_frame])
             main_frame = main_frame.sort_values(
                 ["display_name", "training_phrase"])
             return main_frame
