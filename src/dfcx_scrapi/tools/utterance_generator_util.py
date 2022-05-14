@@ -243,7 +243,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             intent_set = self._generate_phrases_intent(
                 training_phrases_one_intent, synthetic_phrases_per_intent
             )
-            synthetic_dataset = synthetic_dataset.append(intent_set)
+            synthetic_dataset = pd.concat([synthetic_dataset, intent_set])
             i += 1
             self._progress_bar(i, len(intents_list))
 

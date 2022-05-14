@@ -143,8 +143,8 @@ class DataframeFunctions(ScrapiBase):
         for column in dataframe.columns:
             dataframe = dataframe.astype({column: type_map[column]})
             temp_data[column] = type_map[column]
-
-        dataframe = dataframe.append(temp_data, ignore_index=True)
+        
+        dataframe = pd.concat([dataframe, temp_data], ignore_index=True)
 
         return dataframe
 

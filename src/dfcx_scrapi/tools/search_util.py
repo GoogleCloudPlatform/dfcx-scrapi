@@ -260,7 +260,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 message.conversation_success.metadata
             )
             contents = (
-                {"conversation_success": c} if (message_format == "dict") else c
+                {"conversation_success": c} if (
+                    message_format == "dict") else c
             )
         elif "output_audio_text" in message:
             c = message.output_audio_text.text
@@ -321,7 +322,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     ]
                 ],
             )
-            pages_dataframe = pages_dataframe.append(page_dataframe)
+            pages_dataframe = pd.concat([pages_dataframe, page_dataframe])
 
         return pages_dataframe
 
@@ -336,7 +337,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
             for handler in flow_level_event_handlers:
                 flow_level_event_handlers_dataframe = (
-                    flow_level_event_handlers_dataframe.append(
+                    pd.concat([
+                        flow_level_event_handlers_dataframe,
                         pd.DataFrame(
                             columns=[
                                 "flow",
@@ -355,11 +357,12 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                 ]
                             ],
                         )
-                    )
+                    ])
                 )
-                flow_event_handler_data = flow_event_handler_data.append(
+                flow_event_handler_data = pd.concat([
+                    flow_event_handler_data,
                     flow_level_event_handlers_dataframe
-                )
+                ])
 
         return flow_event_handler_data
 
@@ -375,7 +378,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 page_level_event_handlers_dataframe = pd.DataFrame()
                 for handler in page_level_event_handlers:
                     page_level_event_handlers_dataframe = (
-                        page_level_event_handlers_dataframe.append(
+                        pd.concat([
+                            page_level_event_handlers_dataframe,
                             pd.DataFrame(
                                 columns=[
                                     "flow",
@@ -396,14 +400,13 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                     ]
                                 ],
                             )
-                        )
+                        ])
                     )
 
-                page_level_event_handlers_all_dataframe = (
-                    page_level_event_handlers_all_dataframe.append(
-                        page_level_event_handlers_dataframe
-                    )
-                )
+                page_level_event_handlers_all_dataframe = pd.concat([
+                    page_level_event_handlers_all_dataframe,
+                    page_level_event_handlers_dataframe
+                ])
         return page_level_event_handlers_all_dataframe
 
     # Parameters - event handlers
@@ -420,7 +423,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     )
                     param_lvl_event_df = pd.DataFrame()
                     for handler in parameter_event_handlers:
-                        param_lvl_event_df = param_lvl_event_df.append(
+                        param_lvl_event_df = pd.concat([
+                            param_lvl_event_df,
                             pd.DataFrame(
                                 columns=[
                                     "flow",
@@ -443,12 +447,11 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                     ]
                                 ],
                             )
-                        )
-                    parameter_level_event_handlers_all_dataframe = (
-                        parameter_level_event_handlers_all_dataframe.append(
-                            param_lvl_event_df
-                        )
-                    )
+                        ])
+                    parameter_level_event_handlers_all_dataframe = pd.concat([
+                        parameter_level_event_handlers_all_dataframe,
+                        param_lvl_event_df
+                    ])
         return parameter_level_event_handlers_all_dataframe
 
     def find_list_parameters(self, agent_id):
@@ -503,7 +506,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     columns=["resource_id", "condition", "route_id"],
                     data=[[page_id, route.condition, i]],
                 )
-                locator = locator.append(iter_frame)
+                locator = pd.concat([locator, iter_frame])
             i += 1
 
         return locator
@@ -528,7 +531,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     columns=["resource_id", "condition", "route_id"],
                     data=[[flow_id, route.condition, i]],
                 )
-                locator = locator.append(iter_frame)
+                locator = pd.concat([locator, iter_frame])
             i += 1
 
         return locator
@@ -605,7 +608,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 )
                 flow_search.insert(0, "resource_name", flow_name)
                 flow_search.insert(0, "resource_type", "flow")
-                locator = locator.append(flow_search)
+                locator = pd.concat([locator, flow_search])
             except ValueError:
                 logging.error(
                     "%s is not a valid flow_name for agent %s",
@@ -625,7 +628,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     time.sleep(0.5)
                     page_search.insert(0, "resource_name", page)
                     page_search.insert(0, "resource_type", "page")
-                    locator = locator.append(page_search)
+                    locator = pd.concat([locator, page_search])
 
             return locator
 
@@ -641,7 +644,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 )
                 flow_search.insert(0, "resource_name", flow)
                 flow_search.insert(0, "resource_type", "flow")
-                locator = locator.append(flow_search)
+                locator = pd.concat([locator, flow_search])
                 pages_map = self.pages.get_pages_map(
                     flow_id=flows_map[flow], reverse=True
                 )
@@ -652,7 +655,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     time.sleep(0.5)
                     page_search.insert(0, "resource_name", page)
                     page_search.insert(0, "resource_type", "page")
-                    locator = locator.append(page_search)
+                    locator = pd.concat([locator, page_search])
             return locator
 
         # not found
@@ -690,7 +693,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             flow_scan = self._find_true_routes_flow_level(
                 flow_display_name, flow_map
             )
-            agent_results = agent_results.append(flow_scan)
+            agent_results = pd.concat([agent_results, flow_scan])
         return agent_results
 
     # Event handlers Main Function
@@ -810,7 +813,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
         flow_df = self.get_flow_df(agent_id)
         page_df = self.get_page_df(flow_df)
 
-        route_group_df = self.get_route_group_df(page_df, list(flow_df.flow_id))
+        route_group_df = self.get_route_group_df(
+            page_df, list(flow_df.flow_id))
         route_df = SearchUtil.get_route_df(page_df, route_group_df)
         intent_map = self.intents.get_intents_map(agent_id)
         route_df.intent = route_df.intent.map(intent_map)
@@ -849,7 +853,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 event_handler_df.rename(
                     columns={"trigger_fulfillment": "fulfillment"}
                 ),
-                route_df.rename(columns={"trigger_fulfillment": "fulfillment"}),
+                route_df.rename(
+                    columns={"trigger_fulfillment": "fulfillment"}),
                 param_initial_prompt_fulfillment_df.rename(
                     columns={"initial_prompt_fulfillment": "fulfillment"}
                 ),
@@ -904,30 +909,30 @@ class SearchUtil(scrapi_base.ScrapiBase):
             flow_df[["flow_name", "flow_id"]]
             .assign(page_obj=flow_df.flow_id.apply(self.pages.list_pages))
             .explode("page_obj", ignore_index=True)
-            )
+        )
 
         # Handle edge case where Flow exists without Pages
         page_df = page_df[~page_df.page_obj.isna()]
 
         page_df = page_df.assign(
-                page_name=lambda df: df.page_obj.apply(
-                    attrgetter("display_name")
-                ),
-                entry_fulfillment=lambda df: df.page_obj.apply(
-                    attrgetter("entry_fulfillment")
-                ),
-                parameters=lambda df: df.page_obj.apply(
-                    attrgetter("form.parameters")
-                ),
-                route_groups=lambda df: df.page_obj.apply(
-                    attrgetter("transition_route_groups")
-                ),
-                routes=lambda df: df.page_obj.apply(
-                    attrgetter("transition_routes")
-                ),
-                event_handlers=lambda df: df.page_obj.apply(
-                    attrgetter("event_handlers")
-                ))
+            page_name=lambda df: df.page_obj.apply(
+                attrgetter("display_name")
+            ),
+            entry_fulfillment=lambda df: df.page_obj.apply(
+                attrgetter("entry_fulfillment")
+            ),
+            parameters=lambda df: df.page_obj.apply(
+                attrgetter("form.parameters")
+            ),
+            route_groups=lambda df: df.page_obj.apply(
+                attrgetter("transition_route_groups")
+            ),
+            routes=lambda df: df.page_obj.apply(
+                attrgetter("transition_routes")
+            ),
+            event_handlers=lambda df: df.page_obj.apply(
+                attrgetter("event_handlers")
+            ))
 
         page_df = page_df.drop(columns="page_obj")
 
