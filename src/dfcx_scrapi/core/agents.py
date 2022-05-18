@@ -430,9 +430,12 @@ class Agents(scrapi_base.ScrapiBase):
 
         Args:
           agent_id: CX Agent ID string in the following format
-            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+              projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
           obj: (Optional) The CX Agent object in proper format. This can also
               be extracted by using the get_agent() method.
+          kwargs: You may find a list of agent attributes here:
+              https://cloud.google.com/python/docs/reference/dialogflow-cx/
+                  latest/google.cloud.dialogflowcx_v3beta1.types.Agent
         """
 
         if obj:
