@@ -275,8 +275,8 @@ class Flows(scrapi_base.ScrapiBase):
         self,
         flow_id: str,
         ref_flows: bool = True
-    ) -> Dict[str, str]:
-        """Exports DFCX Flow(s), returning uncompressed raw byte content for flow.
+    ) -> bytes:
+        """Export a Flow, returning uncompressed raw byte content for flow.
 
         Args:
           flow_id, the formatted CX Flow ID to export
@@ -310,9 +310,9 @@ class Flows(scrapi_base.ScrapiBase):
 
         Args:
           agent_id, the CX Agent ID to import the flow into.
-          gcs_path, (Optional) The `Google Cloud Storage URI to import flow from.
+          gcs_path, the `Google Cloud Storage URI to import flow from.
             the format of this URI must be ``gs://<bucket-name>/<object-name>``.
-          flow_content, (Optional) uncompressed raw byte content for flow.
+          flow_content, uncompressed raw byte content for flow.
           import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'KEEP'
 
         Returns:
@@ -321,7 +321,12 @@ class Flows(scrapi_base.ScrapiBase):
             corresponding error.
         """
 
-        if (gcs_path is None) == (flow_content is None):
+        if gcs_path and flow_content:
+            raise ValueError(
+                "gcs_path or flow_content required (But not both!)."
+            )
+
+        if not gcs_path and not flow_content:
             raise ValueError(
                 "gcs_path or flow_content required (But not both!)."
             )
