@@ -258,7 +258,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         )
 
         request = (
-            types.transition_route_groups.UpdateTransitionRouteGroupRequest()
+            types.transition_route_group.UpdateTransitionRouteGroupRequest()
         )  # pylint: disable=C0301
 
         request.transition_route_group = route_group
