@@ -299,7 +299,7 @@ class IntentBuilder:
             self.proto_obj.labels.update({label: label})
         else:
             raise ValueError(
-                "labels should be either a list or a dictionary."
+                "labels should be either a string or a dictionary."
             )
 
         return self.proto_obj
