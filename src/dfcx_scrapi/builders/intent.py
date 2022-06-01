@@ -186,7 +186,7 @@ class IntentBuilder:
         if isinstance(phrase, str):
             # Create the training phrase obj and add it to the others
             tp = types.Intent.TrainingPhrase(
-                parts=types.Intent.TrainingPhrase.Part(text=phrase),
+                parts=[types.Intent.TrainingPhrase.Part(text=phrase)],
                 repeat_count=repeat_count
             )
             self.proto_obj.training_phrases.append(tp)
