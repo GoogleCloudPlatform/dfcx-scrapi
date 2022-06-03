@@ -61,6 +61,100 @@ class Intents(ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
 
+
+
+
+    @staticmethod
+    def intent_proto_to_dataframe_refactored(obj: types.Intent) -> pd.DataFrame:
+        """docs here!"""
+        if not isinstance(obj, types.Intent):
+            raise ValueError("obj should be Intent.")
+
+        df = pd.DataFrame(columns=[
+            'name', 'display_name', 'description', 'priority', 'is_fallback',
+            'labels', 'id', 'repeat_count', 'training_phrase', 'phrase', 'text',
+            'part', 'entity_type', 'is_list', 'redact'
+        ])
+
+        intent_dict = {
+            "name": str(obj.name),
+            "display_name": str(obj.display_name),
+            "description": str(obj.description),
+            "priority": int(obj.priority),
+            "is_fallback": bool(obj.is_fallback),
+        }
+
+        # labels
+        intent_dict["labels"] = ",".join([
+            k if k == v else f"{k}:{v}"
+            for k, v in obj.labels.items()
+        ])
+        # parameters
+        params_dict = {
+            str(param.id): {
+                "entity_type": str(param.entity_type),
+                "is_list": bool(param.is_list),
+                "redact": bool(param.redact),
+            }
+            for param in obj.parameters
+        }
+        # training phrases
+        if not obj.training_phrases:
+            df = df.append(intent_dict, ignore_index=True)
+            return df
+        else:
+            for tp_count, tp in enumerate(obj.training_phrases):
+                intent_dict.update({
+                    "id": str(tp.id),
+                    "repeat_count": int(tp.repeat_count),
+                    "training_phrase": tp_count,
+                    "phrase": "".join([part.text for part in tp.parts])
+                })
+                for part_count, part in enumerate(tp.parts):
+                    intent_dict.update({
+                        "text": part.text,
+                        "part": part_count
+                    })
+                    if part.parameter_id:
+                        intent_dict.update(params_dict[part.parameter_id])
+                    # Add to Dataframe
+                    df = df.append(intent_dict, ignore_index=True)
+        
+        return df
+
+
+    def bulk_intent_to_df_refactored(
+        self,
+        agent_id: str = None,
+        intent_subset:list = None,
+        language_code:str = None) -> pd.DataFrame:
+        """Extracts all Intents and Training Phrases into a Pandas DataFrame.
+
+        Args:
+          agent_id, agent to pull list of intents
+          intent_subset: (Optional) A list of intents to pull
+            If it's None, grab all the intents
+          language_code: Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
+        """
+
+        if not agent_id:
+            agent_id = self.agent_id
+
+        main_df = pd.DataFrame()
+
+        intents = self.list_intents(agent_id, language_code=language_code)
+        for obj in intents:
+            if (intent_subset) and (obj.display_name not in intent_subset):
+                continue
+            intent_df = self.intent_proto_to_dataframe_refactored(obj)
+            main_df = pd.concat([main_df, intent_df], ignore_index=True)
+        
+        return main_df
+
+
+
+
     @staticmethod
     def intent_proto_to_dataframe(obj: types.Intent, mode="basic"):
         """intents to dataframe
