@@ -23,6 +23,12 @@ from google.cloud.dialogflowcx_v3beta1 import types
 
 class IntentBuilder:
     """Base Class for CX Intent builder."""
+    # Docs reference: dfcx - API
+    # parameter_checking() is an unused function
+    # update_intents function
+    # add_parameter: Check if the entity type exists
+    # Show info (basic, training phrases, parameters)
+
 
     def __init__(self):
         self.proto_obj = None
