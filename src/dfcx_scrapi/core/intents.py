@@ -149,6 +149,10 @@ class Intents(ScrapiBase):
                         })
                         if part.parameter_id:
                             intent_dict.update(params_dict[part.parameter_id])
+                        elif intent_dict.get("entity_type"):
+                            # Remove existing parameter_id if exist
+                            key_to_remove = ["entity_type", "is_list", "redact"]
+                            _ = [intent_dict.pop(key) for key in key_to_remove]
                         # Add to Dataframe
                         row = pd.DataFrame.from_dict(
                             intent_dict, orient="index"
