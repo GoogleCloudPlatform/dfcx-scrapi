@@ -83,13 +83,18 @@ class Intents(ScrapiBase):
             intent_dict = {"display_name": str(obj.display_name)}
 
             if not obj.training_phrases:
-                df = df.append(intent_dict, ignore_index=True)
+                row = pd.DataFrame.from_dict(
+                    intent_dict, orient="index"
+                ).transpose()
+                df = pd.concat([df, row], ignore_index=True)
             else:
                 for tp in obj.training_phrases:
                     parts_list = [part.text for part in tp.parts]
                     intent_dict.update({"training_phrase": "".join(parts_list)})
 
-                    row = pd.DataFrame.from_dict(intent_dict, orient="index").T
+                    row = pd.DataFrame.from_dict(
+                        intent_dict, orient="index"
+                    ).transpose()
                     df = pd.concat([df, row], ignore_index=True)
 
             return df
@@ -126,7 +131,9 @@ class Intents(ScrapiBase):
             }
             # training phrases
             if not obj.training_phrases:
-                row = pd.DataFrame.from_dict(intent_dict, orient="index").T
+                row = pd.DataFrame.from_dict(
+                    intent_dict, orient="index"
+                ).transpose()
                 df = pd.concat([df, row], ignore_index=True)
             else:
                 for tp_count, tp in enumerate(obj.training_phrases):
