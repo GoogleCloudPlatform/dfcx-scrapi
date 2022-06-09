@@ -583,9 +583,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.progress_bar(test_set.shape[0], test_set.shape[0])
         
         result = self._unpack_match(result)
-        column_order = ['flow_display_name', 'page_display_name', 'utterance', 
-            'match_type', 'detected_intent', 'parameters_set', 'confidence', 'target_page']
-        return result[column_order]
+        return result
 
     def _unpack_match(self, df: pd.DataFrame):
         """ Unpacks a 'match' column into four component columns.
