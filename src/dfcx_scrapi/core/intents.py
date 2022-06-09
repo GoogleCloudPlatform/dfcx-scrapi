@@ -18,7 +18,6 @@ from collections import defaultdict
 import json
 import logging
 from typing import Dict, List, Tuple
-import numpy as np
 import pandas as pd
 
 from google.cloud.dialogflowcx_v3beta1 import services
@@ -62,101 +61,10 @@ class Intents(ScrapiBase):
             self.agent_id = agent_id
 
 
-
-
     @staticmethod
-    def intent_proto_to_dataframe_refactored(obj: types.Intent) -> pd.DataFrame:
-        """docs here!"""
-        if not isinstance(obj, types.Intent):
-            raise ValueError("obj should be Intent.")
-
-        df = pd.DataFrame(columns=[
-            'name', 'display_name', 'description', 'priority', 'is_fallback',
-            'labels', 'id', 'repeat_count', 'training_phrase', 'phrase', 'text',
-            'part', 'entity_type', 'is_list', 'redact'
-        ])
-
-        intent_dict = {
-            "name": str(obj.name),
-            "display_name": str(obj.display_name),
-            "description": str(obj.description),
-            "priority": int(obj.priority),
-            "is_fallback": bool(obj.is_fallback),
-        }
-
-        # labels
-        intent_dict["labels"] = ",".join([
-            k if k == v else f"{k}:{v}"
-            for k, v in obj.labels.items()
-        ])
-        # parameters
-        params_dict = {
-            str(param.id): {
-                "entity_type": str(param.entity_type),
-                "is_list": bool(param.is_list),
-                "redact": bool(param.redact),
-            }
-            for param in obj.parameters
-        }
-        # training phrases
-        if not obj.training_phrases:
-            df = df.append(intent_dict, ignore_index=True)
-            return df
-        else:
-            for tp_count, tp in enumerate(obj.training_phrases):
-                intent_dict.update({
-                    "id": str(tp.id),
-                    "repeat_count": int(tp.repeat_count),
-                    "training_phrase": tp_count,
-                    "phrase": "".join([part.text for part in tp.parts])
-                })
-                for part_count, part in enumerate(tp.parts):
-                    intent_dict.update({
-                        "text": part.text,
-                        "part": part_count
-                    })
-                    if part.parameter_id:
-                        intent_dict.update(params_dict[part.parameter_id])
-                    # Add to Dataframe
-                    df = df.append(intent_dict, ignore_index=True)
-        
-        return df
-
-
-    def bulk_intent_to_df_refactored(
-        self,
-        agent_id: str = None,
-        intent_subset:list = None,
-        language_code:str = None) -> pd.DataFrame:
-        """Extracts all Intents and Training Phrases into a Pandas DataFrame.
-
-        Args:
-          agent_id, agent to pull list of intents
-          intent_subset: (Optional) A list of intents to pull
-            If it's None, grab all the intents
-          language_code: Language code of the intents being uploaded. Ref:
-            https://cloud.google.com/dialogflow/cx/docs/reference/language
-        """
-
-        if not agent_id:
-            agent_id = self.agent_id
-
-        main_df = pd.DataFrame()
-
-        intents = self.list_intents(agent_id, language_code=language_code)
-        for obj in intents:
-            if (intent_subset) and (obj.display_name not in intent_subset):
-                continue
-            intent_df = self.intent_proto_to_dataframe_refactored(obj)
-            main_df = pd.concat([main_df, intent_df], ignore_index=True)
-        
-        return main_df
-
-
-
-
-    @staticmethod
-    def intent_proto_to_dataframe(obj: types.Intent, mode="basic"):
+    def intent_proto_to_dataframe(
+        obj: types.Intent, mode: str = "basic"
+    ) -> pd.DataFrame:
         """intents to dataframe
 
         Args:
@@ -166,147 +74,83 @@ class Intents(ScrapiBase):
           Advanced returns training phrase and parameters df broken out by
             parts.
         """
+        if not isinstance(obj, types.Intent):
+            raise ValueError("obj should be Intent.")
+
         if mode == "basic":
-            intent_dict = defaultdict(list)
-            if "training_phrases" in obj:
-                for train_phrase in obj.training_phrases:
-                    item_list = []
-                    if len(train_phrase.parts) > 1:
-                        for item in train_phrase.parts:
-                            item_list.append(item.text)
-                        intent_dict[obj.display_name].append("".join(item_list))
-                    else:
-                        intent_dict[obj.display_name].append(
-                            train_phrase.parts[0].text
-                        )
+            df = pd.DataFrame(columns=["display_name", "training_phrase"])
+
+            intent_dict = {"display_name": str(obj.display_name)}
+
+            if not obj.training_phrases:
+                df = df.append(intent_dict, ignore_index=True)
             else:
-                intent_dict[obj.display_name].append("")
+                for tp in obj.training_phrases:
+                    parts_list = [part.text for part in tp.parts]
+                    intent_dict.update({"training_phrase": "".join(parts_list)})
 
-            data_frame = pd.DataFrame.from_dict(
-                intent_dict, orient="index"
-            ).transpose()
-            data_frame = data_frame.stack().to_frame().reset_index(level=1)
-            data_frame = data_frame.rename(
-                columns={"level_1": "display_name", 0: "training_phrase"}
-            ).reset_index(drop=True)
-            data_frame = data_frame.sort_values(
-                ["display_name", "training_phrase"])
+                    row = pd.DataFrame.from_dict(intent_dict, orient="index").T
+                    df = pd.concat([df, row], ignore_index=True)
 
-            return data_frame
+            return df
 
         elif mode == "advanced":
+            df = pd.DataFrame(columns=[
+                "name", "display_name", "description", "priority",
+                "is_fallback", "labels", "id", "repeat_count",
+                "training_phrase_idx", "text", "text_idx",
+                "entity_type", "is_list", "redact"
+            ])
 
-            train_phrases = obj.training_phrases
-            params = obj.parameters
-            if len(train_phrases) > 0:
-                tp_df = pd.DataFrame()
-                tp_id = 0
-                for train_phrase in train_phrases:
-                    part_id = 0
-                    for part in train_phrase.parts:
-                        tp_df = pd.concat([
-                            tp_df,
-                            pd.DataFrame(
-                                columns=[
-                                    "display_name",
-                                    "name",
-                                    "training_phrase",
-                                    "part",
-                                    "text",
-                                    "parameter_id",
-                                    "repeat_count",
-                                    "id",
-                                ],
-                                data=[
-                                    [
-                                        obj.display_name,
-                                        obj.name,
-                                        tp_id,
-                                        part_id,
-                                        part.text,
-                                        part.parameter_id,
-                                        train_phrase.repeat_count,
-                                        train_phrase.id,
-                                    ]
-                                ],
-                            )
-                        ])
-                        part_id += 1
-                    tp_id += 1
+            intent_dict = {
+                "name": str(obj.name),
+                "display_name": str(obj.display_name),
+                "description": str(obj.description),
+                "priority": int(obj.priority),
+                "is_fallback": bool(obj.is_fallback),
+            }
 
-                phrases = tp_df.copy()
-                phrase_lst = (
-                    phrases.groupby(["training_phrase"])["text"]
-                    .apply(lambda x: "".join(x))  # pylint: disable=W0108
-                    .reset_index()
-                    .rename(columns={"text": "phrase"})
-                )
-
-                phrases = pd.merge(
-                    phrases, phrase_lst, on=["training_phrase"], how="outer"
-                )
-
-                if len(params) > 0:
-                    param_df = pd.DataFrame()
-                    for param in params:
-                        param_df = pd.concat([
-                            param_df,
-                            pd.DataFrame(
-                                columns=["display_name", "id", "entity_type"],
-                                data=[
-                                    [
-                                        obj.display_name,
-                                        param.id,
-                                        param.entity_type,
-                                    ]
-                                ],
-                            )
-                        ])
-                    return {"phrases": phrases, "parameters": param_df}
-
-                else:
-                    return {
-                        "phrases": phrases,
-                        "parameters": pd.DataFrame(
-                            columns=["display_name", "id", "entity_type"]
-                        ),
-                    }
-
-            else:
-                return {
-                    "phrases": pd.DataFrame(
-                        columns=[
-                            "display_name",
-                            "name",
-                            "training_phrase",
-                            "part",
-                            "text",
-                            "parameter_id",
-                            "repeat_count",
-                            "id",
-                            "phrase",
-                        ],
-                        data=[
-                            [
-                                obj.display_name,
-                                obj.name,
-                                np.nan,
-                                np.nan,
-                                np.nan,
-                                np.nan,
-                                np.nan,
-                                np.nan,
-                                np.nan,
-                            ]
-                        ],
-                    ),
-                    "parameters": pd.DataFrame(
-                        columns=["display_name", "id", "entity_type"]
-                    ),
+            # labels
+            intent_dict["labels"] = ",".join([
+                key if key == val else f"{key}:{val}"
+                for key, val in obj.labels.items()
+            ])
+            # parameters
+            params_dict = {
+                str(param.id): {
+                    "entity_type": str(param.entity_type),
+                    "is_list": bool(param.is_list),
+                    "redact": bool(param.redact),
                 }
-
+                for param in obj.parameters
+            }
+            # training phrases
+            if not obj.training_phrases:
+                row = pd.DataFrame.from_dict(intent_dict, orient="index").T
+                df = pd.concat([df, row], ignore_index=True)
+            else:
+                for tp_count, tp in enumerate(obj.training_phrases):
+                    intent_dict.update({
+                        "id": str(tp.id),
+                        "repeat_count": int(tp.repeat_count),
+                        "training_phrase_idx": tp_count,
+                    })
+                    for part_count, part in enumerate(tp.parts):
+                        intent_dict.update({
+                            "text": part.text,
+                            "text_idx": part_count
+                        })
+                        if part.parameter_id:
+                            intent_dict.update(params_dict[part.parameter_id])
+                        # Add to Dataframe
+                        row = pd.DataFrame.from_dict(
+                            intent_dict, orient="index"
+                        ).transpose()
+                        df = pd.concat([df, row], ignore_index=True)
+            return df
         else:
             raise ValueError("Mode types: [basic, advanced]")
+
 
     @staticmethod
     def modify_training_phrase_df(
@@ -727,8 +571,8 @@ class Intents(ScrapiBase):
         self,
         agent_id: str = None,
         mode: str = "basic",
-        intent_subset:list = None,
-        language_code:str = None) -> pd.DataFrame:
+        intent_subset: List[str] = None,
+        language_code: str = None) -> pd.DataFrame:
         """Extracts all Intents and Training Phrases into a Pandas DataFrame.
 
         Args:
@@ -744,35 +588,19 @@ class Intents(ScrapiBase):
         if not agent_id:
             agent_id = self.agent_id
 
-        intents = self.list_intents(agent_id, language_code=language_code)
-        if mode == "basic":
-            main_frame = pd.DataFrame()
-            for obj in intents:
-                if (intent_subset) and (obj.display_name not in intent_subset):
-                    continue
-
-                data_frame = self.intent_proto_to_dataframe(obj, mode=mode)
-                main_frame = pd.concat([main_frame, data_frame])
-            main_frame = main_frame.sort_values(
-                ["display_name", "training_phrase"])
-            return main_frame
-
-        elif mode == "advanced":
-            master_phrases = pd.DataFrame()
-            master_parameters = pd.DataFrame()
-            for obj in intents:
-                if (intent_subset) and (obj.display_name not in intent_subset):
-                    continue
-                output = self.intent_proto_to_dataframe(obj, mode="advanced")
-                master_phrases = pd.concat([master_phrases, output["phrases"]])
-                master_parameters = pd.concat([
-                    master_parameters,
-                    output["parameters"]
-                ])
-            return {"phrases": master_phrases, "parameters": master_parameters}
-
-        else:
+        if mode not in ["basic", "advanced"]:
             raise ValueError("Mode types: [basic, advanced]")
+
+        main_df = pd.DataFrame()
+        intents = self.list_intents(agent_id, language_code=language_code)
+
+        for obj in intents:
+            if (intent_subset) and (obj.display_name not in intent_subset):
+                continue
+            intent_df = self.intent_proto_to_dataframe(obj, mode=mode)
+            main_df = pd.concat([main_df, intent_df], ignore_index=True)
+
+        return main_df
 
     def intents_to_df_cosine_prep(
         self,
