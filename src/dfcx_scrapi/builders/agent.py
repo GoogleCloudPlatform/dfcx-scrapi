@@ -83,8 +83,8 @@ class AgentBuilder:
             America/New_York, Europe/Paris.
           default_language_code (str):
             Required. Immutable. The default language of the agent as a
-            language tag. See `Language
-            Support <https://cloud.google.com/dialogflow/cx/docs/reference/language>`__
+            language tag. See `Language Support
+              <https://cloud.google.com/dialogflow/cx/docs/reference/language>`
             for a list of the currently supported language codes. This
             field cannot be updated.
           description (str):
@@ -93,8 +93,8 @@ class AgentBuilder:
             request is rejected.
           avatar_uri (str):
             The URI of the agent's avatar. Avatars are used throughout
-            the Dialogflow console and in the self-hosted `Web
-            Demo <https://cloud.google.com/dialogflow/docs/integrations/web-demo>`__
+            the Dialogflow console and in the self-hosted `Web Demo
+              <https://cloud.google.com/dialogflow/docs/integrations/web-demo>`
             integration.
 
         Returns:
@@ -162,7 +162,9 @@ class AgentBuilder:
 
         if supported_language_codes:
             if (isinstance(supported_language_codes, list) and
-                all((isinstance(lang, str) for lang in supported_language_codes))):
+                all(
+                    (isinstance(lang, str) for lang in supported_language_codes)
+                )):
                 self.proto_obj.supported_language_codes = supported_language_codes
             else:
                 raise ValueError(
@@ -183,7 +185,8 @@ class AgentBuilder:
         Args:
           security_settings (str):
             Name of the
-            [SecuritySettings][google.cloud.dialogflow.cx.v3beta1.SecuritySettings]
+            ``[SecuritySettings]
+              [google.cloud.dialogflow.cx.v3beta1.SecuritySettings]``
             reference for the agent.Format:
             ``projects/<Project ID>/locations/<Location ID>/
               securitySettings/<Security Settings ID>``.
@@ -216,14 +219,19 @@ class AgentBuilder:
 
         print(
             f"display_name: {self.proto_obj.display_name}"
-            f"time_zone: {self.proto_obj.time_zone}"
-            f"default_language_code: {self.proto_obj.default_language_code}"
-            f"description: {self.proto_obj.description}"
-            f"avatar_uri: {self.proto_obj.avatar_uri}"
-            f"enable_speech_adaptation: {self.proto_obj.speech_to_text_settings.enable_speech_adaptation}"
-            f"enable_spell_correction: {self.proto_obj.enable_spell_correction}"
-            f"supported_language_codes: {self.proto_obj.supported_language_codes}"
-            f"enable_stackdriver_logging: {self.proto_obj.advanced_settings.logging_settings.enable_stackdriver_logging}"
-            f"enable_interaction_logging: {self.proto_obj.advanced_settings.logging_settings.enable_interaction_logging}"
-            f"security_settings: {self.proto_obj.security_settings}"
+            f"\ntime_zone: {self.proto_obj.time_zone}"
+            f"\ndefault_language_code: {self.proto_obj.default_language_code}"
+            f"\ndescription: {self.proto_obj.description}"
+            f"\navatar_uri: {self.proto_obj.avatar_uri}"
+            "\nenable_speech_adaptation:"
+            f" {self.proto_obj.speech_to_text_settings.enable_speech_adaptation}"
+            "\nenable_spell_correction:"
+            f" {self.proto_obj.enable_spell_correction}"
+            "\nsupported_language_codes:"
+            f" {self.proto_obj.supported_language_codes}"
+            "\nenable_stackdriver_logging:"
+            f" {self.proto_obj.advanced_settings.logging_settings.enable_stackdriver_logging}"
+            "\nenable_interaction_logging:"
+            f" {self.proto_obj.advanced_settings.logging_settings.enable_interaction_logging}"
+            f"\nsecurity_settings: {self.proto_obj.security_settings}"
         )
