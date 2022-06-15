@@ -308,6 +308,63 @@ class IntentBuilder:
         return self.proto_obj
 
 
+    def show_basic_info(self):
+        """Shows the basic information of proto_obj."""
+        self._check_intent_exist()
+
+        labels = [
+            str(key) if key == val else f"{key}: {val}"
+            for key, val in self.proto_obj.labels.items()
+        ]
+        print(
+            f"display_name: {self.proto_obj.display_name}"
+            f"\ndescription: {self.proto_obj.description}"
+            f"\npriority: {self.proto_obj.priority}"
+            f"\nis_fallback: {self.proto_obj.is_fallback}"
+            f"\nlabels: {labels}"
+        )
+
+
+    def show_parameters(self):
+        """Shows the parameters of proto_obj."""
+        self._check_intent_exist()
+
+        for param in self.proto_obj.parameters:
+            print(
+                f"id: {str(param.id)}"
+                f"\n\tentity_type: {str(param.entity_type)}"
+                f"\n\tis_list: {bool(param.is_list)}"
+                f"\n\tredact: {bool(param.redact)}"
+            )
+
+
+    def show_training_phrases(self):
+        """Shows the training phrases of proto_obj."""
+        self._check_intent_exist()
+
+        for tp in self.proto_obj.training_phrases:
+            phrase = "".join([part.text for part in tp.parts])
+            annotations = {
+                part.text: part.parameter_id
+                for part in tp.parts
+                if part.parameter_id
+            }
+
+            print(f"\nphrase: {phrase}")
+            if annotations:
+                print(f"\nannotations: {annotations}")
+            print(f"repeat_count: {tp.repeat_count}")
+
+
+    def show_intent(self):
+        self.show_basic_info()
+        print("\n\n")
+        self.show_parameters()
+        print("\n\n")
+        self.show_training_phrases()
+
+
+
 def build_intent(display_name, phrases: List[str]):
     """build an intent from list of phrases plus meta"""
     tps = {
