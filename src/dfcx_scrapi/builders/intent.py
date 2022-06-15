@@ -129,6 +129,7 @@ class IntentBuilder:
             understanding an intent like its scope, content,
             result etc. Maximum character limit: 140
             characters.
+
         Returns:
           An Intent object stored in proto_obj
         """
