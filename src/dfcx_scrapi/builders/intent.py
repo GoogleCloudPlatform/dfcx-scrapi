@@ -388,17 +388,3 @@ class IntentBuilder:
         self.show_parameters()
         print("\n\n")
         self.show_training_phrases()
-
-
-
-def build_intent(display_name, phrases: List[str]):
-    """build an intent from list of phrases plus meta"""
-    tps = {
-        "text": row["text"] for row in phrases
-    }
-    intent = {
-        "display_name": display_name,
-        "training_phrases": tps
-    }
-    logging.info("intent %s", intent)
-    return intent
