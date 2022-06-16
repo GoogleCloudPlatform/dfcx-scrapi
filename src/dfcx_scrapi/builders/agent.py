@@ -24,8 +24,10 @@ class AgentBuilder:
 
 
     def __init__(self, obj: types.Agent = None):
-        if self.proto_obj:
+        if obj:
             self.load_agent(obj)
+        else:
+            self.proto_obj = None
 
 
     def _check_agent_exist(self):
