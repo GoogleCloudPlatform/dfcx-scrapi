@@ -26,8 +26,10 @@ class IntentBuilder:
 
 
     def __init__(self, obj: types.Intent = None):
-        if self.proto_obj:
+        if obj:
             self.load_intent(obj)
+        else:
+            self.proto_obj = None
 
 
     def _check_intent_exist(self):
