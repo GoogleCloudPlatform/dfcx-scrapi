@@ -75,12 +75,17 @@ class IntentBuilder:
         return True
 
 
-    def load_intent(self, obj: types.Intent) -> types.Intent:
+    def load_intent(
+        self, obj: types.Intent, overwrite: bool = False
+    ) -> types.Intent:
         """Load an existing intent to proto_obj for further uses.
 
         Args:
           obj (Intent):
             An existing Intent obj.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already 
+            contains an Intent.
 
         Returns:
           An Intent object stored in proto_obj
@@ -89,8 +94,15 @@ class IntentBuilder:
             raise ValueError(
                 "The object you're trying to load is not an Intent!"
             )
-        # self.proto_obj = copy.deepcopy(obj)
-        self.proto_obj = obj
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains an Intent."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+
+        if overwrite or not self.proto_obj:
+            # self.proto_obj = copy.deepcopy(obj)
+            self.proto_obj = obj
 
         return self.proto_obj
 
@@ -100,7 +112,8 @@ class IntentBuilder:
         display_name: str,
         priority: int = 500000,
         is_fallback: bool = False,
-        description: str = None
+        description: str = None,
+        overwrite: bool = False
     ) -> types.Intent:
         """Create an empty Intent.
 
@@ -131,16 +144,27 @@ class IntentBuilder:
             understanding an intent like its scope, content,
             result etc. Maximum character limit: 140
             characters.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already 
+            contains an Intent.
 
         Returns:
           An Intent object stored in proto_obj
         """
-        self.proto_obj = types.Intent(
-            display_name=display_name,
-            priority=priority,
-            is_fallback=is_fallback,
-            description=description
-        )
+
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains an Agent."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+
+        if overwrite or not self.proto_obj:
+            self.proto_obj = types.Intent(
+                display_name=display_name,
+                priority=priority,
+                is_fallback=is_fallback,
+                description=description
+            )
 
         return self.proto_obj
 
