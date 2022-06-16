@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import copy
-import logging
 from typing import List, Dict, Union
 
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -83,7 +81,7 @@ class IntentBuilder:
           obj (Intent):
             An existing Intent obj.
           overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already 
+            Overwrite the new proto_obj if proto_obj already
             contains an Intent.
 
         Returns:
@@ -100,7 +98,6 @@ class IntentBuilder:
             )
 
         if overwrite or not self.proto_obj:
-            # self.proto_obj = copy.deepcopy(obj)
             self.proto_obj = obj
 
         return self.proto_obj
@@ -144,7 +141,7 @@ class IntentBuilder:
             result etc. Maximum character limit: 140
             characters.
           overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already 
+            Overwrite the new proto_obj if proto_obj already
             contains an Intent.
 
         Returns:
