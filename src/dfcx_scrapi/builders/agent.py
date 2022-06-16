@@ -54,7 +54,7 @@ class AgentBuilder:
           obj (Agent):
             An existing Agent obj.
           overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already 
+            Overwrite the new proto_obj if proto_obj already
             contains an Agent.
 
         Returns:
@@ -113,7 +113,7 @@ class AgentBuilder:
               <https://cloud.google.com/dialogflow/docs/integrations/web-demo>`
             integration.
           overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already 
+            Overwrite the new proto_obj if proto_obj already
             contains an Agent.
 
         Returns:
@@ -151,15 +151,15 @@ class AgentBuilder:
         """Change the language and speech settings.
 
         Args:
-          supported_language_codes (List[str]):
-            The list of all languages supported by the agent
-            (except for the ``default_language_code``).
           enable_speech_adaptation (bool):
             Whether to use speech adaptation for speech
             recognition.
           enable_spell_correction (bool):
             Indicates if automatic spell correction is
             enabled in detect intent requests.
+          supported_language_codes (List[str]):
+            The list of all languages supported by the agent
+            (except for the ``default_language_code``).
 
         Returns:
           An Agent object stored in proto_obj
@@ -187,7 +187,8 @@ class AgentBuilder:
                 all(
                     (isinstance(lang, str) for lang in supported_language_codes)
                 )):
-                self.proto_obj.supported_language_codes = supported_language_codes
+                the_obj = self.proto_obj
+                the_obj.supported_language_codes = supported_language_codes
             else:
                 raise ValueError(
                     "enable_spell_correction should be a list of strings."
@@ -205,6 +206,12 @@ class AgentBuilder:
         """ Change the security and logging settings.
 
         Args:
+          enable_stackdriver_logging (bool):
+            If true, StackDriver logging is currently
+            enabled.
+          enable_interaction_logging (bool):
+            If true, DF Interaction logging is currently
+            enabled.
           security_settings (str):
             Name of the
             ``[SecuritySettings]
@@ -212,23 +219,17 @@ class AgentBuilder:
             reference for the agent.Format:
             ``projects/<Project ID>/locations/<Location ID>/
               securitySettings/<Security Settings ID>``.
-          enable_stackdriver_logging (bool):
-            If true, StackDriver logging is currently
-            enabled.
-          enable_interaction_logging (bool):
-            If true, DF Interaction logging is currently
-            enabled.
 
         Returns:
           An Agent object stored in proto_obj
         """
         self._check_agent_exist()
 
+        logs = self.proto_obj.advanced_settings.logging_settings
         if isinstance(enable_stackdriver_logging, bool):
-            self.proto_obj.advanced_settings.logging_settings.enable_stackdriver_logging = enable_stackdriver_logging
-            # self.proto_obj.enable_stackdriver_logging = enable_stackdriver_logging
+            logs.enable_stackdriver_logging = enable_stackdriver_logging
         if isinstance(enable_interaction_logging, bool):
-            self.proto_obj.advanced_settings.logging_settings.enable_interaction_logging = enable_interaction_logging
+            logs.enable_interaction_logging = enable_interaction_logging
         if security_settings and isinstance(security_settings, str):
             self.proto_obj.security_settings = security_settings
 
@@ -239,6 +240,8 @@ class AgentBuilder:
         """Shows the information of proto_obj."""
         self._check_agent_exist()
 
+        logs = self.proto_obj.advanced_settings.logging_settings
+        speech_2_txt = self.proto_obj.speech_to_text_settings
         print(
             f"display_name: {self.proto_obj.display_name}"
             f"\ntime_zone: {self.proto_obj.time_zone}"
@@ -246,14 +249,14 @@ class AgentBuilder:
             f"\ndescription: {self.proto_obj.description}"
             f"\navatar_uri: {self.proto_obj.avatar_uri}"
             "\nenable_speech_adaptation:"
-            f" {self.proto_obj.speech_to_text_settings.enable_speech_adaptation}"
+            f" {speech_2_txt.enable_speech_adaptation}"
             "\nenable_spell_correction:"
             f" {self.proto_obj.enable_spell_correction}"
             "\nsupported_language_codes:"
             f" {self.proto_obj.supported_language_codes}"
             "\nenable_stackdriver_logging:"
-            f" {self.proto_obj.advanced_settings.logging_settings.enable_stackdriver_logging}"
+            f" {logs.enable_stackdriver_logging}"
             "\nenable_interaction_logging:"
-            f" {self.proto_obj.advanced_settings.logging_settings.enable_interaction_logging}"
+            f" {logs.enable_interaction_logging}"
             f"\nsecurity_settings: {self.proto_obj.security_settings}"
         )
