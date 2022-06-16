@@ -43,12 +43,17 @@ class AgentBuilder:
             )
 
 
-    def load_agent(self, obj: types.Agent) -> types.Agent:
+    def load_agent(
+        self, obj: types.Agent, overwrite: bool = False
+    ) -> types.Agent:
         """Load an existing agent to proto_obj for further uses.
 
         Args:
           obj (Agent):
             An existing Agent obj.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already 
+            contains an Agent.
 
         Returns:
           An Agent object stored in proto_obj
@@ -57,8 +62,16 @@ class AgentBuilder:
             raise ValueError(
                 "The object you're trying to load is not an Agent!"
             )
-        # self.proto_obj = copy.deepcopy(obj)
-        self.proto_obj = obj
+
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains an Agent."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+
+        if overwrite or not self.proto_obj:
+            # self.proto_obj = copy.deepcopy(obj)
+            self.proto_obj = obj
 
         return self.proto_obj
 
@@ -70,6 +83,7 @@ class AgentBuilder:
         default_language_code: str = "en",
         description: str = None,
         avatar_uri: str = None,
+        overwrite: bool = False
     ) -> types.Agent:
         """Create an empty Agent.
 
@@ -96,26 +110,32 @@ class AgentBuilder:
             the Dialogflow console and in the self-hosted `Web Demo
               <https://cloud.google.com/dialogflow/docs/integrations/web-demo>`
             integration.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already 
+            contains an Agent.
 
         Returns:
           An Agent object stored in proto_obj
         """
-        if (
-            (description and not isinstance(description, str)) or
-            (avatar_uri and not isinstance(avatar_uri, str))
-        ):
+        if ((description and not isinstance(description, str)) or
+            (avatar_uri and not isinstance(avatar_uri, str))):
             raise ValueError(
                 "description and avatar_uri should be string."
             )
-
-        self.proto_obj = types.Agent(
-            display_name=display_name,
-            time_zone=time_zone,
-            default_language_code=default_language_code,
-            description=description,
-            avatar_uri=avatar_uri,
-            locked=False,
-        )
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains an Agent."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+        if overwrite or not self.proto_obj:
+            self.proto_obj = types.Agent(
+                display_name=display_name,
+                time_zone=time_zone,
+                default_language_code=default_language_code,
+                description=description,
+                avatar_uri=avatar_uri,
+                locked=False,
+            )
 
         return self.proto_obj
 
