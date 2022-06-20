@@ -220,7 +220,7 @@ class SemanticClustering:
                 )
                 clustered_this_round.insert(0, "eps", eps)
                 clustered_this_round.insert(0, "round", cluster_round)
-                clustered = clustered.append(clustered_this_round)
+                clustered = pd.concat([clustered, clustered_this_round])
                 unclustered = cluster_attempt.copy()[
                     cluster_attempt["cluster"] == -1
                 ]
@@ -247,9 +247,7 @@ class SemanticClustering:
             return clustered
 
         unclustered = unclustered.drop(columns="cluster")
-        clustered = clustered.sort_values(by="cluster", ascending=True).append(
-            unclustered
-        )
+        clustered = pd.concat([clustered.sort_values(by="cluster", ascending=True), unclustered])
 
         if cluster_round > max_rounds:
             logging.info("max clutering rounds reached before stop threshold")

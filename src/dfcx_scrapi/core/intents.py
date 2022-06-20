@@ -110,7 +110,8 @@ class Intents(ScrapiBase):
                 for train_phrase in train_phrases:
                     part_id = 0
                     for part in train_phrase.parts:
-                        tp_df = tp_df.append(
+                        tp_df = pd.concat([
+                            tp_df,
                             pd.DataFrame(
                                 columns=[
                                     "display_name",
@@ -135,7 +136,7 @@ class Intents(ScrapiBase):
                                     ]
                                 ],
                             )
-                        )
+                        ])
                         part_id += 1
                     tp_id += 1
 
@@ -154,7 +155,8 @@ class Intents(ScrapiBase):
                 if len(params) > 0:
                     param_df = pd.DataFrame()
                     for param in params:
-                        param_df = param_df.append(
+                        param_df = pd.concat([
+                            param_df,
                             pd.DataFrame(
                                 columns=["display_name", "id", "entity_type"],
                                 data=[
@@ -165,7 +167,7 @@ class Intents(ScrapiBase):
                                     ]
                                 ],
                             )
-                        )
+                        ])
                     return {"phrases": phrases, "parameters": param_df}
 
                 else:
@@ -295,12 +297,14 @@ class Intents(ScrapiBase):
         ]
 
         updated_training_phrases_df = untouched.copy()
-        updated_training_phrases_df = updated_training_phrases_df.append(
+        updated_training_phrases_df = pd.concat([
+            updated_training_phrases_df,
             false_additions
-        )
-        updated_training_phrases_df = updated_training_phrases_df.append(
+        ])
+        updated_training_phrases_df = pd.concat([
+            updated_training_phrases_df,
             true_additions
-        )
+        ])
         updated_training_phrases_df = updated_training_phrases_df.drop(
             columns=["action"]
         )
@@ -321,7 +325,7 @@ class Intents(ScrapiBase):
                     axis=1,
                 ),
             )
-            actions_taken = actions_taken.append(true_additions)
+            actions_taken = pd.concat([actions_taken, true_additions])
 
         if false_additions.empty is False:
             false_additions.insert(len(false_additions.columns), "completed", 0)
@@ -338,7 +342,7 @@ class Intents(ScrapiBase):
                     axis=1,
                 ),
             )
-            actions_taken = actions_taken.append(false_additions)
+            actions_taken = pd.concat([actions_taken, false_additions])
 
         if true_deletions.empty is False:
             true_deletions.insert(len(true_deletions.columns), "completed", 1)
@@ -355,7 +359,7 @@ class Intents(ScrapiBase):
                     axis=1,
                 ),
             )
-            actions_taken = actions_taken.append(true_deletions)
+            actions_taken = pd.concat([actions_taken, true_deletions])
 
         if false_deletions.empty is False:
             false_deletions.insert(len(false_deletions.columns), "completed", 0)
@@ -372,7 +376,7 @@ class Intents(ScrapiBase):
                     axis=1,
                 ),
             )
-            actions_taken = actions_taken.append(false_deletions)
+            actions_taken = pd.concat([actions_taken, false_deletions])
 
         actionable_intents = list(
             set(actions_taken[actions_taken["completed"] == 1]["display_name"])
@@ -654,7 +658,7 @@ class Intents(ScrapiBase):
                     continue
 
                 data_frame = self.intent_proto_to_dataframe(obj, mode=mode)
-                main_frame = main_frame.append(data_frame)
+                main_frame = pd.concat([main_frame, data_frame])
             main_frame = main_frame.sort_values(
                 ["display_name", "training_phrase"])
             return main_frame
@@ -666,10 +670,11 @@ class Intents(ScrapiBase):
                 if (intent_subset) and (obj.display_name not in intent_subset):
                     continue
                 output = self.intent_proto_to_dataframe(obj, mode="advanced")
-                master_phrases = master_phrases.append(output["phrases"])
-                master_parameters = master_parameters.append(
+                master_phrases = pd.concat([master_phrases, output["phrases"]])
+                master_parameters = pd.concat([
+                    master_parameters,
                     output["parameters"]
-                )
+                ])
             return {"phrases": master_phrases, "parameters": master_parameters}
 
         else:

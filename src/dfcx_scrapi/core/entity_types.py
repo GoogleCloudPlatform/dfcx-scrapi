@@ -77,9 +77,7 @@ class EntityTypes(ScrapiBase):
                 entity_type_dict["entity_value"] = entity.value
                 for synonym in entity.synonyms:
                     entity_type_dict["synonyms"] = synonym
-                    main_df = main_df.append(
-                        entity_type_dict, ignore_index=True
-                    )
+                    main_df = pd.concat([main_df, entity_type_dict], ignore_index=True)
 
             return main_df
 
@@ -104,15 +102,11 @@ class EntityTypes(ScrapiBase):
                 entity_type_dict["entity_value"] = entity.value
                 for synonym in entity.synonyms:
                     entity_type_dict["synonyms"] = synonym
-                    main_df = main_df.append(
-                        entity_type_dict, ignore_index=True
-                    )
+                    main_df = pd.concat([main_df, entity_type_dict], ignore_index=True)
 
             for excluded_phrase in obj.excluded_phrases:
                 excluded_phrases_dict["excluded_phrase"] = excluded_phrase.value
-                excluded_phrases_df = excluded_phrases_df.append(
-                    excluded_phrases_dict, ignore_index=True
-                )
+                excluded_phrases_df = pd.concat([excluded_phrases_df, excluded_phrases_dict], ignore_index=True)
 
             return {
                 "entity_types": main_df, "excluded_phrases": excluded_phrases_df
@@ -152,7 +146,7 @@ class EntityTypes(ScrapiBase):
                 single_entity_df = self.entity_type_proto_to_dataframe(
                     obj, mode=mode
                 )
-                main_df = main_df.append(single_entity_df)
+                main_df = pd.concat([main_df, single_entity_df])
             main_df = main_df.sort_values(
                 ["display_name", "entity_value"])
             return main_df
@@ -167,10 +161,8 @@ class EntityTypes(ScrapiBase):
                 single_entity_dict = self.entity_type_proto_to_dataframe(
                     obj, mode=mode
                 )
-                main_df = main_df.append(single_entity_dict["entity_types"])
-                excluded_phrases_df = excluded_phrases_df.append(
-                    single_entity_dict["excluded_phrases"]
-                )
+                main_df = pd.concat([main_df, single_entity_dict["entity_types"]])
+                excluded_phrases_df = pd.concat([excluded_phrases_df, single_entity_dict["excluded_phrases"]])
             type_map = {
                 "auto_expansion_mode": bool,
                 "fuzzy_extraction": bool,

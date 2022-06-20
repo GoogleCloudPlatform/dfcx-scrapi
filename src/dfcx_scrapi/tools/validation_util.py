@@ -90,7 +90,7 @@ class ValidationUtil(ScrapiBase):
                         ]
                         i += 1
 
-                dataframe = dataframe.append(temp_df)
+                dataframe = pd.concat([dataframe, temp_df])
                 max_cols_old = 0
 
         return dataframe

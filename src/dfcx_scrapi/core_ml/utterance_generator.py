@@ -114,7 +114,7 @@ class UtteranceGenerator:
             iter_frame["synthetic_phrases"] = synthetic_phrases
             for col in origin_utterances.columns:
                 iter_frame[col] = row[col]
-            synthetic_phrases_df = synthetic_phrases_df.append(iter_frame)
+            synthetic_phrases_df = pd.concat([synthetic_phrases_df, iter_frame])
             ordered_cols = [
                 "id",
                 "synthetic_instances",
