@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import copy
 from typing import List, Union
 
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -45,13 +44,16 @@ class EntityTypeBuilder:
 
 
     def load_entity_type(
-        self, obj: types.EntityType
+        self, obj: types.EntityType, overwrite: bool = False
     ) -> types.EntityType:
         """Load an existing EntityType to proto_obj for further uses.
 
         Args:
           obj (EntityType):
             An existing EntityType obj.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains an EntityType.
 
         Returns:
           An EntityType object stored in proto_obj
@@ -60,8 +62,14 @@ class EntityTypeBuilder:
             raise ValueError(
                 "The object you're trying to load is not an EntityType!"
             )
-        # self.proto_obj = copy.deepcopy(obj)
-        self.proto_obj = obj
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains an EntityType."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+
+        if overwrite or not self.proto_obj:
+            self.proto_obj = obj
 
         return self.proto_obj
 
@@ -73,13 +81,14 @@ class EntityTypeBuilder:
         auto_expansion_mode: int = 0,
         enable_fuzzy_extraction: bool = False,
         redact: bool = False,
+        overwrite: bool = False
     ) -> types.EntityType:
         """Create an empty EntityType.
 
         Args:
           display_name (str)
             The human-readable name of the
-              entity type, unique within the agent.
+            entity type, unique within the agent.
           kind (int)
             Represents kinds of entities.
               0 = KIND_UNSPECIFIED
@@ -88,9 +97,9 @@ class EntityTypeBuilder:
               3 = KIND_REGEXP
           auto_expansion_mode (Optional int)
             Indicates whether the entity type can be
-              automatically expanded.
-            AUTO_EXPANSION_MODE_UNSPECIFIED = 0
-            AUTO_EXPANSION_MODE_DEFAULT = 1
+            automatically expanded.
+              AUTO_EXPANSION_MODE_UNSPECIFIED = 0
+              AUTO_EXPANSION_MODE_DEFAULT = 1
           enable_fuzzy_extraction (bool):
             Enables fuzzy entity extraction during
             classification.
@@ -100,17 +109,26 @@ class EntityTypeBuilder:
             enabled, page parameters and intent parameters
             referring to the entity type will be replaced by
             parameter name during logging.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains an EntityType.
 
         Returns:
           An EntityType object stored in proto_obj
         """
-        self.proto_obj = types.EntityType(
-            display_name=display_name,
-            kind=kind,
-            auto_expansion_mode=auto_expansion_mode,
-            enable_fuzzy_extraction=enable_fuzzy_extraction,
-            redact=redact
-        )
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains an EntityType."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+        if overwrite or not self.proto_obj:
+            self.proto_obj = types.EntityType(
+                display_name=display_name,
+                kind=kind,
+                auto_expansion_mode=auto_expansion_mode,
+                enable_fuzzy_extraction=enable_fuzzy_extraction,
+                redact=redact
+            )
 
         return self.proto_obj
 
