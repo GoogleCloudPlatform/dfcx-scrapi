@@ -137,10 +137,11 @@ class EntityTypeBuilder:
         self, phrase: Union[str, List[str]]
     ) -> types.EntityType:
         """Add one or more phrases to be excluded in the EntityType
+
         Args:
           phrase (str | List[str]):
             A single phrase as a string
-              or multiple phrases as a list of strings
+            or multiple phrases as a list of strings
 
         Returns:
           An EntityType object stored in proto_obj
@@ -172,7 +173,24 @@ class EntityTypeBuilder:
     def add_entity(
         self, value: str, synonyms: List[str] = None
     ) -> types.EntityType:
-        """docs here!"""
+        """Add an entity to the EntityType stored in proto_obj
+
+        Args:
+          value (str):
+            Required. The primary value associated with this entity
+            entry. For example, if the entity type is *vegetable*, the
+            value could be *scallions*.
+            For ``KIND_MAP`` entity types:
+            -  A canonical value to be used in place of synonyms.
+          synonyms (List[str]):
+            Required only for ``KIND_MAP``.
+            A collection of value synonyms. For example, if
+            the entity type is *vegetable*, and ``value`` is
+            *scallions*, a synonym could be *green onions*.
+
+        Returns:
+          An EntityType object stored in proto_obj
+        """
         self._check_entity_type_exist()
 
         if not isinstance(value, str):
