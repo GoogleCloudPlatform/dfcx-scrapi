@@ -29,6 +29,30 @@ class AgentBuilder:
             self.load_agent(obj)
 
 
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_agent_exist()
+
+        logs = self.proto_obj.advanced_settings.logging_settings
+        speech_2_txt = self.proto_obj.speech_to_text_settings
+        return (f"display_name: {self.proto_obj.display_name}"
+            f"\ntime_zone: {self.proto_obj.time_zone}"
+            f"\ndefault_language_code: {self.proto_obj.default_language_code}"
+            f"\ndescription: {self.proto_obj.description}"
+            f"\navatar_uri: {self.proto_obj.avatar_uri}"
+            "\nenable_speech_adaptation:"
+            f" {speech_2_txt.enable_speech_adaptation}"
+            "\nenable_spell_correction:"
+            f" {self.proto_obj.enable_spell_correction}"
+            "\nsupported_language_codes:"
+            f" {self.proto_obj.supported_language_codes}"
+            "\nenable_stackdriver_logging:"
+            f" {logs.enable_stackdriver_logging}"
+            "\nenable_interaction_logging:"
+            f" {logs.enable_interaction_logging}"
+            f"\nsecurity_settings: {self.proto_obj.security_settings}")
+
+
     def _check_agent_exist(self):
         """Check if the proto_obj exists otherwise raise an error."""
 
@@ -71,7 +95,6 @@ class AgentBuilder:
             )
 
         if overwrite or not self.proto_obj:
-            # self.proto_obj = copy.deepcopy(obj)
             self.proto_obj = obj
 
         return self.proto_obj
@@ -236,26 +259,7 @@ class AgentBuilder:
 
 
     def show_agent_info(self):
-        """Shows the information of proto_obj."""
+        """Shows the information of the agent."""
         self._check_agent_exist()
 
-        logs = self.proto_obj.advanced_settings.logging_settings
-        speech_2_txt = self.proto_obj.speech_to_text_settings
-        print(
-            f"display_name: {self.proto_obj.display_name}"
-            f"\ntime_zone: {self.proto_obj.time_zone}"
-            f"\ndefault_language_code: {self.proto_obj.default_language_code}"
-            f"\ndescription: {self.proto_obj.description}"
-            f"\navatar_uri: {self.proto_obj.avatar_uri}"
-            "\nenable_speech_adaptation:"
-            f" {speech_2_txt.enable_speech_adaptation}"
-            "\nenable_spell_correction:"
-            f" {self.proto_obj.enable_spell_correction}"
-            "\nsupported_language_codes:"
-            f" {self.proto_obj.supported_language_codes}"
-            "\nenable_stackdriver_logging:"
-            f" {logs.enable_stackdriver_logging}"
-            "\nenable_interaction_logging:"
-            f" {logs.enable_interaction_logging}"
-            f"\nsecurity_settings: {self.proto_obj.security_settings}"
-        )
+        print(self.__str__())
