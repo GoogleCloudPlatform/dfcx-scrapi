@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 from typing import List, Dict, Union
 
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -29,6 +30,15 @@ class IntentBuilder:
             self.load_intent(obj)
 
 
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_intent_exist()
+
+        return (f"{self._show_basic_info()}"
+            f"\n\n{self._show_parameters()}"
+            f"\n\n{self._show_training_phrases()}")
+
+
     def _check_intent_exist(self):
         """Check if the proto_obj exists otherwise raise an error."""
 
@@ -42,6 +52,117 @@ class IntentBuilder:
                 "proto_obj is not an Intent type."
                 "\nPlease create or load the correct type to continue."
             )
+
+
+    def _show_basic_info(self) -> str:
+        """String representation for the basic information of proto_obj."""
+        self._check_intent_exist()
+
+        labels = [
+            str(key) if key == val else f"{key}: {val}"
+            for key, val in self.proto_obj.labels.items()
+        ]
+        return (f"display_name: {self.proto_obj.display_name}"
+            f"\ndescription: {self.proto_obj.description}"
+            f"\npriority: {self.proto_obj.priority}"
+            f"\nis_fallback: {self.proto_obj.is_fallback}"
+            f"\nlabels: {labels}")
+
+
+    def _show_parameters(self) -> str:
+        """String representation for the parameters of proto_obj."""
+        self._check_intent_exist()
+
+        return "\n".join([
+            (f"parameter_id: {str(param.id)}"
+            f"\nentity_type: {str(param.entity_type)}"
+            f"\n\tis_list: {bool(param.is_list)}"
+            f"\n\tredact: {bool(param.redact)}")
+            for param in self.proto_obj.parameters
+        ])
+
+
+    def _show_training_phrases(self, repeat_count: int = None) -> str:
+        """String representation for the training phrases of proto_obj."""
+        self._check_intent_exist()
+
+        phrases = []
+        for tp in self.proto_obj.training_phrases:
+            if repeat_count and tp.repeat_count != repeat_count:
+                continue
+            phrase = "".join([part.text for part in tp.parts])
+            annotations = {
+                part.text: part.parameter_id
+                for part in tp.parts
+                if part.parameter_id
+            }
+            phrases.append(
+                f"phrase: {phrase}"
+                f"\nannotations: {str(annotations)}"
+                f"\n\trepeat_count: {tp.repeat_count}"
+            )
+
+        return "\n".join(phrases)
+
+
+    def show_intent(
+        self, mode: str = "whole", repeat_count: int = None
+    ) -> None:
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the intent to show.
+              Options:
+              ['basic', 'parameters', 'phrases' or 'training phrases', 'whole']
+          repeat_count (int):
+            Indicates how many times the training phrases
+            was added to the intent.
+        """
+        self._check_intent_exist()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode == "parameters":
+            print(self._show_parameters())
+        elif mode in ["phrases", "training phrases"]:
+            print(self._show_training_phrases(repeat_count=repeat_count))
+        elif mode == "whole":
+            print(self.__str__())
+        else:
+            raise ValueError(
+                "mode should be in"
+                " ['basic', 'parameters',"
+                " 'phrases', 'training phrases', 'whole']"
+            )
+
+
+    def show_stats(self):
+        """Provide some stats about the intent."""
+        repeat_count_dict = defaultdict(lambda: 0)
+        annotated_count = 0
+        for tp in self.proto_obj.training_phrases:
+            repeat_count_dict[tp.repeat_count] += 1
+
+            for part in tp.parts:
+                if part.parameter_id:
+                    annotated_count += 1
+                    break
+
+        phrases = (
+            "# of training phrases:"
+            f" {len(self.proto_obj.training_phrases)}"
+        )
+        params = f"# of parameters: {len(self.proto_obj.parameters)}"
+        annotated = f"# of annotated training phrases: {annotated_count}"
+        repeat_count_srt = "\n".join([
+            "# of training phrases with repeat count"
+            f" {i}: {repeat_count_dict[i]}"
+            for i in sorted(repeat_count_dict.keys())
+        ])
+
+        out = f"{phrases}\n{params}\n{annotated}\n{repeat_count_srt}"
+        print(out)
 
 
     def parameter_checking(self) -> bool:
@@ -328,59 +449,3 @@ class IntentBuilder:
             )
 
         return self.proto_obj
-
-
-    def show_basic_info(self):
-        """Shows the basic information of proto_obj."""
-        self._check_intent_exist()
-
-        labels = [
-            str(key) if key == val else f"{key}: {val}"
-            for key, val in self.proto_obj.labels.items()
-        ]
-        print(
-            f"display_name: {self.proto_obj.display_name}"
-            f"\ndescription: {self.proto_obj.description}"
-            f"\npriority: {self.proto_obj.priority}"
-            f"\nis_fallback: {self.proto_obj.is_fallback}"
-            f"\nlabels: {labels}"
-        )
-
-
-    def show_parameters(self):
-        """Shows the parameters of proto_obj."""
-        self._check_intent_exist()
-
-        for param in self.proto_obj.parameters:
-            print(
-                f"id: {str(param.id)}"
-                f"\n\tentity_type: {str(param.entity_type)}"
-                f"\n\tis_list: {bool(param.is_list)}"
-                f"\n\tredact: {bool(param.redact)}"
-            )
-
-
-    def show_training_phrases(self):
-        """Shows the training phrases of proto_obj."""
-        self._check_intent_exist()
-
-        for tp in self.proto_obj.training_phrases:
-            phrase = "".join([part.text for part in tp.parts])
-            annotations = {
-                part.text: part.parameter_id
-                for part in tp.parts
-                if part.parameter_id
-            }
-
-            print(f"\nphrase: {phrase}")
-            if annotations:
-                print(f"\nannotations: {annotations}")
-            print(f"repeat_count: {tp.repeat_count}")
-
-
-    def show_intent(self):
-        self.show_basic_info()
-        print("\n\n")
-        self.show_parameters()
-        print("\n\n")
-        self.show_training_phrases()
