@@ -24,7 +24,8 @@ class EntityTypeBuilder:
     """Base Class for CX EntityType builder."""
 
     def __init__(self, obj: types.EntityType = None):
-        if self.proto_obj:
+        self.proto_obj = None
+        if obj:
             self.load_entity_type(obj)
 
 
