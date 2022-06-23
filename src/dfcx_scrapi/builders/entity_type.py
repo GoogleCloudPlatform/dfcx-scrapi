@@ -61,7 +61,7 @@ class EntityTypeBuilder:
         return f"excluded phrases:\n\t{excluded_phrases}"
 
 
-    def _show_entities(self):
+    def _show_entities(self) -> str:
         """Shows the entities of proto_obj."""
         self._check_entity_type_exist()
 
