@@ -28,6 +28,77 @@ class EntityTypeBuilder:
             self.load_entity_type(obj)
 
 
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_entity_type_exist()
+
+        return (f"{self._show_entity_type_basic_info()}"
+            f"\n{self._show_excluded_phrases()}"
+            f"\n{self._show_entities()}")
+
+
+    def _show_entity_type_basic_info(self) -> str:
+        """Shows the information of proto_obj."""
+        self._check_entity_type_exist()
+
+        return (f"display_name: {self.proto_obj.display_name}"
+            f"\nkind: {self.proto_obj.kind.name}"
+            f"\nauto_expansion_mode: {self.proto_obj.auto_expansion_mode}"
+            "\nenable_fuzzy_extraction:"
+            f" {self.proto_obj.enable_fuzzy_extraction}"
+            f"\nredact: {self.proto_obj.redact}")
+
+
+    def _show_excluded_phrases(self) -> str:
+        """Shows the excluded phrases of proto_obj."""
+        self._check_entity_type_exist()
+
+        excluded_phrases = "\n\t".join([
+            phrase.value
+            for phrase in self.proto_obj.excluded_phrases
+        ])
+
+        return f"excluded phrases:\n\t{excluded_phrases}"
+
+
+    def _show_entities(self):
+        """Shows the entities of proto_obj."""
+        self._check_entity_type_exist()
+
+        entities =  "\n".join([
+            f"  {entity.value}:\n\t{','.join(entity.synonyms)}"
+            for entity in self.proto_obj.entities
+        ])
+
+        return f"entities:\n{entities}"
+
+
+    def show_entity_type(self, mode: str = "whole"):
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the intent to show.
+              Options:
+              ['basic', 'entities', 'excluded phrases', 'whole']
+        """
+        self._check_entity_type_exist()
+
+        if mode == "basic":
+            print(self._show_entity_type_basic_info())
+        elif mode == "entities":
+            print(self._show_entities())
+        elif mode == "excluded phrases":
+            print(self._show_excluded_phrases())
+        elif mode == "whole":
+            print(self.__str__())
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'entities', 'excluded phrases', 'whole']"
+            )
+
+
     def _check_entity_type_exist(self):
         """Check if the proto_obj exists otherwise raise an error."""
 
@@ -224,19 +295,3 @@ class EntityTypeBuilder:
             )
 
         return self.proto_obj
-
-
-    def show_entity_type_info(self):
-        """Shows the information of proto_obj."""
-        self._check_entity_type_exist()
-
-        print(
-            f"display_name: {self.proto_obj.display_name}"
-            f"\nkind: {self.proto_obj.kind.name}"
-            f"\nauto_expansion_mode: {self.proto_obj.auto_expansion_mode}"
-            "\nenable_fuzzy_extraction:"
-            f" {self.proto_obj.enable_fuzzy_extraction}"
-            f"\nredact: {self.proto_obj.redact}"
-            # Excluded Phrases
-            # Entities
-        )
