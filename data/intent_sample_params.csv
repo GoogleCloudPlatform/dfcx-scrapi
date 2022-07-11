@@ -1,0 +1,2 @@
+display_name,id,entity_type
+head_intent.order_pizza,numberOfPizza,projects/-/locations/-/agents/-/entityTypes/sys.number

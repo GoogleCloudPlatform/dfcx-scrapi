@@ -266,10 +266,11 @@ class DataframeFunctions(ScrapiBase):
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
+                    param_id = row["parameter_id"]
                     part = {
                         "text": row["text"],
-                        "parameter_id": row["parameter_id"],
-                    }
+                        "parameter_id": None if pd.isna(param_id) else param_id,
+                }
                     parts.append(part)
 
                 training_phrase = {"parts": parts, "repeat_count": 1, "id": ""}
@@ -586,9 +587,10 @@ class DataframeFunctions(ScrapiBase):
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
+                    param_id = row["parameter_id"]
                     part = {
                         "text": row["text"],
-                        "parameter_id": row["parameter_id"],
+                        "parameter_id": None if pd.isna(param_id) else param_id,
                     }
                     parts.append(part)
 

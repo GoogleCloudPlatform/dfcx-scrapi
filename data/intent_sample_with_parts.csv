@@ -1,0 +1,9 @@
+display_name,training_phrase,part,text,parameter_id
+head_intent.order_pizza,0,0,I want to order a pizza,
+head_intent.order_pizza,1,0,I\'d like a cheese pizza with pepporoni please!,
+head_intent.order_pizza,2,0,A slice of cheese with extra basil,
+head_intent.order_pizza,3,0,2 ,numberOfPizza
+head_intent.order_pizza,3,1,large thin crust extra pepp add olives,
+head_intent.order_pizza,4,0,I need to place an order for ,
+head_intent.order_pizza,4,1,15 ,numberOfPizza
+head_intent.order_pizza,4,2,large cheese pizzas for a birthday party!,
