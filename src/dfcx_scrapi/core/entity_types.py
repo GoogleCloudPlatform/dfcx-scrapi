@@ -77,16 +77,17 @@ class EntityTypes(ScrapiBase):
                 entity_type_dict["entity_value"] = entity.value
                 for synonym in entity.synonyms:
                     entity_type_dict["synonyms"] = synonym
-                    main_df = pd.concat([main_df, entity_type_dict], ignore_index=True)
+                    main_df = pd.concat(
+                        [main_df, entity_type_dict], ignore_index=True)
 
             return main_df
 
         elif mode == "advanced":
 
             main_df = pd.DataFrame()
-            excluded_phrases_df = pd.DataFrame()
+            excl_phrases_df = pd.DataFrame()
 
-            excluded_phrases_dict = {
+            excl_phrases_dict = {
                 "entity_type_id": obj.name,
                 "display_name": obj.display_name,
             }
@@ -102,14 +103,16 @@ class EntityTypes(ScrapiBase):
                 entity_type_dict["entity_value"] = entity.value
                 for synonym in entity.synonyms:
                     entity_type_dict["synonyms"] = synonym
-                    main_df = pd.concat([main_df, entity_type_dict], ignore_index=True)
+                    main_df = pd.concat(
+                        [main_df, entity_type_dict], ignore_index=True)
 
             for excluded_phrase in obj.excluded_phrases:
-                excluded_phrases_dict["excluded_phrase"] = excluded_phrase.value
-                excluded_phrases_df = pd.concat([excluded_phrases_df, excluded_phrases_dict], ignore_index=True)
+                excl_phrases_dict["excluded_phrase"] = excluded_phrase.value
+                excl_phrases_df = pd.concat(
+                    [excl_phrases_df, excl_phrases_dict], ignore_index=True)
 
             return {
-                "entity_types": main_df, "excluded_phrases": excluded_phrases_df
+                "entity_types": main_df, "excluded_phrases": excl_phrases_df
             }
 
         else:
@@ -153,7 +156,7 @@ class EntityTypes(ScrapiBase):
 
         elif mode == "advanced":
             main_df = pd.DataFrame()
-            excluded_phrases_df = pd.DataFrame()
+            excl_phrases_df = pd.DataFrame()
             for obj in entity_types:
                 if (entity_type_subset and
                         obj.display_name not in entity_type_subset):
@@ -161,8 +164,10 @@ class EntityTypes(ScrapiBase):
                 single_entity_dict = self.entity_type_proto_to_dataframe(
                     obj, mode=mode
                 )
-                main_df = pd.concat([main_df, single_entity_dict["entity_types"]])
-                excluded_phrases_df = pd.concat([excluded_phrases_df, single_entity_dict["excluded_phrases"]])
+                main_df = pd.concat(
+                    [main_df, single_entity_dict["entity_types"]])
+                excl_phrases_df = pd.concat(
+                    [excl_phrases_df, single_entity_dict["excluded_phrases"]])
             type_map = {
                 "auto_expansion_mode": bool,
                 "fuzzy_extraction": bool,
@@ -171,7 +176,7 @@ class EntityTypes(ScrapiBase):
             main_df = main_df.astype(type_map)
 
             return {
-                "entity_types": main_df, "excluded_phrases": excluded_phrases_df
+                "entity_types": main_df, "excluded_phrases": excl_phrases_df
             }
 
         else:

@@ -247,7 +247,8 @@ class SemanticClustering:
             return clustered
 
         unclustered = unclustered.drop(columns="cluster")
-        clustered = pd.concat([clustered.sort_values(by="cluster", ascending=True), unclustered])
+        clustered = pd.concat(
+            [clustered.sort_values(by="cluster", ascending=True), unclustered])
 
         if cluster_round > max_rounds:
             logging.info("max clutering rounds reached before stop threshold")

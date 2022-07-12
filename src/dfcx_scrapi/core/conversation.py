@@ -81,7 +81,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.restart()
         self.flows = flows.Flows(creds=self.creds)
         self.pages = pages.Pages(creds=self.creds)
-    
+
     @staticmethod
     def _get_match_type_from_map(match_type: int):
         match_type_map = {
@@ -581,7 +581,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             self.progress_bar(start, test_set.shape[0])
             time.sleep(rate_limit)
         self.progress_bar(test_set.shape[0], test_set.shape[0])
-        
+
         result = self._unpack_match(result)
         return result
 
@@ -591,24 +591,26 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             df: dataframe containing a column named match of types.Match
         Returns:
             a copy of df with columns match_type, confidence, parameters_set,
-            and detected_intent instead of match. 
+            and detected_intent instead of match.
         """
         df = (
             df
             .copy()
             .assign(
-                match_type = lambda df: df.match.apply(attrgetter('match_type._name_')),
-                confidence = lambda df: df.match.apply(attrgetter('confidence')),
-                parameters_set = lambda df: df.match.apply(attrgetter('parameters')),
-                detected_intent = lambda df: df.match.apply(attrgetter('intent.display_name'))
+                match_type = lambda df: df.match.apply(
+                    attrgetter("match_type._name_")),
+                confidence = lambda df: df.match.apply(
+                    attrgetter("confidence")),
+                parameters_set = lambda df: df.match.apply(
+                    attrgetter("parameters")),
+                detected_intent = lambda df: df.match.apply(
+                    attrgetter("intent.display_name"))
             )
             .assign(
                 parameters_set = lambda df: df.parameters_set.apply(
-                    lambda p: self.recurse_proto_marshal_to_dict(p) if p else '')
-
+                    lambda p: self.recurse_proto_marshal_to_dict(
+                        p) if p else "")
             )
-            .drop(columns='match')
+            .drop(columns="match")
         )
         return df
-    
-
