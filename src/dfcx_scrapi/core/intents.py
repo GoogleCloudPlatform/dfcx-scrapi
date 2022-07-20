@@ -68,11 +68,11 @@ class Intents(ScrapiBase):
         """intents to dataframe
 
         Args:
-          obj, intent protobuf object
-          mode: (Optional) basic returns display name and training phrase as
-            plain text.
-          Advanced returns training phrase and parameters df broken out by
-            parts.
+          obj (Intent protobuf)
+          mode (str):
+            basic returns display name and training phrase as plain text.
+            advanced returns training phrases broken out by parts
+            with their parameters included.
         """
         if not isinstance(obj, types.Intent):
             raise ValueError("obj should be Intent.")
@@ -588,12 +588,16 @@ class Intents(ScrapiBase):
         """Extracts all Intents and Training Phrases into a Pandas DataFrame.
 
         Args:
-          agent_id, agent to pull list of intents
-          mode: (Optional) basic returns display name and training phrase as
-            plain text.
-          Advanced returns training phrase and parameters df broken out by
-            parts.
-          language_code: Language code of the intents being uploaded. Ref:
+          agent_id (str):
+            agent to pull list of intents
+          mode (str):
+            basic returns display name and training phrase as plain text.
+            advanced returns training phrases broken out by parts
+            with their parameters included.
+          intent_subset (list of string):
+            A subset of intents to extract the intents from.
+          language_code (str):
+            Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
         """
 
