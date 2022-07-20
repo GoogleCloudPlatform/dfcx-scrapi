@@ -68,11 +68,11 @@ class Intents(ScrapiBase):
         """intents to dataframe
 
         Args:
-          obj, intent protobuf object
-          mode: (Optional) basic returns display name and training phrase as
-            plain text.
-          Advanced returns training phrase and parameters df broken out by
-            parts.
+          obj (Intent protobuf)
+          mode (str):
+            basic returns display name and training phrase as plain text.
+            advanced returns training phrases broken out by parts
+            with their parameters included.
         """
         if not isinstance(obj, types.Intent):
             raise ValueError("obj should be Intent.")
@@ -152,7 +152,8 @@ class Intents(ScrapiBase):
                         elif intent_dict.get("entity_type"):
                             # Remove existing parameter_id if exist
                             key_to_remove = ["entity_type", "is_list", "redact"]
-                            _ = [intent_dict.pop(key) for key in key_to_remove]
+                            for key in key_to_remove:
+                                intent_dict.pop(key)
                         # Add to Dataframe
                         row = pd.DataFrame.from_dict(
                             intent_dict, orient="index"
@@ -583,21 +584,39 @@ class Intents(ScrapiBase):
         agent_id: str = None,
         mode: str = "basic",
         intent_subset: List[str] = None,
+        transpose: bool = False,
         language_code: str = None) -> pd.DataFrame:
         """Extracts all Intents and Training Phrases into a Pandas DataFrame.
 
         Args:
-          agent_id, agent to pull list of intents
-          mode: (Optional) basic returns display name and training phrase as
-            plain text.
-          Advanced returns training phrase and parameters df broken out by
-            parts.
-          language_code: Language code of the intents being uploaded. Ref:
+          agent_id (str):
+            agent to pull list of intents
+          mode (str):
+            basic returns display name and training phrase as plain text.
+            advanced returns training phrases broken out by parts
+            with their parameters included.
+          intent_subset (list of string):
+            A subset of intents to extract the intents from.
+          transpose (bool):
+            Return the transposed DataFrame. If this flag passed as True,
+            mode won't affect the result and the result would be like basic.
+          language_code (str):
+            Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
         """
 
         if not agent_id:
             agent_id = self.agent_id
+
+        if transpose:
+            _, intents_dict = self.intents_to_df_cosine_prep(agent_id)
+            transposed_df = pd.DataFrame.from_dict(
+                intents_dict, "index"
+            ).transpose()
+            if intent_subset:
+                transposed_df = transposed_df[intent_subset]
+
+            return transposed_df
 
         if mode not in ["basic", "advanced"]:
             raise ValueError("Mode types: [basic, advanced]")
