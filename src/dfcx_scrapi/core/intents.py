@@ -584,6 +584,7 @@ class Intents(ScrapiBase):
         agent_id: str = None,
         mode: str = "basic",
         intent_subset: List[str] = None,
+        transpose: bool = False,
         language_code: str = None) -> pd.DataFrame:
         """Extracts all Intents and Training Phrases into a Pandas DataFrame.
 
@@ -596,6 +597,9 @@ class Intents(ScrapiBase):
             with their parameters included.
           intent_subset (list of string):
             A subset of intents to extract the intents from.
+          transpose (bool):
+            Return the transposed DataFrame. If this flag passed as True,
+            mode won't affect the result and the result would be like basic.
           language_code (str):
             Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
@@ -603,6 +607,16 @@ class Intents(ScrapiBase):
 
         if not agent_id:
             agent_id = self.agent_id
+
+        if transpose:
+            _, intents_dict = self.intents_to_df_cosine_prep(agent_id)
+            transposed_df = pd.DataFrame.from_dict(
+                intents_dict, "index"
+            ).transpose()
+            if intent_subset:
+                transposed_df = transposed_df[intent_subset]
+
+            return transposed_df
 
         if mode not in ["basic", "advanced"]:
             raise ValueError("Mode types: [basic, advanced]")
