@@ -77,8 +77,9 @@ class EntityTypes(ScrapiBase):
                 entity_type_dict["entity_value"] = entity.value
                 for synonym in entity.synonyms:
                     entity_type_dict["synonyms"] = synonym
-                    main_df = pd.concat(
-                        [main_df, entity_type_dict], ignore_index=True)
+                    entity_type_df = pd.DataFrame(entity_type_dict,index=[0])
+                    main_df = pd.concat([main_df, entity_type_df],
+                                        ignore_index=True)
 
             return main_df
 
