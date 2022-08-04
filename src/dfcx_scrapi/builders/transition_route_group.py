@@ -37,7 +37,7 @@ class TransitionRouteGroupBuilder:
         if not self.proto_obj:
             raise ValueError(
                 "There is no proto_obj!"
-                "\nUse create_empty_transition_route_group or"
+                "\nUse create_new_transition_route_group or"
                 " load_transition_route_group to continue."
             )
         elif not isinstance(self.proto_obj, TransitionRouteGroup):
@@ -68,7 +68,7 @@ class TransitionRouteGroupBuilder:
             )
         if self.proto_obj and not overwrite:
             raise Exception(
-                "proto_obj already contains an TransitionRouteGroup."
+                "proto_obj already contains a TransitionRouteGroup."
                 " If you wish to overwrite it, pass overwrite as True."
             )
         if overwrite or not self.proto_obj:
@@ -77,7 +77,7 @@ class TransitionRouteGroupBuilder:
         return self.proto_obj
 
 
-    def create_empty_transition_route_group(
+    def create_new_transition_route_group(
         self,
         display_name: str,
         transition_routes: Union[TransitionRoute, List[TransitionRoute]] = None,
@@ -134,7 +134,7 @@ class TransitionRouteGroupBuilder:
         Args:
             transition_routes (TransitionRoute | List[TransitionRoute]):
                 A single or list of TransitionRoutes to add
-                to this TransitionRouteGroup.
+                to the TransitionRouteGroup existed in proto_obj.
         Returns:
             A TransitionRouteGroup object stored in proto_obj.
         """
