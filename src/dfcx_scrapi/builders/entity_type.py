@@ -16,13 +16,13 @@
 
 from typing import List, Union
 
-from google.cloud.dialogflowcx_v3beta1 import types
+from google.cloud.dialogflowcx_v3beta1.types import EntityType
 
 
 class EntityTypeBuilder:
     """Base Class for CX EntityType builder."""
 
-    def __init__(self, obj: types.EntityType = None):
+    def __init__(self, obj: EntityType = None):
         self.proto_obj = None
         if obj:
             self.load_entity_type(obj)
@@ -107,7 +107,7 @@ class EntityTypeBuilder:
                 "There is no proto_obj!\nUse create_empty_entity_type"
                 " or load_entity_type to continue."
             )
-        elif not isinstance(self.proto_obj, types.EntityType):
+        elif not isinstance(self.proto_obj, EntityType):
             raise ValueError(
                 "proto_obj is not an EntityType."
                 "\nPlease create or load the correct type to continue."
@@ -115,8 +115,8 @@ class EntityTypeBuilder:
 
 
     def load_entity_type(
-        self, obj: types.EntityType, overwrite: bool = False
-    ) -> types.EntityType:
+        self, obj: EntityType, overwrite: bool = False
+    ) -> EntityType:
         """Load an existing EntityType to proto_obj for further uses.
 
         Args:
@@ -129,7 +129,7 @@ class EntityTypeBuilder:
         Returns:
           An EntityType object stored in proto_obj
         """
-        if not isinstance(obj, types.EntityType):
+        if not isinstance(obj, EntityType):
             raise ValueError(
                 "The object you're trying to load is not an EntityType!"
             )
@@ -153,7 +153,7 @@ class EntityTypeBuilder:
         enable_fuzzy_extraction: bool = False,
         redact: bool = False,
         overwrite: bool = False
-    ) -> types.EntityType:
+    ) -> EntityType:
         """Create an empty EntityType.
 
         Args:
@@ -193,7 +193,7 @@ class EntityTypeBuilder:
                 " If you wish to overwrite it, pass overwrite as True."
             )
         if overwrite or not self.proto_obj:
-            self.proto_obj = types.EntityType(
+            self.proto_obj = EntityType(
                 display_name=display_name,
                 kind=kind,
                 auto_expansion_mode=auto_expansion_mode,
@@ -206,7 +206,7 @@ class EntityTypeBuilder:
 
     def add_excluded_phrase(
         self, phrase: Union[str, List[str]]
-    ) -> types.EntityType:
+    ) -> EntityType:
         """Add one or more phrases to be excluded in the EntityType
 
         Args:
@@ -221,7 +221,7 @@ class EntityTypeBuilder:
 
         if isinstance(phrase, str):
             self.proto_obj = self.proto_obj.excluded_phrases.append(
-                types.entity_type.EntityType.ExcludedPhrase(value=phrase)
+                EntityType.ExcludedPhrase(value=phrase)
             )
         elif isinstance(phrase, list):
             if not all((isinstance(p, str) for p in phrase)):
@@ -230,7 +230,7 @@ class EntityTypeBuilder:
                 )
 
             self.proto_obj = self.proto_obj.excluded_phrases.extend([
-                types.entity_type.EntityType.ExcludedPhrase(value=value)
+                EntityType.ExcludedPhrase(value=value)
                 for value in phrase
             ])
         else:
@@ -243,7 +243,7 @@ class EntityTypeBuilder:
 
     def add_entity(
         self, value: str, synonyms: List[str] = None
-    ) -> types.EntityType:
+    ) -> EntityType:
         """Add an entity to the EntityType stored in proto_obj
 
         Args:
@@ -271,7 +271,7 @@ class EntityTypeBuilder:
 
         if self.proto_obj.kind.name in ["KIND_LIST", "KIND_REGEXP"]:
             self.proto_obj.entities.append(
-                types.EntityType.Entity(
+                EntityType.Entity(
                     value=value, synonyms=[value]
                 )
             )
@@ -285,7 +285,7 @@ class EntityTypeBuilder:
                 )
 
             self.proto_obj.entities.append(
-                types.EntityType.Entity(
+                EntityType.Entity(
                     value=value, synonyms=synonyms
                 )
             )
