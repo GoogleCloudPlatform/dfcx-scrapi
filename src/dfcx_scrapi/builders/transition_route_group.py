@@ -16,15 +16,16 @@
 
 from typing import List, Union
 
-from google.cloud.dialogflowcx_v3beta1 import types
-from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
+from google.cloud.dialogflowcx_v3beta1.types import (
+    TransitionRoute, TransitionRouteGroup
+)
 
 
 class TransitionRouteGroupBuilder:
     """Base Class for CX TransitionRouteGroup builder."""
 
 
-    def __init__(self, obj: types.TransitionRouteGroup = None):
+    def __init__(self, obj: TransitionRouteGroup = None):
         self.proto_obj = None
         if obj:
             self.load_transition_route_group(obj)
@@ -39,7 +40,7 @@ class TransitionRouteGroupBuilder:
                 "\nUse create_empty_transition_route_group or"
                 " load_transition_route_group to continue."
             )
-        elif not isinstance(self.proto_obj, types.TransitionRouteGroup):
+        elif not isinstance(self.proto_obj, TransitionRouteGroup):
             raise ValueError(
                 "proto_obj is not a TransitionRouteGroup type."
                 "\nPlease create or load the correct type to continue."
@@ -47,8 +48,8 @@ class TransitionRouteGroupBuilder:
 
 
     def load_transition_route_group(
-        self, obj: types.TransitionRouteGroup, overwrite: bool = False
-    ) -> types.TransitionRouteGroup:
+        self, obj: TransitionRouteGroup, overwrite: bool = False
+    ) -> TransitionRouteGroup:
         """Load an existing TransitionRouteGroup to proto_obj for further uses.
 
         Args:
@@ -61,7 +62,7 @@ class TransitionRouteGroupBuilder:
         Returns:
           A TransitionRouteGroup object stored in proto_obj
         """
-        if not isinstance(obj, types.TransitionRouteGroup):
+        if not isinstance(obj, TransitionRouteGroup):
             raise ValueError(
                 "The object you're trying to load is not a TransitionRouteGroup"
             )
@@ -81,7 +82,7 @@ class TransitionRouteGroupBuilder:
         display_name: str,
         transition_routes: Union[TransitionRoute, List[TransitionRoute]] = None,
         overwrite: bool = False
-    ) -> types.TransitionRouteGroup:
+    ) -> TransitionRouteGroup:
         """Create an empty TransitionRouteGroup.
 
         Args:
@@ -116,7 +117,7 @@ class TransitionRouteGroupBuilder:
         if overwrite or not self.proto_obj:
             if not isinstance(transition_routes, list):
                 transition_routes = [transition_routes]
-            self.proto_obj = types.TransitionRouteGroup(
+            self.proto_obj = TransitionRouteGroup(
                 display_name=display_name,
                 transition_routes=transition_routes
             )
@@ -127,7 +128,7 @@ class TransitionRouteGroupBuilder:
     def add_transition_route(
         self,
         transition_routes: Union[TransitionRoute, List[TransitionRoute]]
-    ) -> types.TransitionRouteGroup:
+    ) -> TransitionRouteGroup:
         """Add single or multiple TransitionRoutes to the TransitionRouteGroup.
 
         Args:
