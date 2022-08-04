@@ -374,3 +374,154 @@ class FulfillmentBuilder:
           A Fulfillment object stored in proto_obj
         """
         self._check_fulfillment_exist()
+
+
+
+class TransitionRouteBuilder:
+    """Base Class for CX TransitionRoute builder."""
+
+
+    def __init__(self, obj: types.TransitionRoute = None):
+        self.proto_obj = None
+        if obj:
+            self.load_transition_route(obj)
+
+
+    def _check_transition_route_exist(self):
+        """Check if the proto_obj exists otherwise raise an error."""
+
+        if not self.proto_obj:
+            raise ValueError(
+                "There is no proto_obj!\nUse create_empty_transition_route"
+                " or load_transition_route to continue."
+            )
+        elif not isinstance(self.proto_obj, types.TransitionRoute):
+            raise ValueError(
+                "proto_obj is not a TransitionRoute type."
+                "\nPlease create or load the correct type to continue."
+            )
+
+
+    def load_transition_route(
+        self, obj: types.TransitionRoute, overwrite: bool = False
+    ) -> types.TransitionRoute:
+        """Load an existing TransitionRoute to proto_obj for further uses.
+
+        Args:
+          obj (TransitionRoute):
+            An existing TransitionRoute obj.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a TransitionRoute.
+
+        Returns:
+          A TransitionRoute object stored in proto_obj
+        """
+        if not isinstance(obj, types.TransitionRoute):
+            raise ValueError(
+                "The object you're trying to load is not a TransitionRoute!"
+            )
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains a TransitionRoute."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+        if overwrite or not self.proto_obj:
+            self.proto_obj = obj
+
+        return self.proto_obj
+
+
+    def create_empty_transition_route(
+        self,
+        intent: str = None,
+        condition: str = None,
+        trigger_fulfillment: types.Fulfillment = None,
+        target_page: str = None,
+        target_flow: str = None,
+        overwrite: bool = False
+    ) -> types.TransitionRoute:
+        """Create an empty TransitionRoute.
+
+        Args:
+            intent (str):
+                Indicates that the transition can only happen when the given
+                intent is matched.
+                Format:
+                ``projects/<Project ID>/locations/<Location ID>/
+                  agents/<Agent ID>/intents/<Intent ID>``.
+                At least one of ``intent`` or ``condition`` must be specified.
+                When both ``intent`` and ``condition`` are specified,
+                the transition can only happen when both are fulfilled.
+            condition (str):
+                The condition to evaluate.
+                See the conditions reference:
+                https://cloud.google.com/dialogflow/cx/docs/reference/condition
+                At least one of ``intent`` or ``condition`` must be specified.
+                When both ``intent`` and ``condition`` are specified,
+                the transition can only happen when both are fulfilled.
+            trigger_fulfillment (Fulfillment):
+                The fulfillment to call when the condition is satisfied.
+                When ``trigger_fulfillment`` and ``target`` are defined,
+                ``trigger_fulfillment`` is executed first.
+            target_page (str):
+                The target page to transition to. Format:
+                ``projects/<Project ID>/locations/<Location ID>/
+                  agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+                At most one of ``target_page`` and ``target_flow``
+                can be specified at the same time.
+            target_flow (str):
+                The target flow to transition to. Format:
+                ``projects/<Project ID>/locations/<Location ID>/
+                  agents/<Agent ID>/flows/<Flow ID>``.
+                At most one of ``target_page`` and ``target_flow``
+                can be specified at the same time.
+            overwrite (bool)
+                Overwrite the new proto_obj if proto_obj already
+                contains a TransitionRoute.
+
+        Returns:
+            A TransitionRoute object stored in proto_obj.
+        """
+        if ((intent and not isinstance(intent, str)) or
+            (condition and not isinstance(condition, str)) or
+            (target_page and not isinstance(target_page, str)) or
+            (target_flow and not isinstance(target_flow, str))):
+            raise ValueError(
+                "intent, condition, target_page, and target_flow"
+                " if existed should be a string."
+            )
+        if (trigger_fulfillment and
+            not isinstance(trigger_fulfillment, types.Fulfillment)):
+            raise ValueError(
+                "trigger_fulfillment type should be a Fulfillment."
+            )
+        if target_page and target_flow:
+            raise Exception(
+                "At most one of target_page and target_flow"
+                " can be specified at the same time."
+            )
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains a TransitionRoute."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+        if overwrite or not self.proto_obj:
+            if not trigger_fulfillment:
+                self.proto_obj = types.TransitionRoute(
+                    intent=intent,
+                    condition=condition,
+                    trigger_fulfillment=types.Fulfillment(),
+                    target_page=target_page,
+                    target_flow=target_flow
+                )
+            else:
+                self.proto_obj = types.TransitionRoute(
+                    intent=intent,
+                    condition=condition,
+                    trigger_fulfillment=trigger_fulfillment,
+                    target_page=target_page,
+                    target_flow=target_flow
+                )
+
+        return self.proto_obj
