@@ -35,8 +35,9 @@ class TransitionRouteGroupBuilder:
 
         if not self.proto_obj:
             raise ValueError(
-                "There is no proto_obj!\nUse create_empty_transition_route_group"
-                " or load_transition_route_group to continue."
+                "There is no proto_obj!"
+                "\nUse create_empty_transition_route_group or"
+                " load_transition_route_group to continue."
             )
         elif not isinstance(self.proto_obj, types.TransitionRouteGroup):
             raise ValueError(
@@ -128,7 +129,7 @@ class TransitionRouteGroupBuilder:
         transition_routes: Union[TransitionRoute, List[TransitionRoute]]
     ) -> types.TransitionRouteGroup:
         """Add single or multiple TransitionRoutes to the TransitionRouteGroup.
-        
+
         Args:
             transition_routes (TransitionRoute | List[TransitionRoute]):
                 A single or list of TransitionRoutes to add
