@@ -16,14 +16,14 @@
 
 from typing import List
 
-from google.cloud.dialogflowcx_v3beta1 import types
+from google.cloud.dialogflowcx_v3beta1.types import Agent, SpeechToTextSettings
 
 
 class AgentBuilder:
     """Base Class for CX Agent builder."""
 
 
-    def __init__(self, obj: types.Agent = None):
+    def __init__(self, obj: Agent = None):
         self.proto_obj = None
         if obj:
             self.load_agent(obj)
@@ -61,7 +61,7 @@ class AgentBuilder:
                 "There is no proto_obj!"
                 "\nUse create_empty_agent or load_agent to continue."
             )
-        elif not isinstance(self.proto_obj, types.Agent):
+        elif not isinstance(self.proto_obj, Agent):
             raise ValueError(
                 "proto_obj is not an Agent type."
                 "\nPlease create or load the correct type to continue."
@@ -69,8 +69,8 @@ class AgentBuilder:
 
 
     def load_agent(
-        self, obj: types.Agent, overwrite: bool = False
-    ) -> types.Agent:
+        self, obj: Agent, overwrite: bool = False
+    ) -> Agent:
         """Load an existing agent to proto_obj for further uses.
 
         Args:
@@ -83,7 +83,7 @@ class AgentBuilder:
         Returns:
           An Agent object stored in proto_obj
         """
-        if not isinstance(obj, types.Agent):
+        if not isinstance(obj, Agent):
             raise ValueError(
                 "The object you're trying to load is not an Agent!"
             )
@@ -108,7 +108,7 @@ class AgentBuilder:
         description: str = None,
         avatar_uri: str = None,
         overwrite: bool = False
-    ) -> types.Agent:
+    ) -> Agent:
         """Create an empty Agent.
 
         Args:
@@ -152,7 +152,7 @@ class AgentBuilder:
                 " If you wish to overwrite it, pass overwrite as True."
             )
         if overwrite or not self.proto_obj:
-            self.proto_obj = types.Agent(
+            self.proto_obj = Agent(
                 display_name=display_name,
                 time_zone=time_zone,
                 default_language_code=default_language_code,
@@ -169,7 +169,7 @@ class AgentBuilder:
         enable_speech_adaptation: bool = False,
         enable_spell_correction: bool = False,
         supported_language_codes: List[str] = None,
-    ) -> types.Agent:
+    ) -> Agent:
         """Change the language and speech settings.
 
         Args:
@@ -189,7 +189,7 @@ class AgentBuilder:
         self._check_agent_exist()
 
         if isinstance(enable_speech_adaptation, bool):
-            self.proto_obj.speech_to_text_settings=types.SpeechToTextSettings(
+            self.proto_obj.speech_to_text_settings=SpeechToTextSettings(
                 enable_speech_adaptation=enable_speech_adaptation
             )
         else:
@@ -224,7 +224,7 @@ class AgentBuilder:
         enable_stackdriver_logging: bool = False,
         enable_interaction_logging: bool = False,
         security_settings: str = None,
-    ) -> types.Agent:
+    ) -> Agent:
         """ Change the security and logging settings.
 
         Args:
