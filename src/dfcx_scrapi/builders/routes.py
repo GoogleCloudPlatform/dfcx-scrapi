@@ -525,3 +525,123 @@ class TransitionRouteBuilder:
                 )
 
         return self.proto_obj
+
+
+class EventHandlerBuilder:
+    """Base Class for CX EventHandler builder."""
+
+
+    def __init__(self, obj: types.EventHandler = None):
+        self.proto_obj = None
+        if obj:
+            self.load_event_handler(obj)
+
+
+    def _check_event_handler_exist(self):
+        """Check if the proto_obj exists otherwise raise an error."""
+
+        if not self.proto_obj:
+            raise ValueError(
+                "There is no proto_obj!\nUse create_empty_event_handler"
+                " or load_event_handler to continue."
+            )
+        elif not isinstance(self.proto_obj, types.EventHandler):
+            raise ValueError(
+                "proto_obj is not an EventHandler type."
+                "\nPlease create or load the correct type to continue."
+            )
+
+
+    def load_event_handler(
+        self, obj: types.EventHandler, overwrite: bool = False
+    ) -> types.EventHandler:
+        """Load an existing EventHandler to proto_obj for further uses.
+
+        Args:
+          obj (EventHandler):
+            An existing EventHandler obj.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains an EventHandler.
+
+        Returns:
+          An EventHandler object stored in proto_obj
+        """
+        if not isinstance(obj, types.EventHandler):
+            raise ValueError(
+                "The object you're trying to load is not an EventHandler!"
+            )
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains an EventHandler."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+        if overwrite or not self.proto_obj:
+            self.proto_obj = obj
+
+        return self.proto_obj
+
+
+    def create_empty_event_handler(
+        self,
+        event: str,
+        trigger_fulfillment: types.Fulfillment = None,
+        target_page: str = None,
+        target_flow: str = None,
+        overwrite: bool = False
+    ) -> types.EventHandler:
+        """Create an empty EventHandler.
+
+        Args:
+            event (str):
+                Required. The name of the event to handle.
+            trigger_fulfillment (Fulfillment):
+                The fulfillment to call when the event occurs.
+                Handling webhook errors with a fulfillment enabled with webhook
+                could cause infinite loop. It is invalid to specify
+                such fulfillment for a handler handling webhooks.
+            target_page (str):
+                The target page to transition to. Format:
+                ``projects/<Project ID>/locations/<Location ID>/
+                  agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+                At most one of ``target_page`` and ``target_flow``
+                can be specified at the same time.
+            target_flow (str):
+                The target flow to transition to. Format:
+                ``projects/<Project ID>/locations/<Location ID>/
+                  agents/<Agent ID>/flows/<Flow ID>``.
+                At most one of ``target_page`` and ``target_flow``
+                can be specified at the same time.
+            overwrite (bool)
+                Overwrite the new proto_obj if proto_obj already
+                contains a EventHandler.
+
+        Returns:
+            An EventHandler object stored in proto_obj.
+        """
+        if event and not isinstance(event, str):
+            raise ValueError("event should be a string.")
+        if (trigger_fulfillment and
+            not isinstance(trigger_fulfillment, types.Fulfillment)):
+            raise ValueError(
+                "trigger_fulfillment type should be a Fulfillment."
+            )
+        if target_page and target_flow:
+            raise Exception(
+                "At most one of target_page and target_flow"
+                " can be specified at the same time."
+            )
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains an EventHandler."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+        if overwrite or not self.proto_obj:
+            self.proto_obj = types.EventHandler(
+                event=event,
+                trigger_fulfillment=trigger_fulfillment,
+                target_page=target_page,
+                target_flow=target_flow
+            )
+
+        return self.proto_obj
