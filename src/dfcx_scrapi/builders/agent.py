@@ -55,11 +55,10 @@ class AgentBuilder:
 
     def _check_agent_exist(self):
         """Check if the proto_obj exists otherwise raise an error."""
-
         if not self.proto_obj:
             raise ValueError(
                 "There is no proto_obj!"
-                "\nUse create_empty_agent or load_agent to continue."
+                "\nUse create_new_agent or load_agent to continue."
             )
         elif not isinstance(self.proto_obj, Agent):
             raise ValueError(
@@ -87,7 +86,6 @@ class AgentBuilder:
             raise ValueError(
                 "The object you're trying to load is not an Agent!"
             )
-
         if self.proto_obj and not overwrite:
             raise Exception(
                 "proto_obj already contains an Agent."
@@ -100,7 +98,7 @@ class AgentBuilder:
         return self.proto_obj
 
 
-    def create_empty_agent(
+    def create_new_agent(
         self,
         display_name: str,
         time_zone: str,
@@ -109,7 +107,7 @@ class AgentBuilder:
         avatar_uri: str = None,
         overwrite: bool = False
     ) -> Agent:
-        """Create an empty Agent.
+        """Create a new Agent.
 
         Args:
           display_name (str):

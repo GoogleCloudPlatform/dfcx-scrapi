@@ -101,10 +101,9 @@ class EntityTypeBuilder:
 
     def _check_entity_type_exist(self):
         """Check if the proto_obj exists otherwise raise an error."""
-
         if not self.proto_obj:
             raise ValueError(
-                "There is no proto_obj!\nUse create_empty_entity_type"
+                "There is no proto_obj!\nUse create_new_entity_type"
                 " or load_entity_type to continue."
             )
         elif not isinstance(self.proto_obj, EntityType):
@@ -145,7 +144,7 @@ class EntityTypeBuilder:
         return self.proto_obj
 
 
-    def create_empty_entity_type(
+    def create_new_entity_type(
         self,
         display_name: str,
         kind: int,
@@ -154,7 +153,7 @@ class EntityTypeBuilder:
         redact: bool = False,
         overwrite: bool = False
     ) -> EntityType:
-        """Create an empty EntityType.
+        """Create a new EntityType.
 
         Args:
           display_name (str)

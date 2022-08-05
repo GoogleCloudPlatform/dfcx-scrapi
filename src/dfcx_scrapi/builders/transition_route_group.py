@@ -83,7 +83,7 @@ class TransitionRouteGroupBuilder:
         transition_routes: Union[TransitionRoute, List[TransitionRoute]] = None,
         overwrite: bool = False
     ) -> TransitionRouteGroup:
-        """Create an empty TransitionRouteGroup.
+        """Create a new TransitionRouteGroup.
 
         Args:
             display_name (str):
