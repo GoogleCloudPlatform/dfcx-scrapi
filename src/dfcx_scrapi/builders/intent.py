@@ -412,6 +412,11 @@ class IntentBuilder:
         """
         self._check_intent_exist()
 
+        if not (isinstance(parameter_id, str) or isinstance(entity_type, str)):
+            raise ValueError(
+                "parameter_id and entity_type should be string."
+            )
+
         # Create the new parameter and add it to the proto_obj
         parameters = types.Intent.Parameter(
             id=parameter_id,
