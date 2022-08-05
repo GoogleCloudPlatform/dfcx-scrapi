@@ -440,6 +440,13 @@ class IntentBuilder:
         self._check_intent_exist()
 
         if isinstance(label, dict):
+            if not all((
+                isinstance(key, str) and isinstance(val, str)
+                for key, val in label.items()
+            )):
+                raise ValueError(
+                    "Keys and values in label's dictionary should be string."
+                )
             self.proto_obj.labels.update(label)
         elif isinstance(label, str):
             self.proto_obj.labels.update({label: label})
