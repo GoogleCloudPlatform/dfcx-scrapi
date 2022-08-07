@@ -17,14 +17,13 @@
 from collections import defaultdict
 from typing import List, Dict, Union
 
-from google.cloud.dialogflowcx_v3beta1 import types
+from google.cloud.dialogflowcx_v3beta1.types import Intent
 
 
 class IntentBuilder:
     """Base Class for CX Intent builder."""
 
-
-    def __init__(self, obj: types.Intent = None):
+    def __init__(self, obj: Intent = None):
         self.proto_obj = None
         if obj:
             self.load_intent(obj)
@@ -41,13 +40,12 @@ class IntentBuilder:
 
     def _check_intent_exist(self):
         """Check if the proto_obj exists otherwise raise an error."""
-
         if not self.proto_obj:
             raise ValueError(
                 "There is no proto_obj!"
-                "\nUse create_empty_intent or load_intent to continue."
+                "\nUse create_new_intent or load_intent to continue."
             )
-        elif not isinstance(self.proto_obj, types.Intent):
+        elif not isinstance(self.proto_obj, Intent):
             raise ValueError(
                 "proto_obj is not an Intent type."
                 "\nPlease create or load the correct type to continue."
@@ -194,8 +192,8 @@ class IntentBuilder:
 
 
     def load_intent(
-        self, obj: types.Intent, overwrite: bool = False
-    ) -> types.Intent:
+        self, obj: Intent, overwrite: bool = False
+    ) -> Intent:
         """Load an existing intent to proto_obj for further uses.
 
         Args:
@@ -208,7 +206,7 @@ class IntentBuilder:
         Returns:
           An Intent object stored in proto_obj
         """
-        if not isinstance(obj, types.Intent):
+        if not isinstance(obj, Intent):
             raise ValueError(
                 "The object you're trying to load is not an Intent!"
             )
@@ -224,15 +222,15 @@ class IntentBuilder:
         return self.proto_obj
 
 
-    def create_empty_intent(
+    def create_new_intent(
         self,
         display_name: str,
         priority: int = 500000,
         is_fallback: bool = False,
         description: str = None,
         overwrite: bool = False
-    ) -> types.Intent:
-        """Create an empty Intent.
+    ) -> Intent:
+        """Create a new Intent.
 
         Args:
           display_name (str):
@@ -268,7 +266,6 @@ class IntentBuilder:
         Returns:
           An Intent object stored in proto_obj
         """
-
         if self.proto_obj and not overwrite:
             raise Exception(
                 "proto_obj already contains an Agent."
@@ -276,7 +273,7 @@ class IntentBuilder:
             )
 
         if overwrite or not self.proto_obj:
-            self.proto_obj = types.Intent(
+            self.proto_obj = Intent(
                 display_name=display_name,
                 priority=priority,
                 is_fallback=is_fallback,
@@ -291,7 +288,7 @@ class IntentBuilder:
         phrase: Union[str, List[str]],
         annotations: List[str] = None,
         repeat_count: int = 1
-    ) -> types.Intent:
+    ) -> Intent:
         """Add a training phrase to proto_obj.
 
         Args:
@@ -331,8 +328,8 @@ class IntentBuilder:
         # Add simple training phrase
         if isinstance(phrase, str):
             # Create the training phrase obj and add it to the others
-            tp = types.Intent.TrainingPhrase(
-                parts=[types.Intent.TrainingPhrase.Part(text=phrase)],
+            tp = Intent.TrainingPhrase(
+                parts=[Intent.TrainingPhrase.Part(text=phrase)],
                 repeat_count=repeat_count
             )
             self.proto_obj.training_phrases.append(tp)
@@ -363,13 +360,13 @@ class IntentBuilder:
         # Creating parts for the training phrase
         parts_list = []
         for text, parameter_id in zip(phrase, annotations):
-            part = types.Intent.TrainingPhrase.Part(
+            part = Intent.TrainingPhrase.Part(
                 text=text, parameter_id=parameter_id
             )
             parts_list.append(part)
 
         # Create the training phrase obj and add it to the others
-        tp = types.Intent.TrainingPhrase(
+        tp = Intent.TrainingPhrase(
             parts=parts_list, repeat_count=repeat_count
         )
         self.proto_obj.training_phrases.append(tp)
@@ -383,7 +380,7 @@ class IntentBuilder:
         entity_type: str,
         is_list: bool = False,
         redact: bool = False
-    ) -> types.Intent:
+    ) -> Intent:
         """Add a parameter to Parameter attribute of proto_obj.
 
         Args:
@@ -418,7 +415,7 @@ class IntentBuilder:
             )
 
         # Create the new parameter and add it to the proto_obj
-        parameters = types.Intent.Parameter(
+        parameters = Intent.Parameter(
             id=parameter_id,
             entity_type=entity_type,
             is_list=is_list,
@@ -431,7 +428,7 @@ class IntentBuilder:
 
     def add_label(
         self, label: Union[Dict[str, str], str]
-    ) -> types.Intent:
+    ) -> Intent:
         """Add a label to proto_obj.
 
         Args:
