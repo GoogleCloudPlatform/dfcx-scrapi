@@ -309,7 +309,7 @@ class PageBuilder:
             )
         if not isinstance(reprompt_event_handlers, list):
             reprompt_event_handlers = [reprompt_event_handlers]
-        
+
         if required:
             the_param = Form.Parameter(
                 display_name=display_name,
@@ -329,7 +329,7 @@ class PageBuilder:
                 redact=redact,
                 default_value=default_value
             )
-        
+
         the_param.fill_behavior = Form.Parameter.FillBehavior(
             initial_prompt_fulfillment=initial_prompt_fulfillment,
             reprompt_event_handlers=reprompt_event_handlers
