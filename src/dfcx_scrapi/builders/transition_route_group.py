@@ -86,18 +86,18 @@ class TransitionRouteGroupBuilder:
         """Create a new TransitionRouteGroup.
 
         Args:
-            display_name (str):
-                Required. The human-readable name of the
-                transition route group, unique within the flow.
-                The display name can be no longer than 30 characters.
-            transition_routes (TransitionRoute | List[TransitionRoute]):
-                Transition routes associated with this TransitionRouteGroup.
-            overwrite (bool)
-                Overwrite the new proto_obj if proto_obj already
-                contains a TransitionRouteGroup.
+          display_name (str):
+            Required. The human-readable name of the
+            transition route group, unique within the flow.
+            The display name can be no longer than 30 characters.
+          transition_routes (TransitionRoute | List[TransitionRoute]):
+            Transition routes associated with this TransitionRouteGroup.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a TransitionRouteGroup.
 
         Returns:
-            A TransitionRouteGroup object stored in proto_obj.
+          A TransitionRouteGroup object stored in proto_obj.
         """
         if not (display_name and isinstance(display_name, str)):
             raise ValueError("display_name should be a nonempty string.")
@@ -132,11 +132,11 @@ class TransitionRouteGroupBuilder:
         """Add single or multiple TransitionRoutes to the TransitionRouteGroup.
 
         Args:
-            transition_routes (TransitionRoute | List[TransitionRoute]):
-                A single or list of TransitionRoutes to add
-                to the TransitionRouteGroup existed in proto_obj.
+          transition_routes (TransitionRoute | List[TransitionRoute]):
+            A single or list of TransitionRoutes to add
+            to the TransitionRouteGroup existed in proto_obj.
         Returns:
-            A TransitionRouteGroup object stored in proto_obj.
+          A TransitionRouteGroup object stored in proto_obj.
         """
         if ((not isinstance(transition_routes, TransitionRoute)) or
             (not isinstance(transition_routes, list) and all(
