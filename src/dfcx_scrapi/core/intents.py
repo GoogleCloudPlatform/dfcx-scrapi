@@ -65,13 +65,13 @@ class Intents(ScrapiBase):
     def intent_proto_to_dataframe(
         obj: types.Intent, mode: str = "basic"
     ) -> pd.DataFrame:
-        """intents to dataframe
+        """Single intent to pandas DataFrame.
 
         Args:
-          obj (Intent protobuf)
+          obj (types.Intent)
           mode (str):
-            basic returns display name and training phrase as plain text.
-            advanced returns training phrases broken out by parts
+            "basic" returns display name and training phrase as plain text.
+            "advanced" returns training phrases broken out by parts
             with their parameters included.
         """
         if not isinstance(obj, types.Intent):
@@ -595,7 +595,7 @@ class Intents(ScrapiBase):
             basic returns display name and training phrase as plain text.
             advanced returns training phrases broken out by parts
             with their parameters included.
-          intent_subset (list of string):
+          intent_subset (List[str]):
             A subset of intents to extract the intents from.
           transpose (bool):
             Return the transposed DataFrame. If this flag passed as True,
