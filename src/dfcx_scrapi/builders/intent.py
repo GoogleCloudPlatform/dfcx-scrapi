@@ -146,7 +146,7 @@ class IntentBuilder:
                 if part.parameter_id:
                     annotated_count += 1
                     break
-        
+
         phrases_count = len(self.proto_obj.training_phrases)
         params_count = len(self.proto_obj.parameters)
         annotated_pct = round(100*annotated_count/phrases_count, 1)
@@ -154,7 +154,7 @@ class IntentBuilder:
         uniques_pct = round(100*uniques_count/phrases_count, 1)
         non_uniques_count = phrases_count - uniques_count
         non_uniques_pct = round(100*non_uniques_count/phrases_count, 1)
-        
+
         phrases_str = f"# of training phrases: {phrases_count}"
         params_str = f"# of parameters: {params_count}"
         annotated_str = (
