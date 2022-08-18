@@ -146,20 +146,40 @@ class IntentBuilder:
                 if part.parameter_id:
                     annotated_count += 1
                     break
-
-        phrases = (
-            "# of training phrases:"
-            f" {len(self.proto_obj.training_phrases)}"
+        
+        phrases_count = len(self.proto_obj.training_phrases)
+        params_count = len(self.proto_obj.parameters)
+        annotated_pct = round(100*annotated_count/phrases_count, 1)
+        uniques_count = repeat_count_dict[1]
+        uniques_pct = round(100*uniques_count/phrases_count, 1)
+        non_uniques_count = phrases_count - uniques_count
+        non_uniques_pct = round(100*non_uniques_count/phrases_count, 1)
+        
+        phrases_str = f"# of training phrases: {phrases_count}"
+        params_str = f"# of parameters: {params_count}"
+        annotated_str = (
+            "Annotated training phrases:"
+            f" {annotated_pct}% ({annotated_count})"
         )
-        params = f"# of parameters: {len(self.proto_obj.parameters)}"
-        annotated = f"# of annotated training phrases: {annotated_count}"
-        repeat_count_srt = "\n".join([
-            "# of training phrases with repeat count"
-            f" {i}: {repeat_count_dict[i]}"
+
+        uniques_str = (
+            "Unique training phrases:"
+            f" {uniques_pct}% ({uniques_count})"
+        )
+        non_uniques_str = (
+            "Non-unique training phrases:"
+            f" {non_uniques_pct}% ({non_uniques_count})"
+        )
+
+        repeat_count_srt = "\n\t".join([
+            f"with repeat count {i}: {repeat_count_dict[i]}"
             for i in sorted(repeat_count_dict.keys())
         ])
 
-        out = f"{phrases}\n{params}\n{annotated}\n{repeat_count_srt}"
+        out = (
+            f"{phrases_str}\n{annotated_str}\n{params_str}\n"
+            f"\n{uniques_str}\n{non_uniques_str}\n\t{repeat_count_srt}"
+        )
         print(out)
 
 
