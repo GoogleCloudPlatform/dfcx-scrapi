@@ -104,7 +104,7 @@ class Intents(ScrapiBase):
                 "name", "display_name", "description", "priority",
                 "is_fallback", "labels", "id", "repeat_count",
                 "training_phrase_idx", "text", "text_idx",
-                "entity_type", "is_list", "redact"
+                "parameter_id", "entity_type", "is_list", "redact",
             ])
 
             intent_dict = {
@@ -123,6 +123,7 @@ class Intents(ScrapiBase):
             # parameters
             params_dict = {
                 str(param.id): {
+                    "parameter_id": str(param.id),
                     "entity_type": str(param.entity_type),
                     "is_list": bool(param.is_list),
                     "redact": bool(param.redact),
@@ -151,7 +152,10 @@ class Intents(ScrapiBase):
                             intent_dict.update(params_dict[part.parameter_id])
                         elif intent_dict.get("entity_type"):
                             # Remove existing parameter_id if exist
-                            key_to_remove = ["entity_type", "is_list", "redact"]
+                            key_to_remove = [
+                                "parameter_id", "entity_type",
+                                "is_list", "redact",
+                            ]
                             for key in key_to_remove:
                                 intent_dict.pop(key)
                         # Add to Dataframe
