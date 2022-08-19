@@ -204,7 +204,7 @@ class IntentBuilder:
         for tp_param in tp_params_set:
             if tp_param not in parameters_set:
                 raise Exception(
-                    f"parameter_id {tp_param} does not exist in parameters."
+                    f"parameter_id `{tp_param}` does not exist in parameters."
                     "\nPlease add it using add_parameter method to continue."
                 )
 
@@ -288,7 +288,7 @@ class IntentBuilder:
         """
         if self.proto_obj and not overwrite:
             raise Exception(
-                "proto_obj already contains an Agent."
+                "proto_obj already contains an Intent."
                 " If you wish to overwrite it, pass overwrite as True."
             )
 
@@ -404,7 +404,7 @@ class IntentBuilder:
         """Add a parameter to Parameter attribute of proto_obj.
 
         Args:
-          id (str):
+          parameter_id (str):
             Required. The unique identifier of the parameter.
           entity_type (str):
             Required. The entity type of the parameter. Format:
