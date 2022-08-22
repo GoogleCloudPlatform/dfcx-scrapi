@@ -77,7 +77,7 @@ class EntityTypes(ScrapiBase):
                 entity_type_dict["entity_value"] = entity.value
                 for synonym in entity.synonyms:
                     entity_type_dict["synonyms"] = synonym
-                    entity_type_df = pd.DataFrame(entity_type_dict,index=[0])
+                    entity_type_df = pd.DataFrame(entity_type_dict, index=[0])
                     main_df = pd.concat([main_df, entity_type_df],
                                         ignore_index=True)
 
@@ -104,13 +104,15 @@ class EntityTypes(ScrapiBase):
                 entity_type_dict["entity_value"] = entity.value
                 for synonym in entity.synonyms:
                     entity_type_dict["synonyms"] = synonym
-                    main_df = pd.concat(
-                        [main_df, entity_type_dict], ignore_index=True)
+                    entity_type_df = pd.DataFrame(entity_type_dict, index=[0])
+                    main_df = pd.concat([main_df, entity_type_df],
+                                        ignore_index=True)
 
             for excluded_phrase in obj.excluded_phrases:
                 excl_phrases_dict["excluded_phrase"] = excluded_phrase.value
-                excl_phrases_df = pd.concat(
-                    [excl_phrases_df, excl_phrases_dict], ignore_index=True)
+                excl_phrases_dict2df = pd.DataFrame(excl_phrases_dict, index=[0])
+                excl_phrases_df = pd.concat([excl_phrases_df,
+                                     excl_phrases_dict2df], ignore_index=True)
 
             return {
                 "entity_types": main_df, "excluded_phrases": excl_phrases_df
