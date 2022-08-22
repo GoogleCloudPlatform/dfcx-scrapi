@@ -183,9 +183,16 @@ class IntentBuilder:
         print(out)
 
 
-    def parameter_checking(self) -> bool:
+    def parameter_checking(self, raise_error: bool = False) -> bool:
         """Check if the annotated parameters exist
         in the Parameter attribute of proto_obj.
+
+        Args:
+          raise_error (bool):
+            A flag to whether raise an error. If False, it will log a warning.
+
+        Returns:
+          True if annotated parameters are the same as parameters in proto_obj
         """
         tp_params_set = set()
         for tp in self.proto_obj.training_phrases:
@@ -203,12 +210,17 @@ class IntentBuilder:
         # Check for not existing annotated parameters
         for tp_param in tp_params_set:
             if tp_param not in parameters_set:
-                raise Exception(
+                return_flag = False
+                msg = (
                     f"parameter_id `{tp_param}` does not exist in parameters."
                     "\nPlease add it using add_parameter method to continue."
                 )
+                if raise_error:
+                    raise Exception(msg)
+                else:
+                    logging.warning(msg)
 
-        return True
+        return True if return_flag else False
 
 
     def load_intent(
@@ -312,10 +324,10 @@ class IntentBuilder:
         """Add a training phrase to proto_obj.
 
         Args:
-          phrase (string or list of strings):
+          phrase (str | List[str]):
             The training phrase as a string without annotations or
             a list of strings that represents a single training phrase.
-          annotations (list of strings):
+          annotations (List[str]):
             A list of strings that represents
               parameter_id of each part in phrase.
             Length of annotations list should be less than or equal to
