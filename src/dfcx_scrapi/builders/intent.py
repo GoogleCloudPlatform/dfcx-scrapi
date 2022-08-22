@@ -14,10 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from collections import defaultdict
 from typing import List, Dict, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import Intent
+
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 class IntentBuilder:
@@ -118,6 +126,8 @@ class IntentBuilder:
             was added to the intent.
         """
         self._check_intent_exist()
+
+        self.parameter_checking()
 
         if mode == "basic":
             print(self._show_basic_info())
@@ -260,7 +270,7 @@ class IntentBuilder:
         priority: int = 500000,
         is_fallback: bool = False,
         description: str = None,
-        overwrite: bool = False
+        overwrite: bool = False,
     ) -> Intent:
         """Create a new Intent.
 
@@ -319,7 +329,8 @@ class IntentBuilder:
         self,
         phrase: Union[str, List[str]],
         annotations: List[str] = None,
-        repeat_count: int = 1
+        repeat_count: int = 1,
+        include_spaces: bool = True,
     ) -> Intent:
         """Add a training phrase to proto_obj.
 
@@ -336,9 +347,16 @@ class IntentBuilder:
               the rest of the annotations automatically with no annotation.
           repeat_count (int):
             Indicates how many times this example was added to the intent.
+          include_spaces (bool):
+            For the phrases with annotations, indicates whether the function
+              should include spaces between each part of training phrase.
 
         Example 1: phrase = "I want to check my balance"
         Example 2:
+          phrase = ['I want to order a', 'pizza']
+          annotations = ['', 'food_type']
+          include_spaces = True
+        Example 3:
           phrase = [
               'one way', ' ticket leaving ', 'January 1',
               ' to ', 'LAX', ' from ', 'CDG'
@@ -347,9 +365,11 @@ class IntentBuilder:
               'flight_type', '', 'departure_date',
               '', 'arrival_city', '', 'departure_city'
           ]
-        Example 3:
-          phrase = ["I'd like to buy a ", 'one way', ' ticket']
+          include_spaces = False
+        Example 4:
+          phrase = ["I'd like to buy a", 'one way', 'ticket']
           annotations = ['', 'flight_type']
+          include_spaces = True
 
         Returns:
           An Intent object stored in proto_obj
@@ -390,6 +410,7 @@ class IntentBuilder:
         if len(annotations) < len(phrase):
             annotations.extend([""] * (len(phrase) - len(annotations)))
         # Creating parts for the training phrase
+        # TODO include_spaces
         parts_list = []
         for text, parameter_id in zip(phrase, annotations):
             part = Intent.TrainingPhrase.Part(
@@ -403,6 +424,8 @@ class IntentBuilder:
         )
         self.proto_obj.training_phrases.append(tp)
 
+        self.parameter_checking()
+
         return self.proto_obj
 
 
@@ -411,7 +434,7 @@ class IntentBuilder:
         parameter_id: str,
         entity_type: str,
         is_list: bool = False,
-        redact: bool = False
+        redact: bool = False,
     ) -> Intent:
         """Add a parameter to Parameter attribute of proto_obj.
 
@@ -464,7 +487,7 @@ class IntentBuilder:
         """Add a label to proto_obj.
 
         Args:
-          labels (Dict[str, str] | List[str]):
+          labels (Dict[str, str] | str):
             labels can be assigned as key:value like driver:account
             or strings like 'head intent'.
 
@@ -486,7 +509,7 @@ class IntentBuilder:
             self.proto_obj.labels.update({label: label})
         else:
             raise ValueError(
-                "labels should be either a string or a dictionary."
+                "label should be either a string or a dictionary."
             )
 
         return self.proto_obj
