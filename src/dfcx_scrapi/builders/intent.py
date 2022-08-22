@@ -490,3 +490,83 @@ class IntentBuilder:
             )
 
         return self.proto_obj
+
+
+    def remove_training_phrase(self, phrase: str) -> Intent:
+        """Remove a training phrase from proto_obj.
+
+        Args:
+          phrase (str):
+            The training phrase to remove from proto_obj.
+
+        Returns:
+          An Intent object stored in proto_obj
+        """
+        self._check_intent_exist()
+
+        if not isinstance(phrase, str):
+            raise ValueError("phrase should be a string.")
+
+        for idx, tp in enumerate(self.proto_obj.training_phrases):
+            # Construct the training phrase using parts
+            the_phrase = "".join([part.text for part in tp.parts])
+            if phrase == the_phrase:
+                del self.proto_obj.training_phrases[idx]
+                break
+
+        return self.proto_obj
+
+
+    def remove_parameter(self, parameter_id: str) -> Intent:
+        """Remove a parameter from proto_obj.
+
+        Args:
+          parameter_id (str):
+            The id of the parameter to remove from proto_obj.
+
+        Returns:
+          An Intent object stored in proto_obj
+        """
+        self._check_intent_exist()
+
+        if not isinstance(parameter_id, str):
+            raise ValueError("parameter_id should be a string.")
+
+        for idx, param in enumerate(self.proto_obj.parameters):
+            if parameter_id == param.id:
+                del self.proto_obj.parameters[idx]
+                break
+
+        return self.proto_obj
+
+
+    def remove_label(self, label: Union[Dict[str, str], str]) -> Intent:
+        """Remove a single or multiple labels from proto_obj.
+
+        Args:
+          label (Dict[str, str] | str):
+            A string or a dictionary of lables to remove.
+
+        Returns:
+          An Intent object stored in proto_obj
+        """
+        self._check_intent_exist()
+
+        if isinstance(label, str):
+            if self.proto_obj.labels.get(label) == label:
+                self.proto_obj.labels.pop(label)
+        elif isinstance(label, dict):
+            for key, val in label.items():
+                if not(isinstance(key, str) and isinstance(val, str)):
+                    raise ValueError(
+                        "Keys and values in label's dictionary should be string."
+                    )
+                # Check if the keys and values in the `label` are the same as labels in proto_obj
+                if self.proto_obj.get(key) == val:
+                    self.proto_obj.labels.pop(key)
+        else:
+            raise ValueError(
+                "labels should be either a string or a dictionary."
+            )
+
+        return self.proto_obj
