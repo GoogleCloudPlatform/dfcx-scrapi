@@ -62,7 +62,7 @@ class ScrapiExperiments(ScrapiBase):
 
         request = types.experiment.ListExperimentsRequest()
         request.parent = environment_path
-        client_options = self._set_region(environment_id)
+        client_options = self._set_region(environment_path)
         client = services.experiments.ExperimentsClient(
             client_options=client_options, credentials=self.creds
         )
