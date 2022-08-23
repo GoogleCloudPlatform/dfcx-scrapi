@@ -633,7 +633,7 @@ class IntentBuilder:
                         "Keys and values in label's dictionary should be string."
                     )
                 # Check if the keys and values in the `label` are the same as labels in proto_obj
-                if self.proto_obj.get(key) == val:
+                if self.proto_obj.labels.get(key) == val:
                     self.proto_obj.labels.pop(key)
         else:
             raise ValueError(
