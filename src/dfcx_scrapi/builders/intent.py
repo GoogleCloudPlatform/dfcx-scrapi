@@ -15,6 +15,8 @@
 # limitations under the License.
 
 import logging
+from string import ascii_lowercase
+from string import digits
 from collections import defaultdict
 from typing import List, Dict, Union
 
@@ -58,6 +60,44 @@ class IntentBuilder:
                 "proto_obj is not an Intent type."
                 "\nPlease create or load the correct type to continue."
             )
+
+
+    def _label_constraints_check(self, key: str, value: str):
+        """Check constraints for the label's key and value
+        and raise an error if needed.
+
+        Args:
+          key (str):
+            Label's key.
+          value (str):
+            Label's value.
+        """
+        allowed_chars = ascii_lowercase + digits + "-_"
+        # TODO Add International characteres to allowed_chars
+        allowed_char_error_msg = (
+            "Key and Value can only contain lowercase letters,"
+            " numeric characters, underscores and dashes."
+        )
+        if not(isinstance(key, str) and isinstance(value, str)):
+            raise ValueError(
+                "Key and value should be string."
+            )
+        if len(key) > 63 or len(value) > 63:
+            raise ValueError(
+                "Key and value can be no longer than 63 characters"
+            )
+        if key.startswith("sys-") and key not in ["sys-head", "sys-contextual"]:
+            raise ValueError(
+                "Prefix `sys-` is reserved for Dialogflow defined labels."
+            )
+        if key[0] not in ascii_lowercase:
+            raise ValueError("Key must start with a lowercase letter.")
+        for s in key:
+            if s not in allowed_chars:
+                raise ValueError(allowed_char_error_msg)
+        for s in value:
+            if s not in allowed_chars:
+                raise ValueError(allowed_char_error_msg)
 
 
     def _show_basic_info(self) -> str:
@@ -218,6 +258,7 @@ class IntentBuilder:
         parameters_set = {param.id for param in self.proto_obj.parameters}
 
         # Check for not existing annotated parameters
+        return_flag = True
         for tp_param in tp_params_set:
             if tp_param not in parameters_set:
                 return_flag = False
@@ -490,23 +531,30 @@ class IntentBuilder:
           labels (Dict[str, str] | str):
             labels can be assigned as key:value like driver:account
             or strings like 'head intent'.
+            Labels can contain lowercase letters, digits and
+              the symbols '-' and'_'.
+            International characters are allowed, including letters
+              from unicase alphabets.
+            Keys must start with a letter.
+            Keys and values can be no longer than 63 characters and no more
+              than 128 bytes.
+            Prefix "sys-" is reserved for Dialogflow defined labels.
+              Currently allowed Dialogflow defined labels include:
+                - "sys-head" means the intent is a head intent.
+                - "sys-contextual" means the intent is a contextual intent.
 
         Returns:
           An Intent object stored in proto_obj
         """
         self._check_intent_exist()
 
-        if isinstance(label, dict):
-            if not all((
-                isinstance(key, str) and isinstance(val, str)
-                for key, val in label.items()
-            )):
-                raise ValueError(
-                    "Keys and values in label's dictionary should be string."
-                )
-            self.proto_obj.labels.update(label)
-        elif isinstance(label, str):
+        if isinstance(label, str):
+            self._label_constraints_check(key=label, value=label)
             self.proto_obj.labels.update({label: label})
+        elif isinstance(label, dict):
+            for key, val in label.items():
+                self._label_constraints_check(key=key, value=val)
+            self.proto_obj.labels.update(label)
         else:
             raise ValueError(
                 "label should be either a string or a dictionary."
