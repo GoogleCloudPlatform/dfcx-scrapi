@@ -68,7 +68,7 @@ class IntentBuilder:
 
         Args:
           phrase (List[str]):
-            A list of strings that represents the training phrase. 
+            A list of strings that represents the training phrase.
           annots (List[str]):
             A list of strings that represents
               parameter_id of each part in phrase.
@@ -306,7 +306,7 @@ class IntentBuilder:
                 else:
                     logging.warning(msg)
 
-        return True if return_flag else False
+        return bool(return_flag)
 
 
     def load_intent(
@@ -667,9 +667,11 @@ class IntentBuilder:
             for key, val in label.items():
                 if not(isinstance(key, str) and isinstance(val, str)):
                     raise ValueError(
-                        "Keys and values in label's dictionary should be string."
+                        "Keys and values in label's dictionary"
+                        " should be string."
                     )
-                # Check if the keys and values in the `label` are the same as labels in proto_obj
+                # Check if the keys and values in the `label`
+                # are the same as labels in proto_obj
                 if self.proto_obj.labels.get(key) == val:
                     self.proto_obj.labels.pop(key)
         else:
