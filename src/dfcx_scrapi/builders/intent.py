@@ -62,6 +62,41 @@ class IntentBuilder:
             )
 
 
+    def _include_spaces_to_phrase(self, phrase: List[str], annots: List[str]):
+        """Internal method to add spaces to the training phrase list and
+        make related changes to the annotations list.
+
+        Args:
+          phrase (List[str]):
+            A list of strings that represents the training phrase. 
+          annots (List[str]):
+            A list of strings that represents
+              parameter_id of each part in phrase.
+        """
+        i = 0
+        while True:
+            p_curr, a_curr = phrase[i], annots[i]
+            try:
+                p_next, a_next = phrase[i+1], annots[i+1]
+            except IndexError:
+                break
+
+            if a_curr and a_next:
+                phrase.insert(i+1, " ")
+                annots.insert(i+1, "")
+                i += 2
+            elif a_curr and not a_next:
+                phrase[i+1] = " " + p_next
+                i += 1
+            elif not a_curr and a_next:
+                phrase[i] = p_curr + " "
+                i += 1
+            elif not a_curr and not a_next:
+                phrase[i] = p_curr + " " + p_next
+                del phrase[i+1]
+                del annots[i+1]
+
+
     def _label_constraints_check(self, key: str, value: str):
         """Check constraints for the label's key and value
         and raise an error if needed.
@@ -450,8 +485,10 @@ class IntentBuilder:
         # Propagate the annotations list if needed
         if len(annotations) < len(phrase):
             annotations.extend([""] * (len(phrase) - len(annotations)))
+        # Change the phrase and annotations lists to include spaces if needed
+        if include_spaces:
+            self._include_spaces_to_phrase(phrase, annotations)
         # Creating parts for the training phrase
-        # TODO include_spaces
         parts_list = []
         for text, parameter_id in zip(phrase, annotations):
             part = Intent.TrainingPhrase.Part(
