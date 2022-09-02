@@ -572,7 +572,7 @@ class CopyUtil(ScrapiBase):
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
           destination_agent: the Agent ID string in the following format:
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
-          copy_optoion: The update method of the copy to the new agent.
+          copy_option: The update method of the copy to the new agent.
             One of 'create' or 'update'. Defaults to 'create'
         """
         # retrieve from source agent
@@ -600,9 +600,10 @@ class CopyUtil(ScrapiBase):
 
     def copy_entity_type_to_agent(
         self,
-        entity_type_display_name,
-        source_agent,
-        destination_agent
+        entity_type_display_name: str,
+        source_agent: str,
+        destination_agent: str,
+        copy_option: str = 'create'
     ):
         """Copy an Entity Type object from one CX agent to another.
 
@@ -613,20 +614,29 @@ class CopyUtil(ScrapiBase):
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
           destination_agent: the Agent ID string in the following format:
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
+          copy_option: The update method of the copy to the new agent.
+            One of 'create' or 'update'. Default: 'create'
         """
         # retrieve from source agent
         entity_map = self.entities.get_entities_map(source_agent, reverse=True)
         entity_id = entity_map[entity_type_display_name]
         entity_object = self.entities.get_entity_type(entity_id)
+        
+        if copy_option == 'create':
+            # push to destination agent
+            try:
+                self.entities.create_entity_type(destination_agent, entity_object)
+                logging.info('Entity Type %s created successfully',
+                  entity_object.display_name)
 
-        # push to destination agent
-        try:
-            self.entities.create_entity_type(destination_agent, entity_object)
-            logging.info('Entity Type %s created successfully',
-              entity_object.display_name)
-
-        except core_exceptions.AlreadyExists as error:
-            print(error)
+            except core_exceptions.AlreadyExists as error:
+                print(error)
+                
+        elif copy_option == 'update':
+            self.entities.update_entity_type(entity_type_id=entity_id, obj=entity_object)
+            
+        else:
+            logging.info('Invalid copy_option. Please use \'create\' or \'update\'')
 
     def create_page_shells(
         self,
