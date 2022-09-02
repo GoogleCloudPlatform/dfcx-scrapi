@@ -328,7 +328,7 @@ class CopyUtil(ScrapiBase):
         source_entities_map = self.entities.get_entities_map(source_agent)
         destination_entities_map = self.entities.get_entities_map(
             destination_agent, reverse=True
-            )
+        )
 
         for param in intent_object.parameters:
             if 'sys.' in param.entity_type:
@@ -340,7 +340,10 @@ class CopyUtil(ScrapiBase):
                 else:
                     self.copy_entity_type_to_agent(source_name, source_agent, destination_agent)
                     logging.info(f'Copied entity:{source_name} from source to destination as required by intent:{intent_object.display_name}')
-                    destination_name = source_name
+                    destination_entities_map = self.entities.get_entities_map(
+                        destination_agent, reverse=True
+                    )
+                    destination_name = destination_entities_map[source_name]
                 param.entity_type = destination_name
 
         return intent_object
