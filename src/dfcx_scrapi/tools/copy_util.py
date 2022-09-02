@@ -335,7 +335,12 @@ class CopyUtil(ScrapiBase):
                 pass
             else:
                 source_name = source_entities_map[param.entity_type]
-                destination_name = destination_entities_map[source_name]
+                if source_name in destination_entities_map:
+                    destination_name = destination_entities_map[source_name]
+                else:
+                    self.copy_entity_type_to_agent(source_name, source_agent, destination_agent)
+                    logging.info(f'Copied entity:{source_name} from source to destination as required by intent:{intent_object.display_name}')
+                    destination_name = source_name
                 param.entity_type = destination_name
 
         return intent_object
