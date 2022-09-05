@@ -15,13 +15,13 @@
 # limitations under the License.
 
 import logging
+
+from dfcx_scrapi.core import scrapi_base
 from typing import Dict
 from google.cloud.dialogflow_v2beta1 import services
 from google.cloud.dialogflow_v2beta1 import types
 from google.cloud.dialogflow_v2beta1.services.knowledge_bases import KnowledgeBasesClient
 from google.protobuf import field_mask_pb2
-
-from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -53,12 +53,42 @@ class AgentAssist(scrapi_base.ScrapiBase):
         if conversation_profile_id:
             self.conversation_profile_id = conversation_profile_id
 
+    def _set_conversation_profile(
+        self,
+        conversation_profile_id: str,
+        project_id: str = None
+    ):
+        """Updating the conversation profile for the object
+        Args:
+            conversation_profile_id (reqd):
+                Unique identifier for the conversation profile.
+            project_id (str):
+                Optional Field. Required if the full conv path is not supplied.
+        """
+        logging.info(f"Setting Conversation Profile: {conversation_profile_id}")
+
+        if len(conversation_profile_id.split("/")) >= 4:
+            profile_path = conversation_profile_id
+        else:
+            logging.info("Inferring Profile Path using the Project ID")
+            if not project_id:
+                raise ValueError(
+                    "Project ID is required if the full conevrsation profile"
+                    " path is not provided."
+                )
+            project_path = f"projects/{project_id}"
+            conv_path = f"/conversationProfiles/{conversation_profile_id}"
+            profile_path = project_path + conv_path
+
+        logging.info(f"Conversation Profile Path :{profile_path}")
+        self.conversation_profile_id = profile_path
+
     def create_conversation_profile(
         self,
         display_name,
+        knowledge_base_id: str,
         project_id,
         suggestion_type: str,
-        knowledge_base_id: str = None,
         no_small_talk: bool = True,
         only_end_user: bool = True,
         max_results: int = 3,
@@ -130,12 +160,11 @@ class AgentAssist(scrapi_base.ScrapiBase):
         # Configuring the query config.
         query_config = hac_config.SuggestionQueryConfig()
 
-        if knowledge_base_id is not None:
-            kb_path = KnowledgeBasesClient.knowledge_base_path(
-                project_id, knowledge_base_id
-                )
-            logging.info(f"Knowledge Base Path : {kb_path}")
-            query_config.knowledge_base_query_source.knowledge_bases=[kb_path]
+        kb_path = KnowledgeBasesClient.knowledge_base_path(
+            project_id, knowledge_base_id
+            )
+        logging.info(f"Knowledge Base Path : {kb_path}")
+        query_config.knowledge_base_query_source.knowledge_bases=[kb_path]
 
         query_config.max_results = max_results
         feature_config.query_config = query_config
@@ -149,7 +178,6 @@ class AgentAssist(scrapi_base.ScrapiBase):
 
         # Make the request
         response = client.create_conversation_profile(request=request)
-        logging.info(response)
         logging.info("Conversation Profile created...")
         logging.info(f"Display Name: {response.display_name}")
         logging.info(f"Name: {response.name}")
@@ -183,37 +211,7 @@ class AgentAssist(scrapi_base.ScrapiBase):
 
         return response
 
-    def set_conversation_profile(
-        self,
-        conversation_profile_id: str,
-        project_id: str = None
-    ):
-        """Updating the conversation profile for the object
-        Args:
-            conversation_profile_id (reqd):
-                Unique identifier for the conversation profile.
-            project_id (str):
-                Optional Field. Required if the full conv path is not supplied.
-        """
-        logging.info(f"Setting Conversation Profile: {conversation_profile_id}")
-
-        if len(conversation_profile_id.split("/")) >= 4:
-            profile_path = conversation_profile_id
-        else:
-            logging.info("Inferring Profile Path using the Project ID")
-            if not project_id:
-                raise ValueError(
-                    "Project ID is required if the full conevrsation profile"
-                    " path is not provided."
-                )
-            project_path = f"projects/{project_id}"
-            conv_path = f"/conversationProfiles/{conversation_profile_id}"
-            profile_path = project_path + conv_path
-
-        logging.info(f"Conversation Profile Path :{profile_path}")
-        self.conversation_profile_id = profile_path
-
-    def list_conversation_profile(
+    def list_conversation_profiles(
         self,
         project_id: str
     ):
@@ -233,7 +231,6 @@ class AgentAssist(scrapi_base.ScrapiBase):
         logging.info(f"Project Path : {project_path}")
 
         response = client.list_conversation_profiles(parent = project_path)
-        logging.info(response)
 
         profile_list = []
         for profile in response:
@@ -336,7 +333,7 @@ class AgentAssist(scrapi_base.ScrapiBase):
             )
 
         if conversation_profile_id:
-            self.set_conversation_profile(
+            self._set_conversation_profile(
                 conversation_profile_id = conversation_profile_id,
                 project_id = project_id
                 )
@@ -355,7 +352,6 @@ class AgentAssist(scrapi_base.ScrapiBase):
             conversation=conversation
             )
 
-        logging.info(response)
         logging.info(f"Conversation Created: {response.name}")
 
         return response
@@ -415,7 +411,6 @@ class AgentAssist(scrapi_base.ScrapiBase):
             timeout=600
             )
 
-        logging.info(response)
         logging.info(f"Participant created for the role {role}")
         logging.info(f"Participant Name: {response.name}")
 
@@ -449,12 +444,12 @@ class AgentAssist(scrapi_base.ScrapiBase):
 
     def get_participant(
         self,
-        participant_name: str
+        participant_id: str
     ) -> types.Participant:
         """Returns the Participant object for the given participant name
         Args:
-            participant_name: str
-                The participant name for the requested object.
+            participant_id: str
+                The participant id for the requested object.
                 ``projects/<Project ID>/locations/<Location ID>/
                 conversations/<Conv. ID>/participants/<Participant ID>``.
         """
@@ -463,7 +458,7 @@ class AgentAssist(scrapi_base.ScrapiBase):
             )
 
         request = types.GetParticipantRequest(
-                    name=participant_name,
+                    name=participant_id,
                 )
 
         response = client.get_participant(request=request)
@@ -472,31 +467,31 @@ class AgentAssist(scrapi_base.ScrapiBase):
 
     def update_participant(
         self,
-        participant_name: str = None,
+        participant_id: str = None,
         obj: types.Participant = None,
         **kwargs
     ) -> types.Participant:
         """
         Updates the participant object based on the provided args.
         Args:
-            participant_name: str
-                Full name of the participant to be updated.
+            participant_id: str
+                Full id of the participant to be updated.
             obj:
                 The participant object to be updated.
         """
         if obj:
             participant = obj
-            participant.name = participant_name
+            participant.name = participant_id
 
         else:
-            if not participant_name:
+            if not participant_id:
                 raise ValueError(
                     "Atleast one of participant object or participant "
                     "name is required to make the update."
                 )
 
             participant = self.get_participant(
-                participant_name = participant_name
+                participant_id = participant_id
                 )
 
         # set participant attributes from kwargs
@@ -522,7 +517,7 @@ class AgentAssist(scrapi_base.ScrapiBase):
     def analyze_content_text(
         self,
         text,
-        participant,
+        participant_id,
         language_code = "en-US"
         ) -> types.AnalyzeContentResponse:
         """Analyze text message content from a participant.
@@ -548,10 +543,8 @@ class AgentAssist(scrapi_base.ScrapiBase):
 
         logging.info("Running analyze content...")
         response = client.analyze_content(
-            participant = participant,
+            participant = participant_id,
             text_input = text_input
             )
-        logging.info(f"analyze content response: {response}")
 
         return response
-
