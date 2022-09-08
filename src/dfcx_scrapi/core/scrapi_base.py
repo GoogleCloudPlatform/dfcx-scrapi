@@ -132,23 +132,27 @@ class ScrapiBase:
             resource_type
         """
 
-        pattern_dict = {
+        pattern_map = {
             'agent': {
-                'matcher': r"^projects\/(?P<project>.+?)\/locations\/(?P<location>.+?)\/agents\/(?P<agent>[\-0-9a-f]+)$",
-                'pattern': '`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`'
+                'matcher': r"^projects/(?P<project>.+?)/locations/(?P<location>.+?)/agents/(?P<agent>[-0-9a-f]+)$",
+                'format': '`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`'
+            },
+            'entity': {
+                'matcher': r"^projects/(?P<project>.+?)/locations/(?P<location>.+?)/agents/(?P<agent>.+?)/entityTypes/(?P<entity>[-@.0-9a-z]+)$",
+                'format': '`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`/entityTypes/<Entity Types ID>`'
             },
             "environment": {
-                'matcher': r"^projects/(?P<project>.+?)/locations/(?P<location>.+?)/agents/(?P<agent>.+?)/environments/(?P<environment>[\-0-9a-f]+)$",
-                'pattern': '`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/environments/<Environment ID>`'
+                'matcher': r"^projects/(?P<project>.+?)/locations/(?P<location>.+?)/agents/(?P<agent>.+?)/environments/(?P<environment>[-0-9a-f]+)$",
+                'format': '`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/environments/<Environment ID>`'
             },
             "session": {
                 "matcher": r"^projects/(?P<project>.+?)/locations/(?P<location>.+?)/agents/(?P<agent>.+?)/sessions/(?P<session>.+?)$",
-                "pattern": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>`"
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>`"
             }
         }
 
         match_res = re.match(
-            pattern_dict[resource_type]['matcher'], resource_id)
+            pattern_map[resource_type]['matcher'], resource_id)
         dict_res = match_res.groupdict() if match_res else {}
         valid = False
 
@@ -159,7 +163,7 @@ class ScrapiBase:
             raise ValueError(
                 f"{resource_type.capitalize()} ID must be provided in the "\
                     f"following format: "\
-                        f"{pattern_dict[resource_type]['pattern']}"
+                        f"{pattern_map[resource_type]['format']}"
                 )
 
         return dict_res
