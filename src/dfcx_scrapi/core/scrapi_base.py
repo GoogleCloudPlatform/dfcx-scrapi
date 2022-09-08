@@ -16,8 +16,9 @@
 
 import logging
 import json
+import re
 
-from typing import Dict
+from typing import Dict, Tuple
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
@@ -117,6 +118,51 @@ class ScrapiBase:
         """convert to json so we can get at the object"""
         blob = ScrapiBase.cx_object_to_dict(msg)
         return blob.get("payload")  # deref for nesting
+
+    @staticmethod
+    def _parse_resource_path(resource_type, resource_id) -> Dict[str,str]:
+        """Validates the provided Resource ID against known patterns.
+
+        Args:
+          resource_type, Must be one of the following resource types:
+            `agent`, `entity_type`, `environmnet`, `flow`, `intent`, `page`,
+            `project`, `security_setting`, `session`, `session_entity_type`,
+            `test_case`, `transition_route_group`, `version`, `webhook`
+          resource_id, The CX resource ID to check against the provided
+            resource_type
+        """
+
+        pattern_dict = {
+            'agent': {
+                'matcher': r"^projects\/(?P<project>.+?)\/locations\/(?P<location>.+?)\/agents\/(?P<agent>[\-0-9a-f]+)$",
+                'pattern': '`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`'
+            },
+            "environment": {
+                'matcher': r"^projects/(?P<project>.+?)/locations/(?P<location>.+?)/agents/(?P<agent>.+?)/environments/(?P<environment>[\-0-9a-f]+)$",
+                'pattern': '`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/environments/<Environment ID>`'
+            },
+            "session": {
+                "matcher": r"^projects/(?P<project>.+?)/locations/(?P<location>.+?)/agents/(?P<agent>.+?)/sessions/(?P<session>.+?)$",
+                "pattern": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>`"
+            }
+        }
+
+        match_res = re.match(
+            pattern_dict[resource_type]['matcher'], resource_id)
+        dict_res = match_res.groupdict() if match_res else {}
+        valid = False
+
+        if dict_res:
+            valid = True
+
+        if not valid:
+            raise ValueError(
+                f"{resource_type.capitalize()} ID must be provided in the "\
+                    f"following format: "\
+                        f"{pattern_dict[resource_type]['pattern']}"
+                )
+
+        return dict_res
 
     def recurse_proto_repeated_composite(self, repeated_object):
         repeated_list = []
