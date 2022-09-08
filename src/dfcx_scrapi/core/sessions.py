@@ -150,6 +150,7 @@ class Sessions(ScrapiBase):
         )
 
         session_path = f"{agent_id}/sessions/{session_id}"
+        logging.info(f'Starting Session ID {session_path}')
 
         if parameters:
             query_params = types.session.QueryParameters(parameters=parameters)
