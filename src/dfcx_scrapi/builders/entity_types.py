@@ -345,3 +345,58 @@ class EntityTypeBuilder:
             )
 
         return self.proto_obj
+
+
+    def remove_entity(
+        self, value: str, synonyms: List[str] = None
+    ) -> EntityType:
+        """Remove an entity or synonym from the EntityType stored in proto_obj.
+        For `KIND_MAP` if synonym was not provided, the whole entity
+        will be removed, otherwise the synonyms associated with
+        the value will be removed.
+
+        Args:
+          value (str):
+            Required. The primary value associated with this entity
+            entry to remove. For example, if the entity type is *vegetable*,
+            the value could be *scallions*.
+            For `KIND_MAP` entity types:
+            -  A canonical value to be used in place of synonyms.
+          synonyms (List[str]):
+            Required only for `KIND_MAP`.
+            A collection of value synonyms to be removed. For example, if
+            the entity type is *vegetable*, and `value` is
+            *scallions*, a synonym could be *green onions*.
+
+        Returns:
+          An EntityType object stored in proto_obj
+        """
+        self._check_entity_type_exist()
+
+        if not isinstance(value, str):
+            raise ValueError(
+                "value should be string."
+            )
+
+        if not synonyms:
+            for idx, entity in enumerate(self.proto_obj.entities):
+                if entity.value == value:
+                    del self.proto_obj.entities[idx]
+                    break
+        elif self.proto_obj.kind.name == "KIND_MAP":
+            if not (
+                isinstance(synonyms, list) and
+                all((isinstance(s, str) for s in synonyms))
+            ):
+                raise ValueError(
+                    "synonyms should be a list of strings."
+                )
+
+            for entity in self.proto_obj.entities:
+                if entity.value == value:
+                    new_synonyms = list(set(entity.synonyms) - set(synonyms))
+                    entity.synonyms.clear()
+                    entity.synonyms.extend(new_synonyms)
+                    break
+
+        return self.proto_obj
