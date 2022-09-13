@@ -17,8 +17,6 @@
 import logging
 from typing import Dict, List
 
-import pandas as pd
-import uuid
 from google.oauth2 import service_account
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -163,7 +161,7 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
             parent_id = session_id
 
         # Append Entity ID to Parent ID
-        entity_parts = self._parse_resource_path("entity", entity_id)
+        entity_parts = self._parse_resource_path("entity_type", entity_id)
         parent_id += f"/entityTypes/{entity_parts['entity']}"
 
         st = types.SessionEntityType()
@@ -241,6 +239,9 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         
         Args:
           session_entity_type_id, The Session Entity Type ID to retrieve.
+            Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+            sessions/<Session ID>/entityTypes/<Entity Type ID>``
           environment_id, The Environment associated with the Session ID to
             list all session entity types from. Format:
             ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
@@ -296,3 +297,103 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         response = client.create_session_entity_type(request)
         
         return response
+
+    def update_session_entity_type(
+        self,
+        session_entity_type_id: str,
+        environment_id: str = None,
+        obj: types.SessionEntityType = None,
+        **kwargs) -> types.SessionEntityType:
+        """Updates the specified Session Entity Type object.
+        
+        This method will update the specific Sesssion Entity Type object based
+        on the provided user inputs. If the user provides the entier Session
+        Entity Type object, the entire existing object will be updated.
+        Alternatively, kwargs can be provided to only update specific portions
+        of the Session Entity Type object.
+
+        Ref: https://github.com/googleapis/python-dialogflow-cx/blob/main/
+          google/cloud/dialogflowcx_v3beta1/types/session_entity_type.py#L36
+
+        Args:
+          session_entity_type_id, the ID of the Session Entity Type to update
+          Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+              sessions/<Session ID>/entityTypes/<Entity Type ID>`
+          environment_id, The Environment associated with the Session Entity
+            Type ID to update. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+              environments/<Environment ID>`
+            If ``Environment ID`` is not specified, we assume default 'DRAFT'
+              environment.
+          obj, the Session Entity Type object to send as update
+        """
+        if environment_id:
+            parent_id = self._merge_session_entity_id_and_env_id(
+                session_entity_type_id,
+                environment_id
+                )
+        else:
+            parent_id = session_entity_type_id
+
+        if obj:
+            session_entity_type = obj
+            session_entity_type.name = parent_id
+        else:
+            session_entity_type = self.get_session_entity_type(parent_id)
+        
+        # set agent attributes to args
+        for key, value in kwargs.items():
+            setattr(session_entity_type, key, value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+
+        client_options = self._set_region(parent_id)
+        client = services.session_entity_types.SessionEntityTypesClient(
+            credentials=self.creds, client_options=client_options
+        )
+        request = types.UpdateSessionEntityTypeRequest()
+        request.session_entity_type = parent_id
+        request.update_mask = mask
+
+        response = client.update_session_entity_type(request)
+
+        return response
+
+    def delete_session_entity_type(
+        self,
+        session_entity_type_id: str,
+        environment_id: str = None) -> str:
+        """Deletes the specified Session Entity Type.
+        
+        Args:
+          session_entity_type_id, the ID of the Session Entity Type to update
+            Format:
+              ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+                sessions/<Session ID>/entityTypes/<Entity Type ID>`
+            environment_id, The Environment associated with the Session Entity
+              Type ID to update. Format:
+              ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+                environments/<Environment ID>`
+              If ``Environment ID`` is not specified, we assume default 'DRAFT'
+                environment.
+        """
+        if environment_id:
+            parent_id = self._merge_session_entity_id_and_env_id(
+                session_entity_type_id, environment_id
+            )
+
+        else:
+            parent_id = session_entity_type_id
+
+        client_options = self._set_region(session_entity_type_id)
+        client = services.session_entity_types.SessionEntityTypesClient(
+            credentials=self.creds, client_options=client_options
+        )
+
+        request = types.DeleteSessionEntityTypeRequest()
+        request.name = parent_id
+
+        client.delete_session_entity_type(request)
+
+        return f"Session Entity Type {session_entity_type_id} successfully deleted."
