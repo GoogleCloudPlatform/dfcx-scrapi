@@ -75,10 +75,10 @@ class Sessions(ScrapiBase):
     def build_session_id(
         self, agent_id:str = None, overwrite:bool = True) -> str:
         """Creates a valid UUID-4 Session ID to use with other methods.
-        
+
         Args:
           overwrite (Optional), if a session_id already exists, this will
-            overwrite the existing ID. Defaults to True.
+            overwrite the existing Session ID parameter. Defaults to True.
         """
 
         agent_parts = self._parse_resource_path("agent", agent_id)
@@ -86,7 +86,8 @@ class Sessions(ScrapiBase):
             f"locations/{agent_parts['location']}/agents/"\
             f"{agent_parts['agent']}/sessions/{uuid.uuid4()}"
 
-        self.session_id = session_id
+        if overwrite:
+            self.session_id = session_id
 
         return session_id
 
@@ -208,13 +209,13 @@ class Sessions(ScrapiBase):
                 "<Agent ID>/sessions/<Session ID>`.\n\n"\
                 "Utilize `build_session_id` to create a new Session ID.")
 
-        logging.info(f'Starting Session ID {session_id}')
+        logging.info(f"Starting Session ID {session_id}")
 
         if parameters:
             query_params = types.session.QueryParameters(parameters=parameters)
 
             query_input = self._build_query_input(text, language_code)
-            
+
             request = types.session.DetectIntentRequest()
             request.session = session_id
             request.query_input = query_input

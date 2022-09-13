@@ -43,27 +43,28 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         creds_dict: Dict = None,
         creds: service_account.Credentials = None,
         scope: bool = False,
-        agent_id: str = None
+        agent_id: str = None,
     ):
 
         super().__init__(
             creds_path=creds_path,
             creds_dict=creds_dict,
             creds=creds,
-            scope=scope
+            scope=scope,
         )
 
         self.agent_id = agent_id
 
     def _merge_session_id_and_env_id(
-        self, session_id: str, environment_id: str) -> str:
+        self, session_id: str, environment_id: str
+    ) -> str:
         """Merges the Session ID and Environment ID into a valid Session ID.
 
         When using DFCX Environments, the Session ID needs to be modified to
         include the Environment ID as part of its fully qualified path. Use
         this method to merge the 2 IDs into a valid Session ID when a non-DRAFT
         environment is in use.
-        
+
         session_id, The session to list all session entity types from.
             Format:
             ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
@@ -75,25 +76,26 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         """
         env_parts = self._parse_resource_path("environment", environment_id)
         session_parts = self._parse_resource_path("session", session_id)
-        
-        parent_id = f"projects/{session_parts['project']}/locations/"\
-            f"{session_parts['location']}/agents/{session_parts['agent']}"\
-                f"/environments/{env_parts['environment']}/sessions/"\
-                    f"{session_parts['session']}"
+
+        parent_id = (
+            f"projects/{session_parts['project']}/locations/"
+            f"{session_parts['location']}/agents/{session_parts['agent']}"
+            f"/environments/{env_parts['environment']}/sessions/"
+            f"{session_parts['session']}"
+        )
 
         return parent_id
 
     def _merge_session_entity_id_and_env_id(
-        self,
-        session_entity_type_id: str,
-        environment_id: str) -> str:
+        self, session_entity_type_id: str, environment_id: str
+    ) -> str:
         """Merges the Session Entity Type ID and Environment ID.
 
         When using DFCX Environments, the Session Entity Type ID needs to be
         modified to include the Environment ID as part of its fully qualified
         path. Use this method to merge the 2 IDs into a valid Session Entity
         Type ID when a non-DRAFT environment is in use.
-        
+
         Args:
           session_entity_type_id, The Session Entity Type ID to merge.
             Format:
@@ -105,16 +107,20 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
               environments/<Environment ID>`
         """
         entity_parts = self._parse_resource_path(
-            "session_entity_type", session_entity_type_id)
+            "session_entity_type", session_entity_type_id
+        )
         environment_parts = self._parse_resource_path(
-            "environment", environment_id)
+            "environment", environment_id
+        )
 
-        parent_id = f"projects/{environment_parts['project']}/"\
-            f"locations/{environment_parts['location']}/"\
-            f"agents/{environment_parts['agent']}/"\
-            f"environments/{environment_parts['environment']}/"\
-            f"sessions/{environment_parts['session']}/"\
+        parent_id = (
+            f"projects/{environment_parts['project']}/"
+            f"locations/{environment_parts['location']}/"
+            f"agents/{environment_parts['agent']}/"
+            f"environments/{environment_parts['environment']}/"
+            f"sessions/{environment_parts['session']}/"
             f"entityTypes/{entity_parts['entity']}"
+        )
 
         return parent_id
 
@@ -122,9 +128,9 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         self,
         session_id: str,
         entity_id: str,
-        entity_dict: Dict[str,List[str]],
+        entity_dict: Dict[str, List[str]],
         environment_id: str = None,
-        entity_override_mode: str = 'Override'
+        entity_override_mode: str = "Override",
     ) -> types.SessionEntityType:
         """Builds a Session Entity Type object based on simple inputs.
 
@@ -134,10 +140,10 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
             ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
               sessions/<Session ID>``
           entity_id, The Entity ID to replace or extend that currently exists
-            in the DFCX Agent. 
+            in the DFCX Agent.
           entity_dict, The Values and associated Synonyms for the Session
           Entities to be created.
-            Ex: 
+            Ex:
               [1] {'scallions': ['green onions']}
               [2] {'fruit': ['apple','orange'],
                 'vegetables': ['cabbage','celery']}
@@ -155,7 +161,8 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         """
         if environment_id:
             parent_id = self._merge_session_id_and_env_id(
-                session_id, environment_id)
+                session_id, environment_id
+            )
 
         else:
             parent_id = session_id
@@ -168,15 +175,15 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         st.name = parent_id
 
         entity_override_map = {
-            'Override': 'ENTITY_OVERRIDE_MODE_OVERRIDE',
-            'Supplement': 'ENTITY_OVERRIDE_MODE_SUPPLEMENT'
+            "Override": "ENTITY_OVERRIDE_MODE_OVERRIDE",
+            "Supplement": "ENTITY_OVERRIDE_MODE_SUPPLEMENT",
         }
 
         st.entity_override_mode = entity_override_map[entity_override_mode]
 
         entity_list = []
 
-        for k,v in entity_dict.items():
+        for k, v in entity_dict.items():
             ent = types.EntityType.Entity()
             ent.value = k
             ent.synonyms = v
@@ -187,10 +194,8 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         return st
 
     def list_session_entity_types(
-        self,
-        session_id: str,
-        environment_id: str = None
-        ) -> List[types.SessionEntityType]:
+        self, session_id: str, environment_id: str = None
+    ) -> List[types.SessionEntityType]:
         """Lists all Session Entities currently active in the Session.
 
         Args:
@@ -207,7 +212,8 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         """
         if environment_id:
             parent_id = self._merge_session_id_and_env_id(
-                session_id, environment_id)
+                session_id, environment_id
+            )
 
         else:
             parent_id = session_id
@@ -231,12 +237,10 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         return session_entities
 
     def get_session_entity_type(
-        self,
-        session_entity_type_id: str,
-        environment_id: str = None
-        ) -> types.SessionEntityType:
+        self, session_entity_type_id: str, environment_id: str = None
+    ) -> types.SessionEntityType:
         """Retrieves the specified Session Entity Type.
-        
+
         Args:
           session_entity_type_id, The Session Entity Type ID to retrieve.
             Format:
@@ -251,12 +255,11 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         """
         if environment_id:
             parent_id = self._merge_session_entity_id_and_env_id(
-                session_entity_type_id,
-                environment_id
-                )
+                session_entity_type_id, environment_id
+            )
         else:
             parent_id = session_entity_type_id
-        
+
         request = types.GetSessionEntityTypeRequest()
         request.name = parent_id
 
@@ -270,10 +273,8 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         return response
 
     def create_session_entity_type(
-        self,
-        session_id: str,
-        session_entity_type: types.SessionEntityType
-        ) -> types.SessionEntityType:
+        self, session_id: str, session_entity_type: types.SessionEntityType
+    ) -> types.SessionEntityType:
         """Creates a Session Entity Type object from provided inputs.
         Args:
           session_id, The session to list all session entity types from.
@@ -283,7 +284,7 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
           session_entity_type, The Session Entity Type object to create for the
             provided session. Use `build_session_entity_type` to create a new
             object.
-        
+
         """
         request = types.CreateSessionEntityTypeRequest()
         request.parent = session_id
@@ -295,7 +296,7 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         )
 
         response = client.create_session_entity_type(request)
-        
+
         return response
 
     def update_session_entity_type(
@@ -303,9 +304,10 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         session_entity_type_id: str,
         environment_id: str = None,
         obj: types.SessionEntityType = None,
-        **kwargs) -> types.SessionEntityType:
+        **kwargs,
+    ) -> types.SessionEntityType:
         """Updates the specified Session Entity Type object.
-        
+
         This method will update the specific Sesssion Entity Type object based
         on the provided user inputs. If the user provides the entier Session
         Entity Type object, the entire existing object will be updated.
@@ -330,9 +332,8 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         """
         if environment_id:
             parent_id = self._merge_session_entity_id_and_env_id(
-                session_entity_type_id,
-                environment_id
-                )
+                session_entity_type_id, environment_id
+            )
         else:
             parent_id = session_entity_type_id
 
@@ -341,7 +342,7 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
             session_entity_type.name = parent_id
         else:
             session_entity_type = self.get_session_entity_type(parent_id)
-        
+
         # set agent attributes to args
         for key, value in kwargs.items():
             setattr(session_entity_type, key, value)
@@ -361,11 +362,10 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
         return response
 
     def delete_session_entity_type(
-        self,
-        session_entity_type_id: str,
-        environment_id: str = None) -> str:
+        self, session_entity_type_id: str, environment_id: str = None
+    ) -> str:
         """Deletes the specified Session Entity Type.
-        
+
         Args:
           session_entity_type_id, the ID of the Session Entity Type to update
             Format:
@@ -396,4 +396,5 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
 
         client.delete_session_entity_type(request)
 
-        return f"Session Entity Type {session_entity_type_id} successfully deleted."
+        return f"Session Entity Type {session_entity_type_id} successfully "\
+            "deleted."
