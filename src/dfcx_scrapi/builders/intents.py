@@ -55,7 +55,7 @@ class IntentBuilder:
                 "There is no proto_obj!"
                 "\nUse create_new_intent or load_intent to continue."
             )
-        elif not isinstance(self.proto_obj, Intent):
+        if not isinstance(self.proto_obj, Intent):
             raise ValueError(
                 "proto_obj is not an Intent type."
                 "\nPlease create or load the correct type to continue."
@@ -303,8 +303,7 @@ class IntentBuilder:
                 )
                 if raise_error:
                     raise Exception(msg)
-                else:
-                    logging.warning(msg)
+                logging.warning(msg)
 
         return bool(return_flag)
 

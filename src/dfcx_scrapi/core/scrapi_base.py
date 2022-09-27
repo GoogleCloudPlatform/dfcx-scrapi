@@ -90,8 +90,7 @@ class ScrapiBase:
             client_options = {"api_endpoint": api_endpoint}
             return client_options
 
-        else:
-            return None  # explicit None return when not required
+        return None  # explicit None return when not required
 
     @staticmethod
     def pbuf_to_dict(pbuf):

@@ -133,7 +133,7 @@ class SecuritySettings(scrapi_base.ScrapiBase):
         if obj and security_settings_dict:
             raise ValueError(
                 "Cannot provide both obj and security_settings_dict")
-        elif obj:
+        if obj:
             security_settings = obj
             security_settings.name = ""
         elif security_settings_dict:

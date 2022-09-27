@@ -83,7 +83,7 @@ class EntityTypes(ScrapiBase):
 
             return main_df
 
-        elif mode == "advanced":
+        if mode == "advanced":
 
             main_df = pd.DataFrame()
             excl_phrases_df = pd.DataFrame()
@@ -118,8 +118,7 @@ class EntityTypes(ScrapiBase):
                 "entity_types": main_df, "excluded_phrases": excl_phrases_df
             }
 
-        else:
-            raise ValueError("Mode types: [basic, advanced]")
+        raise ValueError("Mode types: [basic, advanced]")
 
     def entity_types_to_df(
         self,
@@ -157,7 +156,7 @@ class EntityTypes(ScrapiBase):
                 ["display_name", "entity_value"])
             return main_df
 
-        elif mode == "advanced":
+        if mode == "advanced":
             main_df = pd.DataFrame()
             excl_phrases_df = pd.DataFrame()
             for obj in entity_types:
@@ -182,8 +181,7 @@ class EntityTypes(ScrapiBase):
                 "entity_types": main_df, "excluded_phrases": excl_phrases_df
             }
 
-        else:
-            raise ValueError("Mode types: [basic, advanced]")
+        raise ValueError("Mode types: [basic, advanced]")
 
 
     def get_entities_map(self, agent_id: str = None, reverse=False):
