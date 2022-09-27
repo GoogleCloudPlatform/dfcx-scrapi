@@ -15,9 +15,10 @@
 # limitations under the License.
 
 import logging
+from typing import Union
+
 import pandas
 import numpy as np
-from typing import Union
 from dfcx_scrapi.core.intents import Intents
 from google.cloud.dialogflowcx_v3beta1 import types
 

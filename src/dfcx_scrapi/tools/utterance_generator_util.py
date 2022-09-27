@@ -16,8 +16,10 @@
 
 import logging
 import string
-import pandas as pd
 from typing import List, Dict
+
+import pandas as pd
+
 from google.oauth2 import service_account
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import intents

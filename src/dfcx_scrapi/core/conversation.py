@@ -16,13 +16,14 @@
 
 import logging
 import time
+import traceback
 import uuid
 
-import pandas as pd
 from typing import Dict
-from threading import Thread
-import traceback
 from operator import attrgetter
+from threading import Thread
+
+import pandas as pd
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
