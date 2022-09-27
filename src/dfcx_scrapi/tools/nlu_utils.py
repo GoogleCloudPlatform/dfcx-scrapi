@@ -231,8 +231,8 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
       else:
         # Found a new group, add it.
         match_idx = train_nearest_idx[utterance_idx, 0]
-        similar_training_phrases.append(self.embedder.training_phrases[match_idx])
-        similar_intents.append(self.embedder.training_intents[match_idx])
+        similar_training_phrases.append(self.training_phrases[match_idx])
+        similar_intents.append(self.training_intents[match_idx])
         training_phrase_distances.append(train_similarities[utterance_idx, 0])
         groups.append('"' + ('", "'.join(group_utterances)) + '"')
     
