@@ -453,8 +453,9 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             if retries < MAX_RETRIES:
                 logging.error("retrying")
                 return self.reply(send_obj, restart=restart, retries=retries)
-            logging.error("MAX_RETRIES exceeded")
-            return {}
+            else:
+                logging.error("MAX_RETRIES exceeded")
+                return {}
 
         if checkpoints:
             self.checkpoint("<< got response")

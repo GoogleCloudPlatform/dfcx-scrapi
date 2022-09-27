@@ -99,7 +99,7 @@ class Intents(ScrapiBase):
 
             return df
 
-        if mode == "advanced":
+        elif mode == "advanced":
             df = pd.DataFrame(columns=[
                 "name", "display_name", "description", "priority",
                 "is_fallback", "labels", "id", "repeat_count",
@@ -164,8 +164,8 @@ class Intents(ScrapiBase):
                         ).transpose()
                         df = pd.concat([df, row], ignore_index=True)
             return df
-
-        raise ValueError("Mode types: [basic, advanced]")
+        else:
+            raise ValueError("Mode types: [basic, advanced]")
 
 
     @staticmethod
@@ -494,7 +494,7 @@ class Intents(ScrapiBase):
 
         if obj and intent_dictionary:
             raise ValueError("cannot provide both obj and intent_dictionary")
-        if obj:
+        elif obj:
             intent = obj
             intent.name = ""
         elif intent_dictionary:

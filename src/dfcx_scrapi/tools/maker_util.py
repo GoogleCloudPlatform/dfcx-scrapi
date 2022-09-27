@@ -40,7 +40,7 @@ class MakerUtil:
         if isinstance(obj, obj_type):
             return obj
 
-        if isinstance(obj, dict):
+        elif isinstance(obj, dict):
             obj_ins = obj_type()
             for key, value in obj.items():
                 if key in conditionals.keys():
@@ -52,7 +52,7 @@ class MakerUtil:
                     setattr(obj_ins, key, value)
             return obj_ins
 
-        if isinstance(obj, str):
+        elif isinstance(obj, str):
             dic = {
                 "unspecified": 0,
                 "map": 1,
@@ -63,9 +63,10 @@ class MakerUtil:
             t = dic.get(obj.lower())
             if t:
                 return obj_type(t)
+            else:
+                return default
+        else:
             return default
-
-        return default
 
     @classmethod
     def make_seq(cls, obj, obj_type, default, conditionals=None):
@@ -171,7 +172,8 @@ class MakerUtil:
                     "webhook_tag is required when specifying webhook_id")
                 return None
 
-            fulfillment.tag = webhook_tag
+            else:
+                fulfillment.tag = webhook_tag
 
         # print(fulfillment)
         return fulfillment
