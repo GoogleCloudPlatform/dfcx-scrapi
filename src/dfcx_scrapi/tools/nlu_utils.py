@@ -80,7 +80,7 @@ class SheetsLoader():
     try:
       column_data = worksheet_data[column_name]
     except KeyError:
-      raise KeyError(f"Couldn't find column '{column_name}'")
+      raise KeyError(f"Couldn't find column '{utterance_column_name}'")
 
     return column_data.to_numpy()
 
@@ -231,8 +231,8 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
       else:
         # Found a new group, add it.
         match_idx = train_nearest_idx[utterance_idx, 0]
-        similar_training_phrases.append(self.embedder.training_phrases[match_idx]) # Double check this
-        similar_intents.append(self.embedder.training_intents[match_idx])
+        similar_training_phrases.append(embedder.training_phrases[match_idx]) # Double check this
+        similar_intents.append(embedder.training_intents[match_idx])
         training_phrase_distances.append(train_similarities[utterance_idx, 0])
         groups.append('"' + ('", "'.join(group_utterances)) + '"')
     
