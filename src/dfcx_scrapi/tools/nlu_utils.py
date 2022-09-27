@@ -42,7 +42,7 @@ SHEETS_SCOPE = [
 ]
 
 
-class KonaEmbeddingModel():
+class KonaEmbedder():
   def __init__(self):
     # module_url = "https://tfhub.dev/google/universal-sentence-encoder-large/5"
     module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
@@ -85,7 +85,7 @@ class SheetsLoader():
     return column_data.to_numpy()
 
 
-class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
+class PageEmbedder(scrapi_base.ScrapiBase):
   """Class to generate and analyze embeddings for a page."""
   def __init__(self, agent_id: str, flow_display_name: str,
                page_display_name: str, creds_path: str = None,
@@ -100,7 +100,7 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
     self._load_data(agent_id, flow_display_name, page_display_name)
 
     print("Loading embedder...")
-    self.embedder = KonaEmbeddingModel()
+    self.embedder = KonaEmbedder()
 
     print("Generating embeddings for training data...")
     self.training_intents, self.training_phrases = self._get_training_phrases()
@@ -231,7 +231,7 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
       else:
         # Found a new group, add it.
         match_idx = train_nearest_idx[utterance_idx, 0]
-        similar_training_phrases.append(embedder.training_phrases[match_idx]) # Double check this
+        similar_training_phrases.append(embedder.training_phrases[match_idx])
         similar_intents.append(embedder.training_intents[match_idx])
         training_phrase_distances.append(train_similarities[utterance_idx, 0])
         groups.append('"' + ('", "'.join(group_utterances)) + '"')
