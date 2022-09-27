@@ -14,30 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import collections
-from fileinput import filename
 import logging
-import random
-import re
-import statistics
 
 import gspread
 import numpy as np
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
-import scann #TODO: maybe need to add scann to requirements doc?
+import scann
 import tensorflow_hub
 
-from dfcx_scrapi.core import entity_types
 from dfcx_scrapi.core import flows
 from dfcx_scrapi.core import intents
 from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import transition_route_groups
 from google.colab import data_table
+from typing import Dict, Set
+
 data_table.enable_dataframe_formatter()
 
-from typing import Dict, List, Set
 
 # logging config
 logging.basicConfig(
@@ -46,16 +41,19 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+
 SHEETS_SCOPE = [
     "https:/spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
 ]
 
-class KonaEmbeddingModel():
+
+class KonaEmbeddingModel:
+    """Load and generate text embeddings using Universal Sentence Encoder."""
+
     def __init__(self):
         module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
         self.model = tensorflow_hub.load(module_url)
-        
 
     def embed(self, utterances, batch_size=512):
         embeddings = []
@@ -66,16 +64,21 @@ class KonaEmbeddingModel():
         embeddings = np.vstack(embeddings)
         return embeddings
 
-class SheetsLoader():
-    '''Load sheets '''
+
+class SheetsLoader:
+    """Load sheets"""
+
     def __init__(self, creds_path: str = None):
         sheets_creds = ServiceAccountCredentials.from_json_keyfile_name(
-            filename=creds_path, scopes = SHEETS_SCOPE
+            filename=creds_path, scopes=SHEETS_SCOPE
         )
         self.sheets_client = gspread.authorize(sheets_creds)
-    
-    def load_column_from_sheet(self, sheet_name: str, worksheet_name: str, column_name: str):
-        "Load a column from a Google Sheets file."
+
+    def load_column_from_sheet(
+        self, sheet_name: str, worksheet_name: str, column_name: str
+    ):
+        """Load a column from a Google Sheets
+        file."""
         try:
             sheet = self.sheets_client.open(sheet_name)
         except gspread.SpreadsheetNotFound:
@@ -95,6 +98,7 @@ class SheetsLoader():
 
 class NaturalLanguageUnderstandingUtils(scrapi_base.ScrapiBase):
     """Class to generate and analyze embeddings for a page."""
+
     def __init__(
         self,
         agent_id: str,
@@ -102,43 +106,54 @@ class NaturalLanguageUnderstandingUtils(scrapi_base.ScrapiBase):
         page_display_name: str,
         creds_path: str = None,
         creds_dict: Dict[str, str] = None,
-        creds = None
-        ):
+        creds=None,
+    ):
         super().__init__(
-            creds_path = creds_path,
-            creds_dict = creds_dict,
-            creds = creds
+            creds_path=creds_path, creds_dict=creds_dict, creds=creds
         )
         logging.info("Loading training data...")
         self._load_data(agent_id, flow_display_name, page_display_name)
         logging.info("Loading embedder...")
         self.embedder = KonaEmbeddingModel()
         logging.info("Generating embeddings for training data...")
-        self.training_intents, self.training_phrases = self._get_training_phrases()
-        self.training_embeddings = self.generate_embeddings(self.training_phrases)
+        (
+            self.training_intents,
+            self.training_phrases,
+        ) = self._get_training_phrases()
+        self.training_embeddings = self.generate_embeddings(
+            self.training_phrases
+        )
         logging.info("Loading ScaNN searcher...")
         self.searcher = self._build_searcher(self.training_embeddings)
-    
 
-    def _load_data(self, agent_id: str, flow_display_name: str, page_display_name: str):
-        flow_loader = flows.Flows(creds = self.creds)
-        self.flow = flow_loader.get_flow_by_display_name(flow_display_name, agent_id)
-        page_loader = pages.Pages(creds = self.creds)
+    def _load_data(
+        self, agent_id: str, flow_display_name: str, page_display_name: str
+    ):
+        flow_loader = flows.Flows(creds=self.creds)
+        self.flow = flow_loader.get_flow_by_display_name(
+            flow_display_name, agent_id
+        )
+        page_loader = pages.Pages(creds=self.creds)
         page_map = page_loader.get_pages_map(self.flow.name, reverse=True)
         page_id = page_map.get(page_display_name, None)
         if page_id is None:
-            raise ValueError(f"page \"{page_display_name}\" does not exist in the "
-            "specified agent.")
+            raise ValueError(
+                f'page "{page_display_name}" does not exist in the '
+                "specified agent."
+            )
         self.page = page_loader.get_page(page_id)
 
-        trg_loader = transition_route_groups.TransitionRouteGroups(creds = self.creds)
+        trg_loader = transition_route_groups.TransitionRouteGroups(
+            creds=self.creds
+        )
         self.trgs = trg_loader.list_transition_route_groups(self.flow.name)
         self.name_to_trg = {i.name: i for i in self.trgs}
-        
+
         intent_names = self._list_page_intents()
         all_intents = intents.Intents(creds=self.creds).list_intents(agent_id)
-        self.intents = list(filter(lambda x: x.name in intent_names, all_intents))
-    
+        self.intents = list(
+            filter(lambda x: x.name in intent_names, all_intents)
+        )
 
     def _list_page_intents(self) -> Set[str]:
         """Lists all intents in-scope at the given page.
@@ -160,10 +175,9 @@ class NaturalLanguageUnderstandingUtils(scrapi_base.ScrapiBase):
                 if tr.intent:
                     relevant_intents.add(tr.intent)
         return relevant_intents
-    
 
     def _get_training_phrases(self):
-        intents  = []
+        intents = []
         training_phrases = []
         for intent in self.intents:
             for training_phrase in intent.training_phrases:
@@ -171,42 +185,55 @@ class NaturalLanguageUnderstandingUtils(scrapi_base.ScrapiBase):
                 training_phrases.append(phrase_str)
                 intents.append(intent.display_name)
         return np.array(intents), np.array(training_phrases)
-    
 
     def generate_embeddings(self, utterances):
         return self.embedder.embed(utterances)
-    
 
-    def _build_searcher(self, embeddings, num_neighbors = 10):
-        normalized_dataset = embeddings / np.linalg.norm(embeddings, axis = 1)[:, np.newaxis]
+    def _build_searcher(self, embeddings, num_neighbors=10):
+        normalized_dataset = (
+            embeddings / np.linalg.norm(embeddings, axis=1)[:, np.newaxis]
+        )
         # Use ScaNN brute force. This is fine for up to ~20k points.
         searcher = (
-            scann.scann_ops_pybind.builder(normalized_dataset, num_neighbors, "dot_product").score_brute_force().build()
+            scann.scann_ops_pybind.builder(
+                normalized_dataset, num_neighbors, "dot_product"
+            )
+            .score_brute_force()
+            .build()
         )
         return searcher
-    
 
     def find_similar_phrases(self, utterances):
         embeddings = self.generate_embeddings(utterances)
         nearest_idx, similarities = self.searcher.search_batched(embeddings)
 
-        df = pd.DataFrame({
-            "Utterances": utterances,
-            "Nearest Training Phrase": self.training_phrases[nearest_idx[:, 0]],
-            "Nearest Intent": self.training_intents[nearest_idx[:, 0]],
-            "Similarity": similarities[:, 0]
-        })
+        df = pd.DataFrame(
+            {
+                "Utterances": utterances,
+                "Nearest Training Phrase": self.training_phrases[
+                    nearest_idx[:, 0]
+                ],
+                "Nearest Intent": self.training_intents[nearest_idx[:, 0]],
+                "Similarity": similarities[:, 0],
+            }
+        )
         return df
-    
 
     def find_new_groups(self, utterances):
         utterances = np.unique(utterances)
         embeddings = self.generate_embeddings(utterances)
-        train_nearest_idx, train_similarities = self.searcher.search_batched(embeddings)
+        train_nearest_idx, train_similarities = self.searcher.search_batched(
+            embeddings
+        )
         new_searcher = self._build_searcher(embeddings)
-        new_nearest_idx, new_similarities = new_searcher.search_batched(embeddings)
-        # Count how many new utterances are more similar than any training phrases.
-        closer_count = np.sum(new_similarities > train_similarities[:, :1], axis = 1)
+        new_nearest_idx, new_similarities = new_searcher.search_batched(
+            embeddings
+        )
+        # Count how many new utterances are
+        # more similar than any training phrases.
+        closer_count = np.sum(
+            new_similarities > train_similarities[:, :1], axis=1
+        )
         # Pull out the largest groups.
         grouped_utterance_ids = set()
         groups = []
@@ -219,9 +246,12 @@ class NaturalLanguageUnderstandingUtils(scrapi_base.ScrapiBase):
             if closer_count[utterance_idx] < 2:
                 break
             group_utterances = []
-            for other_idx in new_nearest_idx[utterance_idx, :closer_count[utterance_idx]]:
+            for other_idx in new_nearest_idx[
+                utterance_idx, : closer_count[utterance_idx]
+            ]:
                 if other_idx in grouped_utterance_ids:
-                    # Some of the utterances in this group were assigned to another group
+                    # Some of the utterances in this group
+                    # were assigned to another group
                     # already, ignore this group.
                     break
                 grouped_utterance_ids.add(other_idx)
@@ -229,27 +259,40 @@ class NaturalLanguageUnderstandingUtils(scrapi_base.ScrapiBase):
             else:
                 # Found a new group, add it.
                 match_idx = train_nearest_idx[utterance_idx, 0]
-                similar_training_phrases.append(self.embedder.training_phrases[match_idx])
-                similar_intents.append(self.embedder.training_intents[match_idx])
-                training_phrase_distances.append(train_similarities[utterance_idx, 0])
+                similar_training_phrases.append(
+                    self.embedder.training_phrases[match_idx]
+                )
+                similar_intents.append(
+                    self.embedder.training_intents[match_idx]
+                )
+                training_phrase_distances.append(
+                    train_similarities[utterance_idx, 0]
+                )
                 groups.append('"' + ('", "'.join(group_utterances)) + '"')
-        df = pd.DataFrame({
-            "Utterances": utterances,
-            "Nearest Training Phrase": self.training_phrases[nearest_idx[:, 0]],
-            "Nearest Intent": self.training_intents[nearest_idx[:, 0]],
-            "Similarity": similarities[:, 0]
-        })
+        df = pd.DataFrame(
+            {
+                "Utterances": groups,
+                "Nearest Training Phrase": similar_training_phrases,
+                "Nearest Intent": similar_intents,
+                "Similarity": training_phrase_distances,
+            }
+        )
         return df
-
 
     def find_similar_training_phrases_in_different_intents(self):
         num_utterances = len(self.training_phrases)
         all_idx_1 = np.tile(np.arange(num_utterances)[:, None], 10)
-        all_idx_2, similarities = self.searcher.search_batched(self.training_embeddings)
+        all_idx_2, similarities = self.searcher.search_batched(
+            self.training_embeddings
+        )
         # Only keep pairs in different intents.
+
         def intents_differ(idx_1, idx2):
             return self.training_intents[idx_1] != self.training_intents[idx2]
-        different_intent_mask = np.vectorize(intents_differ)(all_idx_1, all_idx_2)
+
+        different_intent_mask = np.vectorize(intents_differ)(
+            all_idx_1, all_idx_2
+        )
         mismatch_mask = different_intent_mask & (similarities > 0.8)
         mismatch_idx_1 = all_idx_1[mismatch_mask]
         mismatch_idx_2 = all_idx_2[mismatch_mask]
@@ -260,17 +303,22 @@ class NaturalLanguageUnderstandingUtils(scrapi_base.ScrapiBase):
         mismatch_idx_1[sort_mask] = mismatch_idx_2[sort_mask]
         mismatch_idx_2[sort_mask] = sort_vals_1
         (unique_idx_1, unique_idx_2), unique_index = np.unique(
-            [mismatch_idx_1, mismatch_idx_2], axis = 1, return_index = True
+            [mismatch_idx_1, mismatch_idx_2], axis=1, return_index=True
         )
         unique_similarities = misatch_similarities[unique_index]
 
-        df = pd.DataFrame({
-            "Training Phrase 1": self.training_phrases[unique_idx_1],
-            "Training Phrase 2": self.training_phrases[unique_idx_2],
-            "Intent 1": self.training_intents[unique_idx_1],
-            'Intents 2': self.training_intents[unique_idx_2],
-            "Similarities": unique_similarities
-        }).sort_values("Similarity", ascending=False).reset_index(drop = True)
+        df = (
+            pd.DataFrame(
+                {
+                    "Training Phrase 1": self.training_phrases[unique_idx_1],
+                    "Training Phrase 2": self.training_phrases[unique_idx_2],
+                    "Intent 1": self.training_intents[unique_idx_1],
+                    "Intents 2": self.training_intents[unique_idx_2],
+                    "Similarities": unique_similarities,
+                }
+            )
+            .sort_values("Similarity", ascending=False)
+            .reset_index(drop=True)
+        )
 
         return df
-        
