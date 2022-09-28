@@ -85,7 +85,7 @@ class UtteranceGenerator:
           base phrase
 
         Returns:
-          synthetic_phrases_df: dataframe with new synthetic phrases.
+          DataFrame with new synthetic phrases.
         """
 
         synthetic_phrases_df = pd.DataFrame()
