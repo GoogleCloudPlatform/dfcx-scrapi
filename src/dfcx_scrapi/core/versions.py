@@ -57,7 +57,7 @@ class Versions(scrapi_base.ScrapiBase):
               /flows/<Flow ID>
 
         Returns:
-            List of Version objects.
+          List of Version objects.
         """
         if not flow_id:
             flow_id = self.flow_id
@@ -99,7 +99,7 @@ class Versions(scrapi_base.ScrapiBase):
             flows/<Flow ID>
 
         Returns:
-            Version object.
+          Version object.
         """
 
         if not display_name and not version_id:
@@ -126,13 +126,12 @@ class Versions(scrapi_base.ScrapiBase):
 
         Args:
           display_name: Human readable display name of the target to get.
-
           flow_id: The targeted flow for the operation. format:
           projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
             flows/<Flow ID>
 
         Returns:
-            Version object.
+          Version object.
         """
         versions_list = self.list_versions(flow_id)
         for version_obj in versions_list:
@@ -158,7 +157,7 @@ class Versions(scrapi_base.ScrapiBase):
               flows/<Flow ID>
 
         Returns:
-            An object representing a long-running operation (LRO).
+          An object representing a long-running operation (LRO).
         """
 
         if not flow_id:
@@ -192,7 +191,7 @@ class Versions(scrapi_base.ScrapiBase):
           description: Additional description details for the Version created.
 
         Returns:
-            An object representing a long-running operation (LRO).
+          An object representing a long-running operation (LRO).
         """
 
         request = types.version.CreateVersionRequest()
@@ -242,18 +241,16 @@ class Versions(scrapi_base.ScrapiBase):
             to compare with the target version. format:
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/flows/<Flow ID>/versions/<Version ID>.
-
           target_version_id: ID of the target flow version
             to compare with the base version. format:
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/flows/<Flow ID>/versions/<Version ID>.
-
           flow_id: Required. The targeted flow for the operation. Format:
             projects/<Project ID>/locations/<Location ID>/
             agents/<Agent ID>/flows/<Flow ID>
 
         Returns:
-            types.CompareVersionsRequest Object.
+          types.CompareVersionsRequest Object.
         """
         if not flow_id:
             flow_id = self.flow_id

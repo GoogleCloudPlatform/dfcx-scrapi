@@ -70,14 +70,16 @@ class ScrapiBase:
 
     @staticmethod
     def _set_region(item_id):
-        """different regions have different API endpoints
+        """Different regions have different API endpoints
 
         Args:
-            item_id: agent/flow/page - any type of long path id like
-                `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
+          item_id: agent/flow/page - any type of long path id like
+            `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
-            client_options: use when instantiating other library client objects
+          A dictionary containing the api_endpoint to use when 
+          instantiating other library client objects, or None
+          if the location is "global"
         """
         try:
             location = item_id.split("/")[3]
@@ -95,7 +97,7 @@ class ScrapiBase:
 
     @staticmethod
     def pbuf_to_dict(pbuf):
-        """extractor of json from a protobuf"""
+        """Extractor of json from a protobuf"""
         blobstr = json_format.MessageToJson(
             pbuf
         )  # i think this returns JSON as a string
@@ -104,17 +106,17 @@ class ScrapiBase:
 
     @staticmethod
     def cx_object_to_json(cx_object):
-        """response objects have a magical _pb field attached"""
+        """Response objects have a magical _pb field attached"""
         return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
 
     @staticmethod
     def cx_object_to_dict(cx_object):
-        """response objects have a magical _pb field attached"""
+        """Response objects have a magical _pb field attached"""
         return ScrapiBase.pbuf_to_dict(cx_object._pb)  # pylint: disable=W0212
 
     @staticmethod
     def extract_payload(msg):
-        """convert to json so we can get at the object"""
+        """Convert to json so we can get at the object"""
         blob = ScrapiBase.cx_object_to_dict(msg)
         return blob.get("payload")  # deref for nesting
 

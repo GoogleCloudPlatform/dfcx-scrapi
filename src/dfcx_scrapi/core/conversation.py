@@ -85,6 +85,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     @staticmethod
     def _get_match_type_from_map(match_type: int):
+        """Translates the match_type enum int value into a more descriptive string."""
         match_type_map = {
             0: "MATCH_TYPE_UNSPECIFIED",
             1: "INTENT",
@@ -99,6 +100,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     @staticmethod
     def _validate_test_set_input(test_set: pd.DataFrame):
+        """Validates that all pages referenced in the test set exist in the agent."""
         mask = test_set.page_id.isna().to_list()
         invalid_pages = set(test_set.page_display_name[mask].to_list())
 
@@ -236,6 +238,11 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         return output_parameters
 
     def _page_id_mapper(self):
+        """Initializes the agent_pages_map dataframe.
+        
+        This dataframe contains the flow_display_name, page_display_name, 
+        and page_id for each page in the agent.
+        """
         agent_pages_map = pd.DataFrame()
         flow_map = self.flows.get_flows_map(agent_id=self.agent_id)
         for flow_id in flow_map.keys():
@@ -326,17 +333,17 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
 
     def restart(self):
-        """starts a new session/conversation for this agent"""
+        """Starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
         self.turn_count = 0
 
     def set_agent_env(self, param, value):
-        """setting changes related to the environment"""
+        """Setting changes related to the environment"""
         logging.info("setting agent_env param:[%s] = value:[%s]", param, value)
         self.agent_env[param] = value
 
     def checkpoint(self, msg=None, start=False):
-        """print a checkpoint to time progress and debug bottleneck"""
+        """Print a checkpoint to time progress and debug bottleneck"""
         if start:
             start_time = time.perf_counter()
             self.start_time = start_time
@@ -355,20 +362,26 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         current_page: str = None,
         checkpoints: bool = False,
     ):
-        """
-        args:
-            send_obj: Dictionary with the following structure:
-              {'text': str,
-               'params': Dict[str,str],
-               'dtmf': str}
-            restart: Boolean flag that determines whether to use the existing
-              session ID or start a new conversation with a new session ID.
-              Passing True will create a new session ID on subsequent calls.
-              Defaults to False.
-            retries: used for recurse calling this func if API fails
-            current_page: Specify the page id to start the conversation from
-            checkpoints: Boolean flag to enable/disable Checkpoint timer
-              debugging. Defaults to False.
+        """Runs intent detection on one utterance and gets the agent reply.
+        
+        Args:
+          send_obj: Dictionary with the following structure:
+            {'text': str,
+            'params': Dict[str,str],
+            'dtmf': str}
+          restart: Boolean flag that determines whether to use the existing
+            session ID or start a new conversation with a new session ID.
+            Passing True will create a new session ID on subsequent calls.
+            Defaults to False.
+          retries: used for recurse calling this func if API fails
+          current_page: Specify the page id to start the conversation from
+          checkpoints: Boolean flag to enable/disable Checkpoint timer
+            debugging. Defaults to False.
+        
+        Returns:
+          A dictionary for the agent reply to to the submitted text.
+            Includes keys response_messages, confidence, page_name,
+            intent_name, match_type, match, other_intents, and params.
         """
         text = send_obj.get("text")
         send_params = send_obj.get("params")
@@ -496,7 +509,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         return reply
 
     def format_other_intents(self, query_result):
-        """unwind protobufs into more friendly dict"""
+        """Unwind protobufs into more friendly dict"""
         other_intents = query_result.diagnostic_info.get(
             "Alternative Matched Intents"
         )
@@ -518,7 +531,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         return None
 
     def getpath(self, obj, xpath, default=None):
-        """get data at a pathed location out of object internals"""
+        """Get data at a pathed location out of object internals"""
         elem = obj
         try:
             for xpitem in xpath.strip("/").split("/"):
@@ -563,7 +576,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
           rate_limit: Number of seconds to wait between running test set chunks
 
         Returns:
-          intent_detection: A Pandas DataFrame consisting of the original
+          A Pandas DataFrame consisting of the original
             DataFrame plus an additional column for the detected intent with
             the following schema.
               flow_display_name: str
@@ -588,10 +601,12 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     def _unpack_match(self, df: pd.DataFrame):
         """ Unpacks a 'match' column into four component columns.
+        
         Args:
-            df: dataframe containing a column named match of types.Match
+          df: dataframe containing a column named match of types.Match
+        
         Returns:
-            a copy of df with columns match_type, confidence, parameters_set,
+          A copy of df with columns match_type, confidence, parameters_set,
             and detected_intent instead of match.
         """
         df = (

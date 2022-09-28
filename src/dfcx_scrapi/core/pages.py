@@ -62,13 +62,13 @@ class Pages(ScrapiBase):
         """Exports Agent Page UUIDs and Names into a user friendly dict.
 
         Args:
-          - flow_id, the formatted CX Agent Flow ID to use
-          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+          flow_id: the formatted CX Agent Flow ID to use
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          - webhooks_map, Dictionary containing Webhook UUIDs as keys and
-              webhook.display_name as values. If Optional reverse=True, the
-              output will return page_name:ID mapping instead of ID:page_name
+          Dictionary containing Page UUIDs as keys and display names as values. 
+          If Optional reverse=True, the output will return page_name:ID mapping
+          instead of ID:page_name
         """
         if not flow_id:
             flow_id = self.flow_id
@@ -91,10 +91,10 @@ class Pages(ScrapiBase):
         """Get a List of all pages for the specified Flow ID.
 
         Args:
-          flow_id, the properly formatted Flow ID string
+          flow_id: the properly formatted Flow ID string
 
         Returns:
-          cx_pages, A List of CX Page objects for the specific Flow ID
+          A List of CX Page objects for the specific Flow ID
         """
         request = types.page.ListPagesRequest()
         request.parent = flow_id
@@ -116,10 +116,10 @@ class Pages(ScrapiBase):
         """Get a single CX Page object based on the provided Page ID.
 
         Args:
-          page_id, a properly formatted CX Page ID
+          page_id: a properly formatted CX Page ID
 
         Returns:
-          response, a single CX Page Object of types.Page
+          A single CX Page Object
         """
         if not page_id:
             page_id = self.page_id
@@ -141,11 +141,11 @@ class Pages(ScrapiBase):
         """Create a single CX Page object in the specified Flow ID.
 
         Args:
-          flow_id, the CX Flow ID where the Page object will be created
-          obj, (Optional) a CX Page object of types.Page
+          flow_id: the CX Flow ID where the Page object will be created
+          obj: (Optional) a CX Page object of types.Page
 
         Returns:
-          response, a copy of the successful Page object that was created
+          A copy of the successful Page object that was created
         """
         if not flow_id:
             flow_id = self.flow_id
@@ -176,11 +176,11 @@ class Pages(ScrapiBase):
         """Update a single CX Page object.
 
         Args:
-          page_id, the CX Page ID to update
-          obj, (Optional) a CX Page object of types.Page
+          page_id: the CX Page ID to update
+          obj: (Optional) a CX Page object of types.Page
 
         Returns:
-          response, a copy of the successful Page object that was created
+          A copy of the successful Page object that was created
         """
         if obj:
             page = obj

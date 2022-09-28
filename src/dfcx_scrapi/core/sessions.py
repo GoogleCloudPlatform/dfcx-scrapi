@@ -56,18 +56,18 @@ class Sessions(ScrapiBase):
         """Tests a full conversation with the specified CX Agent.
 
         Args:
-          agent_id, the Agent ID of the CX Agent to have the conversation with.
-          session_id, an RFC 4122 formatted UUID to be used as the unique ID
+          agent_id: the Agent ID of the CX Agent to have the conversation with.
+          session_id: an RFC 4122 formatted UUID to be used as the unique ID
             for the duration of the conversation session. When using Python
             uuid library, uuid.uuid4() is preferred.
-          conversation, a List of Strings that represent the USER utterances
+          conversation: a List of Strings that represent the USER utterances
             for the given conversation, in the order they would happen
             chronologically in the conversation.
             Ex:
               ['I want to check my bill', 'yes', 'no that is all', 'thanks!']
-          parameters, (Optional) Dict of CX Session Parameters to set in the
+          parameters: (Optional) Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
-          response_text, Will provide the Agent Response text if set to True.
+          response_text: Will provide the Agent Response text if set to True.
             Default value is False.
 
         Returns:
@@ -140,10 +140,23 @@ class Sessions(ScrapiBase):
                 print(f"Response Text: {concat_messages}\n")
 
     def detect_intent(self, agent_id, session_id, text, parameters=None):
-        """Returns the result of detect intent with texts as inputs.
+        """Runs intent detection with a given text input.
 
         Using the same `session_id` between requests allows continuation
-        of the conversation."""
+        of the conversation.
+        
+        Args:
+          agent_id: the Agent ID of the CX Agent to have the conversation with.
+          session_id: an RFC 4122 formatted UUID to be used as the unique ID
+            for the duration of the conversation session. When using Python
+            uuid library, uuid.uuid4() is preferred.
+          text: the user utterance to run intent detection on
+          parameters: (Optional) Dict of CX Session Parameters to set in the
+            conversation. Typically this is set before a conversation starts.
+        
+        Returns:
+          The CX query result from intent detection
+        """
         client_options = self._set_region(agent_id)
         session_client = services.sessions.SessionsClient(
             client_options=client_options, credentials=self.creds
@@ -182,10 +195,16 @@ class Sessions(ScrapiBase):
     ):
         """Used to set session parameters before a conversation starts.
 
-        agent_id, the Agent ID of the CX Agent to have the conversation with.
-        session_id, an RFC 4122 formatted UUID to be used as the unique ID
+        Args:
+          agent_id: the Agent ID of the CX Agent to have the conversation with.
+          session_id: an RFC 4122 formatted UUID to be used as the unique ID
             for the duration of the conversation session. When using Python
             uuid library, uuid.uuid4() is preferred.
+          parameters: Dict of CX Session Parameters to set in the
+            conversation. Typically this is set before a conversation starts.
+        
+        Returns:
+          The CX query result from intent detection run with no text input
         """
         client_options = self._set_region(agent_id)
         session_client = services.sessions.SessionsClient(
