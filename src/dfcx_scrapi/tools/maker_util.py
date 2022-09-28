@@ -93,8 +93,8 @@ class MakerUtil:
         Note: if no args are provided, a blank Route object will be created.
 
         Args:
-          obj, (Optional) an existing Route object can be provided if the
-              user wants to modify or duplicate the object.
+          obj: (Optional) an existing Route object can be provided if the
+            user wants to modify or duplicate the object.
 
         Keyword Args:
           intent, (str): The UUID of the Intent to route to
@@ -102,7 +102,7 @@ class MakerUtil:
           target_page, (str): The UUID of the target page to transition to
           target_flow, (str): The UUID of the target flow to transition to
           trigger_fulfillment, (obj): Requires an object in the format of type
-          <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
+            <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
 
         Returns:
           Route object of type
@@ -143,16 +143,16 @@ class MakerUtil:
         returned.
 
         Args:
-            messages: Optional list of Dialogue messages to send
-            webhook_id, (str): (Optional)
-                The UUID of the Dialogflow CX webhook to trigger
-                when the Fulfillment is triggered by the conversation.
-            webhook_tag, (str): (Required if webhook_id is provided)
-                User defined tag associated with
+          messages: Optional list of Dialogue messages to send
+          webhook_id, (str): (Optional)
+            The UUID of the Dialogflow CX webhook to trigger
+            when the Fulfillment is triggered by the conversation.
+          webhook_tag, (str): (Required if webhook_id is provided)
+            User defined tag associated with
 
         Returns:
-            Fulfillment object of type
-            <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
+          Fulfillment object of type
+          <google.cloud.dialogflowcx_v3beta1.types.fulfillment.Fulfillment>
         """
         fulfillment = types.fulfillment.Fulfillment()
 
