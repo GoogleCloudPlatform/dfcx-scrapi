@@ -110,7 +110,8 @@ class EntityTypes(ScrapiBase):
 
             for excluded_phrase in obj.excluded_phrases:
                 excl_phrases_dict["excluded_phrase"] = excluded_phrase.value
-                excl_phrases_dict2df = pd.DataFrame(excl_phrases_dict, index=[0])
+                excl_phrases_dict2df = pd.DataFrame(
+                                          excl_phrases_dict, index=[0])
                 excl_phrases_df = pd.concat([excl_phrases_df,
                                      excl_phrases_dict2df], ignore_index=True)
 
