@@ -314,8 +314,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             )
             threads[i].start()
 
-        for idx, _ in enumerate(threads):
-            threads[idx].join()
+        for thread in threads:
+            thread.join()
 
         test_set_mapped["target_page"] = results["target_page"]
         test_set_mapped["match"] = results["match"]
