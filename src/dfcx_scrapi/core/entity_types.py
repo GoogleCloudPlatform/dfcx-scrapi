@@ -212,15 +212,15 @@ class EntityTypes(ScrapiBase):
 
 
     def get_entities_map(self, agent_id: str = None, reverse=False):
-        """Exports Agent Entity Names and UUIDs into a user friendly dict.
+        """Exports Agent Entity Type Names and UUIDs into a user friendly dict.
 
         Args:
           agent_id: the formatted CX Agent ID to use
           reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          Dictionary containing Entity UUIDs as keys and
-              intent.display_name as values
+          Dictionary containing Entity Type UUIDs as keys and
+          Entity Type display names as values
         """
         if not agent_id:
             agent_id = self.agent_id
