@@ -76,7 +76,7 @@ class ValidationUtil(ScrapiBase):
                 temp_df = pd.DataFrame(val_msg)
                 temp_df.insert(0, "flow", flows_map[temp])
 
-                max_cols_new = max(len(x) for x in temp_df.resourceNames)
+                max_cols_new = max([len(x) for x in temp_df.resourceNames])
 
                 if max_cols_new > max_cols_old:
                     for i in range(1, max_cols_new + 1):
