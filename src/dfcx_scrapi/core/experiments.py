@@ -56,7 +56,15 @@ class ScrapiExperiments(ScrapiBase):
         logging.info("created %s", self.agent_id)
 
     def list_experiments(self, environment_id=None):
-        """list out experiments"""
+        """List out experiments.
+
+        Args:
+          environment_id: (Optional) The ID for the environment from which
+            the list of experiments will be retrieved.
+
+        Returns:
+          A list of experiment JSON objects.
+        """
         environment_path = f"{self.agent_id}/environments/{environment_id}"
         logging.info("environment_path %s", environment_path)
 

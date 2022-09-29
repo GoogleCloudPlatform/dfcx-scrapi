@@ -64,7 +64,7 @@ class Project(ScrapiBase):
             self.project_id or error.
 
         Returns:
-          all_agents: A List of Dicts that has all agent metadata info.
+          A List of Dicts that has all agent metadata info.
 
         """
         region_list = [
@@ -96,7 +96,7 @@ class Project(ScrapiBase):
           gcs_bucket: The GCS bucket to backup all files to
 
         Returns:
-          lro_list: List of all LROs to reference backend job status
+          List of all LROs to reference backend job status
         """
         if not project_id:
             project_id = self.project_id

@@ -59,14 +59,28 @@ class EntityTypes(ScrapiBase):
     def entity_type_proto_to_dataframe(
         obj: types.EntityType, mode: str = "basic"
     ):
-        """Entity Types to dataframe
+        """Converts an EntityType protobuf object to a Pandas Dataframe.
 
         Args:
-          obj, EntityType protobuf object
-          mode: (Optional) basic returns display_name, value of entity type and
-            it's synonyms.
-          advanced returns entity types and excluded phrases in a comprehensive
-            format.
+          obj: EntityType protobuf object
+          mode: (Optional) "basic" returns display_name, value of entity type
+            and its synonyms.
+            "advanced" returns entity types and excluded phrases in a
+            comprehensive format.
+
+        Returns:
+          In basic mode, a Pandas Dataframe for the entity type object with
+          schema:
+            display_name: str
+            entity_value: str
+            synonyms: str
+          In advanced mode, a dictionary with keys entity_types and
+          excluded_phrases.
+            The value of entity_types is a Pandas Dataframe with columns:
+              entity_type_id, display_name, kind, auto_expansion_mode,
+              fuzzy_extraction, redact, entity_value, synonyms
+            The value of excluded_phrases is a Dataframe with columns:
+              entity_type_id, display_name, excluded_phrase
         """
         if mode == "basic":
             main_df = pd.DataFrame()
@@ -110,7 +124,8 @@ class EntityTypes(ScrapiBase):
 
             for excluded_phrase in obj.excluded_phrases:
                 excl_phrases_dict["excluded_phrase"] = excluded_phrase.value
-                excl_phrases_dict2df = pd.DataFrame(excl_phrases_dict, index=[0])
+                excl_phrases_dict2df = pd.DataFrame(
+                                          excl_phrases_dict, index=[0])
                 excl_phrases_df = pd.concat([excl_phrases_df,
                                      excl_phrases_dict2df], ignore_index=True)
 
@@ -126,16 +141,30 @@ class EntityTypes(ScrapiBase):
         agent_id: str = None,
         mode: str = "basic",
         entity_type_subset: List[str] = None) -> pd.DataFrame:
-        """Extracts all Intents and Training Phrases into a Pandas DataFrame.
+        """Extracts all Entity Types into a Pandas DataFrame.
 
         Args:
-          agent_id, agent to pull list of intents
-          mode: (Optional) basic returns display_name, value of entity type and
-            it's synonyms.
-          advanced returns entity types and excluded phrases in a comprehensive
-            format.
+          agent_id, agent to pull list of entity types
+          mode: (Optional) "basic" returns display_name, value of entity type
+            and its synonyms.
+            "advanced" returns entity types and excluded phrases in a
+            comprehensive format.
           entity_type_subset: (Optional) A list of entities to pull
             If it's None, grab all the entity_types
+
+        Returns:
+          In basic mode, a Pandas Dataframe for all entity types in the agent
+          with schema:
+            display_name: str
+            entity_value: str
+            synonyms: str
+          In advanced mode, a dictionary with keys entity_types and
+          excluded_phrases.
+            The value of entity_types is a Pandas Dataframe with columns:
+              entity_type_id, display_name, kind, auto_expansion_mode,
+              fuzzy_extraction, redact, entity_value, synonyms
+            The value of excluded_phrases is a Dataframe with columns:
+              entity_type_id, display_name, excluded_phrase
         """
 
         if not agent_id:
@@ -187,15 +216,15 @@ class EntityTypes(ScrapiBase):
 
 
     def get_entities_map(self, agent_id: str = None, reverse=False):
-        """Exports Agent Entityt Names and UUIDs into a user friendly dict.
+        """Exports Agent Entity Type Names and UUIDs into a user friendly dict.
 
         Args:
-          - agent_id, the formatted CX Agent ID to use
-          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+          agent_id: the formatted CX Agent ID to use
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          - intents_map, Dictionary containing Entity UUIDs as keys and
-              intent.display_name as values
+          Dictionary containing Entity Type UUIDs as keys and
+          Entity Type display names as values
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -218,10 +247,10 @@ class EntityTypes(ScrapiBase):
         """Returns a list of Entity Type objects.
 
         Args:
-          - agent_id, the formatted CX Agent ID to use
+          agent_id: the formatted CX Agent ID to use
 
         Returns:
-          - entities, List of Entity Type objects
+          List of Entity Type objects
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -247,10 +276,10 @@ class EntityTypes(ScrapiBase):
         """Returns a single Entity Type object.
 
         Args:
-          - entity_id, the formatted CX Entity ID to get
+          entity_id: the formatted CX Entity ID to get
 
         Returns:
-          - response, the single Entity Type object
+          The single Entity Type object
         """
         if not entity_id:
             entity_id = self.entity_id
@@ -270,13 +299,13 @@ class EntityTypes(ScrapiBase):
         """Creates a single Entity Type object resource.
 
         Args:
-          - agent_id, the formatted CX Agent ID to create the object on
-          - obj, The CX EntityType object in proper format.
-          - language_code: Language code of the intents being uploaded. Ref:
+          agent_id: the formatted CX Agent ID to create the object on
+          obj: The CX EntityType object in proper format.
+          language_code: Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
-          - response, copy of the Entity Type object created
+          A copy of the Entity Type object created
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -318,6 +347,7 @@ class EntityTypes(ScrapiBase):
         language_code: str = None,
         **kwargs):
         """Update a single CX Entity Type object.
+
         Pass in a the Entity Type ID and the specified kwargs for the
         parameters in Entity Types object that you want updated. If you do not
         provide an Entity Type object, the object will be fetched based on the
@@ -326,13 +356,13 @@ class EntityTypes(ScrapiBase):
         Entity Type object as defined by the kwargs provided.
 
         Args:
-          entity_type_id, CX Entity Type ID in proper format
-          obj, (Optional) a CX Entity Type object of types.EntityType
+          entity_type_id: CX Entity Type ID in proper format
+          obj: (Optional) a CX Entity Type object of types.EntityType
           language_code: Language code of the intents being uploaded. Ref:
-          https://cloud.google.com/dialogflow/cx/docs/reference/language
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
-          response, a copy of the updated Entity Type object
+          A copy of the updated Entity Type object
         """
 
         if obj:
@@ -368,10 +398,10 @@ class EntityTypes(ScrapiBase):
         """Deletes a single Entity Type resouce object.
 
         Args:
-          entity_id, the formatted CX Entity ID to delete
+          entity_id: the formatted CX Entity ID to delete
 
         Returns:
-          - None
+          None
         """
         if not entity_id:
             entity_id = self.entity_id

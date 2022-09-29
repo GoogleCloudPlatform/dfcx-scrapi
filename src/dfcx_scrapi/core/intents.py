@@ -65,14 +65,23 @@ class Intents(ScrapiBase):
     def intent_proto_to_dataframe(
         obj: types.Intent, mode: str = "basic"
     ) -> pd.DataFrame:
-        """Single intent to pandas DataFrame.
+        """Converts an intent protobuf object to a Pandas DataFrame.
 
         Args:
-          obj (types.Intent)
+          obj (types.Intent): the intent protobuf object
           mode (str):
             "basic" returns display name and training phrase as plain text.
             "advanced" returns training phrases broken out by parts
             with their parameters included.
+
+        Returns:
+          In basic mode, a Pandas DataFrame with columns:
+            display_name, training phrase
+          In advanced mode, a Pandas DataFrame with columns:
+            name, display_name, description, priority,
+            is_fallback, labels, id, repeat_count,
+            training_phrase_idx, text, text_idx,
+            parameter_id, entity_type, is_list, redact
         """
         if not isinstance(obj, types.Intent):
             raise ValueError("obj should be Intent.")
@@ -172,8 +181,7 @@ class Intents(ScrapiBase):
     def modify_training_phrase_df(
         actions: pd.DataFrame, training_phrase_df: pd.DataFrame
     ):
-        """
-        Update the advanced mode training phrases dataframe to reflect the
+        """Update the advanced mode training phrases dataframe to reflect the
         actions provided in the actions dataframe. Pass the returned new
         training phrase dataframe and the original parameters dataframe to the
         bulk_update_intents_from_dataframe functions with update_flag = True in
@@ -182,19 +190,21 @@ class Intents(ScrapiBase):
         added or moved.
 
         Args:
-          actions:
-            display_name, display_name of the intent to take action on
-            phrase, exact string training phrase to take action on
-            action, add or delete. To do a move it is an add + a delete action
-              of the same phrase
-            training_phrase_df, advanced mode training phrase dataframe pulled
+          actions: A Pandas DataFrame with columns:
+            display_name: the display name of the intent to take action on
+            phrase: exact string training phrase to take action on
+            action: "add" or "delete". To do a move, it will be an add and
+              a delete action of the same phrase
+          training_phrase_df: advanced mode training phrase dataframe pulled
 
         Returns:
-          updated_training_phrases_df, training phrase df from advanced mode
-            with the edits made to it shown in the actions_taken dataframe
-          actions_taken: actions taken based on the actions provided. For
-            example we cannot delete a training phrase which does not exit;
-            this will be shown.
+          A dictionary with keys updated_training_phrases_df and actions_taken.
+            The value for updated_training_phrases_df is the training phrase
+              DataFrame from advanced mode with the edits made to it shown
+              in the actions_taken DataFrame.
+            The value for actions_taken is a DataFrame of actions taken based
+              on the actions provided. For example, we cannot delete a training
+              phrase which does not exist; this will be shown.
         """
         mutations = pd.merge(
             training_phrase_df,
@@ -350,12 +360,11 @@ class Intents(ScrapiBase):
         """Exports Agent Intent Names and UUIDs into a user friendly dict.
 
         Args:
-          agent_id, the formatted CX Agent ID to use
-          reverse, (Optional) Boolean flag to swap key:value -> value:key
+          agent_id: the formatted CX Agent ID to use
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          intents_map, Dictionary containing Intent UUIDs as keys and
-              intent.display_name as values
+          Dictionary containing Intent UUIDs as keys and display names as values
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -381,12 +390,12 @@ class Intents(ScrapiBase):
         """Exports List of all intents in specific CX Agent.
 
         Args:
-          agent_id, the formatted CX Agent ID to use
+          agent_id: the formatted CX Agent ID to use
           language_code: Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
-          intents, List of Intent objects
+          List of Intent objects
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -417,12 +426,12 @@ class Intents(ScrapiBase):
         """Get a single Intent object based on specific CX Intent ID.
 
         Args:
-          intent_id, the properly formatted CX Intent ID
+          intent_id: the properly formatted CX Intent ID
           language_code: Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
-          response, a single Intent object
+          A single Intent object
         """
         if not intent_id:
             intent_id = self.intent_id
@@ -451,9 +460,9 @@ class Intents(ScrapiBase):
         """Creates an Intent from a protobuf or dictionary.
 
         Args:
-          agent_id, the formatted CX Agent ID to use
-          obj, (Optional) Intent protobuf of types.Intent
-          intent_dictionary, (optional) dictionary of the intent to pass in
+          agent_id: the formatted CX Agent ID to use
+          obj: (Optional) Intent protobuf of types.Intent
+          intent_dictionary: (optional) dictionary of the intent to pass in
             with structure
 
         example intent dictionary:
@@ -527,14 +536,18 @@ class Intents(ScrapiBase):
         obj: types.Intent = None,
         language_code: str = None,
         **kwargs) -> types.Intent:
-        """Updates a single Intent object based on provided args.
+        """Updates a single Intent object based on provided arguments.
+
         Args:
-          intent_id, the destination Intent ID. Must be formatted properly
+          intent_id: the destination Intent ID. Must be formatted properly
             for Intent IDs in CX.
-          obj, The CX Intent object in proper format. This can also be
+          obj: The CX Intent object in proper format. This can also be
             extracted by using the get_intent() method.
           language_code: Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
+
+        Returns:
+          The updated intent object.
         """
         if obj:
             intent = obj
@@ -572,7 +585,7 @@ class Intents(ScrapiBase):
         """Deletes an intent by Intent ID.
 
         Args:
-          intent_id, intent to delete
+          intent_id: intent to delete
         """
         if obj:
             intent_id = obj.name
@@ -596,8 +609,8 @@ class Intents(ScrapiBase):
           agent_id (str):
             agent to pull list of intents
           mode (str):
-            basic returns display name and training phrase as plain text.
-            advanced returns training phrases broken out by parts
+            "basic" returns display name and training phrase as plain text.
+            "advanced" returns training phrases broken out by parts
             with their parameters included.
           intent_subset (List[str]):
             A subset of intents to extract the intents from.
@@ -607,6 +620,15 @@ class Intents(ScrapiBase):
           language_code (str):
             Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
+
+        Returns:
+          In basic mode, a Pandas DataFrame with columns:
+            display_name, training phrase
+          In advanced mode, a Pandas DataFrame with columns:
+            name, display_name, description, priority,
+            is_fallback, labels, id, repeat_count,
+            training_phrase_idx, text, text_idx,
+            parameter_id, entity_type, is_list, redact
         """
 
         if not agent_id:
@@ -643,12 +665,13 @@ class Intents(ScrapiBase):
         Similarity tools.
 
         Args:
-          agent_id, agent to pull list of intents from
+          agent_id: agent to pull list of intents from
 
         Returns:
-          df, a Pandas Dataframe of Intents and TPs
-          intent_dict, a Defaultdict(List) that is prepped to feed to the
-            Cosine similarity tool (offline)
+          A tuple containing two values:
+            A Pandas Dataframe of Intents and TPs
+            A Defaultdict(List) that is prepped to feed to the
+              Cosine similarity tool (offline)
         """
         if not agent_id:
             agent_id = self.agent_id

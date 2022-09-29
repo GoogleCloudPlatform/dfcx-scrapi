@@ -83,6 +83,7 @@ class Agents(scrapi_base.ScrapiBase):
               `projects/<GCP PROJECT ID>/locations/<LOCATION ID>`
               `projects/my-gcp-project/locations/us-central1`
           project_id: The GCP Project ID as a string
+
         Returns:
           List of Agent objects
         """
@@ -125,13 +126,13 @@ class Agents(scrapi_base.ScrapiBase):
         return agents
 
     def get_agent(self, agent_id: str) -> types.Agent:
-        """Retrieves a single CX agent resource object.
+        """Retrieves a single CX Agent resource object.
 
         Args:
           agent_id: The formatted CX Agent ID
 
         Returns:
-        A single types.Agent object
+          A single CX Agent resource object
         """
 
         request = types.agent.GetAgentRequest()
@@ -171,6 +172,7 @@ class Agents(scrapi_base.ScrapiBase):
               display names.
               Syntax for region ID can be found here:
               https://cloud.google.com/dialogflow/cx/docs/concept/region#avail
+
         Returns:
           CX agent resource object. If no agent is found, returns None.
         """
@@ -237,7 +239,7 @@ class Agents(scrapi_base.ScrapiBase):
           obj: (Optional) Agent object to create new agent from
 
         Returns:
-          A single types.Agent resource.
+          The newly created CX Agent resource object.
         """
 
         if obj:
@@ -317,12 +319,12 @@ class Agents(scrapi_base.ScrapiBase):
         that Flow ID.
 
         Args:
-        agent_id: CX Agent ID string in the following format
+          agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-        timeout: (Optional) The timeout for this request
+          timeout: (Optional) The timeout for this request
 
         Returns:
-        Dictionary of Validation results for the entire Agent.
+          Dictionary of Validation results for the entire Agent.
         """
 
         if not agent_id:
@@ -395,6 +397,7 @@ class Agents(scrapi_base.ScrapiBase):
 
     def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
         """Restores a CX agent from a gcs_bucket location.
+
         Currently there is no way to restore back to default
         settings via the api. The feature request for this is logged.
 
@@ -436,6 +439,8 @@ class Agents(scrapi_base.ScrapiBase):
           kwargs: You may find a list of agent attributes here:
               https://cloud.google.com/python/docs/reference/dialogflow-cx/
                   latest/google.cloud.dialogflowcx_v3beta1.types.Agent
+        Returns:
+          The updated CX Agent resource object.
         """
 
         if obj:
@@ -464,6 +469,9 @@ class Agents(scrapi_base.ScrapiBase):
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+
+        Returns:
+          String "Agent '(agent_id)' successfully deleted."
         """
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(

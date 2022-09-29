@@ -61,12 +61,11 @@ class Flows(scrapi_base.ScrapiBase):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
-            - agent_id, the formatted CX Agent ID to use
-            - reverse, (Optional) Boolean flag to swap key:value -> value:key
+          agent_id: the formatted CX Agent ID to use
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-            - flows_dict, Dictionary containing flow UUIDs as keys and
-                flow.display_name as values
+          Dictionary containing flow UUIDs as keys and display names as values
         """
 
         if reverse:
@@ -84,7 +83,7 @@ class Flows(scrapi_base.ScrapiBase):
         return flows_dict
 
     def train_flow(self, flow_id: str) -> str:
-        """trains the specified flow.
+        """Trains the specified flow.
 
         Args:
           flow_id: CX flow ID string in the following format
@@ -92,7 +91,7 @@ class Flows(scrapi_base.ScrapiBase):
               flows/<FLOW ID>
 
         Returns:
-          response: A Long Running Operation (LRO) ID that can be used to
+          A Long Running Operation (LRO) ID that can be used to
             check the status of the export using
               dfcx_scrapi.core.operations->get_lro()
         """
@@ -115,7 +114,7 @@ class Flows(scrapi_base.ScrapiBase):
         """Get a List of all Flows in the current Agent.
 
         Args:
-          agent_id, CX Agent ID string in the proper format
+          agent_id: CX Agent ID string in the proper format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
 
         Returns:
@@ -149,7 +148,8 @@ class Flows(scrapi_base.ScrapiBase):
           agent_id: CX Agent ID in which the flow exists.
 
         Returns:
-          a single CX Flow object"""
+          A single CX Flow object
+        """
 
         flows_map = self.get_flows_map(
             agent_id = agent_id,
@@ -175,7 +175,8 @@ class Flows(scrapi_base.ScrapiBase):
           flow_id: CX Flow ID in the proper format
 
         Returns:
-          response: a single CX Flow object"""
+          A single CX Flow object
+        """
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
@@ -194,11 +195,11 @@ class Flows(scrapi_base.ScrapiBase):
         """Update a single specific CX Flow object.
 
         Args:
-          flow_id, CX Flow ID in the proper format
-          obj, (Optional) a single CX Flow object of types.Flow
+          flow_id: CX Flow ID in the proper format
+          obj: (Optional) a single CX Flow object of types.Flow
 
         Returns:
-          response, a copy of the updated Flow object
+          A copy of the updated Flow object
         """
 
         if obj:
@@ -222,9 +223,10 @@ class Flows(scrapi_base.ScrapiBase):
         return response
 
     def update_nlu_settings(self, flow_id:str, **kwargs):
-        """updates flow to new NLU setting.
+        """Updates flow to new NLU setting.
+
         Args:
-            flow_id: flow id to update nlu settings for.
+          flow_id: flow id to update nlu settings for.
             model_type: (Optional) [0:unspecified, 1:MODEL_TYPE_STANDARD,
               2:Custom, 3:Advanced]
             classification_threshold: (Optional) threshold for the flow
@@ -247,16 +249,16 @@ class Flows(scrapi_base.ScrapiBase):
         """Exports DFCX Flow(s) into GCS bucket.
 
         Args:
-          flow_id, the formatted CX Flow ID to export
-          gcs_path, The `Google Cloud Storage URI to export the flow to. The
+          flow_id: the formatted CX Flow ID to export
+          gcs_path: The `Google Cloud Storage URI to export the flow to. The
             format of this URI must be ``gs://<bucket-name>/<object-name>``. If
             left unspecified, the serialized flow is returned inline.
-          ref_flows, Whether to export flows referenced by the specified flow.
+          ref_flows: Whether to export flows referenced by the specified flow.
 
         Returns:
-          lro.result, If successful the LRO result will return the Google Cloud
-            Storage URI from the Export Flow request. Otherwise, it will return
-            the corresponding error.
+          A Long Running Operation result. If successful the LRO result will
+            return the Google Cloud Storage URI from the Export Flow request.
+            Otherwise, it will return the corresponding error.
         """
         request = types.flow.ExportFlowRequest()
         request.name = flow_id
@@ -279,11 +281,11 @@ class Flows(scrapi_base.ScrapiBase):
         """Export a Flow, returning uncompressed raw byte content for flow.
 
         Args:
-          flow_id, the formatted CX Flow ID to export
-          ref_flows, Whether to export flows referenced by the specified flow.
+          flow_id: the formatted CX Flow ID to export
+          ref_flows: Whether to export flows referenced by the specified flow.
 
         Returns:
-          bytes representing the content of the flow.
+          Bytes representing the content of the flow.
         """
         request = types.flow.ExportFlowRequest()
         request.name = flow_id
@@ -309,16 +311,16 @@ class Flows(scrapi_base.ScrapiBase):
         GCS bucket or from raw bytes.
 
         Args:
-          agent_id, the CX Agent ID to import the flow into.
-          gcs_path, the `Google Cloud Storage URI to import flow from.
+          agent_id: the CX Agent ID to import the flow into.
+          gcs_path: the `Google Cloud Storage URI to import flow from.
             the format of this URI must be ``gs://<bucket-name>/<object-name>``.
-          flow_content, uncompressed raw byte content for flow.
-          import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'KEEP'
+          flow_content: uncompressed raw byte content for flow.
+          import_option: one of 'FALLBACK' or 'KEEP'. Defaults to 'KEEP'
 
         Returns:
-          lro.result, If successful the LRO result will return the Flow ID of
-            the newly imported Flow. Otherwise, it will return the
-            corresponding error.
+          A Long Running Operation result. If successful the LRO result will
+            return the Flow ID of the newly imported Flow.
+            Otherwise, it will return the corresponding error.
         """
 
         if gcs_path and flow_content:
@@ -351,12 +353,13 @@ class Flows(scrapi_base.ScrapiBase):
         flow_id: str,
         force: bool = False
     ):
-        """Deletes a single CX Flow Object resources.
+        """Deletes a single CX Flow Object resource.
 
         Args:
           flow_id: flow to delete
           force: False means a flow will not be deleted if a route to the flow
-            exists, True means the flow will be deleted and all
+            exists, True means the flow will be deleted as well as all the
+            transition routes leading to the flow.
         """
 
         request = types.DeleteFlowRequest()

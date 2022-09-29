@@ -351,7 +351,8 @@ class CopyUtil(ScrapiBase):
         Source Intent Display Name. This is specifically used when the
         Destination Agent already contains the Intent Display Name specified.
         This performs a lookup based on Intent Display Name, retrieves the
-        Destination Intent object, and then updates it appropriately."""
+        Destination Intent object, and then updates it appropriately.
+        """
 
         destination_intents = self.intents.list_intents(destination_agent)
         for intent in destination_intents:
@@ -635,13 +636,13 @@ class CopyUtil(ScrapiBase):
         from source to destination.
 
         Args:
-          pages_list, List of Page(s) object to extract page names from
-          destination_agent, DFCX Agent ID of the Destination Agent
-          destination_flow, DFCX Flow ID of the Destination Flow. If no Flow ID
+          pages_list: List of Page objects to extract page names from
+          destination_agent: DFCX Agent ID of the Destination Agent
+          destination_flow: DFCX Flow ID of the Destination Flow. If no Flow ID
             is provided, Default Start Flow will be used.
 
-        Return:
-          Success!
+        Returns:
+          None
         """
         destination_flows = self.flows.get_flows_map(
             destination_agent, reverse=True
@@ -690,7 +691,9 @@ class CopyUtil(ScrapiBase):
               strings: 'intents', 'entities', 'webhooks', 'route_groups'
 
         Returns:
-          Success!
+          A dictionary with possible keys being webhooks, entities, intents,
+          and route_groups, with keys missing if they were in the skip_list.
+          Each value is a list of display names of created CX resources.
         """
         resources_objects = defaultdict(list)
         resources_skip_list = defaultdict(list)
@@ -738,6 +741,16 @@ class CopyUtil(ScrapiBase):
         first convert all of the Resource IDs to their respective Display
         Names. We will then use the Display Names to convert back to the
         Destination Agent resource IDs using another method.
+
+        Args:
+          agent_id: the source Agent ID string in the following format:
+            projects/<project_id>/locations/<location_id>/agents/<agent_id>
+          pages_list: A list of DFCX Page objects
+          flow: The flow display name. Defaults to "Default Start Flow"
+
+        Returns:
+          The modified list of pages, with source agent resource IDs converted
+          to display names.
         """
 
         pages_mod = copy.deepcopy(pages_list)
@@ -796,6 +809,16 @@ class CopyUtil(ScrapiBase):
         to their respective Destination Agent Resource IDs. We will do this
         by extracting maps of the Destination Agent Resources and then
         performing a lookup with the Page objects in our pages_list.
+
+        Args:
+          agent_id: the target Agent ID string in the following format:
+            projects/<project_id>/locations/<location_id>/agents/<agent_id>
+          pages_list: A list of DFCX Page objects
+          flow: The flow display name. Defaults to "Default Start Flow"
+
+        Returns:
+          The modified list of pages, with display names converted to
+          resource IDs for the target agent.
         """
 
         pages_mod = copy.deepcopy(pages_list)
@@ -861,6 +884,19 @@ class CopyUtil(ScrapiBase):
         Destination Agent resource IDs using another method. Start Pages are a
         special type of Page that exists inside of the Flow object, so they
         have to be handled differently.
+
+        Args:
+          agent_id: the source Agent ID string in the following format:
+            projects/<project_id>/locations/<location_id>/agents/<agent_id>
+          start_page: The DFCX Flow object corresponding to the start page of
+            the flow to be copied
+          agent_type: "source" or "destination". Defaults to "source"
+          flow: The flow display name. Defaults to "Default Start Flow"
+
+        Returns:
+          The modified start page, with the resource IDs converted to
+          display names for the source option and the display names converted
+          to resource IDs for the destination option.
         """
         page_mod = copy.deepcopy(start_page)
 
@@ -951,10 +987,10 @@ class CopyUtil(ScrapiBase):
         """Pass in DFCX Page object(s) and retrieve all resource dependencies.
 
         Args:
-            - obj_list, a List of one or more DFCX Page Objects
+          obj_list: a List of one or more DFCX Page Objects
 
         Returns:
-            - resources, Dictionary containing all of the resource objects
+          Dictionary containing all of the resource objects
         """
         resources = defaultdict(list)
         flow_id = '/'.join(obj_list[0].name.split('/')[0:8])

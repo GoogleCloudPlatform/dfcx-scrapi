@@ -15,9 +15,10 @@
 # limitations under the License.
 
 import logging
+from typing import Union
+
 import pandas
 import numpy as np
-from typing import Union
 from dfcx_scrapi.core.intents import Intents
 from google.cloud.dialogflowcx_v3beta1 import types
 
@@ -32,9 +33,7 @@ class Levenshtein():
 
     @staticmethod
     def __levenshtein_ratio(s: str, t: str) -> float:
-        """ levenshtein_ratio_and_distance:
-            Calculates levenshtein distance between two strings.
-        """
+        """Calculates levenshtein distance between two strings."""
         rows = len(s)+1
         cols = len(t)+1
         distance = np.zeros((rows,cols),dtype = int)
@@ -69,28 +68,27 @@ class Levenshtein():
         threshold: float = 0.75,
         silent: bool = False
     ):
-        """
-        compares the training phrases between two intents to find the
+        """Compares the training phrases between two intents to find the
         levenshtein distance between all training phrases. Structure of the
         returned object depends on which intent is the key, and which is the
         comparator.
 
         Args:
           intent_key: intent protobuf or dataframe object. In the returned
-          object, the utterances of this intent are paired with a list of
-          utterances from the comparator.
+            object, the utterances of this intent are paired with a list of
+            utterances from the comparator.
 
           intent_comparator: intent protobuf or dataframe object. In the
-          returned object, the utterances of this intent will be included
-          in a list associated with every phrase whose similarity ratio
-          is above the defined threshold.
+            returned object, the utterances of this intent will be included
+            in a list associated with every phrase whose similarity ratio
+            is above the defined threshold.
 
           threshold: float describing the levenshtein distance above which
-          a pair of phrases should be associated. Default: .75
+            a pair of phrases should be associated. Default: .75
 
           silent: When set to True, the program will execute without
-          creating Info logs or updating the progress on the console.
-          Default=False
+            creating Info logs or updating the progress on the console.
+            Default=False
 
         Returns:
           Dict containing two major parts. The first ("stats") contains
