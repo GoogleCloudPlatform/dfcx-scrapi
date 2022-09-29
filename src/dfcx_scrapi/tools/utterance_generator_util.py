@@ -91,10 +91,10 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
           case,
           punctuation, or
           leading and trailing spaces.
-        
+
         Args:
           string_raw: phrase to clean
-        
+
         Returns:
           Cleaned string
         """
@@ -120,7 +120,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             phrases.
           existing_phrases: list of phrases that already exist as intent
             training phrases.
-        
+
         Returns:
           A dataframe of new only generated phrases.
         """
@@ -174,7 +174,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             new training phrases.
           synthetic_phrases_per_intent: number of phrases to generate.
 
-        Returns: 
+        Returns:
           A DataFrame containing synthetic training phrases.
         """
         synthetic_instances = (
@@ -230,7 +230,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
             an Intent "display_name" column.
           dataset_size: number of requested phrases to generate over all
             specified intents.
-        
+
         Returns:
             A DataFrame of generated training phrases.
         """
@@ -267,7 +267,7 @@ class UtteranceGeneratorUtils(scrapi_base.ScrapiBase):
           agent_id: ID of the DFCX agent.
           intent_subset: intents to generate a test dataset for.
           dataset_size: number of synthetic phrases to generate, default 100.
-        
+
         Returns:
           DataFrame containing synthetic test dataset utterances with columns:
             id: IDs of original utterances.

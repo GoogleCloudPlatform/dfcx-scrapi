@@ -73,7 +73,7 @@ class Intents(ScrapiBase):
             "basic" returns display name and training phrase as plain text.
             "advanced" returns training phrases broken out by parts
             with their parameters included.
-        
+
         Returns:
           In basic mode, a Pandas DataFrame with columns:
             display_name, training phrase
@@ -190,7 +190,7 @@ class Intents(ScrapiBase):
         added or moved.
 
         Args:
-          actions: A Pandas DataFrame with columns: 
+          actions: A Pandas DataFrame with columns:
             display_name: the display name of the intent to take action on
             phrase: exact string training phrase to take action on
             action: "add" or "delete". To do a move, it will be an add and
@@ -200,9 +200,9 @@ class Intents(ScrapiBase):
         Returns:
           A dictionary with keys updated_training_phrases_df and actions_taken.
             The value for updated_training_phrases_df is the training phrase
-              DataFrame from advanced mode with the edits made to it shown 
+              DataFrame from advanced mode with the edits made to it shown
               in the actions_taken DataFrame.
-            The value for actions_taken is a DataFrame of actions taken based 
+            The value for actions_taken is a DataFrame of actions taken based
               on the actions provided. For example, we cannot delete a training
               phrase which does not exist; this will be shown.
         """
@@ -537,7 +537,7 @@ class Intents(ScrapiBase):
         language_code: str = None,
         **kwargs) -> types.Intent:
         """Updates a single Intent object based on provided arguments.
-        
+
         Args:
           intent_id: the destination Intent ID. Must be formatted properly
             for Intent IDs in CX.
@@ -545,7 +545,7 @@ class Intents(ScrapiBase):
             extracted by using the get_intent() method.
           language_code: Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
-        
+
         Returns:
           The updated intent object.
         """
@@ -620,7 +620,7 @@ class Intents(ScrapiBase):
           language_code (str):
             Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
-        
+
         Returns:
           In basic mode, a Pandas DataFrame with columns:
             display_name, training phrase
@@ -628,7 +628,7 @@ class Intents(ScrapiBase):
             name, display_name, description, priority,
             is_fallback, labels, id, repeat_count,
             training_phrase_idx, text, text_idx,
-            parameter_id, entity_type, is_list, redact 
+            parameter_id, entity_type, is_list, redact
         """
 
         if not agent_id:

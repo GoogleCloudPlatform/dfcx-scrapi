@@ -57,11 +57,11 @@ class ScrapiExperiments(ScrapiBase):
 
     def list_experiments(self, environment_id=None):
         """List out experiments.
-        
+
         Args:
           environment_id: (Optional) The ID for the environment from which
             the list of experiments will be retrieved.
-        
+
         Returns:
           A list of experiment JSON objects.
         """

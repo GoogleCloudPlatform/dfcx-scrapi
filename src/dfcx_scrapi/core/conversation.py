@@ -85,7 +85,9 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     @staticmethod
     def _get_match_type_from_map(match_type: int):
-        """Translates the match_type enum int value into a more descriptive string."""
+        """Translates the match_type enum int value into a more descriptive
+        string.
+        """
         match_type_map = {
             0: "MATCH_TYPE_UNSPECIFIED",
             1: "INTENT",
@@ -100,7 +102,9 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     @staticmethod
     def _validate_test_set_input(test_set: pd.DataFrame):
-        """Validates that all pages referenced in the test set exist in the agent."""
+        """Validates that all pages referenced in the test set exist in the
+        agent.
+        """
         mask = test_set.page_id.isna().to_list()
         invalid_pages = set(test_set.page_display_name[mask].to_list())
 
@@ -239,8 +243,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     def _page_id_mapper(self):
         """Initializes the agent_pages_map dataframe.
-        
-        This dataframe contains the flow_display_name, page_display_name, 
+
+        This dataframe contains the flow_display_name, page_display_name,
         and page_id for each page in the agent.
         """
         agent_pages_map = pd.DataFrame()
@@ -363,7 +367,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         checkpoints: bool = False,
     ):
         """Runs intent detection on one utterance and gets the agent reply.
-        
+
         Args:
           send_obj: Dictionary with the following structure:
             {'text': str,
@@ -377,7 +381,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
           current_page: Specify the page id to start the conversation from
           checkpoints: Boolean flag to enable/disable Checkpoint timer
             debugging. Defaults to False.
-        
+
         Returns:
           A dictionary for the agent reply to to the submitted text.
             Includes keys response_messages, confidence, page_name,
@@ -601,10 +605,10 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     def _unpack_match(self, df: pd.DataFrame):
         """ Unpacks a 'match' column into four component columns.
-        
+
         Args:
           df: dataframe containing a column named match of types.Match
-        
+
         Returns:
           A copy of df with columns match_type, confidence, parameters_set,
             and detected_intent instead of match.

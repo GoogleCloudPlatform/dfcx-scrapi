@@ -63,17 +63,19 @@ class EntityTypes(ScrapiBase):
 
         Args:
           obj: EntityType protobuf object
-          mode: (Optional) "basic" returns display_name, value of entity type and
-            its synonyms.
-            "advanced" returns entity types and excluded phrases in a comprehensive
-            format.
-        
+          mode: (Optional) "basic" returns display_name, value of entity type
+            and its synonyms.
+            "advanced" returns entity types and excluded phrases in a
+            comprehensive format.
+
         Returns:
-          In basic mode, a Pandas Dataframe for the entity type object with schema:
+          In basic mode, a Pandas Dataframe for the entity type object with
+          schema:
             display_name: str
             entity_value: str
             synonyms: str
-          In advanced mode, a dictionary with keys entity_types and excluded_phrases.
+          In advanced mode, a dictionary with keys entity_types and
+          excluded_phrases.
             The value of entity_types is a Pandas Dataframe with columns:
               entity_type_id, display_name, kind, auto_expansion_mode,
               fuzzy_extraction, redact, entity_value, synonyms
@@ -143,19 +145,21 @@ class EntityTypes(ScrapiBase):
 
         Args:
           agent_id, agent to pull list of entity types
-          mode: (Optional) "basic" returns display_name, value of entity type and
-            its synonyms.
-            "advanced" returns entity types and excluded phrases in a comprehensive
-            format.
+          mode: (Optional) "basic" returns display_name, value of entity type
+            and its synonyms.
+            "advanced" returns entity types and excluded phrases in a
+            comprehensive format.
           entity_type_subset: (Optional) A list of entities to pull
             If it's None, grab all the entity_types
-        
+
         Returns:
-          In basic mode, a Pandas Dataframe for all entity types in the agent with schema:
+          In basic mode, a Pandas Dataframe for all entity types in the agent
+          with schema:
             display_name: str
             entity_value: str
             synonyms: str
-          In advanced mode, a dictionary with keys entity_types and excluded_phrases.
+          In advanced mode, a dictionary with keys entity_types and
+          excluded_phrases.
             The value of entity_types is a Pandas Dataframe with columns:
               entity_type_id, display_name, kind, auto_expansion_mode,
               fuzzy_extraction, redact, entity_value, synonyms
@@ -343,7 +347,7 @@ class EntityTypes(ScrapiBase):
         language_code: str = None,
         **kwargs):
         """Update a single CX Entity Type object.
-        
+
         Pass in a the Entity Type ID and the specified kwargs for the
         parameters in Entity Types object that you want updated. If you do not
         provide an Entity Type object, the object will be fetched based on the

@@ -67,7 +67,7 @@ class Webhooks(scrapi_base.ScrapiBase):
           reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          Dictionary containing Webhook UUIDs as keys and 
+          Dictionary containing Webhook UUIDs as keys and
           webhook display names as values
         """
         if not agent_id:

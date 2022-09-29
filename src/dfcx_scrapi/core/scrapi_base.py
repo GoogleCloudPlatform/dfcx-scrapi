@@ -77,7 +77,7 @@ class ScrapiBase:
             `projects/<GCP PROJECT ID>/locations/<LOCATION ID>
 
         Returns:
-          A dictionary containing the api_endpoint to use when 
+          A dictionary containing the api_endpoint to use when
           instantiating other library client objects, or None
           if the location is "global"
         """

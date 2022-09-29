@@ -144,7 +144,7 @@ class Sessions(ScrapiBase):
 
         Using the same `session_id` between requests allows continuation
         of the conversation.
-        
+
         Args:
           agent_id: the Agent ID of the CX Agent to have the conversation with.
           session_id: an RFC 4122 formatted UUID to be used as the unique ID
@@ -153,7 +153,7 @@ class Sessions(ScrapiBase):
           text: the user utterance to run intent detection on
           parameters: (Optional) Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
-        
+
         Returns:
           The CX query result from intent detection
         """
@@ -202,7 +202,7 @@ class Sessions(ScrapiBase):
             uuid library, uuid.uuid4() is preferred.
           parameters: Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
-        
+
         Returns:
           The CX query result from intent detection run with no text input
         """

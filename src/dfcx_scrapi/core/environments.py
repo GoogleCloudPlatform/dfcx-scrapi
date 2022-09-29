@@ -211,7 +211,7 @@ class Environments(scrapi_base.ScrapiBase):
             type google.cloud.dialogflowcx_v3beta1.types.Environment
           agent_id: The targeted agent for the operation. format:
             projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>
-        
+
         Returns:
           An object representing a long-running operation. (LRO)
         """
@@ -355,7 +355,7 @@ class Environments(scrapi_base.ScrapiBase):
         environment_id:str,
         flow_version:str):
         """Deploys a flow to the specified environment.
-         
+
          Args:
           environment_id: unique ID associated with target environment. Format:
             projects/<Project ID>/locations/<Location ID>/agents/
@@ -363,7 +363,7 @@ class Environments(scrapi_base.ScrapiBase):
           flow_version: Required. The flow version to deploy. Format:
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/ flows/<Flow ID>/versions/<Version ID>
-        
+
         Returns:
           An object representing a long-running operation. (LRO)
         """

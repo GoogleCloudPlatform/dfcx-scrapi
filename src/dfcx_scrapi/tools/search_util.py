@@ -81,7 +81,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
     @staticmethod
     def get_route_df(page_df: pd.DataFrame, route_group_df: pd.DataFrame):
         """Gets a route dataframe from page- and route-group-dataframes.
-        
+
         Args:
           page_df: dataframe with required columns flow_name, page_name,
             routes (where routes are types.TransitionRoute) such as
@@ -89,7 +89,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
           route_group_df: dataframe woth required columns flow_name,
             page_name, route_group_name, routes (where routes are
             types.TransitionRoute) such as from get_route_group_df().
-        
+
         Returns:
           routes dataframe with columns:
             flow_name,
@@ -120,11 +120,11 @@ class SearchUtil(scrapi_base.ScrapiBase):
     @staticmethod
     def get_param_df(page_df: pd.DataFrame):
         """Gets a parameter dataframe from an input page dataframe.
-        
+
         Args:
           page_df: dataframe with minimum columns flow_name, page_name,
             parameters (types.Form.Parameter), such as from get_page_df().
-        
+
         Returns:
           dataframe with columns:
             flow_name,
@@ -155,14 +155,14 @@ class SearchUtil(scrapi_base.ScrapiBase):
     @staticmethod
     def get_event_handler_df(page_df, param_reprompt_event_handler_df):
         """Gets an event handler dataframe from page- and parameter-dataframes.
-        
+
         Args:
           page_df: dataframe with minimum columns flow_name, page_name,
             event_handlers (types.EventHandler), such as from get_page_df().
             param_reprompt_event_handler_df: dataframe with minimum columns
               flow_name, page_name, parameter_name, reprompt_event_handlers
               (types.EventHandler), such as from get_param_df().
-        
+
         Returns:
           dataframe with columns: flow_name, page_name, parameter_name, event,
             trigger_fulfillment.
@@ -192,10 +192,10 @@ class SearchUtil(scrapi_base.ScrapiBase):
     @staticmethod
     def _get_msg_type(message: types.ResponseMessage):
         """Gets the response message type for a message from a fulfillment.
-        
+
         Args:
           message: message structure from a fulfillment.
-        
+
         Returns:
           type in {np.nan, text, custom_payload, play_audio,
             live_agent_handoff, conversation_success, output_audio_text}.
@@ -225,10 +225,10 @@ class SearchUtil(scrapi_base.ScrapiBase):
     @staticmethod
     def _gather_text_responses(text_message: types.ResponseMessage.Text):
         """Flattens a Dialogflow CX text structure.
-        
+
         Args:
           text_message: text such as is inside types.ResponseMessage.
-        
+
         Returns:
           Flattened text in a string.
         """
@@ -239,11 +239,11 @@ class SearchUtil(scrapi_base.ScrapiBase):
         self, message: types.ResponseMessage, message_format: str
     ):
         """Conditionally unpacks message formats.
-        
+
         Args:
           message: structure such as from a fulfillment.
           message_format: 'dict' or 'human-readable'
-        
+
         Returns:
           Unpacked contents of message.
         """
@@ -576,7 +576,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 then only the start page of the flow is searched.
               if an agent_id, flow_name and page_name are specified,
                 then a page is searched.
-        
+
         Returns:
           Dataframe of the results of where this string was found
         """
@@ -685,7 +685,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         Returns:
           agent_results: dataframe with:
             flow_display_name: display name of the associated page
-            page_display_name: display name of the page with the 
+            page_display_name: display name of the page with the
               associated data
             webhook_entry_fulfillments: True if a page has a webhook on the
               entry fulfillment else False
@@ -739,7 +739,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
           agent_id: ID of the Dialogflow CX agent.
           format_message: minor processing of the message to be more readable,
             default True.
-        
+
         Returns:
           dataframe with columns:
             flow_name,
@@ -810,7 +810,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         Args:
           agent_id: ID of the Dialogflow CX agent.
-        
+
         Returns:
           dataframe with columns:
             flow_name,
@@ -880,7 +880,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         Args:
           agent_id: ID of the Dialogflow CX agent.
-        
+
         Returns:
           flow dataframe with columns:
             flow_name,
@@ -906,10 +906,10 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
     def get_page_df(self, flow_df: pd.DataFrame):
         """Gets pages dataframe for an agent.
-        
+
         Args:
           flow_df: flow dataframe from get_flow_df().
-        
+
         Returns:
           page dataframe with columns:
             flow_name,
@@ -962,14 +962,14 @@ class SearchUtil(scrapi_base.ScrapiBase):
         self, page_df: pd.DataFrame, flow_id_list: List[str]
     ):
         """Gets route groups dataframe for the pages in an input dataframe.
-        
+
         Args:
           page_df: dataframe with required columns flow_name, page_name,
             route_groups (where route_groups are route group IDs) such as
             from get_page_df().
           flow_id_list: contains the flow IDs for flows containing the pages
             in page_df arg.
-        
+
         Returns:
           route group dataframe with columns:
             flow_name,

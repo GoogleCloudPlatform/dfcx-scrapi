@@ -66,7 +66,7 @@ class Pages(ScrapiBase):
           reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          Dictionary containing Page UUIDs as keys and display names as values. 
+          Dictionary containing Page UUIDs as keys and display names as values.
           If Optional reverse=True, the output will return page_name:ID mapping
           instead of ID:page_name
         """

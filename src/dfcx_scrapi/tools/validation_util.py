@@ -53,7 +53,7 @@ class ValidationUtil(ScrapiBase):
         """ "Transform the Validation results into a dataframe.
         Note will not work if you call get_validation_result with a
         flow_id specified. For calling validate ensure lro is complete
-        
+
         Args:
           validation_results: dictionary of validation results
             assed back from get_validation_result or validate functions
@@ -98,12 +98,12 @@ class ValidationUtil(ScrapiBase):
 
     def intent_disambiguation(self, agent_id, refresh=False, flow=None):
         """Obtains the intent disambiguation tasks from the validation tool
-        
+
         Args:
           refresh: (optional) False means validation results are pulled
             as is. True means the validation tool is refreshed then
             results are pulled
-          flow: (optional) If specified results are returned for the 
+          flow: (optional) If specified results are returned for the
             indicated flow display name
 
         Returns:

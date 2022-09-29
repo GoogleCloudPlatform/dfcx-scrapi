@@ -224,7 +224,7 @@ class Flows(scrapi_base.ScrapiBase):
 
     def update_nlu_settings(self, flow_id:str, **kwargs):
         """Updates flow to new NLU setting.
-        
+
         Args:
           flow_id: flow id to update nlu settings for.
             model_type: (Optional) [0:unspecified, 1:MODEL_TYPE_STANDARD,
@@ -256,8 +256,8 @@ class Flows(scrapi_base.ScrapiBase):
           ref_flows: Whether to export flows referenced by the specified flow.
 
         Returns:
-          A Long Running Operation result. If successful the LRO result will 
-            return the Google Cloud Storage URI from the Export Flow request. 
+          A Long Running Operation result. If successful the LRO result will
+            return the Google Cloud Storage URI from the Export Flow request.
             Otherwise, it will return the corresponding error.
         """
         request = types.flow.ExportFlowRequest()
@@ -318,8 +318,8 @@ class Flows(scrapi_base.ScrapiBase):
           import_option: one of 'FALLBACK' or 'KEEP'. Defaults to 'KEEP'
 
         Returns:
-          A Long Running Operation result. If successful the LRO result will 
-            return the Flow ID of the newly imported Flow. 
+          A Long Running Operation result. If successful the LRO result will
+            return the Flow ID of the newly imported Flow.
             Otherwise, it will return the corresponding error.
         """
 

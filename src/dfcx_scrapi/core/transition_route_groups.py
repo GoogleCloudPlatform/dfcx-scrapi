@@ -113,8 +113,8 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
           reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          Dictionary containing Route Group UUIDs as keys and display names 
-          as values. If Optional reverse=True, the output will return 
+          Dictionary containing Route Group UUIDs as keys and display names
+          as values. If Optional reverse=True, the output will return
           route group name:ID mapping instead of ID:route group name
         """
         if not flow_id:
@@ -293,7 +293,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         Returns:
           a Pandas Dataframe with columns: flow, route_group_name, target_page,
           intent, condition, webhook, webhook_tag, custom_payload,
-          live_agent_handoff, conversation_success, play_audio, 
+          live_agent_handoff, conversation_success, play_audio,
           output_audio_text, fulfillment_message
         """
         if not agent_id:

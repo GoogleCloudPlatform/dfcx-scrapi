@@ -1023,7 +1023,7 @@ class DataframeFunctions(ScrapiBase):
           display_name: name for the route group
           agent_id: agent id of target agent
           flow_id: flow id where to create route group
-          route_group_df: dataframe with data for all routes in the route 
+          route_group_df: dataframe with data for all routes in the route
             group. Columns should have the following format:
               intent: intent id
               condition: string condition. ex.
@@ -1033,12 +1033,12 @@ class DataframeFunctions(ScrapiBase):
               target_flow: flow id
               webhook: webhook id
               webhook_tag: string webhook tag
-              custom_payload: a singular payload or list of payloads 
+              custom_payload: a singular payload or list of payloads
                 ex. [{}, {}]
               fulfillment_text: = list of text ["yo", "hi"]
               parameter_presets: = dictionary of parameter presets ex.
                 {"param1":"value","param2":"othervalues"}
-                update_flag: True to create the route group in the provided 
+                update_flag: True to create the route group in the provided
                 flow id
 
         Returns:

@@ -60,7 +60,7 @@ class SemanticClustering:
     @staticmethod
     def _string_cleaner(string):
         """Clean text by removing tokens, punctuation, and applying lower().
-        
+
         Args:
           string: text string to be cleaned
 
@@ -86,7 +86,7 @@ class SemanticClustering:
         n_jobs=-1,
     ):
         """Cluster phrases using a model with set hyperparameters
-        
+
         Args:
           data: DataFrame to cluster
           eps: max distance between two points for them to be

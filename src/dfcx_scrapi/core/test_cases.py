@@ -101,14 +101,14 @@ class TestCases(ScrapiBase):
         """Export test cases from an agent to cloud storage
 
         Args:
-          gcs_uri: The GCS URI to export the test cases to. The format of this 
+          gcs_uri: The GCS URI to export the test cases to. The format of this
             URI must be `gs://<bucket-name>/<object-name>`. If unspecified,
             the serialized test cases are returned inline.
           agent_id: The agent to export test cases from.
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
-          data_format: The data format of the exported test cases. If not 
+          data_format: The data format of the exported test cases. If not
             specified, `BLOB` is assumed.
-          data_filter: The filter expression used to filter exported test 
+          data_filter: The filter expression used to filter exported test
             cases, see `API Filtering <https://aip.dev/160>`__. The expression
             is case insensitive and supports the following syntax:
               name = [OR name = ] ...
