@@ -103,7 +103,7 @@ class Levenshtein():
         if isinstance(intent_key, types.Intent):
             list_keys = Intents.intent_proto_to_dataframe(
                 intent_key
-            ).tp
+            ).training_phrase
         elif isinstance(intent_key, pandas.core.frame.DataFrame):
             list_keys = intent_key.tp
         else:
@@ -117,7 +117,7 @@ class Levenshtein():
         if isinstance(intent_comparator, types.Intent):
             list_comparators = Intents.intent_proto_to_dataframe(
                 intent_comparator
-            ).tp
+            ).training_phrase
         elif isinstance(intent_comparator, pandas.core.frame.DataFrame):
             list_comparators = intent_comparator.tp
         else:
