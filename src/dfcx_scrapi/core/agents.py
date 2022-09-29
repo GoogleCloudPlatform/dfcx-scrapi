@@ -217,7 +217,7 @@ class Agents(scrapi_base.ScrapiBase):
     def create_agent(
         self,
         project_id: str,
-        display_name: str,
+        display_name: str = None,
         gcp_region: str = "global",
         obj: types.Agent = None,
         **kwargs,
@@ -225,9 +225,10 @@ class Agents(scrapi_base.ScrapiBase):
         """Create a Dialogflow CX Agent with given display name.
 
         By default the CX Agent will be created in the project that the user
-        is currently authenticated to
-        If the user provides an existing Agent object, create a new CX agent
-        based on this object.
+        is currently authenticated to.
+        If the user provides an existing Agent object, a new CX Agent will be
+        created based on this object and any other input/kwargs will be
+        discarded.
 
         Args:
           project_id: GCP project id where the CX agent will be created
@@ -242,18 +243,17 @@ class Agents(scrapi_base.ScrapiBase):
         if obj:
             agent = obj
             parent = f"projects/{project_id}/locations/{gcp_region}"
-            agent.display_name = display_name
+
         else:
             agent = types.agent.Agent()
             parent = f"projects/{project_id}/locations/{gcp_region}"
             agent.display_name = display_name
+            agent.default_language_code = "en"
+            agent.time_zone = "America/Chicago"
 
-        agent.default_language_code = "en"
-        agent.time_zone = "America/Chicago"
-
-        # set optional args as agent attributes
-        for key, value in kwargs.items():
-            setattr(agent, key, value)
+            # set optional args as agent attributes
+            for key, value in kwargs.items():
+                setattr(agent, key, value)
 
         client_options = self._set_region(parent)
         client = services.agents.AgentsClient(
