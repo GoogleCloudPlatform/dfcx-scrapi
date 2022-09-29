@@ -211,7 +211,7 @@ class IntentBuilder:
         elif mode in ["phrases", "training phrases"]:
             print(self._show_training_phrases(repeat_count=repeat_count))
         elif mode == "whole":
-            print(str(self))
+            print(self.__str__())
         else:
             raise ValueError(
                 "mode should be in"
