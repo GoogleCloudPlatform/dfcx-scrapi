@@ -229,7 +229,7 @@ class EntityTypeBuilder:
         self._check_entity_type_exist()
 
         if isinstance(phrase, str):
-            self.proto_obj = self.proto_obj.excluded_phrases.append(
+            self.proto_obj.excluded_phrases.append(
                 EntityType.ExcludedPhrase(value=phrase)
             )
         elif isinstance(phrase, list):
@@ -238,10 +238,10 @@ class EntityTypeBuilder:
                     "Only strings are allowed in the phrase list."
                 )
 
-            self.proto_obj = self.proto_obj.excluded_phrases.extend([
+            self.proto_obj.excluded_phrases.extend([
                 EntityType.ExcludedPhrase(value=value)
-                for value in phrase
-            ])
+                for value in phrase])
+
         else:
             raise ValueError(
                 "phrase should be either a string or a list of strings."
