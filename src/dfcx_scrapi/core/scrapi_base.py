@@ -16,6 +16,7 @@
 
 import logging
 import json
+import re
 
 from typing import Dict
 from google.oauth2 import service_account
@@ -24,6 +25,8 @@ from google.protobuf import json_format  # type: ignore
 
 from proto.marshal.collections import repeated
 from proto.marshal.collections import maps
+
+
 class ScrapiBase:
     """Core Class for managing Auth and other shared functions."""
 
@@ -35,8 +38,8 @@ class ScrapiBase:
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: Dict[str,str] = None,
-        creds: service_account.Credentials =None,
+        creds_dict: Dict[str, str] = None,
+        creds: service_account.Credentials = None,
         scope=False,
         agent_id=None,
     ):
@@ -120,6 +123,124 @@ class ScrapiBase:
         blob = ScrapiBase.cx_object_to_dict(msg)
         return blob.get("payload")  # deref for nesting
 
+    @staticmethod
+    def _parse_resource_path(
+        resource_type,
+        resource_id,
+        validate=True) -> Dict[str, str]:
+        # pylint: disable=line-too-long
+        """Validates the provided Resource ID against known patterns.
+
+        Args:
+          resource_type, Must be one of the following resource types:
+            `agent`, `entity_type`, `environmnet`, `flow`, `intent`, `page`,
+            `project`, `security_setting`, `session`, `session_entity_type`,
+            `test_case`, `transition_route_group`, `version`, `webhook`
+          resource_id, The CX resource ID to check against the provided
+            resource_type
+          validate, allows the user to have their Resource ID validated along
+            with returning the parts dictionary of the Resource ID. If set to
+            True, this method will prompt the user with the correct format
+            to utilize for the specified ID. If set to False, no validation
+            will occur. If the input Resource ID is invalid when set to False,
+            an empty Dictionary will be returned, allowing the caller to
+            define their own ValueError message in a higher level class.
+            Defaults to True.
+        """
+
+        standard_id_match = r"[-0-9a-f]{1,36}"
+        entity_id_match = r"[-@.0-9a-z]{1,36}"
+        location_id_match = r"[-0-9a-z]{1,36}"
+        session_id_match = r"[-0-9a-zA-Z!@#$%^&*()_+={}[\]:;\"'<>,.?]{1,36}"
+        version_id_match = r"[0-9]{1,4}"
+
+        matcher_root = f"^projects/(?P<project>.+?)/locations/(?P<location>{location_id_match})"
+
+        pattern_map = {
+            "agent": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`",
+            },
+            "entity_type": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/entityTypes/(?P<entity>{entity_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/entityTypes/<Entity Types ID>`",
+            },
+            "environment": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/environments/(?P<environment>{standard_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/environments/<Environment ID>`",
+            },
+            "flow": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>`",
+            },
+            "intent": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/intents/(?P<intent>{standard_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/intents/<Intent ID>`",
+            },
+            "page": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/pages/(?P<page>{standard_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>`",
+            },
+            "project": {
+                "matcher": fr"{matcher_root}$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/`",
+            },
+            "security_setting": {
+                "matcher": fr"{matcher_root}/securitySettings/(?P<security_setting>{standard_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/securitySettings/<Security Setting ID>`",
+            },
+            "session": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/sessions/(?P<session>{session_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>`",
+            },
+            "session_entity_type": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/sessions/(?P<session>{session_id_match})/entityTypes/(?P<entity>{entity_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>/entityTypes/<Entity Type ID>`",
+            },
+            "test_case": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/testCases/(?P<test_case>{standard_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/testCases/<Test Case ID>`",
+            },
+            "transition_route_group": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/transitionRouteGroups/(?P<transition_route_group>{standard_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>/transitionRouteGroups/<Transition Route Group ID>`",
+            },
+            "version": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/versions/(?P<version>{version_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>`",
+            },
+            "webhook": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/webhooks/(?P<webhook>{standard_id_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`",
+            }
+        }
+
+        if resource_type not in pattern_map:
+            raise KeyError(
+                "`resource_type` must be one of the following resource types:"
+                " `agent`, `entity_type`, `environmnet`, `flow`, `intent`,"
+                "`page`,`project`, `security_setting`, `session`, "
+                "`session_entity_type`,`test_case`, `transition_route_group`, "
+                "`version`, `webhook`"
+            )
+
+        match_res = re.match(pattern_map[resource_type]["matcher"], resource_id)
+        dict_res = match_res.groupdict() if match_res else {}
+        valid_parse = False
+
+        if dict_res:
+            valid_parse = True
+
+        if validate and not valid_parse:
+            raise ValueError(
+                f"{resource_type.capitalize()} ID must be provided in the "
+                f"following format: "
+                f"{pattern_map[resource_type]['format']}"
+            )
+
+        # pylint: enable=line-too-long
+        return dict_res
+
     def recurse_proto_repeated_composite(self, repeated_object):
         repeated_list = []
         for item in repeated_object:
@@ -136,7 +257,7 @@ class ScrapiBase:
 
     def recurse_proto_marshal_to_dict(self, marshal_object):
         new_dict = {}
-        for k,v in marshal_object.items():
+        for k, v in marshal_object.items():
             if isinstance(v, maps.MapComposite):
                 v = self.recurse_proto_marshal_to_dict(v)
             elif isinstance(v, repeated.RepeatedComposite):
