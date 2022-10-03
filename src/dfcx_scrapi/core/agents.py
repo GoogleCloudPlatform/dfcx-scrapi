@@ -232,9 +232,10 @@ class Agents(scrapi_base.ScrapiBase):
 
         Args:
           obj: Agent object to create new agent from. Refer to
-            builders.agents.AgentBuilder to build one.
+            `builders.agents.AgentBuilder` to build one.
           project_id: GCP project id where the CX agent will be created
-          gcp_region: (Optional) GCP region to create CX agent. Defaults to 'global'
+          gcp_region: (Optional) GCP region to create CX agent.
+            Defaults to 'global'
 
         Returns:
           The newly created CX Agent resource object.
@@ -244,7 +245,7 @@ class Agents(scrapi_base.ScrapiBase):
             raise ValueError(
                 "The obj should be an Agent."
             )
-        
+
         parent = f"projects/{project_id}/locations/{gcp_region}"
         client_options = self._set_region(parent)
         client = services.agents.AgentsClient(
