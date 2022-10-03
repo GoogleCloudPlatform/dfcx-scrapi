@@ -15,7 +15,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-import json
 import logging
 from typing import Dict, List, Tuple
 import pandas as pd
