@@ -481,64 +481,25 @@ class Intents(ScrapiBase):
     def create_intent(
         self,
         agent_id: str,
-        obj: types.Intent = None,
-        intent_dictionary: dict = None,
+        obj: types.Intent,
         language_code: str = None) -> types.Intent:
-        """Creates an Intent from a protobuf or dictionary.
+        """Creates an Intent from an Intent protobuf.
 
         Args:
           agent_id: the formatted CX Agent ID to use
-          obj: (Optional) Intent protobuf of types.Intent
-          intent_dictionary: (optional) dictionary of the intent to pass in
-            with structure
-
-        example intent dictionary:
-           test_intent = {
-            "description": "",
-            "display_name": "my_intent",
-            "is_fallback": False,
-            "labels": {},
-            "priority": 500000,
-            "training_phrases": [
-                {
-                    "id": "",
-                    "parts": [
-                        {
-                            "text": "hello"
-                        },
-                        {
-                            "text": "all"
-                        }
-                    ],
-                    "repeat_count": 1
-                },
-                {
-                    "id": "",
-                    "parts": [
-                        {
-                            "text": "hi"
-                        }
-                    ],
-                    "repeat_count": 1
-                }
-            ]
-        }
+          obj: Intent object to create new intent from. Refer to
+            IntentBuilder in the builders package to build one
+          language_code (Optional): The language of the training phrases in
+            the intent. If not specified, the agent's default language is used
 
         Returns:
-          Intent protobuf object
+          The newly created Intent protobuf object.
         """
 
-        if obj and intent_dictionary:
-            raise ValueError("cannot provide both obj and intent_dictionary")
-        elif obj:
-            intent = obj
-            intent.name = ""
-        elif intent_dictionary:
-            intent = types.intent.Intent.from_json(
-                json.dumps(intent_dictionary)
+        if not isinstance(obj, types.Intent):
+            raise ValueError(
+                "The obj should be an Intent."
             )
-        else:
-            raise ValueError("must provide either obj or intent_dictionary")
 
         request = types.intent.CreateIntentRequest()
 
@@ -546,7 +507,7 @@ class Intents(ScrapiBase):
             request.language_code = language_code
 
         request.parent = agent_id
-        request.intent = intent
+        request.intent = obj
 
         client_options = self._set_region(agent_id)
         client = services.intents.IntentsClient(
