@@ -232,7 +232,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         Args:
           obj: Agent object to create new agent from. Refer to
-            AgentBuilder in the builders package to build one.
+            builders.agents.AgentBuilder to build one.
           project_id: GCP project id where the CX agent will be created
           gcp_region: (Optional) GCP region to create CX agent. Defaults to 'global'
 

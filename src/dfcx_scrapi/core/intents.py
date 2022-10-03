@@ -488,7 +488,7 @@ class Intents(ScrapiBase):
         Args:
           agent_id: the formatted CX Agent ID to use
           obj: Intent object to create new intent from. Refer to
-            IntentBuilder in the builders package to build one
+            `builders.intents.IntentBuilder` to build one.
           language_code (Optional): The language of the training phrases in
             the intent. If not specified, the agent's default language is used
 
