@@ -227,3 +227,22 @@ class Pages(scrapi_base.ScrapiBase):
         response = client.update_page(page=page, update_mask=mask)
 
         return response
+
+    def delete_page(self, page_id: str = None) -> str:
+        """Deletes the specified Page.
+        
+        Args:
+          page_id: CX Page ID string in the following Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+              flows/<Flow ID>/pages/<Page ID>``
+
+        Returns:
+          String "Page `{page_id}` successfully deleted."
+          """
+        client_options = self._set_region(page_id)
+        client = pages.PagesClient(
+            credentials=self.creds, client_options=client_options
+            )
+        client.delete_page(name=page_id)
+
+        return f"Page `{page_id}` successfully deleted."
