@@ -20,7 +20,7 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -29,14 +29,14 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-class Pages(ScrapiBase):
+class Pages(scrapi_base.ScrapiBase):
     """Core Class for CX Page Resource functions."""
 
     def __init__(
         self,
         creds_path: str = None,
         creds_dict: Dict = None,
-        scope=False,
+        scope=None,
         creds=None,
         page_id: str = None,
         flow_id: str = None,
@@ -48,12 +48,8 @@ class Pages(ScrapiBase):
             scope=scope,
         )
 
-        if page_id:
-            self.page_id = page_id
-            self.client_options = self._set_region(page_id)
-
-        if flow_id:
-            self.flow_id = flow_id
+        self.page_id = page_id
+        self.flow_id = flow_id
 
     def get_pages_map(
         self,
