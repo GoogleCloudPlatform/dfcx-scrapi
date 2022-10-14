@@ -16,8 +16,8 @@
 
 import logging
 from typing import Dict, List
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
+from google.cloud.dialogflowcx_v3beta1.services import pages
+from google.cloud.dialogflowcx_v3beta1.types import page as gcdc_page
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core import scrapi_base
@@ -111,7 +111,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return pages_dict
 
-    def list_pages(self, flow_id: str = None) -> List[types.Page]:
+    def list_pages(self, flow_id: str = None) -> List[gcdc_page.Page]:
         """Get a List of all pages for the specified Flow ID.
 
         Args:
@@ -120,11 +120,11 @@ class Pages(scrapi_base.ScrapiBase):
         Returns:
           A List of CX Page objects for the specific Flow ID
         """
-        request = types.page.ListPagesRequest()
+        request = gcdc_page.ListPagesRequest()
         request.parent = flow_id
 
         client_options = self._set_region(flow_id)
-        client = services.pages.PagesClient(
+        client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
         response = client.list_pages(request)
@@ -136,7 +136,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return cx_pages
 
-    def get_page(self, page_id: str = None) -> types.Page:
+    def get_page(self, page_id: str = None) -> gcdc_page.Page:
         """Get a single CX Page object based on the provided Page ID.
 
         Args:
@@ -149,7 +149,7 @@ class Pages(scrapi_base.ScrapiBase):
             page_id = self.page_id
 
         client_options = self._set_region(page_id)
-        client = services.pages.PagesClient(
+        client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
 
@@ -160,13 +160,13 @@ class Pages(scrapi_base.ScrapiBase):
     def create_page(
         self,
         flow_id: str = None,
-        obj: types.Page = None,
-        **kwargs) -> types.Page:
+        obj: gcdc_page.Page = None,
+        **kwargs) -> gcdc_page.Page:
         """Create a single CX Page object in the specified Flow ID.
 
         Args:
           flow_id: the CX Flow ID where the Page object will be created
-          obj: (Optional) a CX Page object of types.Page
+          obj: (Optional) a CX Page object of gcdc_page.Page
 
         Returns:
           A copy of the successful Page object that was created
@@ -178,13 +178,13 @@ class Pages(scrapi_base.ScrapiBase):
             page = obj
             page.name = ""
         else:
-            page = types.page.Page()
+            page = gcdc_page.Page()
 
         for key, value in kwargs.items():
             setattr(page, key, value)
 
         client_options = self._set_region(flow_id)
-        client = services.pages.PagesClient(
+        client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
 
@@ -195,13 +195,13 @@ class Pages(scrapi_base.ScrapiBase):
     def update_page(
         self,
         page_id: str = None,
-        obj: types.Page = None,
-        **kwargs) -> types.Page:
+        obj: gcdc_page.Page = None,
+        **kwargs) -> gcdc_page.Page:
         """Update a single CX Page object.
 
         Args:
           page_id: the CX Page ID to update
-          obj: (Optional) a CX Page object of types.Page
+          obj: (Optional) a CX Page object of gcdc_page.Page
 
         Returns:
           A copy of the successful Page object that was created
@@ -220,7 +220,7 @@ class Pages(scrapi_base.ScrapiBase):
         mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(page_id)
-        client = services.pages.PagesClient(
+        client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
 
