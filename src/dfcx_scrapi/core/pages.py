@@ -29,6 +29,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+
 class Pages(scrapi_base.ScrapiBase):
     """Core Class for CX Page Resource functions."""
 
@@ -65,21 +66,20 @@ class Pages(scrapi_base.ScrapiBase):
             we will add the new special pages to.
           reverse: Boolean flag to swap key:value -> value:key
         """
-        page_names = ['START_PAGE', 'END_FLOW', 'END_SESSION']
+        page_names = ["START_PAGE", "END_FLOW", "END_SESSION"]
 
         if reverse:
             for page in page_names:
-                pages_map[page] = f'{flow_id}/pages/{page}'
+                pages_map[page] = f"{flow_id}/pages/{page}"
         else:
             for page in page_names:
-                pages_map[f'{flow_id}/pages/{page}'] = page
+                pages_map[f"{flow_id}/pages/{page}"] = page
 
         return pages_map
 
     def get_pages_map(
-        self,
-        flow_id: str = None,
-        reverse=False) -> Dict[str, str]:
+        self, flow_id: str = None, reverse=False
+    ) -> Dict[str, str]:
         """Exports Agent Page UUIDs and Names into a user friendly dict.
 
         Args:
@@ -107,7 +107,8 @@ class Pages(scrapi_base.ScrapiBase):
             }
 
         pages_dict = self._add_generic_pages_to_map(
-                flow_id, pages_dict, reverse)
+            flow_id, pages_dict, reverse
+        )
 
         return pages_dict
 
@@ -158,10 +159,8 @@ class Pages(scrapi_base.ScrapiBase):
         return response
 
     def create_page(
-        self,
-        flow_id: str = None,
-        obj: gcdc_page.Page = None,
-        **kwargs) -> gcdc_page.Page:
+        self, flow_id: str = None, obj: gcdc_page.Page = None, **kwargs
+    ) -> gcdc_page.Page:
         """Create a single CX Page object in the specified Flow ID.
 
         Args:
@@ -193,10 +192,8 @@ class Pages(scrapi_base.ScrapiBase):
         return response
 
     def update_page(
-        self,
-        page_id: str = None,
-        obj: gcdc_page.Page = None,
-        **kwargs) -> gcdc_page.Page:
+        self, page_id: str = None, obj: gcdc_page.Page = None, **kwargs
+    ) -> gcdc_page.Page:
         """Update a single CX Page object.
 
         Args:
@@ -230,7 +227,7 @@ class Pages(scrapi_base.ScrapiBase):
 
     def delete_page(self, page_id: str = None) -> str:
         """Deletes the specified Page.
-        
+
         Args:
           page_id: CX Page ID string in the following Format:
             ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
@@ -238,11 +235,11 @@ class Pages(scrapi_base.ScrapiBase):
 
         Returns:
           String "Page `{page_id}` successfully deleted."
-          """
+        """
         client_options = self._set_region(page_id)
         client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
-            )
+        )
         client.delete_page(name=page_id)
 
         return f"Page `{page_id}` successfully deleted."
