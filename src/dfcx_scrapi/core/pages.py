@@ -51,6 +51,31 @@ class Pages(scrapi_base.ScrapiBase):
         self.page_id = page_id
         self.flow_id = flow_id
 
+    @staticmethod
+    def _add_generic_pages_to_map(flow_id, pages_map, reverse):
+        """Add the generic page names to each Page map.
+
+        Dialogflow CX contains a few `special` pages names that are reserved
+        and do not have UUID4 format IDs. This will take the existing page
+        map and insert them in for downstream lookups.
+
+        Args:
+          flow_id: The Flow ID that contains the Pages in the pages_map
+          pages_map: The existing pages_map Dict from `get_pages_map` that
+            we will add the new special pages to.
+          reverse: Boolean flag to swap key:value -> value:key
+        """
+        page_names = ['START_PAGE', 'END_FLOW', 'END_SESSION']
+
+        if reverse:
+            for page in page_names:
+                pages_map[page] = f'{flow_id}/pages/{page}'
+        else:
+            for page in page_names:
+                pages_map[f'{flow_id}/pages/{page}'] = page
+
+        return pages_map
+
     def get_pages_map(
         self,
         flow_id: str = None,
@@ -80,6 +105,9 @@ class Pages(scrapi_base.ScrapiBase):
                 page.name: page.display_name
                 for page in self.list_pages(flow_id)
             }
+
+        pages_dict = self._add_generic_pages_to_map(
+                flow_id, pages_dict, reverse)
 
         return pages_dict
 
