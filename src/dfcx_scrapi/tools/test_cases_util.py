@@ -471,8 +471,6 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
                     row.sentiment_analysis_enabled
                 )
 
-
-
                 # Build Virtual Agent Output
                 virtual_agent_output = self._build_virtual_agent_output(
                     row.expected_parameters,
