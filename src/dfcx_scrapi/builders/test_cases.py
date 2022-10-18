@@ -40,7 +40,7 @@ class TestCaseBuilder:
 
         self.proto_obj = None
         if obj:
-            self.load_agent(obj)
+            self.load_test_case(obj)
 
         self.scrapi_base = scrapi_base.ScrapiBase()
 
@@ -54,7 +54,8 @@ class TestCaseBuilder:
             f"\ntags: {self.proto_obj.tags}"
             f"\nnotes: {self.proto_obj.notes}"
             f"\ntest_config: {self.proto_obj.test_config}"
-            f"\natest_case_conversation_turns: {self.proto_obj.test_case_conversation_turns}"
+            f"\natest_case_conversation_turns: \
+                {self.proto_obj.test_case_conversation_turns}"
             f"\nlast_test_result: {self.proto_obj.last_test_result}"
             )
 
@@ -118,6 +119,36 @@ class TestCaseBuilder:
         response_text.text.extend([response])
 
         return response_text
+
+    def load_test_case(
+        self, obj: TestCase, overwrite: bool = False
+        ) -> TestCase:
+        """Load an existing Test Case to proto_obj for further uses.
+
+        Args:
+          obj (TestCase):
+            An existing Test Case obj.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a Test Case.
+
+        Returns:
+          A Test Case object stored in proto_obj
+        """
+        if not isinstance(obj, TestCase):
+            raise ValueError(
+                "The object you're trying to load is not a TestCase!"
+            )
+        if self.proto_obj and not overwrite:
+            raise Exception(
+                "proto_obj already contains a Test Case."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+
+        if overwrite or not self.proto_obj:
+            self.proto_obj = obj
+
+        return self.proto_obj
 
     def create_new_test_case(
             self,
