@@ -82,6 +82,38 @@ class Flows(scrapi_base.ScrapiBase):
 
         return flows_dict
 
+    def get_flow_page_map(self, agent_id: str) -> Dict[str, Dict[str, str]]:
+        """Exports a user friendly dict containing Flows, Pages, and IDs
+
+        This method builds on top of `get_flows_map` and builds out a nested
+        dictionary containing all of the Page Display Names and UUIDs contained
+        within each Flow. Output Format:
+          {
+            <FLOW_DISPLAY_NAME>: {
+                'id': <FLOW_UUID>
+                'pages': { <PAGE_DISPLAY_NAME> : <PAGE_UUID> }
+            }
+          }
+        
+        Args:
+          agent_id: the formatted CX Agent ID to use
+          
+        Returns:
+          Dictionary containing Flow Names/UUIDs and Page Names/UUIDs
+        """
+        flow_page_map = {}
+
+        flows_map = self.get_flows_map(agent_id, reverse=True)
+
+        for flow in flows_map:
+            pages_map = self.pages.get_pages_map(
+                flows_map[flow], reverse=True)
+            pages_map = self.add_generic_pages_to_map(
+                flows_map[flow], pages_map)
+            flow_page_map[flow] = {'id': flows_map[flow], 'pages': pages_map}
+
+        return flow_page_map
+
     def train_flow(self, flow_id: str) -> str:
         """Trains the specified flow.
 
