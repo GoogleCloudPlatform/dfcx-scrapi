@@ -149,6 +149,7 @@ class ScrapiBase:
         """
 
         standard_id_match = r"[-0-9a-f]{1,36}"
+        page_id_match = r"[-0-9a-f]{1,36}|START_PAGE|END_SESSION|END_FLOW"
         entity_id_match = r"[-@.0-9a-z]{1,36}"
         location_id_match = r"[-0-9a-z]{1,36}"
         session_id_match = r"[-0-9a-zA-Z!@#$%^&*()_+={}[\]:;\"'<>,.?]{1,36}"
@@ -178,7 +179,7 @@ class ScrapiBase:
                 "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/intents/<Intent ID>`",
             },
             "page": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/pages/(?P<page>{standard_id_match})$",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/pages/(?P<page>{page_id_match})$",
                 "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>`",
             },
             "project": {
