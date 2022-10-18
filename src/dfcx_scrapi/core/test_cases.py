@@ -51,13 +51,8 @@ class TestCases(ScrapiBase):
             scope=scope,
         )
 
-        if agent_id:
-            self.agent_id = agent_id
-            self.client_options = self._set_region(self.agent_id)
-
-        if test_case_id:
-            self.test_case_id = test_case_id
-            self.client_options = self._set_region(self.test_case_id)
+        self.agent_id = agent_id
+        self.test_case_id = test_case_id
 
     def get_test_cases_map(
       self,
