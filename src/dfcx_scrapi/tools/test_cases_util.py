@@ -20,11 +20,7 @@ from ast import literal_eval
 import logging
 import re
 from google.cloud.dialogflowcx_v3beta1.types import test_case
-import numpy as np
 import pandas as pd
-
-from google.cloud import storage
-from google.oauth2 import service_account
 
 from dfcx_scrapi.core import intents
 from dfcx_scrapi.core import flows
@@ -32,84 +28,12 @@ from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import test_cases
 from dfcx_scrapi.tools import dataframe_functions
-from requests import session
-
-from builders.test_cases import TestCaseBuilder
+from dfcx_scrapi.builders.test_cases import TestCaseBuilder
 
 logging.basicConfig(
     level=logging.INFO,
     format="[dfcx] %(levelname)s:%(message)s"
 )
-
-# TODO: Consider placing in scrapi_base
-class GcsUtil:
-    @staticmethod
-    def _parse_bucket_name(gcs_bucket_uri):
-        """Parse the GCS Bucket name from the provided full GCS Bucket URI."""
-        pattern = r'gs:\/\/(.*?)\/'
-        match = re.search(pattern, gcs_bucket_uri)
-
-        bucket_name = match.groups()[0]
-
-        return bucket_name
-
-    @staticmethod
-    def _parse_file_name(gcs_bucket_uri):
-        """Parse the filename portion of the full GCS Bucket URI."""
-        pattern = r'gs:\/\/.*?\/(.*)'
-        match = re.search(pattern, gcs_bucket_uri)
-
-        file_name = match.groups()[0]
-
-        return file_name
-
-    @staticmethod
-    def _set_gcp_creds(creds_dict=None):
-        """Sets GCP Creds."""
-        creds = service_account.Credentials.from_service_account_info(creds_dict)
-
-        return creds
-
-    def _setup_storage_client(self, creds_dict):
-        """Instantiate the Storage Client."""
-        creds = self._set_gcp_creds(creds_dict)
-
-        storage_client = storage.Client(
-            credentials=creds,
-            project=creds.project_id,
-            )
-
-        return storage_client
-
-    def read_from_gcs(self, creds_dict, gcs_bucket_uri: str):
-        """Reads the timestamp from the provided timestamp file.
-
-        gcs_bucket_uri: Fully qualified GCS bucket in the following format:
-            gs://bucket_name/filename.blah
-        """
-        client = self._setup_storage_client(creds_dict)
-        bucket_name = self._parse_bucket_name(gcs_bucket_uri)
-        file_name = self._parse_file_name(gcs_bucket_uri)
-
-        bucket = client.get_bucket(bucket_name)
-        blob = bucket.get_blob(file_name)
-
-        return blob
-
-    def download_from_gcs(self, creds_dict, gcs_bucket_uri: str, destination_file: str):
-        """Reads the timestamp from the provided timestamp file.
-
-        gcs_bucket_uri: Fully qualified GCS bucket in the following format:
-            gs://bucket_name/filename.blah
-        """
-        client = self._setup_storage_client(creds_dict)
-        bucket_name = self._parse_bucket_name(gcs_bucket_uri)
-        file_name = self._parse_file_name(gcs_bucket_uri)
-
-        bucket = client.get_bucket(bucket_name)
-        blob = bucket.get_blob(file_name)
-
-        blob.download_to_filename(destination_file)
 
 class TestCaseUtil(scrapi_base.ScrapiBase):
     """Util class for test case automation and transformation."""
