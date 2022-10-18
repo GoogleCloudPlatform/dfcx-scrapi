@@ -59,6 +59,40 @@ class TestCases(ScrapiBase):
             self.test_case_id = test_case_id
             self.client_options = self._set_region(self.test_case_id)
 
+    def get_test_cases_map(
+      self,
+      agent_id: str = None,
+      reverse=False) -> Dict[str, str]:
+      """Exports Test Cases UUIDs, Names, and Tags into a user friendly dict.
+      
+      Args:
+        agent_id: the formatted CX Agent ID to use
+        reverse: (Optional) Boolean flag to swap key:value -> value:key
+
+      Returns:
+        Dictionary containing Test Case UUIDs as keys and a dictionary
+        containing display names and tags as values. If Optional reverse=True,
+        the output will return display_names as keys, with the embedded
+        dictionary containing ids and tags as values.
+        """
+      if not agent_id:
+        agent_id = self.agent_id
+            
+      test_cases_map = {}
+      test_case_list = self.list_test_cases(agent_id)
+        
+      if reverse:
+        for test_case in test_case_list:
+          test_cases_map[test_case.display_name] = {
+            'id': test_case.name, 'tags': test_case.tags}
+            
+      else:
+        for test_case in test_case_list:
+          test_cases_map[test_case.name] = {
+            'display_name': test_case.display_name, 'tags': test_case.tags}
+            
+      return test_cases_map
+
     def list_test_cases(self, agent_id: str = None):
         """List test cases from an agent.
 
@@ -307,6 +341,7 @@ class TestCases(ScrapiBase):
         )
         response = client.batch_run_test_cases(request)
         results = response.result()
+
         return results
 
     def update_test_case(
