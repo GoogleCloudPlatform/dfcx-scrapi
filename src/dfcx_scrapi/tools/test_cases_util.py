@@ -44,7 +44,6 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
         creds_dict: Dict = None,
         creds=None,
         scope=False,
-        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -57,11 +56,12 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
         self.intents = intents.Intents(creds=self.creds)
         self.flows = flows.Flows(creds=self.creds)
         self.pages = pages.Pages(creds=self.creds)
-        self.test_cases = test_cases.TestCases(creds=self.creds)
+        self.tc = test_cases.TestCases(creds=self.creds)
         self.tcb = TestCaseBuilder()
+        self.test_cases_map = None
 
     @staticmethod
-    def _dataframe_to_dict_of_dataframes(df, group_column):
+    def _dataframe_to_dict_of_dataframes(df, slice_column):
         """Converts the incoming dataframe into a dict of dataframes.
         
         Args:
@@ -75,9 +75,9 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
         """
         df_dict = {}
 
-        tcid_set = set(df.test_case_id.to_list())
+        tcid_set = set(df[slice_column].to_list())
         for tcid in tcid_set:
-            temp_df = df[df.test_case_id == tcid].copy()
+            temp_df = df[df[slice_column] == tcid].copy()
             temp_df.reset_index(drop=True, inplace=True)
 
             df_dict[tcid] = temp_df
@@ -261,6 +261,43 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
         
         return valid_bool
 
+    def match_test_cases(
+        self,
+        agent_id: str,
+        contains: str = None,
+        regex: str = None) -> List[str]:
+        """Uses contains or regex pattern to extract a list of Test Case IDs.
+        
+        Args:
+          """
+        test_case_ids_list = []
+
+        if not self.test_cases_map:
+            self.test_cases_map = self.tc.get_test_cases_map(
+                agent_id, reverse=True)
+
+        if not contains and not regex:
+            raise ValueError(
+                'Must provide one of `contains` or `regex` patterns to match \
+                    test cases.'
+                    )
+        
+        elif contains:
+            for test_case in self.test_cases_map:
+                if contains in test_case:
+                    test_case_ids_list.append(
+                        self.test_cases_map[test_case]['id'])
+
+        elif regex:
+            for test_case in self.test_cases_map:
+                match = re.match(regex, test_case)
+                if match:
+                    test_case_ids_list.append(
+                        self.test_cases_map[test_case]['id'])
+
+        return test_case_ids_list
+
+
     def _build_user_input(
         self,
         injected_parameters: str,
@@ -424,7 +461,7 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
                 if row.test_case_id:
                     tcid = self.tcb.build_test_case_id(
                         agent_id, row.test_case_id)
-                    self.test_cases._parse_resource_path('test_case', tcid)
+                    self._parse_resource_path('test_case', tcid)
                 
                 # Build User Input
                 user_input = self._build_user_input(
