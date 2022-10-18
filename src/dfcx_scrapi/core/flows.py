@@ -20,6 +20,7 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import pages
 
 # logging config
 logging.basicConfig(
@@ -52,6 +53,7 @@ class Flows(scrapi_base.ScrapiBase):
             self.flow_id = flow_id
 
         self.agent_id = agent_id
+        self.pages = pages.Pages(creds=self.creds)
 
     def get_flows_map(
         self,
