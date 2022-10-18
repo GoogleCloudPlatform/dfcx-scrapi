@@ -105,20 +105,6 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
 
         return responses
 
-    # @staticmethod
-    # def _check_for_dict_structure(session_parameters):
-    #     """Parses incoming params if they are in a Dict-like structure."""
-
-    #     match_string = None
-    #     # Dict Type Matching
-    #     dict_pattern = r'(\{.*\})'
-
-    #     match = re.search(dict_pattern, session_parameters)
-    #     if match:
-    #         match_string = match.groups()[0]
-
-    #     return match_string
-
     @staticmethod
     def _parse_incoming_parameters_struct(session_parameters: str):
         """Parse dict-like string structure to extract session parameters.
@@ -401,22 +387,6 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
             responses_list.append(response_text)
 
         return responses_list
-
-
-    # TODO: Consider putting in core.flows instead
-    def get_flow_page_map(self, agent_id: str) -> Dict[str, Dict[str, str]]:
-        flow_page_map = {}
-
-        flows_map = self.flows.get_flows_map(agent_id, reverse=True)
-
-        for flow in flows_map:
-            pages_map = self.pages.get_pages_map(
-                flows_map[flow], reverse=True)
-            pages_map = self.add_generic_pages_to_map(
-                flows_map[flow], pages_map)
-            flow_page_map[flow] = {'id': flows_map[flow], 'pages': pages_map}
-
-        return flow_page_map
 
     def build_test_cases_from_dataframe(
         self,
