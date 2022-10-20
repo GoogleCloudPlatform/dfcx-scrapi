@@ -274,6 +274,8 @@ class TestCases(ScrapiBase):
         )
         client.batch_delete_test_cases(request)
 
+        print(f'{len(test_case_ids)} Test Cases Successfully Deleted.')
+
     def list_test_case_results(self, test_case_id: str):
         """List the results from a specific Test Case.
 
