@@ -110,8 +110,6 @@ class Flows(scrapi_base.ScrapiBase):
         for flow in flows_map:
             pages_map = self.pages.get_pages_map(
                 flows_map[flow], reverse=True)
-            pages_map = self.add_generic_pages_to_map(
-                flows_map[flow], pages_map)
             flow_page_map[flow] = {'id': flows_map[flow], 'pages': pages_map}
 
         return flow_page_map
