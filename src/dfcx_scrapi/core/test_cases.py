@@ -215,9 +215,10 @@ class TestCases(ScrapiBase):
 
         time.sleep(rate_limit)
 
-      logging.info(f'{len(test_cases_list) - len(failed_test_cases)} Test' \
+      logging.info(f'{len(test_cases_list) - len(failed_test_cases)} Test'\
         ' Cases successfully created.')
-      logging.info(f'{len(failed_test_cases)} Test Case failed to create.' \
+      if len(failed_test_cases) > 0:
+          logging.info(f'{len(failed_test_cases)} Test Cases failed to create.'\
         ' Please see error log.')
       
       return failed_test_cases
