@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import List, Dict, Any
 
 from dfcx_scrapi.core import scrapi_base
@@ -29,6 +30,12 @@ from google.cloud.dialogflowcx_v3beta1.types import TestCase
 from google.cloud.dialogflowcx_v3beta1.types import TestConfig
 from google.cloud.dialogflowcx_v3beta1.types import TextInput
 
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s [test_cases_builder] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 class TestCaseBuilder:
     """Base Class for CX Test Case builder."""
@@ -106,6 +113,11 @@ class TestCaseBuilder:
         page = Page()
         page.display_name = page_display_name
         page.name = page_id
+
+        if page.display_name and not page.name:
+            logging.warn(f'Page ID for `{page.display_name}` is `None`. This '\
+                'will cause an error when creating the Test Case in '\
+                'Dialogflow CX.')
 
         return page
 
