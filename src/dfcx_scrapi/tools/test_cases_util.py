@@ -298,7 +298,6 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
                     test_case_ids_list.append(
                         self.test_cases_map[test_case]['id'])
 
-        # TODO: more testing on regex
         elif regex:
             for test_case in self.test_cases_map:
                 match = re.match(regex, test_case)
