@@ -119,7 +119,6 @@ class CopyUtil(ScrapiBase):
     @staticmethod
     def _convert_entry_webhooks(page_object, webhooks_map):
         """Convert webhooks in the entry fulfillment of the Page Object.
-
         Internal method to convert webhooks in the entry fulfillment of
         a given page from the Resource ID to their Display Name or vice versa.
         """
@@ -149,6 +148,10 @@ class CopyUtil(ScrapiBase):
                 trans_route.target_page.split('/')[-1] == 'CURRENT_PAGE'
             ):
                 trans_route.target_page = 'CURRENT_PAGE'
+            elif (
+                trans_route.target_page.split('/')[-1] == 'START_PAGE'
+            ):
+                trans_route.target_page = 'START_PAGE'
 
             else:
                 trans_route.target_page = pages_map[trans_route.target_page]
@@ -165,6 +168,10 @@ class CopyUtil(ScrapiBase):
             elif trans_route.target_page == 'CURRENT_PAGE':
                 trans_route.target_page = (
                     flows_map[flow] + '/pages/CURRENT_PAGE')
+            
+            elif trans_route.target_page == 'START_PAGE':
+                trans_route.target_page = (
+                    flows_map[flow] + '/pages/START_PAGE')
 
             else:
                 trans_route.target_page = pages_map[trans_route.target_page]
@@ -185,6 +192,8 @@ class CopyUtil(ScrapiBase):
         pages_map,
         webhooks_map,
         entities_map,
+        flows_map,
+        flow,
         convert_type = None):
 
         for param in page_object.form.parameters:
@@ -207,7 +216,7 @@ class CopyUtil(ScrapiBase):
                         if 'target_page' in handler:
                             handler.target_page = (
                                 self.__convert_tr_target_page(
-                                    handler, pages_map,
+                                    handler, pages_map, flows_map=flows_map, flow=flow,
                                     convert_type=convert_type)
                             )
 
@@ -219,12 +228,12 @@ class CopyUtil(ScrapiBase):
         return page_object
 
     def _convert_event_handlers(
-        self, page_object, pages_map, webhooks_map, convert_type = None):
+        self, page_object, pages_map, webhooks_map, flows_map, flow, convert_type = None):
 
         for handler in page_object.event_handlers:
             if 'target_page' in handler:
                 handler.target_page = self.__convert_tr_target_page(
-                    handler, pages_map, convert_type=convert_type)
+                    handler, pages_map, flows_map=flows_map, flow=flow, convert_type=convert_type)
 
             if 'trigger_fulfillment' in handler:
                 handler.trigger_fulfillment.webhook = (
@@ -241,12 +250,14 @@ class CopyUtil(ScrapiBase):
         pages_map,
         intents_map,
         webhooks_map,
+        flows_map,
+        flow,
         convert_type = None):
 
         for trans_route in page_object.transition_routes:
             if 'target_page' in trans_route:
                 trans_route.target_page = self.__convert_tr_target_page(
-                    trans_route, pages_map, convert_type=convert_type)
+                    trans_route, pages_map, convert_type=convert_type, flows_map=flows_map, flow=flow)
 
             if 'intent' in trans_route:
                 trans_route.intent = intents_map[trans_route.intent]
@@ -281,7 +292,6 @@ class CopyUtil(ScrapiBase):
 
     def _get_flow_intent_route_intents(self, flow_id, obj_list, resources):
         """Extract Intents from Transition Routes on the Flow Start Page.
-
         The Start Page of every Flow is a special Page-like object that
         actually exists as part of the Flow object. Because it is different
         enough from a standard Page object, we have to extract the resources
@@ -318,7 +328,6 @@ class CopyUtil(ScrapiBase):
         destination_agent,
         intent_object):
         """Remap the Entity Type Resource ID from the Source to Destination.
-
         Internal function to find the Source Entity Type Resource ID, convert
         it to the Display Name, perform a lookup in the Destination Agent, and
         convert that final Resource ID to the Desitnation Agent Entity Type
@@ -346,7 +355,6 @@ class CopyUtil(ScrapiBase):
         intent_object,
         destination_agent):
         """Update the Source Intent Display Name in the Destination Agent.
-
         Internal method to update the Destination Intent based on the defined
         Source Intent Display Name. This is specifically used when the
         Destination Agent already contains the Intent Display Name specified.
@@ -558,7 +566,6 @@ class CopyUtil(ScrapiBase):
         copy_option: str = 'create',
     ):
         """Copy an Intent object from one CX agent to another.
-
         Args:
           intent_display_name: The human readable display name of the intent.
           source_agent: the Agent ID string in the following format:
@@ -598,7 +605,6 @@ class CopyUtil(ScrapiBase):
         destination_agent
     ):
         """Copy an Entity Type object from one CX agent to another.
-
         Args:
           entity_type_display_name: The human readable display name of the
             entity.
@@ -628,19 +634,16 @@ class CopyUtil(ScrapiBase):
         destination_flow: str = 'Default Start Flow',
     ):
         """Create blank DFCX Page object(s) with given Display Name.
-
         This function aids in the copy/pasting of pages from one DFCX agent to
         another by first creating blank Page "shells" in the destination agent
         using the human-readable display names. These Pages will then be
         retrieved by Page ID to use in the final copy/paste of the Page object
         from source to destination.
-
         Args:
           pages_list: List of Page objects to extract page names from
           destination_agent: DFCX Agent ID of the Destination Agent
           destination_flow: DFCX Flow ID of the Destination Flow. If no Flow ID
             is provided, Default Start Flow will be used.
-
         Returns:
           None
         """
@@ -670,16 +673,13 @@ class CopyUtil(ScrapiBase):
         skip_list: List[str] = None
     ):
         """Copy/Paste Agent level resources from one DFCX agent to another.
-
         Agent level resources in DFCX are resources like Entities, Intents, and
         Webhooks which are not Flow dependent. This method allows the user to
         provide a dictionary of Agent Resources and Resources IDs to be copied
         from a Source agent to a Destination agent. *NOTE* That this method
         will also copy all Route Groups from Default Start Flow only.
-
         To obtain the resource_dict in the proper format, you can use the
         get_page_dependencies() method included in the CopyUtil Class.
-
         Args:
           resource_dict: Dictionary of Lists of DFCX Resource IDs with keys
             corresponding to the Resource type (i.e. intents, entities, etc.)
@@ -689,7 +689,6 @@ class CopyUtil(ScrapiBase):
           destination_flow: (Optional) Defaults to 'Default Start Flow'
           skip_list: (Optional) List of resources to exclude. Use the following
               strings: 'intents', 'entities', 'webhooks', 'route_groups'
-
         Returns:
           A dictionary with possible keys being webhooks, entities, intents,
           and route_groups, with keys missing if they were in the skip_list.
@@ -736,18 +735,15 @@ class CopyUtil(ScrapiBase):
         flow: str = 'Default Start Flow',
     ) -> List[types.Page]:
         """Convert all Source Agent dependencies to Display Names.
-
         In order to copy resources over to a Destination Agent, we need to
         first convert all of the Resource IDs to their respective Display
         Names. We will then use the Display Names to convert back to the
         Destination Agent resource IDs using another method.
-
         Args:
           agent_id: the source Agent ID string in the following format:
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
           pages_list: A list of DFCX Page objects
           flow: The flow display name. Defaults to "Default Start Flow"
-
         Returns:
           The modified list of pages, with source agent resource IDs converted
           to display names.
@@ -774,17 +770,17 @@ class CopyUtil(ScrapiBase):
 
             if 'transition_routes' in page:
                 page = self._convert_trans_routes(
-                    page, pages_map, intents_map, webhooks_map,
+                    page, pages_map, intents_map, webhooks_map, flows_map, flow,
                     convert_type='source')
 
             if 'event_handlers' in page:
                 page = self._convert_event_handlers(
-                    page, pages_map, webhooks_map, convert_type='source')
+                    page, pages_map, webhooks_map, flows_map, flow, convert_type='source')
 
             if 'form' in page:
                 if 'parameters' in page.form:
                     page = self._convert_form_parameters(
-                        page, pages_map, webhooks_map, entities_map,
+                        page, pages_map, webhooks_map, entities_map, flows_map, flow,
                         convert_type='source')
 
             if 'transition_route_groups' in page:
@@ -803,19 +799,16 @@ class CopyUtil(ScrapiBase):
         flow: str = 'Default Start Flow'
     ) -> List[types.Page]:
         """Convert from Display Names to Destination Agent Resource IDs.
-
         In order to copy resources over to a Destination Agent, we need to
         look up all the Display Names we previously converted and remap them
         to their respective Destination Agent Resource IDs. We will do this
         by extracting maps of the Destination Agent Resources and then
         performing a lookup with the Page objects in our pages_list.
-
         Args:
           agent_id: the target Agent ID string in the following format:
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
           pages_list: A list of DFCX Page objects
           flow: The flow display name. Defaults to "Default Start Flow"
-
         Returns:
           The modified list of pages, with display names converted to
           resource IDs for the target agent.
@@ -845,19 +838,19 @@ class CopyUtil(ScrapiBase):
 
             if 'transition_routes' in page:
                 page = self._convert_trans_routes(
-                    page, pages_map, intents_map, webhooks_map,
+                    page, pages_map, intents_map, webhooks_map, flows_map, flow,
                     convert_type='destination'
                 )
 
             if 'event_handlers' in page:
                 page = self._convert_event_handlers(
-                    page, pages_map, webhooks_map, convert_type='destination')
+                    page, pages_map, webhooks_map, flows_map, flow, convert_type='destination')
 
 
             if 'form' in page:
                 if 'parameters' in page.form:
                     page = self._convert_form_parameters(
-                        page, pages_map, webhooks_map, entities_map,
+                        page, pages_map, webhooks_map, entities_map, flows_map, flow,
                         convert_type='destination')
 
             if 'transition_route_groups' in page:
@@ -877,14 +870,12 @@ class CopyUtil(ScrapiBase):
         flow='Default Start Flow',
     ):
         """Convert all Source Agent Start page dependencies to Display Names.
-
         In order to copy resources over to a Destination Agent, we need to
         first convert all of the Resource IDs to their respective Display
         Names. We will then use the Display Names to convert back to the
         Destination Agent resource IDs using another method. Start Pages are a
         special type of Page that exists inside of the Flow object, so they
         have to be handled differently.
-
         Args:
           agent_id: the source Agent ID string in the following format:
             projects/<project_id>/locations/<location_id>/agents/<agent_id>
@@ -892,7 +883,6 @@ class CopyUtil(ScrapiBase):
             the flow to be copied
           agent_type: "source" or "destination". Defaults to "source"
           flow: The flow display name. Defaults to "Default Start Flow"
-
         Returns:
           The modified start page, with the resource IDs converted to
           display names for the source option and the display names converted
@@ -927,9 +917,19 @@ class CopyUtil(ScrapiBase):
                     trans_route.trigger_fulfillment.webhook = webhooks_map[
                         trans_route.trigger_fulfillment.webhook
                     ]
+            for event_handler in page_mod.event_handlers:
+                if 'target_page' in event_handler:
+                    if event_handler.target_page.split('/')[-1] == 'END_FLOW':
+                        event_handler.target_page = 'END_FLOW'
+                    elif event_handler.target_page.split('/')[-1] == 'START_PAGE':
+                        event_handler.target_page = 'START_PAGE'
+                    else:
+                        event_handler.target_page = pages_map[
+                            event_handler.target_page]
 
         elif agent_type == 'destination':
             final_trs = []
+            final_ehs = []
             intents_map = self.intents.get_intents_map(agent_id, reverse=True)
             webhooks_map = self.webhooks.get_webhooks_map(
                 agent_id, reverse=True
@@ -980,15 +980,28 @@ class CopyUtil(ScrapiBase):
 
             page_mod.transition_routes = final_trs
 
+            for event_handler in page_mod.event_handlers:
+                if 'target_page' in event_handler:
+                    if event_handler.target_page.split('/')[-1] == 'END_FLOW':
+                        event_handler.target_page = 'END_FLOW'
+                    elif event_handler.target_page.split('/')[-1] == 'START_PAGE':
+                        event_handler.target_page = 'START_PAGE'
+                    else:
+                        event_handler.target_page = pages_map[
+                            event_handler.target_page]
+                final_ehs.append(event_handler)
+            page_mod.event_handlers = final_ehs
+        
+        # Change display name to new flow name
+        page_mod.display_name = flow
+
         return page_mod
 
 
     def get_page_dependencies(self, obj_list):
         """Pass in DFCX Page object(s) and retrieve all resource dependencies.
-
         Args:
           obj_list: a List of one or more DFCX Page Objects
-
         Returns:
           Dictionary containing all of the resource objects
         """
