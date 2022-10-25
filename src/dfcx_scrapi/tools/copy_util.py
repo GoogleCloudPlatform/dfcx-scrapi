@@ -168,7 +168,7 @@ class CopyUtil(ScrapiBase):
             elif trans_route.target_page == 'CURRENT_PAGE':
                 trans_route.target_page = (
                     flows_map[flow] + '/pages/CURRENT_PAGE')
-            
+
             elif trans_route.target_page == 'START_PAGE':
                 trans_route.target_page = (
                     flows_map[flow] + '/pages/START_PAGE')
@@ -216,7 +216,8 @@ class CopyUtil(ScrapiBase):
                         if 'target_page' in handler:
                             handler.target_page = (
                                 self.__convert_tr_target_page(
-                                    handler, pages_map, flows_map=flows_map, flow=flow,
+                                    handler, pages_map,
+                                    flows_map=flows_map, flow=flow,
                                     convert_type=convert_type)
                             )
 
@@ -228,12 +229,16 @@ class CopyUtil(ScrapiBase):
         return page_object
 
     def _convert_event_handlers(
-        self, page_object, pages_map, webhooks_map, flows_map, flow, convert_type = None):
+        self, page_object, pages_map, webhooks_map,
+        flows_map, flow, convert_type = None):
 
         for handler in page_object.event_handlers:
             if 'target_page' in handler:
                 handler.target_page = self.__convert_tr_target_page(
-                    handler, pages_map, flows_map=flows_map, flow=flow, convert_type=convert_type)
+                    handler, pages_map,
+                    flows_map=flows_map, flow=flow,
+                    convert_type=convert_type
+                )
 
             if 'trigger_fulfillment' in handler:
                 handler.trigger_fulfillment.webhook = (
@@ -257,7 +262,8 @@ class CopyUtil(ScrapiBase):
         for trans_route in page_object.transition_routes:
             if 'target_page' in trans_route:
                 trans_route.target_page = self.__convert_tr_target_page(
-                    trans_route, pages_map, convert_type=convert_type, flows_map=flows_map, flow=flow)
+                    trans_route, pages_map, convert_type=convert_type,
+                    flows_map=flows_map, flow=flow)
 
             if 'intent' in trans_route:
                 trans_route.intent = intents_map[trans_route.intent]
@@ -770,18 +776,22 @@ class CopyUtil(ScrapiBase):
 
             if 'transition_routes' in page:
                 page = self._convert_trans_routes(
-                    page, pages_map, intents_map, webhooks_map, flows_map, flow,
-                    convert_type='source')
+                    page, pages_map, intents_map, webhooks_map,
+                    flows_map, flow, convert_type='source'
+                )
 
             if 'event_handlers' in page:
                 page = self._convert_event_handlers(
-                    page, pages_map, webhooks_map, flows_map, flow, convert_type='source')
+                    page, pages_map, webhooks_map,
+                    flows_map, flow, convert_type='source'
+                )
 
             if 'form' in page:
                 if 'parameters' in page.form:
                     page = self._convert_form_parameters(
-                        page, pages_map, webhooks_map, entities_map, flows_map, flow,
-                        convert_type='source')
+                        page, pages_map, webhooks_map, entities_map,
+                        flows_map, flow, convert_type='source'
+                    )
 
             if 'transition_route_groups' in page:
                 temp_list = []
@@ -838,20 +848,23 @@ class CopyUtil(ScrapiBase):
 
             if 'transition_routes' in page:
                 page = self._convert_trans_routes(
-                    page, pages_map, intents_map, webhooks_map, flows_map, flow,
-                    convert_type='destination'
+                    page, pages_map, intents_map, webhooks_map,
+                    flows_map, flow, convert_type='destination'
                 )
 
             if 'event_handlers' in page:
                 page = self._convert_event_handlers(
-                    page, pages_map, webhooks_map, flows_map, flow, convert_type='destination')
+                    page, pages_map, webhooks_map,
+                    flows_map, flow, convert_type='destination'
+                )
 
 
             if 'form' in page:
                 if 'parameters' in page.form:
                     page = self._convert_form_parameters(
-                        page, pages_map, webhooks_map, entities_map, flows_map, flow,
-                        convert_type='destination')
+                        page, pages_map, webhooks_map, entities_map,
+                        flows_map, flow, convert_type='destination'
+                    )
 
             if 'transition_route_groups' in page:
                 temp_list = []
@@ -921,7 +934,7 @@ class CopyUtil(ScrapiBase):
                 if 'target_page' in event_handler:
                     if event_handler.target_page.split('/')[-1] == 'END_FLOW':
                         event_handler.target_page = 'END_FLOW'
-                    elif event_handler.target_page.split('/')[-1] == 'START_PAGE':
+                    elif event_handler.target_page.split('/')[-1] == 'START_PAGE': #pylint: disable=line-too-long
                         event_handler.target_page = 'START_PAGE'
                     else:
                         event_handler.target_page = pages_map[
@@ -984,14 +997,14 @@ class CopyUtil(ScrapiBase):
                 if 'target_page' in event_handler:
                     if event_handler.target_page.split('/')[-1] == 'END_FLOW':
                         event_handler.target_page = 'END_FLOW'
-                    elif event_handler.target_page.split('/')[-1] == 'START_PAGE':
+                    elif event_handler.target_page.split('/')[-1] == 'START_PAGE': #pylint: disable=line-too-long
                         event_handler.target_page = 'START_PAGE'
                     else:
                         event_handler.target_page = pages_map[
                             event_handler.target_page]
                 final_ehs.append(event_handler)
             page_mod.event_handlers = final_ehs
-        
+
         # Change display name to new flow name
         page_mod.display_name = flow
 
