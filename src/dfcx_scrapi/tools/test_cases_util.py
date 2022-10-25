@@ -280,11 +280,11 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
         
         Args:
           """
+        # TODO: Search option for Display name vs. Tags
         test_case_ids_list = []
 
-        if not self.test_cases_map:
-            self.test_cases_map = self.tc_instance.get_test_cases_map(
-                agent_id, reverse=True)
+        self.test_cases_map = self.tc_instance.get_test_cases_map(
+            agent_id, reverse=True)
 
         if not contains and not regex:
             raise ValueError(
@@ -298,6 +298,7 @@ class TestCaseUtil(scrapi_base.ScrapiBase):
                     test_case_ids_list.append(
                         self.test_cases_map[test_case]['id'])
 
+        # TODO: more testing on regex
         elif regex:
             for test_case in self.test_cases_map:
                 match = re.match(regex, test_case)
