@@ -58,11 +58,12 @@ class Flows(scrapi_base.ScrapiBase):
     # TODO: Migrate to Flow Builder class when ready
     @staticmethod
     def _build_nlu_settings(
-        model_type: str = 'STANDARD',
+        model_type: str = "STANDARD",
         classification_threshold: float = 0.3,
-        model_training_mode: str = 'MANUAL'):
+        model_training_mode: str = "MANUAL",
+    ):
         """Builds the NLU Settings object to be used with Flow objects.
-        
+
         Args:
           model_type: ONEOF `STANDARD`, `ADVANCED`, `CUSTOM`. Defaults to
             `STANDARD`.
@@ -76,16 +77,9 @@ class Flows(scrapi_base.ScrapiBase):
           model_training_mode: ONEOF `AUTOMATIC`, `MANUAL`. Defaults to
             `MANUAL`
         """
-        model_type_map = {
-            'STANDARD': 1,
-            'CUSTOM': 2,
-            'ADVANCED': 3
-        }
+        model_type_map = {"STANDARD": 1, "CUSTOM": 2, "ADVANCED": 3}
 
-        model_training_map = {
-            'AUTOMATIC': 1,
-            'MANUAL': 2
-        }
+        model_training_map = {"AUTOMATIC": 1, "MANUAL": 2}
 
         nlu_settings = types.NluSettings()
         nlu_settings.classification_threshold = classification_threshold
@@ -93,23 +87,24 @@ class Flows(scrapi_base.ScrapiBase):
         if model_type in model_type_map:
             nlu_settings.model_type = model_type_map[model_type]
         else:
-            raise KeyError (f'`{model_type}` is invalid. `model_type` must be '\
-                'one of `STANDARD`, `ADVANCED`, `CUSTOM`.')
+            raise KeyError(
+                f"`{model_type}` is invalid. `model_type` must be "
+                "one of `STANDARD`, `ADVANCED`, `CUSTOM`."
+            )
 
         if model_training_mode in model_training_map:
             nlu_settings.model_training_mode = model_training_map[
-                model_training_mode]
+                model_training_mode
+            ]
         else:
-            raise KeyError (f'`{model_training_mode}` is invalid. '\
-                '`model_training_mode` must be one of `AUTOMATIC`, `MANUAL`.')            
+            raise KeyError(
+                f"`{model_training_mode}` is invalid. "
+                "`model_training_mode` must be one of `AUTOMATIC`, `MANUAL`."
+            )
 
         return nlu_settings
 
-    def get_flows_map(
-        self,
-        agent_id: str,
-        reverse=False
-    ):
+    def get_flows_map(self, agent_id: str, reverse=False):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
@@ -153,16 +148,14 @@ class Flows(scrapi_base.ScrapiBase):
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
-            credentials=self.creds, client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
 
         response = client.train_flow(request)
 
         return response
 
-    def list_flows(
-        self,
-        agent_id: str
-    ) -> List[types.Flow]:
+    def list_flows(self, agent_id: str) -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
         Args:
@@ -189,9 +182,7 @@ class Flows(scrapi_base.ScrapiBase):
         return flows
 
     def get_flow_by_display_name(
-        self,
-        display_name: str,
-        agent_id: str
+        self, display_name: str, agent_id: str
     ) -> types.Flow:
         """Get a single CX Flow object based on its display name.
 
@@ -203,16 +194,13 @@ class Flows(scrapi_base.ScrapiBase):
           A single CX Flow object
         """
 
-        flows_map = self.get_flows_map(
-            agent_id = agent_id,
-            reverse = True
-        )
+        flows_map = self.get_flows_map(agent_id=agent_id, reverse=True)
 
         if display_name in flows_map:
             flow_id = flows_map[display_name]
         else:
             raise ValueError(
-                f"Flow \"{display_name}\" " \
+                f'Flow "{display_name}" '
                 f"does not exist in the specified agent."
             )
 
@@ -245,7 +233,7 @@ class Flows(scrapi_base.ScrapiBase):
         language_code: str = "en",
         obj: types.Flow = None,
         **kwargs,
-        ):
+    ):
         """Create a Dialogflow CX Flow with given display name.
 
         If the user provides an existing Flow object, a new CX Flow will be
@@ -287,10 +275,7 @@ class Flows(scrapi_base.ScrapiBase):
         return response
 
     def update_flow(
-        self,
-        flow_id: str,
-        obj: types.Flow = None,
-        **kwargs
+        self, flow_id: str, obj: types.Flow = None, **kwargs
     ) -> types.Flow:
         """Update a single specific CX Flow object.
 
@@ -322,7 +307,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
-    def update_nlu_settings(self, flow_id:str, **kwargs):
+    def update_nlu_settings(self, flow_id: str, **kwargs):
         """Updates flow to new NLU setting.
 
         Args:
@@ -341,10 +326,7 @@ class Flows(scrapi_base.ScrapiBase):
         self.update_flow(flow_id=flow_id, nlu_settings=current_settings)
 
     def export_flow(
-        self,
-        flow_id: str,
-        gcs_path: str,
-        ref_flows: bool = True
+        self, flow_id: str, gcs_path: str, ref_flows: bool = True
     ) -> Dict[str, str]:
         """Exports DFCX Flow(s) into GCS bucket.
 
@@ -373,11 +355,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response.result()
 
-    def export_flow_inline(
-        self,
-        flow_id: str,
-        ref_flows: bool = True
-    ) -> bytes:
+    def export_flow_inline(self, flow_id: str, ref_flows: bool = True) -> bytes:
         """Export a Flow, returning uncompressed raw byte content for flow.
 
         Args:
@@ -390,7 +368,6 @@ class Flows(scrapi_base.ScrapiBase):
         request = types.flow.ExportFlowRequest()
         request.name = flow_id
         request.include_referenced_flows = ref_flows
-
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
@@ -405,7 +382,7 @@ class Flows(scrapi_base.ScrapiBase):
         agent_id: str,
         gcs_path: str = None,
         flow_content: bytes = None,
-        import_option: str = "KEEP"
+        import_option: str = "KEEP",
     ) -> Dict[str, str]:
         """Imports a DFCX Flow to CX Agent. Flow can be imported from a
         GCS bucket or from raw bytes.
@@ -448,11 +425,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
-    def delete_flow(
-        self,
-        flow_id: str,
-        force: bool = False
-    ):
+    def delete_flow(self, flow_id: str, force: bool = False):
         """Deletes a single CX Flow Object resource.
 
         Args:
