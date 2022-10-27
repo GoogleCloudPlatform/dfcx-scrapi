@@ -186,6 +186,54 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
+    def create_flow(
+        self,
+        agent_id: str,
+        display_name: str = None,
+        language_code: str = "en",
+        obj: types.Flow = None,
+        **kwargs,
+        ):
+        """Create a Dialogflow CX Flow with given display name.
+
+        If the user provides an existing Flow object, a new CX Flow will be
+        created based on this object and any other input/kwargs will be
+        discarded.
+
+        Args:
+          agent_id: DFCX Agent id where the Flow will be created
+          display_name: Human readable display name for the CX Flow
+          obj: (Optional) Flow object to create in proto format
+
+        Returns:
+          The newly created CX Flow resource object.
+        """
+        request = types.flow.CreateFlowRequest()
+        request.parent = agent_id
+        request.language_code = language_code
+
+        if obj:
+            flow_obj = obj
+            request.flow = flow_obj
+
+        else:
+            flow_obj = types.Flow()
+            flow_obj.display_name = display_name
+
+            # set optional args as agent attributes
+            for key, value in kwargs.items():
+                setattr(flow_obj, key, value)
+
+            request.flow = flow_obj
+
+        client_options = self._set_region(agent_id)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options
+        )
+        response = client.create_flow(request)
+
+        return response
+
     def update_flow(
         self,
         flow_id: str,
