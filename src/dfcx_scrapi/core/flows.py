@@ -28,6 +28,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+logger = logging.getLogger(__name__)
+
 
 class Flows(scrapi_base.ScrapiBase):
     """Core Class for CX Flow Resource functions."""
@@ -52,6 +54,56 @@ class Flows(scrapi_base.ScrapiBase):
             self.flow_id = flow_id
 
         self.agent_id = agent_id
+
+    # TODO: Migrate to Flow Builder class when ready
+    @staticmethod
+    def _build_nlu_settings(
+        model_type: str = 'STANDARD',
+        classification_threshold: float = 0.3,
+        model_training_mode: str = 'MANUAL'):
+        """Builds the NLU Settings object to be used with Flow objects.
+        
+        Args:
+          model_type: ONEOF `STANDARD`, `ADVANCED`, `CUSTOM`. Defaults to
+            `STANDARD`.
+          classification_threshold: To filter out false positive results and
+            still get variety in matched natural language inputs for your
+            agent, you can tune the machine learning classification threshold.
+            If the returned score value is less than the threshold value, then
+            a no-match event will be triggered. The score values range from 0.0
+            (completely uncertain) to 1.0 (completely certain). If set to 0.0,
+            the default of 0.3 is used.
+          model_training_mode: ONEOF `AUTOMATIC`, `MANUAL`. Defaults to
+            `MANUAL`
+        """
+        model_type_map = {
+            'STANDARD': 1,
+            'CUSTOM': 2,
+            'ADVANCED': 3
+        }
+
+        model_training_map = {
+            'AUTOMATIC': 1,
+            'MANUAL': 2
+        }
+
+        nlu_settings = types.NluSettings()
+        nlu_settings.classification_threshold = classification_threshold
+
+        if model_type in model_type_map:
+            nlu_settings.model_type = model_type_map[model_type]
+        else:
+            raise KeyError (f'`{model_type}` is invalid. `model_type` must be '\
+                'one of `STANDARD`, `ADVANCED`, `CUSTOM`.')
+
+        if model_training_mode in model_training_map:
+            nlu_settings.model_training_mode = model_training_map[
+                model_training_mode]
+        else:
+            raise KeyError (f'`{model_training_mode}` is invalid. '\
+                '`model_training_mode` must be one of `AUTOMATIC`, `MANUAL`.')            
+
+        return nlu_settings
 
     def get_flows_map(
         self,
