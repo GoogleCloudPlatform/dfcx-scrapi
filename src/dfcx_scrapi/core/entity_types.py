@@ -294,25 +294,45 @@ class EntityTypes(ScrapiBase):
 
     def create_entity_type(
         self,
-        obj: types.EntityType,
         agent_id: str = None,
+        display_name: str = None,
         language_code: str = None,
+        obj: types.EntityType = None,
+        **kwargs
     ) -> types.EntityType:
         """Creates a single Entity Type object resource.
 
         Args:
-          obj: EntityType object to create new intent from. Refer to
-            `builders.entity_types.EntityTypeBuilder` to build one.
           agent_id: the formatted CX Agent ID to create the object on
-          language_code: Language code for the entities, it's synonyms and
-            the excluded phrases. Ref:
+          display_name: Human readable display name for the EntityType
+          language_code: Language code of the intents being uploaded. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
+          obj: The CX EntityType object in proper format.
+            Refer to `builders.entity_types.EntityTypeBuilder` to build one.
 
         Returns:
           A copy of the Entity Type object created
         """
         if not agent_id:
             agent_id = self.agent_id
+
+        # If entity_type_obj is given set entity_type to it
+        if obj:
+            entity_type_obj = obj
+            entity_type_obj.name = ""
+        else:
+            if not display_name:
+                raise ValueError(
+                    "At least display_name or obj should be specified."
+                )
+            entity_type_obj = types.EntityType(
+                display_name=display_name,
+                kind=1
+            )
+
+            # set optional arguments to entity type attributes
+            for key, value in kwargs.items():
+                setattr(entity_type_obj, key, value)
 
         client_options = self._set_region(agent_id)
         client = services.entity_types.EntityTypesClient(
@@ -322,7 +342,7 @@ class EntityTypes(ScrapiBase):
         request = types.entity_type.CreateEntityTypeRequest()
 
         request.parent = agent_id
-        request.entity_type = obj
+        request.entity_type = entity_type_obj
 
         if language_code:
             request.language_code = language_code

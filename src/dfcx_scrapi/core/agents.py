@@ -218,9 +218,11 @@ class Agents(scrapi_base.ScrapiBase):
 
     def create_agent(
         self,
-        obj: types.Agent,
         project_id: str,
+        display_name: str = None,
         gcp_region: str = "global",
+        obj: types.Agent = None,
+        **kwargs,
     ):
         """Create a Dialogflow CX Agent with given display name.
 
@@ -231,27 +233,42 @@ class Agents(scrapi_base.ScrapiBase):
         discarded.
 
         Args:
-          obj: Agent object to create new agent from. Refer to
-            `builders.agents.AgentBuilder` to build one.
           project_id: GCP project id where the CX agent will be created
-          gcp_region: (Optional) GCP region to create CX agent.
-            Defaults to 'global'
+          display_name: Human readable display name for the CX agent
+          gcp_region: GCP region to create CX agent. Defaults to 'global'
+          obj: (Optional) Agent object to create new agent from
+            Refer to `builders.agents.AgentBuilder` to build one.
 
         Returns:
           The newly created CX Agent resource object.
         """
 
-        if not isinstance(obj, types.Agent):
-            raise ValueError(
-                "The obj should be an Agent."
+        parent = f"projects/{project_id}/locations/{gcp_region}"
+
+        if obj:
+            agent_obj = obj
+            agent_obj.name = ""
+
+        else:
+            if not display_name:
+                raise ValueError(
+                    "At least display_name or obj should be specified."
+                )
+            agent_obj = types.Agent(
+                display_name=display_name,
+                default_language_code="en",
+                time_zone="America/Chicago"
             )
 
-        parent = f"projects/{project_id}/locations/{gcp_region}"
+            # set optional args as agent attributes
+            for key, value in kwargs.items():
+                setattr(agent_obj, key, value)
+
         client_options = self._set_region(parent)
         client = services.agents.AgentsClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.create_agent(parent=parent, agent=obj)
+        response = client.create_agent(parent=parent, agent=agent_obj)
 
         return response
 

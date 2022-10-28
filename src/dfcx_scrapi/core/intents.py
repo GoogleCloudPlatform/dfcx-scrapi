@@ -480,25 +480,39 @@ class Intents(ScrapiBase):
     def create_intent(
         self,
         agent_id: str,
-        obj: types.Intent,
-        language_code: str = None) -> types.Intent:
-        """Creates an Intent from an Intent protobuf.
+        obj: types.Intent = None,
+        display_name: str = None,
+        language_code: str = None,
+        **kwargs) -> types.Intent:
+        """Creates an Intent from a protobuf or dictionary.
 
         Args:
           agent_id: the formatted CX Agent ID to use
-          obj: Intent object to create new intent from. Refer to
-            `builders.intents.IntentBuilder` to build one.
+          obj: Intent object to create new intent from.
+            Refer to `builders.intents.IntentBuilder` to build one.
+          display_name: Human readable display name for the Intent
           language_code (Optional): The language of the training phrases in
             the intent. If not specified, the agent's default language is used
 
         Returns:
-          The newly created Intent protobuf object.
+          Intent protobuf object
         """
 
-        if not isinstance(obj, types.Intent):
-            raise ValueError(
-                "The obj should be an Intent."
+        if obj:
+            intent_obj = obj
+            intent_obj.name = ""
+        else:
+            if not display_name:
+                raise ValueError(
+                    "At least display_name or obj should be specified."
+                )
+            intent_obj = types.Intent(
+                display_name=display_name
             )
+
+            # set optional arguments to entity type attributes
+            for key, value in kwargs.items():
+                setattr(intent_obj, key, value)
 
         request = types.intent.CreateIntentRequest()
 
@@ -506,7 +520,7 @@ class Intents(ScrapiBase):
             request.language_code = language_code
 
         request.parent = agent_id
-        request.intent = obj
+        request.intent = intent_obj
 
         client_options = self._set_region(agent_id)
         client = services.intents.IntentsClient(
