@@ -569,6 +569,13 @@ class TransitionRouteBuilder:
         return self.proto_obj
 
 
+    def show_transition_route(self):
+        """Show the proto_obj information."""
+        self._check_transition_route_exist()
+
+        print(self.__str__())
+
+
 class EventHandlerBuilder:
     """Base Class for CX EventHandler builder."""
 
@@ -715,3 +722,10 @@ class EventHandlerBuilder:
             )
 
         return self.proto_obj
+
+
+    def show_event_handler(self):
+        """Show the proto_obj information."""
+        self._check_event_handler_exist()
+
+        print(self.__str__())
