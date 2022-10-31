@@ -16,9 +16,11 @@
 
 from typing import List, Dict, Union, Any
 
-from google.cloud.dialogflowcx_v3beta1.types import (
-    Fulfillment, TransitionRoute, EventHandler, ResponseMessage
-)
+from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
+from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
+from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
+from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+
 from google.protobuf import struct_pb2
 
 
@@ -29,6 +31,13 @@ class FulfillmentBuilder:
         self.proto_obj = None
         if obj:
             self.load_fulfillment(obj)
+
+
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_fulfillment_exist()
+
+        return
 
 
     def _check_fulfillment_exist(self):
@@ -373,7 +382,6 @@ class FulfillmentBuilder:
         self._check_fulfillment_exist()
 
 
-
 class TransitionRouteBuilder:
     """Base Class for CX TransitionRoute builder."""
 
@@ -381,6 +389,40 @@ class TransitionRouteBuilder:
         self.proto_obj = None
         if obj:
             self.load_transition_route(obj)
+
+
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_transition_route_exist()
+
+        # Transition criteria str
+        intent_str, cond_str = "Not Specified", "Not Specified"
+        if self.proto_obj.intent:
+            intent_str = self.proto_obj.intent
+        if self.proto_obj.condition:
+            cond_str = self.proto_obj.condition
+        transition_criteria = (
+            "Transition criteria:"
+            f"\n\tIntent: {intent_str}\n\tCondition: {cond_str}"
+        )
+        # Target str
+        if self.proto_obj.target_page:
+            target_type = "Page"
+            target_id = self.proto_obj.target_page
+        elif self.proto_obj.target_flow:
+            target_type = "Flow"
+            target_id = self.proto_obj.target_flow
+        else:
+            target_type = "Not Specified"
+            target_id = "None"
+        target_str = f"Target: {target_type}\nTarget ID: {target_id}"
+        # Fulfillment str
+        if self.proto_obj.trigger_fulfillment:
+            fulfillment_str = str(
+                FulfillmentBuilder(self.proto_obj.trigger_fulfillment)
+            )
+
+        return f"{transition_criteria}\n{target_str}\n{fulfillment_str}"
 
 
     def _check_transition_route_exist(self):
@@ -478,6 +520,7 @@ class TransitionRouteBuilder:
         Returns:
           A TransitionRoute object stored in proto_obj.
         """
+        # Types error checking
         if ((intent and not isinstance(intent, str)) or
             (condition and not isinstance(condition, str)) or
             (target_page and not isinstance(target_page, str)) or
@@ -491,33 +534,37 @@ class TransitionRouteBuilder:
             raise ValueError(
                 "The type of trigger_fulfillment should be a Fulfillment."
             )
+        # Minimum requirement error checking
+        if not(intent or condition):
+            raise Exception(
+                "At least one of `intent` or `condition` must be specified."
+            )
+        # Oneof error checking
         if target_page and target_flow:
             raise Exception(
-                "At most one of target_page and target_flow"
+                "At most one of `target_page` and `target_flow`"
                 " can be specified at the same time."
             )
+        # `overwrite` parameter error checking
         if self.proto_obj and not overwrite:
             raise Exception(
                 "proto_obj already contains a TransitionRoute."
                 " If you wish to overwrite it, pass overwrite as True."
             )
+
+        # Create the TransitionRoute
         if overwrite or not self.proto_obj:
+            # Create empty Fulfillment in case user didn't pass any
             if not trigger_fulfillment:
-                self.proto_obj = TransitionRoute(
-                    intent=intent,
-                    condition=condition,
-                    trigger_fulfillment=Fulfillment(),
-                    target_page=target_page,
-                    target_flow=target_flow
-                )
-            else:
-                self.proto_obj = TransitionRoute(
-                    intent=intent,
-                    condition=condition,
-                    trigger_fulfillment=trigger_fulfillment,
-                    target_page=target_page,
-                    target_flow=target_flow
-                )
+                trigger_fulfillment = Fulfillment()
+
+            self.proto_obj = TransitionRoute(
+                intent=intent,
+                condition=condition,
+                trigger_fulfillment=trigger_fulfillment,
+                target_page=target_page,
+                target_flow=target_flow
+            )
 
         return self.proto_obj
 
@@ -529,6 +576,32 @@ class EventHandlerBuilder:
         self.proto_obj = None
         if obj:
             self.load_event_handler(obj)
+
+
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_transition_route_exist()
+
+        # Event str
+        event_str = f"Event: {self.proto_obj.event}"
+        # Target str
+        if self.proto_obj.target_page:
+            target_type = "Page"
+            target_id = self.proto_obj.target_page
+        elif self.proto_obj.target_flow:
+            target_type = "Flow"
+            target_id = self.proto_obj.target_flow
+        else:
+            target_type = "Not Specified"
+            target_id = "None"
+        target_str = f"Target: {target_type}\nTarget ID: {target_id}"
+        # Fulfillment str
+        if self.proto_obj.trigger_fulfillment:
+            fulfillment_str = str(
+                FulfillmentBuilder(self.proto_obj.trigger_fulfillment)
+            )
+
+        return f"{event_str}\n{target_str}\n{fulfillment_str}"
 
 
     def _check_event_handler_exist(self):
@@ -612,6 +685,7 @@ class EventHandlerBuilder:
         Returns:
           An EventHandler object stored in proto_obj.
         """
+        # Types error checking
         if event and not isinstance(event, str):
             raise ValueError("event should be a string.")
         if (trigger_fulfillment and
@@ -619,16 +693,19 @@ class EventHandlerBuilder:
             raise ValueError(
                 "The type of trigger_fulfillment should be a Fulfillment."
             )
+        # Oneof error checking
         if target_page and target_flow:
             raise Exception(
                 "At most one of target_page and target_flow"
                 " can be specified at the same time."
             )
+        # `overwrite` parameter error checking
         if self.proto_obj and not overwrite:
             raise Exception(
                 "proto_obj already contains an EventHandler."
                 " If you wish to overwrite it, pass overwrite as True."
             )
+        # Create the EventHandler
         if overwrite or not self.proto_obj:
             self.proto_obj = EventHandler(
                 event=event,
