@@ -390,9 +390,8 @@ class TestCases(ScrapiBase):
         if obj:
             test_case = obj
             test_case.name = test_case_id
+
         else:
-            if not test_case_id:
-                test_case_id = self.test_case_id
             test_case = self.get_test_case(test_case_id)
 
         for key, value in kwargs.items():
@@ -400,15 +399,13 @@ class TestCases(ScrapiBase):
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
 
-        request = types.test_case.UpdateTestCaseRequest()
-        request.test_case = test_case
-        request.update_mask = mask
-
         client_options = self._set_region(test_case_id)
         client = services.test_cases.TestCasesClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.update_test_case(request)
+        response = client.update_test_case(
+          test_case=test_case, update_mask=mask)
+
         return response
 
     def run_test_case(self, test_case_id: str, environment: str = None):
