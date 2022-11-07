@@ -1,4 +1,4 @@
-"""Utiliity functions to create PyTorch datset for training a Pegasus Model."""
+"""Utility functions to create PyTorch datset for training a Pegasus Model."""
 
 # Copyright 2022 Google LLC
 #
@@ -47,35 +47,34 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-DATA_DIR = "data/final"
-MODEL_NAME = "t5-small"
 
-class PegasusDataset(torch.utils.data.Dataset):
+class T5Dataset(torch.utils.data.Dataset):
     def __init__(
         self, 
         file_name: str = None, # must be 'train', 'val', or 'test'
-        type_file: str = None, 
+        max_length: int = 256,
+        file_type: str = None, 
         tokenizer = None, 
         data_dir: str = None,  
-        truncation: str= None,
+        truncation: bool= True,
         padding: str = None,
         return_tensors: str = None
         ) -> None:
 
-        self.path = os.path.join(data_dir + "/" + file_name + type_file)
+        self.path = data_dir + file_name + file_type
         self.source_column = "sentence1"
         self.target_column = "sentence2"
         
-        if type_file == ".tsv":
+        if file_type == ".tsv":
             self.data = pd.read_csv(self.path, sep = "\t")
-        elif type_file == ".csv":
+        elif file_type == ".csv":
             self.data = self.data = pd.read_csv(self.path)
         # TODO: build out sheets file reader.
         else:
             raise TypeError("File is not a .tsv or .csv file")
 
         self.inputs = []
-        self.padding = padding
+        self.max_length = max_length
         self.return_tensors = return_tensors
         self.targets = []
         self.tokenizer = tokenizer
@@ -103,25 +102,18 @@ class PegasusDataset(torch.utils.data.Dataset):
         for idx in range(len(self.data)):
             input_, target = self.data.loc[idx, self.source_column], self.data.loc[idx, self.target_column]
 
-            input_ = "paraphrase: "+ input_
-            target = target
+            input_ = "paraphrase: "+ input_ + " </s>"
+            target = target + " </s>"
 
             # tokenize inputs
             tokenized_inputs = self.tokenizer.batch_encode_plus(
-                [input_], truncation=self.truncation, padding=self.padding, return_tensors=self.return_tensors
+                [input_], max_length = self.max_length, pad_to_max_length=True, return_tensors="pt"
             )
             # tokenize targets
             tokenized_targets = self.tokenizer.batch_encode_plus(
-                [target], truncation=self.truncation, padding=self.padding, return_tensors=self.return_tensors
+                [target], max_length = self.max_length, pad_to_max_length=True, return_tensors="pt"
             )
 
             self.inputs.append(tokenized_inputs)
             self.targets.append(tokenized_targets)
 
-
-# dataset = PegasusDataset(file_name = "train", tokenizer=T5Tokenizer.from_pretrained(MODEL_NAME), data_dir=DATA_DIR, type_file = ".tsv", truncation="longest_first", padding = "longest", return_tensors="pt")
-# print(len(dataset))
-
-# data = dataset[100]
-# print(PegasusDataset(file_name = "train", tokenizer=T5Tokenizer.from_pretrained(MODEL_NAME), data_dir=DATA_DIR, type_file = ".tsv", truncation="longest_first", padding = "longest", return_tensors="pt").tokenizer.decode(data['source_ids']))
-# print(PegasusDataset(file_name = "train", tokenizer=T5Tokenizer.from_pretrained(MODEL_NAME), data_dir=DATA_DIR, type_file = ".tsv", truncation="longest_first", padding = "longest", return_tensors="pt").tokenizer.decode(data['target_ids']))

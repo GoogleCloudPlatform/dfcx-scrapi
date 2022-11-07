@@ -15,7 +15,7 @@
 # limitations under the License.
 import pandas as pd
 import torch
-from transformers import PegasusForConditionalGeneration, PegasusTokenizer
+from transformers import PegasusForConditionalGeneration, T5Tokenizer
 
 
 class UtteranceGenerator:
@@ -23,10 +23,10 @@ class UtteranceGenerator:
 
     def __init__(self):
 
-        model_name = "tuner007/pegasus_paraphrase"
+        model_name = "src/dfcx_scrapi/core_ml/t5_base_paraphrase/"
         self.torch_device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.tokenizer = PegasusTokenizer.from_pretrained(model_name)
-        self.model = PegasusForConditionalGeneration.from_pretrained(
+        self.tokenizer = T5Tokenizer.from_pretrained("t5-small")
+        self.model = T5ForConditionalGeneration.from_pretrained(
             model_name
         ).to(self.torch_device)
 

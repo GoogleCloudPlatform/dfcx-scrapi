@@ -1,4 +1,4 @@
-"""Utiliity functions for fine tuning pretrained T5 summarization model for paraphrasing."""
+"""Utility functions for fine tuning pretrained T5 summarization model for paraphrasing."""
 
 # Copyright 2022 Google LLC
 #
@@ -42,9 +42,9 @@ import pandas as pd
 import pytorch_lightning as pl
 import numpy as np
 import torch
-print(torch.backends.mps.is_available())
-print(torch.backends.mps.is_built()) # run if running on Mac OS
-print(torch.cuda.device_count()) # run if running on Mac OS
+# print(torch.backends.mps.is_available())
+# print(torch.backends.mps.is_built()) # run if running on Mac OS
+# print(torch.cuda.device_count()) # run if running on Mac OS
 
 from torch.utils.data import Dataset, DataLoader
 from transformers import (
@@ -53,11 +53,17 @@ from transformers import (
     T5Tokenizer,
     get_linear_schedule_with_warmup
 )
-from torch_dataset import PegasusDataset
+#from torch_dataset import PegasusDataset
 from model import LoggingCallback, FineTuneT5Model
+
+from torch_dataset import T5Dataset
 
 DATA_DIR = "data/final/"
 MODEL_NAME = "t5-small"
+TRAIN_FILE = "train"
+VAL_FILE = "val"
+TEST_FILE = "test"
+FILE_TYPE = ".tsv"
 
 # args_dict = dict(
 #   data_dir="data/final", # path for data files
@@ -81,47 +87,28 @@ MODEL_NAME = "t5-small"
 #   seed=args.seed,
 # )
 
-DATA_DIR = "data/final/"
-MODEL_NAME = "t5-base"
+# DATA_DIR = "data/final/"
+# MODEL_NAME = "t5-base"
 OUTPUT_DIR = "src/dfcx_scrapi/core_ml/cpk"
+FILE_TYPE = ".tsv"
+MODEL_SAVE_PATH = "src/dfcx_scrapi/core_ml/t5_base_paraphrase/"
 
-def get_dataset(tokenizer, data_dir: str, file_name: str):
-  return PegasusDataset(tokenizer=tokenizer, data_dir=data_dir, file_name=file_name)
+# def get_dataset(tokenizer, data_dir: str, file_name: str):
+#   return T5Dataset(tokenizer=tokenizer, data_dir=data_dir, file_name=file_name)
 
 
 def main(args: argparse.Namespace) -> None:
     logger = logging.getLogger(__name__)
-
-    # Load Data
-    # args_dict = dict(
-    #     # data_dir=args.data_dir, # path for data files
-    #     # output_dir=args.output_dir, # path to save the checkpoints
-    #     model_name_or_path=args.model_name_or_path,
-    #     tokenizer_name_or_path=args.tokenizer_name_or_path,
-    #     #max_seq_length=512,
-    #     learning_rate=args.learning_rate,
-    #     weight_decay=args.weight_decay,
-    #     adam_epsilon=args.adam_epsilon,
-    #     warmup_steps=args.warmup_steps, # probably need to change this.
-    #     train_batch_size=args.train_batch_size,
-    #     eval_batch_size=args.eval_batch_size,
-    #     num_train_epochs=args.num_train_epochs,
-    #     gradient_accumulation_steps=args.gradient_accumulation_steps,
-    #     n_gpu=args.n_gpu,
-    #     # early_stop_callback=False,
-    #     fp_16=args.fp_16, # if you want to enable 16-bit training then install apex and set this to true
-    #     opt_level=args.opt_level, # you can find out more on optimisation levels here https://nvidia.github.io/apex/amp.html#opt-levels-and-properties
-    #     max_grad_norm=args.max_grad_norm, # if you enable 16-bit training then set this to a sensible value, 0.5 is a good default
-    #     seed=args.seed
-    # )
     
-    print("Loading Training Data...")
-    train_data = PegasusDataset(file_name = "train", tokenizer=T5Tokenizer.from_pretrained(args.tokenizer_name_or_path), data_dir=args.data_dir, type_file = ".tsv", truncation="longest_first", padding = "longest", return_tensors="pt")
-    print("Loading Validation Data...")
-    val_data = PegasusDataset(file_name = "val", tokenizer=T5Tokenizer.from_pretrained(args.tokenizer_name_or_path), data_dir=args.data_dir, type_file = ".tsv", truncation="longest_first", padding = "longest", return_tensors="pt")  
+    # print("Loading Training Data...")
+    # train_data = T5Dataset(file_name = "train", tokenizer=T5Tokenizer.from_pretrained(args.tokenizer_name_or_path), data_dir=args.data_dir, type_file = ".tsv")
+    # print(f"Train Data Length: {train_data}")
+    # print("Loading Validation Data...")
+    # val_data = T5Dataset(file_name = "val", tokenizer=T5Tokenizer.from_pretrained(args.tokenizer_name_or_path), data_dir=args.data_dir, type_file = ".tsv")
+    # print(f"Val Data Length: {val_data}")
 
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        filepath=args.output_dir, prefix="checkpoint", monitor="val_loss", mode="min", save_top_k=5
+        filepath=args.output_dir, prefix="checkpoint", monitor="val_loss", mode="min", save_top_k=1
         ) 
 
     train_params = dict(
@@ -140,6 +127,8 @@ def main(args: argparse.Namespace) -> None:
     model = FineTuneT5Model(
         adam_epsilon = args.adam_epsilon,
         eval_batch_size = args.eval_batch_size,
+        file_type = FILE_TYPE,
+        data_dir = DATA_DIR,
         gradient_accumulation_steps = args.gradient_accumulation_steps,
         learning_rate = args.learning_rate,
         model_name_or_path = args.model_name_or_path,
@@ -148,7 +137,10 @@ def main(args: argparse.Namespace) -> None:
         tokenizer_name_or_path = args.tokenizer_name_or_path,
         train_batch_size = args.train_batch_size,
         warmup_steps = args.warmup_steps,
-        weight_decay = args.weight_decay
+        weight_decay = args.weight_decay,
+        train_dataset_file_name = TRAIN_FILE, 
+        val_dataset_file_name = VAL_FILE,
+        #test_data_file_name = TEST_FILE
     )
     #Initalize Trainer
     print("Initalizing Trainer...")
@@ -160,14 +152,21 @@ def main(args: argparse.Namespace) -> None:
     print("Fine Tuning Complete in: ")
 
     print("Saving model...")
-    #model.model.save_pretrained('t5_base_paraphrase/')
+    try:
+        # TODO: Save tokenizer
+        model.model.save_pretrained(MODEL_SAVE_PATH)
+    except AssertionError:
+        try:
+            model.model.save_pretrained('./t5_base_paraphrase/')
+        except AssertionError:
+            model.model.save_pretrained(os.getcwd())
     print('Saved model...')
 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument("data_dir", help="", nargs='?', type=str, const="data/final", default="data/final")
+    parser.add_argument("data_dir", help="", nargs='?', type=str, const="data/final/", default="data/final/")
     parser.add_argument("output_dir", help="", nargs='?', type=str, const="src/dfcx_scrapi/core_ml/cpk", default="src/dfcx_scrapi/core_ml/cpk")
     parser.add_argument("model_name_or_path", help="", nargs='?', type=str, const="t5-small", default="t5-small")
     parser.add_argument("tokenizer_name_or_path", help="Debug", nargs='?', type=str, const="t5-small", default="t5-small")
@@ -176,9 +175,9 @@ if __name__ == "__main__":
     parser.add_argument("weight_decay", help="", nargs='?', type=float, const=0.0, default=0.0)
     parser.add_argument("adam_epsilon", help="", nargs='?', type=float, const=1e-8, default=1e-8)
     parser.add_argument("warmup_steps", help="", nargs='?', type=int, const=0, default=0)
-    parser.add_argument("train_batch_size", help="", nargs='?', type=int, const=8, default=8)
-    parser.add_argument("eval_batch_size", help="", nargs='?', type=int, const=8, default=8)
-    parser.add_argument("num_train_epochs", help="Debug", nargs='?', type=int, const=2, default=2)
+    parser.add_argument("train_batch_size", help="", nargs='?', type=int, const=4, default=4)
+    parser.add_argument("eval_batch_size", help="", nargs='?', type=int, const=4, default=4)
+    parser.add_argument("num_train_epochs", help="Debug", nargs='?', type=int, const=10, default=10)
     parser.add_argument("gradient_accumulation_steps", help="", nargs='?', type=int, const=16, default=16)
     parser.add_argument("n_gpu", help="", nargs='?', type=int, const=1, default=1)
     parser.add_argument("early_stop_callback", help="", nargs='?', type=bool, const=False, default=False)

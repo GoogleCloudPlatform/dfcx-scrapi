@@ -50,7 +50,7 @@ from transformers import (
     T5Tokenizer,
     get_linear_schedule_with_warmup
 )
-from torch_dataset import PegasusDataset
+from torch_dataset import T5Dataset
 
 # DATA_DIR = "data/final/"
 # MODEL_NAME = "t5-base"
@@ -115,7 +115,9 @@ class FineTuneT5Model(pl.LightningModule):
     self, 
     adam_epsilon: float = None, 
     eval_batch_size: int = None,
+    data_dir: str = None,
     gradient_accumulation_steps: int = None,
+    file_type: str = None,
     learning_rate: float = None,
     model_name_or_path: str = None, 
     n_gpu: int = None, 
@@ -123,12 +125,17 @@ class FineTuneT5Model(pl.LightningModule):
     tokenizer_name_or_path: str = None, 
     train_batch_size: int = None,
     warmup_steps: int = None, 
-    weight_decay: float = None,  
+    weight_decay: float = None,
+    train_dataset_file_name: str = None,
+    val_dataset_file_name: str = None,
+    #test_dataset_file_name: str = None
     ):
     super(FineTuneT5Model, self).__init__()
 
     # self.hparams = hparams
+    self.data_dir = data_dir
     self.eval_batch_size = eval_batch_size
+    self.file_type = file_type
     self.model_name_or_path = model_name_or_path
     self.num_train_epochs = num_train_epochs
     self.tokenizer_name_or_path = tokenizer_name_or_path
@@ -139,6 +146,9 @@ class FineTuneT5Model(pl.LightningModule):
     self.train_batch_size = train_batch_size
     self.gradient_accumulation_steps = gradient_accumulation_steps
     self.warmup_steps = warmup_steps
+    self.train_dataset_file_name = train_dataset_file_name
+    #self.test_dataset_file_name = test_dataset_file_name
+    self.val_dataset_file_name = val_dataset_file_name
 
     self.model = T5ForConditionalGeneration.from_pretrained(self.model_name_or_path)
     self.tokenizer = T5Tokenizer.from_pretrained(self.tokenizer_name_or_path)
@@ -214,10 +224,10 @@ class FineTuneT5Model(pl.LightningModule):
   
   def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None,using_native_amp=None):
     
-    if self.trainer.use_tpu:
-      xm.optimizer_step(optimizer)
-    else:
-      optimizer.step()
+    # if self.trainer.use_tpu:
+    #   xm.optimizer_step(optimizer)
+    # else:
+    optimizer.step()
     optimizer.zero_grad()
     self.lr_scheduler.step()
   
@@ -225,8 +235,14 @@ class FineTuneT5Model(pl.LightningModule):
     tqdm_dict = {"loss": "{:.3f}".format(self.trainer.avg_loss), "lr": self.lr_scheduler.get_last_lr()[-1]}
 
     return tqdm_dict
+  
+  def get_dataset(self, tokenizer, data_dir: str, file_name: str, file_type:str):
+      return T5Dataset(tokenizer=tokenizer, data_dir=data_dir, file_name=file_name, file_type=file_type)
 
-  def train_dataloader(self, train_dataset):
+  def train_dataloader(self):
+    # calling T5Dataset
+    train_dataset = T5Dataset(tokenizer=self.tokenizer, data_dir=self.data_dir, file_name=self.train_dataset_file_name, file_type = self.file_type) # figure out this interaction with data dir and file name
+    # This loads the data with Dataloader
     dataloader = DataLoader(train_dataset, batch_size=self.train_batch_size, drop_last=True, shuffle=True, num_workers=4)
     t_total = (
         (len(dataloader.dataset) // (self.train_batch_size * max(1, self.n_gpu)))
@@ -239,8 +255,14 @@ class FineTuneT5Model(pl.LightningModule):
     self.lr_scheduler = scheduler
     return dataloader
 
-  def val_dataloader(self, val_dataset):
-    return DataLoader(val_dataset, batch_size=self.eval_batch_size, num_workers=4)
+  def val_dataloader(self):
+        val_dataset = T5Dataset(tokenizer=self.tokenizer, data_dir=self.data_dir, file_name=self.val_dataset_file_name, file_type = self.file_type)
+        return DataLoader(val_dataset, batch_size=self.eval_batch_size, num_workers=4)
+    
+  # def test_dataloader(self):
+  #   test_dataset = T5Dataset(tokenizer=self.tokenizer, data_dir=self.data_dir, file_name=self.test_dataset_file_name, file_type = self.file_type)
+  #   return DataLoader(val_dataset, batch_size=self.eval_batch_size, num_workers=4)
+    
     
   
 
