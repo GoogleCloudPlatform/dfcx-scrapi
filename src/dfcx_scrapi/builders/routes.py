@@ -587,7 +587,7 @@ class EventHandlerBuilder:
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
-        self._check_transition_route_exist()
+        self._check_event_handler_exist()
 
         # Event str
         event_str = f"Event: {self.proto_obj.event}"
