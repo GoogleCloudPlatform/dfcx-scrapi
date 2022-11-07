@@ -120,7 +120,7 @@ class DataframeFunctions(ScrapiBase):
     def _coerce_to_int(dataframe: pd.DataFrame, fields: List[str]):
         """Coerce incoming object type to int"""
         for field in fields:
-            dataframe = dataframe.astype({field: "int32"})
+            dataframe = dataframe.astype({field: "Int32"})
 
         return dataframe
 
@@ -138,14 +138,18 @@ class DataframeFunctions(ScrapiBase):
             "id": "string",
             "entity_type": "string",
         }
-
-        temp_data = {}
-        for column in dataframe.columns:
-            dataframe = dataframe.astype({column: type_map[column]})
-            temp_data[column] = type_map[column]
-
-        dataframe = pd.concat([dataframe, temp_data], ignore_index=True)
-
+        # print(dataframe)
+        # temp_data = {}
+        # for column in dataframe.columns:
+        #     dataframe = dataframe.astype({column: type_map[column]})
+        #     temp_data[column] = type_map[column]
+        
+        # filter dictionary
+        type_map = {k: type_map.get(k, None) for k in set(columns)}
+        
+        for k, v in type_map.items():
+            dataframe[k] = dataframe[k].astype(v)
+            
         return dataframe
 
     @staticmethod
