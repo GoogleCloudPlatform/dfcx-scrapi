@@ -63,49 +63,50 @@ CONFIG_PATH = "src/dfcx_scrapi/core_ml/t5_base_paraphrase/config.json"
 
 def main(args: argparse.Namespace) -> None:
     
-    model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH)
+    model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH, config=CONFIG_PATH)
     tokenizer = T5Tokenizer.from_pretrained("t5-small")
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print ("device ",device)
     model = model.to(device)
 
-    sentence = "Can you confirm no data charge?"
+    #sentence = "Can you confirm no data charge?"
     # sentence = "What are the ingredients required to bake a perfect cake?"
     # sentence = "What is the best possible approach to learn aeronautical engineering?"
     # sentence = "Do apples taste better than oranges in general?"
+    sentences =  ["billing and missing a credit", "where's my credit", "I'm missing a credit", "credit not applied", "missing credit", "credit charge off", "credit not received", "i was offered a credit on my account"]
 
-    text =  "paraphrase: " + sentence + " </s>"
+    texts =  ["paraphrase: " + sentence + " </s>" for sentence in sentences]
 
     max_len = 256
+    for text in texts:
+        encoding = tokenizer.encode_plus(text,pad_to_max_length=True, return_tensors="pt")
+        input_ids, attention_masks = encoding["input_ids"].to(device), encoding["attention_mask"].to(device)
 
-    encoding = tokenizer.encode_plus(text,pad_to_max_length=True, return_tensors="pt")
-    input_ids, attention_masks = encoding["input_ids"].to(device), encoding["attention_mask"].to(device)
+        # set top_k = 50 and set top_p = 0.95 and num_return_sequences = 3
+        beam_outputs = model.generate(
+            input_ids=input_ids, attention_mask=attention_masks,
+            do_sample=True,
+            max_length=256,
+            top_k=50,
+            top_p=1,
+            early_stopping=True,
+            temperature = 0.90,
+            num_return_sequences= 3
+        )
 
-    # set top_k = 50 and set top_p = 0.95 and num_return_sequences = 3
-    beam_outputs = model.generate(
-        input_ids=input_ids, attention_mask=attention_masks,
-        do_sample=True,
-        max_length=256,
-        top_k=120,
-        top_p=0.98,
-        early_stopping=True,
-        temperature = 0.8,
-        num_return_sequences=10
-    )
+        print ("\nOriginal Question ::")
+        print (text)
+        print ("\n")
+        print ("Paraphrased Questions :: ")
+        final_outputs =[]
+        for beam_output in beam_outputs:
+            sent = tokenizer.decode(beam_output, skip_special_tokens=True,clean_up_tokenization_spaces=True)
+            if sent.lower() not in sentences and sent not in final_outputs:
+                final_outputs.append(sent)
 
-    print ("\nOriginal Question ::")
-    print (sentence)
-    print ("\n")
-    print ("Paraphrased Questions :: ")
-    final_outputs =[]
-    for beam_output in beam_outputs:
-        sent = tokenizer.decode(beam_output, skip_special_tokens=True,clean_up_tokenization_spaces=True)
-        if sent.lower() != sentence.lower() and sent not in final_outputs:
-            final_outputs.append(sent)
-
-    for i, final_output in enumerate(final_outputs):
-        print("{}: {}".format(i, final_output))
+        for i, final_output in enumerate(final_outputs):
+            print("{}: {}".format(i, final_output))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(__doc__)
