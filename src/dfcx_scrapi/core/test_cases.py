@@ -197,31 +197,31 @@ class TestCases(ScrapiBase):
         return response
 
     def batch_create_test_cases(
-      self,
-      test_cases_list: List[types.TestCase],
-      agent_id: str = None,
-      rate_limit: float = 0.5) -> Dict[str, Dict[str, types.TestCase]]:
-      """Create Test Cases in batch."""
-      failed_test_cases = {}
+        self,
+        test_cases_list: List[types.TestCase],
+        agent_id: str = None,
+        rate_limit: float = 0.5) -> Dict[str, Dict[str, types.TestCase]]:
+        """Create Test Cases in batch."""
+        failed_test_cases = {}
 
-      for test_case in test_cases_list:
-        try:
-          self.create_test_case(test_case, agent_id)
+        for test_case in test_cases_list:
+          try:
+            self.create_test_case(test_case, agent_id)
 
-        except Exception as create_error:
-          failed_test_cases[test_case.display_name] = {
-            'test_case': test_case,
-            'error': create_error}
+          except Exception as create_error:
+            failed_test_cases[test_case.display_name] = {
+              'test_case': test_case,
+              'error': create_error}
 
-        time.sleep(rate_limit)
+          time.sleep(rate_limit)
 
-      logging.info(f'{len(test_cases_list) - len(failed_test_cases)} Test'\
-        ' Cases successfully created.')
-      if len(failed_test_cases) > 0:
-          logging.info(f'{len(failed_test_cases)} Test Cases failed to create.'\
-        ' Please see error log.')
-      
-      return failed_test_cases
+        logging.info(f'{len(test_cases_list) - len(failed_test_cases)} Test'\
+          ' Cases successfully created.')
+        if len(failed_test_cases) > 0:
+            logging.info(f'{len(failed_test_cases)} Test Cases failed to '\
+              'create. Please see error log.')
+              
+        return failed_test_cases
 
 
     def get_test_case(self, test_case_id: str):
