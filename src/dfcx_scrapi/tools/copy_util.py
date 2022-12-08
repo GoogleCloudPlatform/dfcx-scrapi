@@ -1046,3 +1046,72 @@ class CopyUtil(ScrapiBase):
             resources[key] = set(resources[key])
 
         return resources
+
+    def copy_route_groups(self, agent_id: str, source_flow: str, target_flow: str):
+        """Creates new route groups in the target flow to match the route groups
+        in the source flow. Requires the pages to exist in the target flow. If
+        the pages do not exist, the destination of the route group routes will
+        be left as empty. Currently only works within an agent, not between
+        different agents. Also note that this will overwrite the content of the
+        route groups in the target flow if they already exist with the same
+        names.
+        """
+        flows_map = self.flows.get_flows_map(agent_id, reverse=True)
+        # Get the route groups for the source flow, and all the maps
+        source_route_groups_map = self.route_groups.get_route_groups_map(
+            flows_map[source_flow], reverse=True)
+        target_route_groups_map = self.route_groups.get_route_groups_map(
+            flows_map[target_flow], reverse=True)
+        source_route_groups = self.route_groups.list_transition_route_groups(
+            flows_map[source_flow])
+        target_route_groups = self.route_groups.list_transition_route_groups(
+            flows_map[target_flow])
+        source_pages_map = self.pages.get_pages_map(flows_map[source_flow])
+        target_pages_map = self.pages.get_pages_map(
+            flows_map[target_flow], reverse=True)
+        # Need to create new route groups if they don't already exist
+        route_group_objects = []
+        for source_route_group in source_route_groups:
+            route_group_name = source_route_group.display_name
+            if route_group_name in target_route_groups_map:
+                print(f'Route group {route_group_name} already exists in target flow')
+                for i, target_route_group in enumerate(target_route_groups):
+                  if target_route_group.display_name == route_group_name:
+                    route_group_objects.append(target_route_groups[i])
+                    # Assuming there aren't route groups with the same name
+                    break
+            else:
+                print(f'Creating new route group {route_group_name}')
+                route_group_objects.append(
+                    self.route_groups.create_transition_route_group(
+                        flows_map[target_flow], obj=None, 
+                        display_name=route_group_name
+                    ))
+        # For each route group, update the routes
+        # source_route_groups and route_group_objects are in the same order
+        for i, source_route_group in enumerate(source_route_groups):
+            # route_group_objects[i] is the route group we will add routes to
+            # Note that this will overwrite the existing routes if a route group
+            # already existed in the target flow with this name
+            route_group_objects[i].transition_routes = source_route_group.transition_routes
+            # Go through the route and update the references
+            for j, route in enumerate(route_group_objects[i].transition_routes):
+                if route.target_page:
+                    current_page_id = route.target_page
+                    new_page_id = None # Empty transition by default
+                    if current_page_id in source_pages_map.keys():
+                        current_page_name = source_pages_map[current_page_id]
+                        if current_page_name in target_pages_map.keys():
+                            new_page_id = target_pages_map[current_page_name]
+                        else:
+                            print(f"Page '{current_page_name}' does not exist in target flow")
+                            new_page_id = None # Empty transition
+                    else:
+                        # Must be one of the special pages
+                        new_page_id = current_page_id.replace(
+                            flows_map[source_flow], flows_map[target_flow])
+                    route_group_objects[i].transition_routes[j].target_page = new_page_id
+            # Update the route group (hopefully)
+            print(f'Updating route group {route_group_objects[i].display_name}')
+            self.route_groups.update_transition_route_group(
+                route_group_objects[i].name, route_group_objects[i])
