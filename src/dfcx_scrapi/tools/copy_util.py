@@ -991,6 +991,9 @@ class CopyUtil(ScrapiBase):
                     ]
                     final_trs.append(trans_route)
 
+                else: # condition only
+                    final_trs.append(trans_route)
+
             page_mod.transition_routes = final_trs
 
             for event_handler in page_mod.event_handlers:
