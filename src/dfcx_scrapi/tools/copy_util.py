@@ -908,6 +908,7 @@ class CopyUtil(ScrapiBase):
             webhooks_map = self.webhooks.get_webhooks_map(agent_id)
             flows_map = self.flows.get_flows_map(agent_id, reverse=True)
             pages_map = self.pages.get_pages_map(flows_map[flow])
+            trgs_map = self.route_groups.get_route_groups_map(flows_map[flow])
 
             for trans_route in page_mod.transition_routes:
                 if 'target_page' in trans_route:
@@ -940,15 +941,20 @@ class CopyUtil(ScrapiBase):
                         event_handler.target_page = pages_map[
                             event_handler.target_page]
 
+            for i, transition_route_group in enumerate(page_mod.transition_route_groups):
+                page_mod.transition_route_groups[i] = trgs_map[transition_route_group]
+
         elif agent_type == 'destination':
             final_trs = []
             final_ehs = []
+            final_trgs = []
             intents_map = self.intents.get_intents_map(agent_id, reverse=True)
             webhooks_map = self.webhooks.get_webhooks_map(
                 agent_id, reverse=True
             )
             flows_map = self.flows.get_flows_map(agent_id, reverse=True)
             pages_map = self.pages.get_pages_map(flows_map[flow], reverse=True)
+            trgs_map = self.route_groups.get_route_groups_map(flows_map[flow], reverse=True)
 
             page_mod.name = flows_map[flow]
             print(page_mod.name)
@@ -1007,6 +1013,12 @@ class CopyUtil(ScrapiBase):
                             event_handler.target_page]
                 final_ehs.append(event_handler)
             page_mod.event_handlers = final_ehs
+
+            for transition_route_group in page_mod.transition_route_groups:
+                if transition_route_group in trgs_map.keys():
+                    final_trgs.append(trgs_map[transition_route_group])
+                    print('Found')
+            page_mod.transition_route_groups = final_trgs
 
         # Change display name to new flow name
         page_mod.display_name = flow
