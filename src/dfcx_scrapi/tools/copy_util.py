@@ -140,19 +140,20 @@ class CopyUtil(ScrapiBase):
         if convert_type == 'source':
             if trans_route.target_page.split('/')[-1] == 'END_FLOW':
                 trans_route.target_page = 'END_FLOW'
-
             elif trans_route.target_page.split('/')[-1] == 'END_SESSION':
                 trans_route.target_page = 'END_SESSION'
-
             elif (
                 trans_route.target_page.split('/')[-1] == 'CURRENT_PAGE'
             ):
                 trans_route.target_page = 'CURRENT_PAGE'
             elif (
+                trans_route.target_page.split('/')[-1] == 'PREVIOUS_PAGE'
+            ):
+                trans_route.target_page = 'PREVIOUS_PAGE'
+            elif (
                 trans_route.target_page.split('/')[-1] == 'START_PAGE'
             ):
                 trans_route.target_page = 'START_PAGE'
-
             else:
                 trans_route.target_page = pages_map[trans_route.target_page]
 
@@ -160,19 +161,18 @@ class CopyUtil(ScrapiBase):
             if trans_route.target_page == 'END_FLOW':
                 trans_route.target_page = (
                     flows_map[flow] + '/pages/END_FLOW')
-
             elif trans_route.target_page == 'END_SESSION':
                 trans_route.target_page = (
                     flows_map[flow] + '/pages/END_SESSION')
-
             elif trans_route.target_page == 'CURRENT_PAGE':
                 trans_route.target_page = (
                     flows_map[flow] + '/pages/CURRENT_PAGE')
-
+            elif trans_route.target_page == 'PREVIOUS_PAGE':
+                trans_route.target_page = (
+                    flows_map[flow] + '/pages/PREVIOUS_PAGE')
             elif trans_route.target_page == 'START_PAGE':
                 trans_route.target_page = (
                     flows_map[flow] + '/pages/START_PAGE')
-
             else:
                 trans_route.target_page = pages_map[trans_route.target_page]
 
