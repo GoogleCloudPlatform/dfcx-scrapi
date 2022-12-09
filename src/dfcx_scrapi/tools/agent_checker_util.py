@@ -51,6 +51,16 @@ class AgentCheckerUtil(ScrapiBase):
             creds=self.creds, agent_id=self.agent_id)
         self.test_cases = TestCases(creds=self.creds, agent_id=self.agent_id)
 
+        # Generate maps
+        self.intents_map = self.intents.get_intents_map(self.agent_id)
+        self.flows_map = self.flows.get_flows_map(self.agent_id)
+        self.pages_map = {}
+        for flow_id in self.flows_map.keys():
+            self.pages_map[flow_id] = self.pages.get_pages_map(flow_id)
+        self.route_groups_map = {}
+        for flow_id in self.flows_map.keys():
+            self.route_groups_map[flow_id] = self.route_groups.get_route_groups_map(flow_id)
+
     def convert_intent(self, intent_id, agent_id, intents_map):
         intent_id_converted = str(agent_id) + '/intents/' + str(intent_id)
         if intent_id_converted in intents_map.keys():
@@ -156,7 +166,7 @@ class AgentCheckerUtil(ScrapiBase):
     """
     TODO: Methods to implement:
         - Run test cases and store results, and give a report
-            - Eeed to include a reference agent for this to give useful info about new failing test cases
+            - Need to include a reference agent for this to give useful info about new failing test cases
         - Get condensed changelog compared to a reference
             - Ideally include test case changes, to include info that the CX UI can't provide
         - Find unreachable/unused pages, intents, route groups, and possibly routes
