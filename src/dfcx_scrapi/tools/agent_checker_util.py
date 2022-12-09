@@ -62,12 +62,14 @@ class AgentCheckerUtil(ScrapiBase):
             self.route_groups_map[flow_id] = self.route_groups.get_route_groups_map(flow_id)
 
     def convert_intent(self, intent_id):
+        """Gets an intent display name from an intent ID"""
         intent_id_converted = str(self.agent_id) + '/intents/' + str(intent_id)
         if intent_id_converted in self.intents_map.keys():
             return self.intents_map[intent_id_converted]
         return ''
 
     def convert_flow(self, flow_id):
+        """Gets a flow display name from a flow ID"""
         if flow_id.split('/')[-1] == '-':
             return ''
         #flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
@@ -78,6 +80,7 @@ class AgentCheckerUtil(ScrapiBase):
 
     # Note that flow id includes agent, normally...
     def convert_page(self, page_id, flow_id):
+        """Gets a page display name from a page and flow ID"""
         if page_id == 'END_SESSION':
             return 'End Session'
         elif page_id == 'END_FLOW':
@@ -95,7 +98,23 @@ class AgentCheckerUtil(ScrapiBase):
         # TODO: Should throw error, but returning this probably will anyway
         return 'Invalid'
     
+    # TODO: Should this function be in the base test_cases class, 
+    # as get_test_case_results_df or something?
     def get_test_case_results(self, retest_all=False):
+        """Gets the test case results for this agent,
+        and generates a dataframe with their details.
+        Any tests without a result will be run in a batch.
+        
+        Args:
+          retest_all: if true, all test cases are re-run,
+            regardless of whether or not they had a result
+        
+        Returns:
+          DataFrame of test case results for this agent, with columns:
+            display_name, id, short_id (excluding agent ID), 
+            tags (comma-separated string), creation_time,
+            start_flow, start_page, passed, test_time
+        """
         test_case_results = dfcx_tc.list_test_cases(self.agent_id)
         retest = []
         retest_names = []
