@@ -31,7 +31,6 @@ logging.basicConfig(
 )
 
 
-
 class Agents(scrapi_base.ScrapiBase):
     """Core Class for CX Agent Resource functions."""
 
