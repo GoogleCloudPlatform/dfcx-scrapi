@@ -87,7 +87,8 @@ class AgentCheckerUtil(ScrapiBase):
         for flow_id in self.flows_map.keys():
             self.route_groups_map[flow_id] = self.route_groups.get_route_groups_map(flow_id=flow_id)
 
-        # Get flow and page data
+        # Get intent, flow, and page data
+        self.intent_data = self.intents.list_intents(agent_id=self.agent_id)
         self.flow_data = {}
         for flow_id in self.flows_map.keys():
             self.flow_data[flow_id] = self.flows.get_flow(flow_id=flow_id)
@@ -95,6 +96,10 @@ class AgentCheckerUtil(ScrapiBase):
         for flow_id in self.flows_map.keys():
             page_list = self.pages.list_pages(flow_id=flow_id)
             self.page_data[flow_id] = {page.name: page for page in page_list}
+        self.route_group_data = {}
+        for flow_id in self.flows_map.keys():
+            route_group_list = self.route_groups.list_transition_route_groups(flow_id=flow_id)
+            self.route_group_data[flow_id] = {route_group.name: route_group for route_group in route_group_list}
 
     # Conversion utilities
     
@@ -134,6 +139,11 @@ class AgentCheckerUtil(ScrapiBase):
         print('Flow not found')
         # TODO: Should throw error, but returning this probably will anyway
         return 'Invalid'
+
+    def get_intent_parameters(self, intent_name):
+        for intent in self.intent_data:
+            if intent.display_name == intent_name:
+                return intent.parameters
     
     def get_page(self, flow_id: str = None, flow_name: str = None, page_id: str = None, page_name: str = None) -> DFCXPage | DFCXFlow:
         """Gets the page data for a specified page within
@@ -268,8 +278,10 @@ class AgentCheckerUtil(ScrapiBase):
     
     # Reachable and unreachable pages
     
-    def find_reachable_pages_rec_helper(self, page: DFCXPage | DFCXFlow, route: DFCXRoute, reachable: List[str], conversation_path: List[str], min_intent_counts: List[int], presets: Dict[str,str], intent_route_count: int = 0, intent_route_limit: Optional[int] = None, include_groups: bool = True, include_start_page_routes: bool = True, limit_intent_to_initial: bool = False, is_initial: bool = False, include_meta: bool = False, verbose: bool = False) -> None:
+    def find_reachable_pages_rec_helper(self, flow_id: str, flow_name: str, page: DFCXPage | DFCXFlow, route: DFCXRoute, reachable: List[str], conversation_path: List[str], min_intent_counts: List[int], presets: Dict[str,str], intent_route_count: int = 0, intent_route_limit: Optional[int] = None, include_groups: bool = True, include_start_page_routes: bool = True, limit_intent_to_initial: bool = False, is_initial: bool = False, include_meta: bool = False, verbose: bool = False) -> None:
         # TODO: Docstring
+        if not flow_name:
+            flow_name = self.flows_map[flow_id]
         target_page = route.target_page
         target_flow = route.target_flow
         if intent_route_limit is None or not hasattr(route, 'intent') or route.intent == '' or intent_route_count < intent_route_limit:
@@ -286,8 +298,8 @@ class AgentCheckerUtil(ScrapiBase):
                     # Don't continue on this path
                     return
                 intent_route_count += 1
-            if target_page in self.pages:
-                page_name = self.pages[target_page].display_name
+            if target_page in self.page_data[flow_id]:
+                page_name = self.page_data[flow_id][target_page].display_name
                 if verbose:
                       print(page.display_name,'->',page_name)
                 # Move to this page (this is also the recursion limiting step to prevent infinite loops)
@@ -322,7 +334,7 @@ class AgentCheckerUtil(ScrapiBase):
                         for param in intent_params:
                             new_presets[param.id] = f'(potentially set by {intent_name})'
 
-                    self.find_reachable_pages_rec(self.pages[target_page], reachable, conversation_path, min_intent_counts, new_presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=False, include_meta=include_meta, verbose=verbose)
+                    self.find_reachable_pages_rec(flow_id, flow_name, self.page_data[flow_id][target_page], reachable, conversation_path, min_intent_counts, new_presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=False, include_meta=include_meta, verbose=verbose)
                     conversation_path.pop(-1)
                 elif page_name in reachable and intent_route_count < min_intent_counts[reachable.index(page_name)]:
                     # Better route found, traverse from here
@@ -355,7 +367,7 @@ class AgentCheckerUtil(ScrapiBase):
                         for param in intent_params:
                             new_presets[param.id] = f'(potentially set by {intent_name})'
 
-                    self.find_reachable_pages_rec(self.pages[target_page], reachable, conversation_path, min_intent_counts, new_presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=False, include_meta=include_meta, verbose=verbose)
+                    self.find_reachable_pages_rec(flow_id, flow_name, self.page_data[flow_id][target_page], reachable, conversation_path, min_intent_counts, new_presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=False, include_meta=include_meta, verbose=verbose)
                     conversation_path.pop(-1)
             elif 'END_FLOW' in target_page:
                 if verbose:
@@ -431,7 +443,7 @@ class AgentCheckerUtil(ScrapiBase):
                         for param in intent_params:
                             new_presets[param.id] = f'(potentially set by {intent_name})'
 
-                    self.find_reachable_pages_rec(self.flow_data, reachable, conversation_path, min_intent_counts, new_presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=False, include_meta=include_meta, verbose=verbose)
+                    self.find_reachable_pages_rec(flow_id, flow_name, self.flow_data[flow_id], reachable, conversation_path, min_intent_counts, new_presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=False, include_meta=include_meta, verbose=verbose)
                     conversation_path.pop(-1)
                 elif page_name in reachable and intent_route_count < min_intent_counts[reachable.index(page_name)]:
                   # Better route found, traverse from here
@@ -464,7 +476,7 @@ class AgentCheckerUtil(ScrapiBase):
                         for param in intent_params:
                             new_presets[param.id] = f'(potentially set by {intent_name})'
 
-                    self.find_reachable_pages_rec(self.flow_data, reachable, conversation_path, min_intent_counts, new_presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=False, include_meta=include_meta, verbose=verbose)
+                    self.find_reachable_pages_rec(flow_id, flow_name, self.flow_data[flow_id], reachable, conversation_path, min_intent_counts, new_presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=False, include_meta=include_meta, verbose=verbose)
                     conversation_path.pop(-1)
             elif len(target_page) > 0:
                 print(page.display_name,'->',target_page)
@@ -486,39 +498,42 @@ class AgentCheckerUtil(ScrapiBase):
                 if page_name in reachable and intent_route_count < min_intent_counts[reachable.index(page_name)]:
                     min_intent_counts[reachable.index(page_name)] = intent_route_count
   
-    def find_reachable_pages_rec(self, page: DFCXPage | DFCXFlow, reachable: List[str], conversation_path: List[str], min_intent_counts: List[int], presets: Dict[str,str], intent_route_count: int = 0, intent_route_limit: Optional[int] = None, include_groups: bool = True, include_start_page_routes: bool = True, limit_intent_to_initial: bool = False, is_initial: bool = False, include_meta: bool = False, verbose: bool = False) -> None:
+    def find_reachable_pages_rec(self, flow_id: str, flow_name: str, page: DFCXPage | DFCXFlow, reachable: List[str], conversation_path: List[str], min_intent_counts: List[int], presets: Dict[str,str], intent_route_count: int = 0, intent_route_limit: Optional[int] = None, include_groups: bool = True, include_start_page_routes: bool = True, limit_intent_to_initial: bool = False, is_initial: bool = False, include_meta: bool = False, verbose: bool = False) -> None:
         # TODO: Docstring
+        if not flow_name:
+            flow_name = self.flows_map[flow_id]
         if hasattr(page, 'form'):
             for parameter in page.form.parameters:
                 for event_handler in parameter.fill_behavior.reprompt_event_handlers:
                     if limit_intent_to_initial and not is_initial:
                         continue
                     if hasattr(event_handler, 'target_page') or hasattr(event_handler, 'target_flow'):
-                        self.find_reachable_pages_rec_helper(page, event_handler, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
+                        self.find_reachable_pages_rec_helper(flow_id, flow_name, page, event_handler, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
         for event_handler in page.event_handlers:
             if limit_intent_to_initial and not is_initial:
                 continue
             if hasattr(event_handler, 'target_page') or hasattr(event_handler, 'target_flow'):
-                self.find_reachable_pages_rec_helper(page, event_handler, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
+                self.find_reachable_pages_rec_helper(flow_id, flow_name, page, event_handler, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
         for route in page.transition_routes:
-            self.find_reachable_pages_rec_helper(page, route, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
+            self.find_reachable_pages_rec_helper(flow_id, flow_name, page, route, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
         if include_groups:
             for route_group in page.transition_route_groups:
-                for route in self.transition_route_groups[route_group].transition_routes:
-                    self.find_reachable_pages_rec_helper(page, route, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
+                # TODO: Need to map by flow
+                for route in self.route_group_data[flow_id][route_group].transition_routes:
+                    self.find_reachable_pages_rec_helper(flow_id, flow_name, page, route, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
         # Start page routes and route groups are also accessible from this page
-        if include_start_page_routes and page.display_name != self.flow_data.display_name and (not limit_intent_to_initial or is_initial):
-            for event_handler in self.flow_data.event_handlers:
+        if include_start_page_routes and page.display_name != flow_name and (not limit_intent_to_initial or is_initial):
+            for event_handler in self.flow_data[flow_id].event_handlers:
                 if hasattr(event_handler, 'target_page') or hasattr(event_handler, 'target_flow'):
-                    self.find_reachable_pages_rec_helper(self.flow_data, event_handler, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
-            for route in self.flow_data.transition_routes:
+                    self.find_reachable_pages_rec_helper(flow_id, flow_name, self.flow_data[flow_id], event_handler, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
+            for route in self.flow_data[flow_id].transition_routes:
                 if hasattr(route, 'intent') and route.intent != '':
-                    self.find_reachable_pages_rec_helper(self.flow_data, route, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
+                    self.find_reachable_pages_rec_helper(flow_id, flow_name, self.flow_data[flow_id], route, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
             if include_groups:
-                for route_group in self.flow_data.transition_route_groups:
-                    for route in self.transition_route_groups[route_group].transition_routes:
+                for route_group in self.flow_data[flow_id].transition_route_groups:
+                    for route in self.route_group_data[flow_id][route_group].transition_routes:
                         if hasattr(route, 'intent') and route.intent != '':
-                            self.find_reachable_pages_rec_helper(self.flow_data, route, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)    
+                            self.find_reachable_pages_rec_helper(flow_id, flow_name, self.flow_data[flow_id], route, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)    
 
     def find_reachable_pages(self, flow_id: str, flow_name: str, from_page: str = 'Start', intent_route_limit: Optional[int] = None, include_groups: bool = True, include_start_page_routes: bool = True, limit_intent_to_initial: bool = False, is_initial: bool = True, include_meta: bool = False, verbose: bool = False) -> List[str]:
         """Finds all pages which are reachable by transition routes,
@@ -526,8 +541,7 @@ class AgentCheckerUtil(ScrapiBase):
         flow_name must be used.
 
         Args:
-          flow_id: The ID of the flow to find reachable pages for
-          flow_name: The display name of the flow to find reachable pages for
+          flow_id OR flow_name: The ID or name of the flow to find reachable pages for
           from_page: (Optional) The page to start from. If left blank, it will start on the Start Page
           intent_route_limit: (Optional) Default None
           include_groups: (Optional) If true, intents from transition route groups will be included, 
@@ -541,13 +555,25 @@ class AgentCheckerUtil(ScrapiBase):
         Returns:
           The list of reachable pages in this flow
         """
+        if not flow_id:
+            if not flow_name:
+                raise Exception("One of flow_id or flow_name must be set")
+            if flow_name in self.flows_map_rev.keys():
+                flow_id = self.flows_map_rev[flow_name]
+            else:
+                raise Exception(f"Flow not found: {flow_name}")
+        if flow_id in self.flows_map.keys():
+            flow_name = self.flows_map[flow_id]
+        else:
+            raise Exception(f'Flow not found: {flow_id}')
+
         # Start at the start page...
         reachable = [from_page]
         conversation_path = [from_page]
         min_intent_counts = [25] # Technically this could be [0] or [1], or very rarely more than 1, depending on the routes that lead to current page...
         presets = {}
         page_data = self.get_page(flow_id=flow_id, flow_name=flow_name, page_id=None, page_name=from_page)
-        self.find_reachable_pages_rec(page_data, reachable, conversation_path, min_intent_counts, presets, intent_route_count=0, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
+        self.find_reachable_pages_rec(flow_id, flow_name, page_data, reachable, conversation_path, min_intent_counts, presets, intent_route_count=0, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
         return reachable
     
     def find_unreachable_pages(self, flow_id: str = None, flow_name: str = None, include_groups: bool = True, verbose: bool = False) -> List[str]:
@@ -567,12 +593,18 @@ class AgentCheckerUtil(ScrapiBase):
         """
         if not flow_id:
             if not flow_name:
-                raise Exception("One of flow_id or flow_name must be set for find_unreachable_pages")
-        reachable = self.find_reachable_pages(flow_id, flow_name, include_groups=include_groups, verbose=verbose)
-        if flow_id:
-            return list(set(self.pages_map[self.flows_map_rev[flow_name]].keys()) - set(reachable))
+                raise Exception("One of flow_id or flow_name must be set")
+            if flow_name in self.flows_map_rev.keys():
+                flow_id = self.flows_map_rev[flow_name]
+            else:
+                raise Exception(f"Flow not found: {flow_name}")
+        if flow_id in self.flows_map.keys():
+            flow_name = self.flows_map[flow_id]
         else:
-            return list(set(self.pages_map[self.flows_map[flow_id]].keys()) - set(reachable))
+            raise Exception(f'Flow not found: {flow_id}')
+
+        reachable = self.find_reachable_pages(flow_id, flow_name, include_groups=include_groups, verbose=verbose)
+        return list(set(self.pages_map[flow_id].values()) - set(reachable))
 
     """
     TODO: Methods to implement:
