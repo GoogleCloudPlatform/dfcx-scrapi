@@ -80,9 +80,21 @@ class AgentCheckerUtil(ScrapiBase):
         self.pages_map = {}
         for flow_id in self.flows_map.keys():
             self.pages_map[flow_id] = self.pages.get_pages_map(flow_id=flow_id)
+        self.pages_map_rev = {}
+        for flow_id in self.flows_map.keys():
+            self.pages_map_rev[flow_id] = self.pages.get_pages_map(flow_id=flow_id, reverse=True)
         self.route_groups_map = {}
         for flow_id in self.flows_map.keys():
             self.route_groups_map[flow_id] = self.route_groups.get_route_groups_map(flow_id=flow_id)
+
+        # Get flow and page data
+        self.flow_data = {}
+        for flow_id in self.flows_map.keys():
+            self.flow_data[flow_id] = self.flows.get_flow(flow_id=flow_id)
+        self.page_data = {}
+        for flow_id in self.flows_map.keys():
+            page_data_list = self.pages.list_pages(flow_id=flow_id)
+            self.page_data[flow_id] = {page.name: page for page in page_list}
 
     # Conversion utilities
     
