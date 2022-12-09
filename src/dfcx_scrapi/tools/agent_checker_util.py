@@ -52,14 +52,24 @@ class AgentCheckerUtil(ScrapiBase):
 
     """
     TODO: Methods to implement:
-        - Restore from reference agent
-        - Retrain flows
+        x Restore from reference agent
+            - Beyond the scope of this class
+        x Retrain flows
+            - Easy enough to do manually
         - Run test cases and store results, and give a report
-        - Get condensed changelog
+            - Eeed to include a reference agent for this to give useful info about new failing test cases
+        - Get condensed changelog compared to a reference
+            - Ideally include test case changes, to include info that the CX UI can't provide
         - Find unreachable/unused pages, intents, route groups, and possibly routes
+            - Finding unreachable routes is hard, but the other problems have already been figured out
         - Find invalid test cases
+            - Test cases referencing pages or intents that don't exist, for example
         - Check true routes
+            - Pages with only conditional routes, and no intents or parameter filling, should have the last route be "true" to prevent getting stuck on the page
         - Check events
+            - Pages with user input should have a no-input-default and no-match-default event handler. 
+            - Not sure if this applies to all agents in the same way
         - Check infinite loops
+            - Not possible to solve in general because of webhooks, but can find likely candidates
         - Probably other things
     """
