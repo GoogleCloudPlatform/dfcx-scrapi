@@ -49,8 +49,8 @@ def conf_score(request, debugging=False):
         logging.info('* [cx_webhook] CONF TEST TAG RECEIVED.')
         score = wu.get_conf_score(req)
         session_info = wu.build_session_info({'webhook_conf': score})
-        message = wu.build_response('The Confidence Score is: {}'.format(
-          score), session_info=session_info)
+        message = wu.build_response(
+            f'The Confidence Score is: {score}', session_info=session_info)
 
     else:
         logging.info('* [cx_webhook] No Webhook Tag Received.')
@@ -62,7 +62,7 @@ def conf_score(request, debugging=False):
 
 if __name__ == '__main__':
     FILE = '/Users/pmarlow/eng/cloud_functions/tests/conf_score_payload.json'
-    with open(FILE) as json_file:
+    with open(FILE, encoding='UTF-8') as json_file:
         data = json.load(json_file)
 
     conf_score(data, False)
