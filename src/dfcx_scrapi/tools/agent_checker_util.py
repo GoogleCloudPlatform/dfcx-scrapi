@@ -14,9 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 import pandas as pd
+
+import google.cloud.dialogflowcx_v3beta1.types as dfcx_types
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.intents import Intents
@@ -26,6 +30,11 @@ from dfcx_scrapi.core.pages import Pages
 from dfcx_scrapi.core.webhooks import Webhooks
 from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
 from dfcx_scrapi.core.test_cases import TestCases
+
+# Type aliases
+DFCXFlow = dfcx_types.flow.Flow
+DFCXPage = dfcx_types.page.Page
+DFCXRoute = dfcx_types.page.TransitionRoute
 
 # logging config
 logging.basicConfig(
@@ -384,12 +393,12 @@ class AgentCheckerUtil(ScrapiBase):
                             for param_preset in page.entry_fulfillment.set_parameter_actions:
                                 new_presets[param_preset.parameter] = param_preset.value
                     if hasattr(page, 'form'):
-                    for parameter in page.form.parameters:
-                        if hasattr(parameter, 'fill_behavior'):
-                            if hasattr(parameter.fill_behavior, 'initial_prompt_fulfillment'):
-                                if hasattr(parameter.fill_behavior.initial_prompt_fulfillment, 'set_parameter_actions'):
-                                    for param_preset in parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions:
-                                        new_presets[param_preset.parameter] = param_preset.value
+                        for parameter in page.form.parameters:
+                            if hasattr(parameter, 'fill_behavior'):
+                                if hasattr(parameter.fill_behavior, 'initial_prompt_fulfillment'):
+                                    if hasattr(parameter.fill_behavior.initial_prompt_fulfillment, 'set_parameter_actions'):
+                                        for param_preset in parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions:
+                                            new_presets[param_preset.parameter] = param_preset.value
                     if hasattr(route, 'trigger_fulfillment'):
                         if hasattr(route.trigger_fulfillment, 'set_parameter_actions'):
                             for param_preset in route.trigger_fulfillment.set_parameter_actions:
@@ -459,58 +468,58 @@ class AgentCheckerUtil(ScrapiBase):
                             self.find_reachable_pages_rec_helper(self.flow_data, route, reachable, conversation_path, min_intent_counts, presets, intent_route_count=intent_route_count, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)    
 
     def find_reachable_pages(self, flow_id: str, flow_name: str, from_page: str = 'Start', intent_route_limit: Optional[int] = None, include_groups: bool = True, include_start_page_routes: bool = True, limit_intent_to_initial: bool = False, is_initial: bool = True, include_meta: bool = False, verbose: bool = False) -> List[str]:
-    """Finds all pages which are reachable by transition routes,
-    starting from a given page in a given flow. Either flow_id or
-    flow_name must be used.
-    
-    Args:
-      flow_id: The ID of the flow to find reachable pages for
-      flow_name: The display name of the flow to find reachable pages for
-      from_page: (Optional) The page to start from. If left blank, it will start on the Start Page
-      intent_route_limit: (Optional) Default None
-      include_groups: (Optional) If true, intents from transition route groups will be included, 
-        but only if they are actually referenced on some page
-      include_start_page_routes: (Optional) Default true
-      limit_intent_to_initial: (Optional) Default False
-      is_initial: (Optional) Default True
-      include_meta: (Optional) Default False
-      verbose: (Optional) If true, print debug information about route traversal
-    
-    Returns:
-      The list of reachable pages in this flow
-    """
-    # Start at the start page...
-    reachable = [from_page]
-    conversation_path = [from_page]
-    min_intent_counts = [25] # Technically this could be [0] or [1], or very rarely more than 1, depending on the routes that lead to current page...
-    presets = {}
-    page_data = self.get_page(flow_id=flow_id, flow_name=flow_name, page_id=None, page_name=from_page)
-    self.find_reachable_pages_rec(page_data, reachable, conversation_path, min_intent_counts, presets, intent_route_count=0, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
-    return reachable
+        """Finds all pages which are reachable by transition routes,
+        starting from a given page in a given flow. Either flow_id or
+        flow_name must be used.
+
+        Args:
+          flow_id: The ID of the flow to find reachable pages for
+          flow_name: The display name of the flow to find reachable pages for
+          from_page: (Optional) The page to start from. If left blank, it will start on the Start Page
+          intent_route_limit: (Optional) Default None
+          include_groups: (Optional) If true, intents from transition route groups will be included, 
+            but only if they are actually referenced on some page
+          include_start_page_routes: (Optional) Default true
+          limit_intent_to_initial: (Optional) Default False
+          is_initial: (Optional) Default True
+          include_meta: (Optional) Default False
+          verbose: (Optional) If true, print debug information about route traversal
+
+        Returns:
+          The list of reachable pages in this flow
+        """
+        # Start at the start page...
+        reachable = [from_page]
+        conversation_path = [from_page]
+        min_intent_counts = [25] # Technically this could be [0] or [1], or very rarely more than 1, depending on the routes that lead to current page...
+        presets = {}
+        page_data = self.get_page(flow_id=flow_id, flow_name=flow_name, page_id=None, page_name=from_page)
+        self.find_reachable_pages_rec(page_data, reachable, conversation_path, min_intent_counts, presets, intent_route_count=0, intent_route_limit=intent_route_limit, include_groups=include_groups, include_start_page_routes=include_start_page_routes, limit_intent_to_initial=limit_intent_to_initial, is_initial=is_initial, include_meta=include_meta, verbose=verbose)
+        return reachable
     
     def find_unreachable_pages(self, flow_id: str = None, flow_name: str = None, include_groups: bool = True, verbose: bool = False) -> List[str]:
-    """Finds all pages which are unreachable by transition routes, 
-    starting from the start page of a given flow. Either flow_id or
-    flow_name must be used.
-    
-    Args:
-      flow_id: The ID of the flow to find unreachable pages for
-      flow_name: The display name of the flow to find unreachable pages for
-      include_groups: (Optional) If true, intents from transition route groups will be included, 
-        but only if they are actually referenced on some page
-      verbose: (Optional) If true, print debug information about route traversal
-    
-    Returns:
-      The list of unreachable pages in this flow
-    """
-    if not flow_id:
-        if not flow_name:
-            raise Exception("One of flow_id or flow_name must be set for find_unreachable_pages")
-    reachable = self.find_reachable_pages(flow_id, flow_name, include_groups=include_groups, verbose=verbose)
-    if flow_id:
-        return list(set(self.pages_map[self.flows_map_rev[flow_name]].keys()) - set(reachable))
-    else:
-        return list(set(self.pages_map[self.flows_map[flow_id]].keys()) - set(reachable))
+        """Finds all pages which are unreachable by transition routes, 
+        starting from the start page of a given flow. Either flow_id or
+        flow_name must be used.
+
+        Args:
+          flow_id: The ID of the flow to find unreachable pages for
+          flow_name: The display name of the flow to find unreachable pages for
+          include_groups: (Optional) If true, intents from transition route groups will be included, 
+            but only if they are actually referenced on some page
+          verbose: (Optional) If true, print debug information about route traversal
+
+        Returns:
+          The list of unreachable pages in this flow
+        """
+        if not flow_id:
+            if not flow_name:
+                raise Exception("One of flow_id or flow_name must be set for find_unreachable_pages")
+        reachable = self.find_reachable_pages(flow_id, flow_name, include_groups=include_groups, verbose=verbose)
+        if flow_id:
+            return list(set(self.pages_map[self.flows_map_rev[flow_name]].keys()) - set(reachable))
+        else:
+            return list(set(self.pages_map[self.flows_map[flow_id]].keys()) - set(reachable))
 
     """
     TODO: Methods to implement:
