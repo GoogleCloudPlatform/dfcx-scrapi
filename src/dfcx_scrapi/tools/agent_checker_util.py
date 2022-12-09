@@ -61,23 +61,23 @@ class AgentCheckerUtil(ScrapiBase):
         for flow_id in self.flows_map.keys():
             self.route_groups_map[flow_id] = self.route_groups.get_route_groups_map(flow_id)
 
-    def convert_intent(self, intent_id, agent_id, intents_map):
-        intent_id_converted = str(agent_id) + '/intents/' + str(intent_id)
-        if intent_id_converted in intents_map.keys():
-            return intents_map[intent_id_converted]
+    def convert_intent(self, intent_id):
+        intent_id_converted = str(self.agent_id) + '/intents/' + str(intent_id)
+        if intent_id_converted in self.intents_map.keys():
+            return self.intents_map[intent_id_converted]
         return ''
 
-    def convert_flow(self, flow_id, agent_id, flows_map):
+    def convert_flow(self, flow_id):
         if flow_id.split('/')[-1] == '-':
             return ''
         #flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
-        if flow_id in flows_map.keys():
-            return flows_map[flow_id]
+        if flow_id in self.flows_map.keys():
+            return self.flows_map[flow_id]
         # TODO: Should throw error instead of returning default
         return 'Default Start Flow'
 
     # Note that flow id includes agent, normally...
-    def convert_page(self, page_id, flow_id, pages_map):
+    def convert_page(self, page_id, flow_id):
         if page_id == 'END_SESSION':
             return 'End Session'
         elif page_id == 'END_FLOW':
@@ -85,9 +85,9 @@ class AgentCheckerUtil(ScrapiBase):
         elif page_id == 'START_PAGE':
             return 'Start'
         page_id_converted = str(flow_id) + '/pages/' + str(page_id)
-        if flow_id in pages_map.keys():
-            if page_id_converted in pages_map[flow_id].keys():
-                return pages_map[flow_id][page_id_converted]
+        if flow_id in self.pages_map.keys():
+            if page_id_converted in self.pages_map[flow_id].keys():
+                return self.pages_map[flow_id][page_id_converted]
             else:
                 # TODO: Should throw error instead of returning default
                 return 'Start'
@@ -122,8 +122,8 @@ class AgentCheckerUtil(ScrapiBase):
             short_ids.append(response.name.split('/')[-1])
             tags.append(','.join(response.tags))
             creation_times.append(response.creation_time)
-            flows.append(convert_flow(response.test_config.flow, self.agent_id, self.flows_map))
-            pages.append(convert_page(response.test_config.page, response.test_config.flow, self.pages_map))
+            flows.append(convert_flow(response.test_config.flow))
+            pages.append(convert_page(response.test_config.page, response.test_config.flow))
             test_results.append(str(response.last_test_result.test_result))
             test_times.append(response.last_test_result.test_time)
             passed.append(str(response.last_test_result.test_result) == 'TestResult.PASSED')
