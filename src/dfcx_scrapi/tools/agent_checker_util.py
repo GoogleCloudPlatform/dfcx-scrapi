@@ -43,6 +43,31 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+# TODO: Methods to implement:
+#     - Run test cases and store results, and give a report
+#         - Need to include a reference agent for this to give useful info
+#           about new failing test cases
+#     - Get condensed changelog compared to a reference
+#         - Ideally include test case changes, to include info that the CX UI
+#           can't provide
+#     - Find unreachable/unused pages, intents, route groups, and maybe routes
+#         - Finding unreachable routes is hard, but the other problems have
+#           already been figured out
+#     - Find invalid test cases
+#         - Test cases referencing pages or intents that don't exist,
+#           for example
+#     - Check true routes
+#         - Pages with only conditional routes, and no intents or parameter
+#           filling, should have the last route be "true" to prevent getting
+#           stuck on the page
+#     - Check events
+#         - Pages with user input should have a no-input-default and
+#           no-match-default event handler.
+#         - Not sure if this applies to all agents in the same way
+#     - Check infinite loops
+#         - Not possible to solve in general because of webhooks,
+#           but can find likely candidates
+#     - Probably other things
 
 class AgentCheckerUtil(ScrapiBase):
     """Utility class for checking DFCX Agents."""
@@ -119,7 +144,7 @@ class AgentCheckerUtil(ScrapiBase):
     def _convert_intent(self, intent_id):
         """Gets an intent display name from an intent ID"""
         intent_id_converted = str(self.agent_id) + "/intents/" + str(intent_id)
-        if intent_id_converted in self.intents_map.keys():
+        if intent_id_converted in self.intents_map:
             return self.intents_map[intent_id_converted]
         return ""
 
@@ -128,7 +153,7 @@ class AgentCheckerUtil(ScrapiBase):
         if flow_id.split("/")[-1] == "-":
             return ""
         # flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
-        if flow_id in self.flows_map.keys():
+        if flow_id in self.flows_map:
             return self.flows_map[flow_id]
         # TODO: Should throw error instead of returning default
         return "Default Start Flow"
@@ -143,8 +168,8 @@ class AgentCheckerUtil(ScrapiBase):
         elif page_id == "START_PAGE":
             return "Start"
         page_id_converted = str(flow_id) + "/pages/" + str(page_id)
-        if flow_id in self.pages_map.keys():
-            if page_id_converted in self.pages_map[flow_id].keys():
+        if flow_id in self.pages_map:
+            if page_id_converted in self.pages_map[flow_id]:
                 return self.pages_map[flow_id][page_id_converted]
             else:
                 # TODO: Should throw error instead of returning default
@@ -175,7 +200,8 @@ class AgentCheckerUtil(ScrapiBase):
           page_id OR page_name: The ID or display name of the page
 
         Returns:
-          A DFCX Page object for this page, or DFCX Flow object if it's the start page
+          A DFCX Page object for this page,
+          or DFCX Flow object if it's the start page
 
         Raises:
           KeyError, if the page is not found
@@ -183,7 +209,7 @@ class AgentCheckerUtil(ScrapiBase):
         if flow_id is None and flow_name is None:
             raise Exception("Please specify a flow")
         elif flow_name is not None:
-            if flow_name in self.flows_map_rev.keys():
+            if flow_name in self.flows_map_rev:
                 flow_id = self.flows_map_rev[flow_name]
             else:
                 raise Exception(f"Flow not found: {flow_name}")
@@ -193,7 +219,7 @@ class AgentCheckerUtil(ScrapiBase):
         elif page_name is not None:
             if page_name == "Start":
                 return self.flow_data[flow_id]
-            if page_name in self.pages_map_rev[flow_id].keys():
+            if page_name in self.pages_map_rev[flow_id]:
                 page_id = self.pages_map_rev[flow_id][page_name]
                 return self.page_data[flow_id][page_id]
             else:
@@ -201,7 +227,7 @@ class AgentCheckerUtil(ScrapiBase):
         else:
             if "START_PAGE" in page_id:
                 return self.flow_data[flow_id]
-            elif page_id not in self.pages_map[flow_id].keys():
+            elif page_id not in self.pages_map[flow_id]:
                 raise KeyError("Page not found.")
             else:
                 return self.page_data[flow_id][page_id]
@@ -258,7 +284,8 @@ class AgentCheckerUtil(ScrapiBase):
             creation_times.append(response.creation_time)
             flows.append(self._convert_flow(response.test_config.flow))
             pages.append(
-                self._convert_page(response.test_config.page, response.test_config.flow)
+                self._convert_page(response.test_config.page,
+                                   response.test_config.flow)
             )
             test_results.append(str(response.last_test_result.test_result))
             test_times.append(response.last_test_result.test_time)
@@ -285,25 +312,26 @@ class AgentCheckerUtil(ScrapiBase):
         # Retest any that haven't been run yet
         print("To retest:", len(retest))
         if len(retest) > 0:
-            response = self.test_cases.batch_run_test_cases(retest, self.agent_id)
+            response = self.test_cases.batch_run_test_cases(retest,
+                                                            self.agent_id)
             for result in response.results:
-                # Results may not be in the same order as they went in (oh well)
-                # Process the name a bit to remove the /results/id part at the end.
-                testCaseId_full = "/".join(result.name.split("/")[:-2])
-                testCaseId = testCaseId_full.split("/")[-1]
+                # Results may not be in the same order as they went in
+                # Process the name a bit to remove the /results/id part
+                test_case_id_full = "/".join(result.name.split("/")[:-2])
+                test_case_id = test_case_id_full.split("/")[-1]
 
-                # Update dataframe where id = testcaseId_full
-                # row = test_case_df.loc[test_case_df['id'] == testCaseId_full]
+                # Update dataframe where id = test_case_id_full
+                # row = test_case_df.loc[test_case_df['id']==test_case_id_full]
                 test_case_df.loc[
-                    test_case_df["id"] == testCaseId_full, "short_id"
-                ] = testCaseId
+                    test_case_df["id"] == test_case_id_full, "short_id"
+                ] = test_case_id
                 test_case_df.loc[
-                    test_case_df["id"] == testCaseId_full, "test_result"
+                    test_case_df["id"] == test_case_id_full, "test_result"
                 ] = str(result.test_result)
                 test_case_df.loc[
-                    test_case_df["id"] == testCaseId_full, "test_time"
+                    test_case_df["id"] == test_case_id_full, "test_time"
                 ] = result.test_time
-                test_case_df.loc[test_case_df["id"] == testCaseId_full, "passed"] = (
+                test_case_df.loc[test_case_df["id"] == test_case_id_full, "passed"] = (
                     str(result.test_result) == "TestResult.PASSED"
                 )
 
@@ -336,7 +364,9 @@ class AgentCheckerUtil(ScrapiBase):
         include_meta: bool = False,
         verbose: bool = False,
     ) -> None:
-        """Helper function for the recursion involved in finding reachable pages"""
+        """Helper function for the recursion involved in
+        finding reachable pages
+        """
         if not flow_name:
             flow_name = self.flows_map[flow_id]
         target_page = route.target_page
@@ -353,7 +383,7 @@ class AgentCheckerUtil(ScrapiBase):
                     # Need to also account for parameters being
                     # set by intents (or by webhooks...)
                     if (
-                        parameter_name not in presets.keys()
+                        parameter_name not in presets
                         or presets[parameter_name] == "NULL"
                     ):
                         # This page has an unfilled parameter
@@ -946,16 +976,19 @@ class AgentCheckerUtil(ScrapiBase):
         flow_name must be used.
 
         Args:
-          flow_id OR flow_name: The ID or name of the flow to find reachable pages for
-          from_page: (Optional) The page to start from. If left blank, it will start on the Start Page
+          flow_id OR flow_name: The ID or name of the flow
+          from_page: (Optional) The page to start from. If left blank, it will
+            start on the Start Page
           intent_route_limit: (Optional) Default None
-          include_groups: (Optional) If true, intents from transition route groups will be included,
-            but only if they are actually referenced on some page
+          include_groups: (Optional) If true, intents from transition route
+            groups will be included, but only if they are actually referenced
+            on some page
           include_start_page_routes: (Optional) Default true
           limit_intent_to_initial: (Optional) Default False
           is_initial: (Optional) Default True
           include_meta: (Optional) Default False
-          verbose: (Optional) If true, print debug information about route traversal
+          verbose: (Optional) If true, print debug information about
+            route traversal
 
         Returns:
           The list of reachable pages in this flow
@@ -963,11 +996,11 @@ class AgentCheckerUtil(ScrapiBase):
         if not flow_id:
             if not flow_name:
                 raise Exception("One of flow_id or flow_name must be set")
-            if flow_name in self.flows_map_rev.keys():
+            if flow_name in self.flows_map_rev:
                 flow_id = self.flows_map_rev[flow_name]
             else:
                 raise Exception(f"Flow not found: {flow_name}")
-        if flow_id in self.flows_map.keys():
+        if flow_id in self.flows_map:
             flow_name = self.flows_map[flow_id]
         else:
             raise Exception(f"Flow not found: {flow_id}")
@@ -975,12 +1008,13 @@ class AgentCheckerUtil(ScrapiBase):
         # Start at the start page...
         reachable = [from_page]
         conversation_path = [from_page]
-        min_intent_counts = [
-            25
-        ]  # Technically this could be [0] or [1], or very rarely more than 1, depending on the routes that lead to current page...
+        # Technically this could be [0] or [1], or very rarely more than 1,
+        # depending on the routes that lead to current page...
+        min_intent_counts = [25]
         presets = {}
         page_data = self._get_page(
-            flow_id=flow_id, flow_name=flow_name, page_id=None, page_name=from_page
+            flow_id=flow_id, flow_name=flow_name,
+            page_id=None, page_name=from_page
         )
         self._find_reachable_pages_rec(
             flow_id,
@@ -1015,9 +1049,11 @@ class AgentCheckerUtil(ScrapiBase):
         Args:
           flow_id: The ID of the flow to find unreachable pages for
           flow_name: The display name of the flow to find unreachable pages for
-          include_groups: (Optional) If true, intents from transition route groups will be included,
-            but only if they are actually referenced on some page
-          verbose: (Optional) If true, print debug information about route traversal
+          include_groups: (Optional) If true, intents from transition route
+            groups will be included, but only if they are actually referenced
+            on some page
+          verbose: (Optional) If true, print debug information about
+            route traversal
 
         Returns:
           The list of unreachable pages in this flow
@@ -1025,11 +1061,11 @@ class AgentCheckerUtil(ScrapiBase):
         if not flow_id:
             if not flow_name:
                 raise Exception("One of flow_id or flow_name must be set")
-            if flow_name in self.flows_map_rev.keys():
+            if flow_name in self.flows_map_rev:
                 flow_id = self.flows_map_rev[flow_name]
             else:
                 raise Exception(f"Flow not found: {flow_name}")
-        if flow_id in self.flows_map.keys():
+        if flow_id in self.flows_map:
             flow_name = self.flows_map[flow_id]
         else:
             raise Exception(f"Flow not found: {flow_id}")
@@ -1038,23 +1074,3 @@ class AgentCheckerUtil(ScrapiBase):
             flow_id, flow_name, include_groups=include_groups, verbose=verbose
         )
         return list(set(self.pages_map[flow_id].values()) - set(reachable))
-
-    """
-    TODO: Methods to implement:
-        - Run test cases and store results, and give a report
-            - Need to include a reference agent for this to give useful info about new failing test cases
-        - Get condensed changelog compared to a reference
-            - Ideally include test case changes, to include info that the CX UI can't provide
-        - Find unreachable/unused pages, intents, route groups, and possibly routes
-            - Finding unreachable routes is hard, but the other problems have already been figured out
-        - Find invalid test cases
-            - Test cases referencing pages or intents that don't exist, for example
-        - Check true routes
-            - Pages with only conditional routes, and no intents or parameter filling, should have the last route be "true" to prevent getting stuck on the page
-        - Check events
-            - Pages with user input should have a no-input-default and no-match-default event handler. 
-            - Not sure if this applies to all agents in the same way
-        - Check infinite loops
-            - Not possible to solve in general because of webhooks, but can find likely candidates
-        - Probably other things
-    """
