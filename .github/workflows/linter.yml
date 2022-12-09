@@ -26,4 +26,4 @@ jobs:
         pip install pylint
     - name: Running Pylint
       run: |
-        pylint --rcfile=.pylintrc $(git ls-files '*.py')
+        pylint --rcfile=dfcx-scrapi/.pylintrc $(git ls-files '*.py')
