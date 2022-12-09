@@ -93,7 +93,7 @@ class AgentCheckerUtil(ScrapiBase):
             self.flow_data[flow_id] = self.flows.get_flow(flow_id=flow_id)
         self.page_data = {}
         for flow_id in self.flows_map.keys():
-            page_data_list = self.pages.list_pages(flow_id=flow_id)
+            page_list = self.pages.list_pages(flow_id=flow_id)
             self.page_data[flow_id] = {page.name: page for page in page_list}
 
     # Conversion utilities
