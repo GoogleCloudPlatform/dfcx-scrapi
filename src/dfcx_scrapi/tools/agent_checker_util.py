@@ -123,6 +123,47 @@ class AgentCheckerUtil(ScrapiBase):
         # TODO: Should throw error, but returning this probably will anyway
         return 'Invalid'
     
+    def get_page(self, flow_id: str = None, flow_name: str = None, page_id: str = None, page_name: str = None) -> DFCXPage | DFCXFlow:
+        """Gets the page data for a specified page within
+        a specified flow. The flow and page can be specified
+        by ID or by display name.
+        
+        Args:
+          flow_id OR flow_name: The ID or display name of the flow 
+          page_id OR page_name: The ID or display name of the page
+        
+        Returns:
+          A DFCX Page object for this page, or DFCX Flow object if it's the start page
+        
+        Raises:
+          KeyError, if the page is not found
+        """
+        if flow_id is None and flow_name is None:
+            raise Exception('Please specify a flow')
+        elif flow_name is not None:
+            if flow_name in self.flows_map_rev.keys():
+                flow_id = self.flows_map_rev[flow_name]
+            else:
+                raise Exception(f'Flow not found: {flow_name}')
+        # Now that flow_id is set, look up the page
+        if page_id is None and page_name is None:
+            raise Exception('Please specify a page')
+        elif page_name is not None:
+            if page_name == 'Start':
+                return self.flow_data[flow_id]
+            if page_name in self.pages_map_rev[flow_id].keys():
+                page_id = self.pages_map_rev[flow_id][page_name]
+                return self.page_data[flow_id][page_id]
+            else:
+                raise KeyError('Page not found. Did you forget "page_name="?')
+        else:
+            if 'START_PAGE' in page_id:
+                return self.flow_data[flow_id]
+            elif page_id not in self.pages_map[flow_id].keys():
+                raise KeyError('Page not found.')
+            else:
+                return self.page_data[flow_id][page_id]
+    
     # Test case results
     
     # TODO: Should this function be in the base test_cases class, 
