@@ -16,6 +16,7 @@
 
 import logging
 from typing import Dict, List
+import pandas as pd
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.intents import Intents
@@ -51,6 +52,8 @@ class AgentCheckerUtil(ScrapiBase):
         )
 
         self.agent_id = agent_id
+        if not self.agent_id:
+            
 
         self.intents = Intents(creds=self.creds, agent_id=self.agent_id)
         self.entities = EntityTypes(creds=self.creds, agent_id=self.agent_id)
@@ -62,14 +65,14 @@ class AgentCheckerUtil(ScrapiBase):
         self.test_cases = TestCases(creds=self.creds, agent_id=self.agent_id)
 
         # Generate maps
-        self.intents_map = self.intents.get_intents_map(self.agent_id)
-        self.flows_map = self.flows.get_flows_map(self.agent_id)
+        self.intents_map = self.intents.get_intents_map(agent_id=self.agent_id)
+        self.flows_map = self.flows.get_flows_map(agent_id=self.agent_id)
         self.pages_map = {}
         for flow_id in self.flows_map.keys():
-            self.pages_map[flow_id] = self.pages.get_pages_map(flow_id)
+            self.pages_map[flow_id] = self.pages.get_pages_map(flow_id=flow_id)
         self.route_groups_map = {}
         for flow_id in self.flows_map.keys():
-            self.route_groups_map[flow_id] = self.route_groups.get_route_groups_map(flow_id)
+            self.route_groups_map[flow_id] = self.route_groups.get_route_groups_map(flow_id=flow_id)
 
     def convert_intent(self, intent_id):
         """Gets an intent display name from an intent ID"""
@@ -125,7 +128,7 @@ class AgentCheckerUtil(ScrapiBase):
             tags (comma-separated string), creation_time,
             start_flow, start_page, passed, test_time
         """
-        test_case_results = dfcx_tc.list_test_cases(self.agent_id)
+        test_case_results = self.test_cases.list_test_cases(self.agent_id)
         retest = []
         retest_names = []
 
@@ -151,8 +154,8 @@ class AgentCheckerUtil(ScrapiBase):
             short_ids.append(response.name.split('/')[-1])
             tags.append(','.join(response.tags))
             creation_times.append(response.creation_time)
-            flows.append(convert_flow(response.test_config.flow))
-            pages.append(convert_page(response.test_config.page, response.test_config.flow))
+            flows.append(self.convert_flow(response.test_config.flow))
+            pages.append(self.convert_page(response.test_config.page, response.test_config.flow))
             test_results.append(str(response.last_test_result.test_result))
             test_times.append(response.last_test_result.test_time)
             passed.append(str(response.last_test_result.test_result) == 'TestResult.PASSED')
