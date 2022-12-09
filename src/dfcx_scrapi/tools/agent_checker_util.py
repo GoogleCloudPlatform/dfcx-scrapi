@@ -50,12 +50,42 @@ class AgentCheckerUtil(ScrapiBase):
         self.route_groups = TransitionRouteGroups(
             creds=self.creds, agent_id=self.agent_id)
 
+    def convert_intent(self, intent_id, agent_id, intents_map):
+        intent_id_converted = str(agent_id) + '/intents/' + str(intent_id)
+        if intent_id_converted in intents_map.keys():
+            return intents_map[intent_id_converted]
+        return ''
+
+    def convert_flow(self, flow_id, agent_id, flows_map):
+        if flow_id.split('/')[-1] == '-':
+            return ''
+        #flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
+        if flow_id in flows_map.keys():
+            return flows_map[flow_id]
+        # TODO: Should throw error instead of returning default
+        return 'Default Start Flow'
+
+    # Note that flow id includes agent, normally...
+    def convert_page(self, page_id, flow_id, pages_map):
+        if page_id == 'END_SESSION':
+            return 'End Session'
+        elif page_id == 'END_FLOW':
+            return 'End Flow'
+        elif page_id == 'START_PAGE':
+            return 'Start'
+        page_id_converted = str(flow_id) + '/pages/' + str(page_id)
+        if flow_id in pages_map.keys():
+            if page_id_converted in pages_map[flow_id].keys():
+                return pages_map[flow_id][page_id_converted]
+            else:
+                # TODO: Should throw error instead of returning default
+                return 'Start'
+        print('Flow not found')
+        # TODO: Should throw error, but returning this probably will anyway
+        return 'Invalid'
+    
     """
     TODO: Methods to implement:
-        x Restore from reference agent
-            - Beyond the scope of this class
-        x Retrain flows
-            - Easy enough to do manually
         - Run test cases and store results, and give a report
             - Eeed to include a reference agent for this to give useful info about new failing test cases
         - Get condensed changelog compared to a reference
