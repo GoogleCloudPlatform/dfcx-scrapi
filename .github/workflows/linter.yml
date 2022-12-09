@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -24,4 +24,4 @@ jobs:
         pip install pylint
     - name: Running Pylint
       run: |
-        pylint --rcfile=.pylintrc $(git ls-files '*.py')
+        pwd && pylint --rcfile=.pylintrc $(git ls-files '*.py')
