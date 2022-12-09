@@ -24,4 +24,4 @@ jobs:
         pip install pylint
     - name: Running Pylint
       run: |
-        pwd && pylint --rcfile=.pylintrc $(git ls-files '*.py')
+        pylint --rcfile=.pylintrc $(git ls-files '*.py')
