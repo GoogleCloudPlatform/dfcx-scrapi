@@ -251,4 +251,4 @@ class AgentBuilder:
         """Show the proto_obj information."""
         self._check_agent_exist()
 
-        print(self.__str__())
+        print(self)

@@ -65,9 +65,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         )
 
         logging.info(
-            f"create conversation with creds_path: \
-                {creds_path} | agent_id: {agent_id}",
-        )
+            "create conversation with creds_path: %s | agent_id: %s",
+            creds_path, agent_id)
 
         if agent_id or config["agent_path"]:
             self.agent_id = agent_id or config["agent_path"]
@@ -325,8 +324,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             )
             threads[i].start()
 
-        for idx, _ in enumerate(threads):
-            threads[idx].join()
+        for _, thread in enumerate(threads):
+            thread.join()
 
         test_set_mapped["target_page"] = results["target_page"]
         test_set_mapped["match"] = results["match"]

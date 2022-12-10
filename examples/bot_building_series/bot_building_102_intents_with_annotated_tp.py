@@ -19,12 +19,7 @@
 import sys
 import pandas as pd
 from dfcx_scrapi.core.agents import Agents
-from dfcx_scrapi.core.intents import Intents
-from dfcx_scrapi.core.flows import Flows
-from dfcx_scrapi.core.pages import Pages
 from dfcx_scrapi.tools.dataframe_functions import DataframeFunctions
-from dfcx_scrapi.tools.maker_util import MakerUtil
-
 
 # # Method 1 - Creating an Agent from Simple Text Inputs
 
@@ -82,7 +77,7 @@ def build_agent(creds_path, project_id, gcp_region, display_name):
 
     # Finally, we will use `dffx` to push our Intents to our Agent
     # If intents do not exist, use bulk_create_intent_from_dataframe
-    my_intents = dffx.bulk_create_intent_from_dataframe(
+    _ = dffx.bulk_create_intent_from_dataframe(
         my_agent.name, df, params_df, update_flag=True, mode="advanced"
     )
 
@@ -138,7 +133,7 @@ def update_agent(creds_path, agent_id):
     params_df = pd.read_csv("../../data/intent_sample_params.csv")
 
     # bulk update the existing intents
-    my_intents = dffx.bulk_update_intents_from_dataframe(
+    _ = dffx.bulk_update_intents_from_dataframe(
         my_agent.name, df, params_df, update_flag=True, mode="advanced"
     )
 
