@@ -97,9 +97,10 @@ class Levenshtein():
           from intent_key as the key, and utterance from intent_comparator
           with a similarity ratio above the defined threshold as the value.
         """
+        intents = Intents()
 
         if isinstance(intent_key, types.Intent):
-            list_keys = Intents.intent_proto_to_dataframe(
+            list_keys = intents.intent_proto_to_dataframe(
                 intent_key
             ).training_phrase
         elif isinstance(intent_key, pandas.core.frame.DataFrame):
@@ -113,7 +114,7 @@ class Levenshtein():
             return None
 
         if isinstance(intent_comparator, types.Intent):
-            list_comparators = Intents.intent_proto_to_dataframe(
+            list_comparators = intents.intent_proto_to_dataframe(
                 intent_comparator
             ).training_phrase
         elif isinstance(intent_comparator, pandas.core.frame.DataFrame):
@@ -126,7 +127,7 @@ class Levenshtein():
                 """)
             return None
 
-        it = 0
+        count = 0
         completed = 0.0
         tp_distances = {}
         num_keys_overlapped = 0
@@ -138,7 +139,7 @@ class Levenshtein():
             found_key_similarity = False
 
             if not silent:
-                completed = float(it/len(list_keys))*100.0
+                completed = float(count/len(list_keys))*100.0
                 #print instead of logging.info is intentional.
                 #Needed to avoid spamming new lines with every percentile.
                 print(
@@ -161,7 +162,7 @@ class Levenshtein():
                         found_key_similarity = True
 
 
-            it += 1
+            count += 1
 
             #float greatest similarities to top
             phrase_similarity_list = dict(sorted(

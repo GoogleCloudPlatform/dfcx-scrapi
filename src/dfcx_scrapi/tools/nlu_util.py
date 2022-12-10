@@ -40,21 +40,24 @@ SHEETS_SCOPE = [
 
 
 class KonaEmbeddingModel:
+    """Download USE4 model and prep for calculating embeddings."""
     def __init__(self):
         module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
         self.model = tensorflow_hub.load(module_url)
 
     def embed(self, utterances, batch_size=512):
+        """Generates embeddings for a given set of utterances."""
         embeddings = []
         for next_idx in range(0, len(utterances), batch_size):
             batch_utterances = utterances[next_idx: next_idx + batch_size]
             batch_embeddings = self.model(batch_utterances).numpy()
             embeddings.append(batch_embeddings)
         embeddings = np.vstack(embeddings)
+
         return embeddings
 
-
 class SheetsLoader:
+    """Load data from Google Sheets."""
     def __init__(self, creds_path: str = None):
         sheets_creds = ServiceAccountCredentials.from_json_keyfile_name(
             filename=creds_path,
@@ -66,18 +69,18 @@ class SheetsLoader:
         """Load a column from a Google Sheets file"""
         try:
             sheet = self.sheets_client.open(sheet_name)
-        except gspread.SpreadsheetNotFound:
+        except gspread.SpreadsheetNotFound as gse:
             raise KeyError(
                 f"Couldn't find sheet '{sheet_name}'."
                 "Did you share it with your service account?"
-            )
+            ) from gse
 
         worksheet = sheet.worksheet(worksheet_name)
         worksheet_data = pd.DataFrame(worksheet.get_all_records())
         try:
             column_data = worksheet_data[column_name]
-        except KeyError:
-            raise KeyError(f"Couldn't find column '{column_name}'")
+        except KeyError as err:
+            raise KeyError(f"Couldn't find column '{column_name}'") from err
 
         return column_data.to_numpy()
 
@@ -170,15 +173,15 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
         return relevant_intents
 
     def _get_training_phrases(self):
-        intents = []
+        intent_list = []
         training_phrases = []
         for intent in self.intents:
             for training_phrase in intent.training_phrases:
                 phrase_str = "".join([i.text for i in training_phrase.parts])
                 training_phrases.append(phrase_str)
-                intents.append(intent.display_name)
+                intent_list.append(intent.display_name)
 
-        return np.array(intents), np.array(training_phrases)
+        return np.array(intent_list), np.array(training_phrases)
 
     def generate_embeddings(self, utterances):
         return self.embedder.embed(utterances)

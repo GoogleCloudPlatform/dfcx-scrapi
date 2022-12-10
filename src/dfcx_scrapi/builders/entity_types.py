@@ -107,7 +107,7 @@ class EntityTypeBuilder:
         elif mode in ["excluded", "excluded phrases"]:
             print(self._show_excluded_phrases())
         elif mode == "whole":
-            print(self.__str__())
+            print(self)
         else:
             raise ValueError(
                 "mode should be in"
