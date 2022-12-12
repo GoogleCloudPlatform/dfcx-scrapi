@@ -512,7 +512,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         return params_list
     
-    def search_param_presets(self, flow_name_list=None, search):
+    def get_param_presets_df(self, flow_name_list=None):
         if flow_name_list is None:
             flow_id_list = list(flows_map.values())
         if type(flow_name_list) == str:
@@ -540,11 +540,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
             flow_name = start_page.display_name
             #Event Handlers
             for event_handler in start_page.event_handlers:
-                if hasattr(event_handler, "trigger_fulfillent") 
-                    and event_handler.trigger_fulfillment:
+                if hasattr(event_handler, "trigger_fulfillent") and event_handler.trigger_fulfillment:
                     event_ful_data = event_handler.trigger_fulfillment
-                    if hasattr(event_ful_data, "set_parameter_actions") 
-                        and event_ful_data.set_parameter_actions:
+                    if hasattr(event_ful_data, "set_parameter_actions") and event_ful_data.set_parameter_actions:
                         for param_data in event_ful_data.set_parameter_actions:
                             param_name = param_data.parameter
                             #TODO: parse parameter value
@@ -565,11 +563,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 
             #Transition Routes
             for route in start_page.transition_routes:
-                if hasattr(route, "trigger_fulfillment")
-                    and route.trigger_fulfillment:
+                if hasattr(route, "trigger_fulfillment") and route.trigger_fulfillment:
                     route_ful_data = route.trigger_fulfillment
-                    if hasattr(route_ful_data, "set_parameter_actions") 
-                        and route_ful_data.set_parameter_actions:
+                    if hasattr(route_ful_data, "set_parameter_actions") and route_ful_data.set_parameter_actions:
                         for param_data in route_ful_data.set_parameter_actions:
                             param_name = param_data.parameter
                             #TODO: parse parameter value
@@ -595,11 +591,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
             for group in start_page.transition_route_groups:
                 route_group = self.route_group_data[group]
                 for route in route_group:
-                    if hasattr(route, "trigger_fulfillment")
-                        and route.trigger_fulfillment:
+                    if hasattr(route, "trigger_fulfillment") and route.trigger_fulfillment:
                         route_ful_data = route.trigger_fulfillment
-                        if hasattr(route_ful_data, "set_parameter_actions") 
-                            and route_ful_data.set_parameter_actions:
+                        if hasattr(route_ful_data, "set_parameter_actions") and route_ful_data.set_parameter_actions:
                             for param_data in route_ful_data.set_parameter_actions:
                                 param_name = param_data.parameter
                                 #TODO: parse parameter value
@@ -653,7 +647,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                             #Form Filling Parameter Presets
                             if hasattr(page_param, "fill_behavior") and page_param.fill_behavior:
                                 page_ful_behavior = page_param.fill_behavior
-                                if hasattr(page_ful_behavior, "initial_prompt_fulfillment") and page_ful_behavior.initial_prompt_fulfillment
+                                if hasattr(page_ful_behavior, "initial_prompt_fulfillment") and page_ful_behavior.initial_prompt_fulfillment:
                                     initial_page_ful = page_ful_behavior.initial_prompt_fulfillment
                                     if hasattr(initial_page_ful, "set_parameter_actions") and initial_page_ful.set_parameter_actions:
                                         for param_data in initial_page_ful.set_parameter_actions:
@@ -674,37 +668,33 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                 #Form Filling Event Handlers
                                 if hasattr(page_ful_behavior, "reprompt_event_handlers") and page_ful_behavior.reprompt_event_handlers:
                                     for event_handler in page_param.reprompt_event_handlers:
-                                    if hasattr(event_handler, "trigger_fulfillent") 
-                                        and event_handler.trigger_fulfillment:
-                                        event_ful_data = event_handler.trigger_fulfillment
-                                        if hasattr(event_ful_data, "set_parameter_actions") 
-                                            and event_ful_data.set_parameter_actions:
-                                            for param_data in event_ful_data.set_parameter_actions:
-                                                param_name = param_data.parameter
-                                                #TODO: parse parameter value
-                                                param_value = param_data.value
-                                                flow_names.append(flow_name)
-                                                page_names.append(page_name)
-                                                route_intents.append("")
-                                                route_events.append(event_handler.event)
-                                                page_param_names.append(page_param.display_name)
-                                                route_group_names.append("")
-                                                if hasattr(event_handler, "condition") and event_handler.condition:
-                                                    route_conditions.append(event_handler.condition)
-                                                else:
-                                                    route_conditions.append("")
-                                                location_names.append("Form Filling Event Handler")
-                                                parameter_preset_names.append(param_name)
-                                                parameter_preset_values.append(param_value)
+                                        if hasattr(event_handler, "trigger_fulfillent") and event_handler.trigger_fulfillment:
+                                            event_ful_data = event_handler.trigger_fulfillment
+                                            if hasattr(event_ful_data, "set_parameter_actions") and event_ful_data.set_parameter_actions:
+                                                for param_data in event_ful_data.set_parameter_actions:
+                                                    param_name = param_data.parameter
+                                                    #TODO: parse parameter value
+                                                    param_value = param_data.value
+                                                    flow_names.append(flow_name)
+                                                    page_names.append(page_name)
+                                                    route_intents.append("")
+                                                    route_events.append(event_handler.event)
+                                                    page_param_names.append(page_param.display_name)
+                                                    route_group_names.append("")
+                                                    if hasattr(event_handler, "condition") and event_handler.condition:
+                                                        route_conditions.append(event_handler.condition)
+                                                    else:
+                                                        route_conditions.append("")
+                                                    location_names.append("Form Filling Event Handler")
+                                                    parameter_preset_names.append(param_name)
+                                                    parameter_preset_values.append(param_value)
                                         
                                                                                            
                 #Event Handlers
                 for event_handler in page.event_handlers:
-                    if hasattr(event_handler, "trigger_fulfillent") 
-                        and event_handler.trigger_fulfillment:
+                    if hasattr(event_handler, "trigger_fulfillent") and event_handler.trigger_fulfillment:
                         event_ful_data = event_handler.trigger_fulfillment
-                        if hasattr(event_ful_data, "set_parameter_actions") 
-                            and event_ful_data.set_parameter_actions:
+                        if hasattr(event_ful_data, "set_parameter_actions") and event_ful_data.set_parameter_actions:
                             for param_data in event_ful_data.set_parameter_actions:
                                 param_name = param_data.parameter
                                 #TODO: parse parameter value
@@ -725,11 +715,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
                 #Transition Routes
                 for route in page.transition_routes:
-                    if hasattr(route, "trigger_fulfillment")
-                        and route.trigger_fulfillment:
+                    if hasattr(route, "trigger_fulfillment") and route.trigger_fulfillment:
                         route_ful_data = route.trigger_fulfillment
-                        if hasattr(route_ful_data, "set_parameter_actions") 
-                            and route_ful_data.set_parameter_actions:
+                        if hasattr(route_ful_data, "set_parameter_actions") and route_ful_data.set_parameter_actions:
                             for param_data in route_ful_data.set_parameter_actions:
                                 param_name = param_data.parameter
                                 #TODO: parse parameter value
@@ -755,11 +743,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 for group in page.transition_route_groups:
                     route_group = self.route_group_data[group]
                     for route in route_group:
-                        if hasattr(route, "trigger_fulfillment")
-                            and route.trigger_fulfillment:
+                        if hasattr(route, "trigger_fulfillment") and route.trigger_fulfillment:
                             route_ful_data = route.trigger_fulfillment
-                            if hasattr(route_ful_data, "set_parameter_actions") 
-                                and route_ful_data.set_parameter_actions:
+                            if hasattr(route_ful_data, "set_parameter_actions") and route_ful_data.set_parameter_actions:
                                 for param_data in route_ful_data.set_parameter_actions:
                                     param_name = param_data.parameter
                                     #TODO: parse parameter value
@@ -784,15 +770,16 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     
         #Combine Lists to DataFrame
         return pd.DataFrame({"flow":flow_names, 
-        "page":page_names,
-        "intent":route_intents,
-        "event":route_events,
-        "route_group":route_group_names,
-        "condition":route_conditions,
-        "form_filling":page_param_names,
-        "location":location_names,
-        "param_name":parameter_preset_names,
-        "param_value":parameter_preset_values})
+            "page":page_names,
+            "intent":route_intents,
+            "event":route_events,
+            "route_group":route_group_names,
+            "condition":route_conditions,
+            "form_filling":page_param_names,
+            "location":location_names,
+            "param_name":parameter_preset_names,
+            "param_value":parameter_preset_values
+        })
     
     
     def search_conditionals_page(self, page_id, search):
