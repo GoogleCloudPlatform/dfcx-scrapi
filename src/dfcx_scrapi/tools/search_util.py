@@ -72,20 +72,20 @@ class SearchUtil(scrapi_base.ScrapiBase):
         self.intents_map = None
         if agent_id:
             self.agent_id = agent_id
-            self.flow_map = self.flows.get_flows_map(
+            self.flows_map = self.flows.get_flows_map(
                 agent_id=agent_id, reverse=True
             )
             self.intents_map = self.intents.get_intents_map(agent_id)
             self.client_options = self._set_region(agent_id)
             self.flow_data = {}
-            for flow_id in self.flows_map.keys():
+            for flow_id in self.flows_map.values():
                 self.flow_data[flow_id] = self.flows.get_flow(flow_id=flow_id)
             self.page_data = {}
-            for flow_id in self.flows_map.keys():
+            for flow_id in self.flows_map.values():
                 page_list = self.pages.list_pages(flow_id=flow_id)
                 self.page_data[flow_id] = {page.name: page for page in page_list}
             self.route_group_data = {}
-            for flow_id in self.flows_map.keys():
+            for flow_id in self.flows_map.values():
                 route_group_list = self.route_groups.list_transition_route_groups(
                     flow_id=flow_id
                 )
@@ -301,8 +301,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
             contents = message
         return contents
 
-    def _find_true_routes_flow_level(self, flow_display_name, flow_map):
-        flow_id = flow_map[flow_display_name]
+    def _find_true_routes_flow_level(self, flow_display_name, flows_map):
+        flow_id = flows_map[flow_display_name]
         start_page = self.flows.get_flow(flow_id)  # pylint: disable=W0612
         other_pages = self.pages.list_pages(flow_id)
 
@@ -395,8 +395,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
     # Pages - event handlers
     def _page_level_handlers(self):
         page_level_event_handlers_all_dataframe = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(self.agent_id)
-        for flow_ in flow_map.keys():
+        flows_map = self.flows.get_flows_map(self.agent_id)
+        for flow_ in flows_map.keys():
             pages_in_flow = self.pages.list_pages(flow_)
 
             for page in pages_in_flow:
@@ -417,7 +417,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                 ],
                                 data=[
                                     [
-                                        flow_map[flow_],
+                                        flows_map[flow_],
                                         page.display_name,
                                         handler.event,
                                         handler.trigger_fulfillment.messages,
@@ -438,8 +438,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
     # Parameters - event handlers
     def _parameter_level_handlers(self):
         parameter_level_event_handlers_all_dataframe = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(self.agent_id)
-        for flow_ in flow_map.keys():
+        flows_map = self.flows.get_flows_map(self.agent_id)
+        for flow_ in flows_map.keys():
             pages_in_flow = self.pages.list_pages(flow_)
             for page in pages_in_flow:
                 parameters = page.form.parameters
@@ -463,7 +463,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                 ],
                                 data=[
                                     [
-                                        flow_map[flow_],
+                                        flows_map[flow_],
                                         page.display_name,
                                         parameter.display_name,
                                         handler.event,
@@ -513,15 +513,19 @@ class SearchUtil(scrapi_base.ScrapiBase):
         return params_list
     
     def get_param_presets_df(self, flow_name_list=None):
+        flow_id_list = []
         if flow_name_list is None:
-            flow_id_list = list(flows_map.values())
-        if type(flow_name_list) == str:
-            if flow_name_list in flows_map:
-                flow_id_list = list(flows_map[flow_name_list])
+            flow_id_list = list(self.flows_map.values())
+        elif type(flow_name_list) == list:
+            for flow_name in flow_name_list:
+                flow_id_list.append(self.flows_map[flow_name])
+        elif type(flow_name_list) == str:
+            if flow_name_list in self.flows_map:
+                flow_id_list = list(self.flows_map[flow_name_list])
             else:
                 raise TypeError("Flow not found")
-        if type(flow_name_list) != list:
-            raise TypeError("flow_id_name parameter needs to be a list of flow names")
+        else:
+            raise TypeError("flow_name_list parameter needs to be a list of flow names")
             
         flow_names = []
         page_names = []
@@ -588,32 +592,33 @@ class SearchUtil(scrapi_base.ScrapiBase):
                             parameter_preset_values.append(param_value)
                             
             #Route Group Routes
-            for group in start_page.transition_route_groups:
-                route_group = self.route_group_data[group]
-                for route in route_group:
-                    if hasattr(route, "trigger_fulfillment") and route.trigger_fulfillment:
-                        route_ful_data = route.trigger_fulfillment
-                        if hasattr(route_ful_data, "set_parameter_actions") and route_ful_data.set_parameter_actions:
-                            for param_data in route_ful_data.set_parameter_actions:
-                                param_name = param_data.parameter
-                                #TODO: parse parameter value
-                                param_value = param_data.value
-                                flow_names.append(flow_name)
-                                page_names.append("Start")
-                                if hasattr(route, "intent") and route.intent and route.intent in self.intents_map:
-                                    route_intents.append(self.intents_map[route.intent])
-                                else:
-                                    route_intents.append("")
-                                route_events.append("")
-                                route_group_names.append(route_group.display_name)
-                                page_param_names.append("")
-                                if hasattr(route, "condition") and route.condition:
-                                    route_conditions.append(route.condition)
-                                else:
-                                    route_conditions.append("")
-                                location_names.append("Route Group")
-                                parameter_preset_names.append(param_name)
-                                parameter_preset_values.append(param_value)
+            for route_group_id in start_page.transition_route_groups:
+                if flow_id in self.route_group_data and route_group_id in self.route_group_data[flow_id]:
+                    route_group = self.route_group_data[flow_id][route_group_id]
+                    for route in route_group.transition_routes:
+                        if hasattr(route, "trigger_fulfillment") and route.trigger_fulfillment:
+                            route_ful_data = route.trigger_fulfillment
+                            if hasattr(route_ful_data, "set_parameter_actions") and route_ful_data.set_parameter_actions:
+                                for param_data in route_ful_data.set_parameter_actions:
+                                    param_name = param_data.parameter
+                                    #TODO: parse parameter value
+                                    param_value = param_data.value
+                                    flow_names.append(flow_name)
+                                    page_names.append("Start")
+                                    if hasattr(route, "intent") and route.intent and route.intent in self.intents_map:
+                                        route_intents.append(self.intents_map[route.intent])
+                                    else:
+                                        route_intents.append("")
+                                    route_events.append("")
+                                    route_group_names.append(route_group.display_name)
+                                    page_param_names.append("")
+                                    if hasattr(route, "condition") and route.condition:
+                                        route_conditions.append(route.condition)
+                                    else:
+                                        route_conditions.append("")
+                                    location_names.append("Route Group")
+                                    parameter_preset_names.append(param_name)
+                                    parameter_preset_values.append(param_value)
                                 
                                 
             #All Other Pages
@@ -667,8 +672,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                             
                                 #Form Filling Event Handlers
                                 if hasattr(page_ful_behavior, "reprompt_event_handlers") and page_ful_behavior.reprompt_event_handlers:
-                                    for event_handler in page_param.reprompt_event_handlers:
-                                        if hasattr(event_handler, "trigger_fulfillent") and event_handler.trigger_fulfillment:
+                                    for event_handler in page_ful_behavior.reprompt_event_handlers:
+                                        if hasattr(event_handler, "trigger_fulfillment") and event_handler.trigger_fulfillment:
                                             event_ful_data = event_handler.trigger_fulfillment
                                             if hasattr(event_ful_data, "set_parameter_actions") and event_ful_data.set_parameter_actions:
                                                 for param_data in event_ful_data.set_parameter_actions:
@@ -740,32 +745,33 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                 parameter_preset_values.append(param_value)
 
                 #Route Group Routes
-                for group in page.transition_route_groups:
-                    route_group = self.route_group_data[group]
-                    for route in route_group:
-                        if hasattr(route, "trigger_fulfillment") and route.trigger_fulfillment:
-                            route_ful_data = route.trigger_fulfillment
-                            if hasattr(route_ful_data, "set_parameter_actions") and route_ful_data.set_parameter_actions:
-                                for param_data in route_ful_data.set_parameter_actions:
-                                    param_name = param_data.parameter
-                                    #TODO: parse parameter value
-                                    param_value = param_data.value
-                                    flow_names.append(flow_name)
-                                    page_names.append(page_name)
-                                    if hasattr(route, "intent") and route.intent and route.intent in self.intents_map:
-                                        route_intents.append(self.intents_map[route.intent])
-                                    else:
-                                        route_intents.append("")
-                                    route_events.append("")
-                                    page_param_names.append("")
-                                    route_group_names.append(route_group.display_name)
-                                    if hasattr(route, "condition") and route.condition:
-                                        route_conditions.append(route.condition)
-                                    else:
-                                        route_conditions.append("")
-                                    location_names.append("Route Group")
-                                    parameter_preset_names.append(param_name)
-                                    parameter_preset_values.append(param_value)
+                for route_group_id in page.transition_route_groups:
+                    if flow_id in self.route_group_data and route_group_id in self.route_group_data[flow_id]:
+                        route_group = self.route_group_data[flow_id][route_group_id]
+                        for route in route_group.transition_routes:
+                            if hasattr(route, "trigger_fulfillment") and route.trigger_fulfillment:
+                                route_ful_data = route.trigger_fulfillment
+                                if hasattr(route_ful_data, "set_parameter_actions") and route_ful_data.set_parameter_actions:
+                                    for param_data in route_ful_data.set_parameter_actions:
+                                        param_name = param_data.parameter
+                                        #TODO: parse parameter value
+                                        param_value = param_data.value
+                                        flow_names.append(flow_name)
+                                        page_names.append(page_name)
+                                        if hasattr(route, "intent") and route.intent and route.intent in self.intents_map:
+                                            route_intents.append(self.intents_map[route.intent])
+                                        else:
+                                            route_intents.append("")
+                                        route_events.append("")
+                                        page_param_names.append("")
+                                        route_group_names.append(route_group.display_name)
+                                        if hasattr(route, "condition") and route.condition:
+                                            route_conditions.append(route.condition)
+                                        else:
+                                            route_conditions.append("")
+                                        location_names.append("Route Group")
+                                        parameter_preset_names.append(param_name)
+                                        parameter_preset_values.append(param_value)
                     
                     
         #Combine Lists to DataFrame
@@ -984,11 +990,11 @@ class SearchUtil(scrapi_base.ScrapiBase):
             agent_id = self.agent_id
 
         agent_results = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
+        flows_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
 
-        for flow_display_name in flow_map.keys():
+        for flow_display_name in flows_map.keys():
             flow_scan = self._find_true_routes_flow_level(
-                flow_display_name, flow_map
+                flow_display_name, flows_map
             )
             agent_results = pd.concat([agent_results, flow_scan])
         return agent_results
