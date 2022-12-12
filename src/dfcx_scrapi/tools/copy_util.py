@@ -1133,9 +1133,6 @@ class CopyUtil(ScrapiBase):
         """
         flows_map = self.flows.get_flows_map(agent_id, reverse=True)
         # Get the route groups for the source flow, and all the maps
-        source_route_groups_map = self.route_groups.get_route_groups_map(
-            flows_map[source_flow], reverse=True
-        )
         target_route_groups_map = self.route_groups.get_route_groups_map(
             flows_map[target_flow], reverse=True
         )
