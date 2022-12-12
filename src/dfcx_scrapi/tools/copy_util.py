@@ -1,4 +1,4 @@
-"""A set of Utility methods to copy DFCX Resources."""
+"""A set of Utility methods to copy DFCX Resource."""
 
 # Copyright 2022 Google LLC
 #
