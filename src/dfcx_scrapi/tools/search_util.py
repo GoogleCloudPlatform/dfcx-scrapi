@@ -77,6 +77,21 @@ class SearchUtil(scrapi_base.ScrapiBase):
             )
             self.intents_map = self.intents.get_intents_map(agent_id)
             self.client_options = self._set_region(agent_id)
+            self.flow_data = {}
+            for flow_id in self.flows_map.keys():
+                self.flow_data[flow_id] = self.flows.get_flow(flow_id=flow_id)
+            self.page_data = {}
+            for flow_id in self.flows_map.keys():
+                page_list = self.pages.list_pages(flow_id=flow_id)
+                self.page_data[flow_id] = {page.name: page for page in page_list}
+            self.route_group_data = {}
+            for flow_id in self.flows_map.keys():
+                route_group_list = self.route_groups.list_transition_route_groups(
+                    flow_id=flow_id
+                )
+                self.route_group_data[flow_id] = {
+                    route_group.name: route_group for route_group in route_group_list
+                }
 
     @staticmethod
     def get_route_df(page_df: pd.DataFrame, route_group_df: pd.DataFrame):
@@ -496,7 +511,290 @@ class SearchUtil(scrapi_base.ScrapiBase):
                         params_list.append(param.display_name)
 
         return params_list
+    
+    def search_param_presets(self, flow_name_list=None, search):
+        if flow_name_list is None:
+            flow_id_list = list(flows_map.values())
+        if type(flow_name_list) == str:
+            if flow_name_list in flows_map:
+                flow_id_list = list(flows_map[flow_name_list])
+            else:
+                raise TypeError("Flow not found")
+        if type(flow_name_list) != list:
+            raise TypeError("flow_id_name parameter needs to be a list of flow names")
+            
+        flow_names = []
+        page_names = []
+        route_intents = []
+        route_events = []
+        route_group_names = []
+        route_conditions = []
+        page_param_names = []
+        location_names = []
+        parameter_preset_names = []
+        parameter_preset_values = []
+        
+        for flow_id in flow_id_list:
+            #Start Page
+            start_page = self.flow_data[flow_id]
+            flow_name = start_page.display_name
+            #Event Handlers
+            for event_handler in start_page.event_handlers:
+                if hasattr(event_handler, "trigger_fulfillent") 
+                    and event_handler.trigger_fulfillment:
+                    event_ful_data = event_handler.trigger_fulfillment
+                    if hasattr(event_ful_data, "set_parameter_actions") 
+                        and event_ful_data.set_parameter_actions:
+                        for param_data in event_ful_data.set_parameter_actions:
+                            param_name = param_data.parameter
+                            #TODO: parse parameter value
+                            param_value = param_data.value
+                            flow_names.append(flow_name)
+                            page_names.append("Start")
+                            route_intents.append("")
+                            route_events.append(event_handler.event)
+                            route_group_names.append("")
+                            page_param_names.append("")
+                            if hasattr(event_handler, "condition") and event_handler.condition:
+                                route_conditions.append(event_handler.condition)
+                            else:
+                                route_conditions.append("")
+                            location_names.append("Event Handler")
+                            parameter_preset_names.append(param_name)
+                            parameter_preset_values.append(param_value)
+                
+            #Transition Routes
+            for route in start_page.transition_routes:
+                if hasattr(route, "trigger_fulfillment")
+                    and route.trigger_fulfillment:
+                    route_ful_data = route.trigger_fulfillment
+                    if hasattr(route_ful_data, "set_parameter_actions") 
+                        and route_ful_data.set_parameter_actions:
+                        for param_data in route_ful_data.set_parameter_actions:
+                            param_name = param_data.parameter
+                            #TODO: parse parameter value
+                            param_value = param_data.value
+                            flow_names.append(flow_name)
+                            page_names.append("Start")
+                            if hasattr(route, "intent") and route.intent and route.intent in self.intents_map:
+                                route_intents.append(self.intents_map[route.intent])
+                            else:
+                                route_intents.append("")
+                            route_events.append("")
+                            route_group_names.append("")
+                            page_param_names.append("")
+                            if hasattr(route, "condition") and route.condition:
+                                route_conditions.append(route.condition)
+                            else:
+                                route_conditions.append("")
+                            location_names.append("Transition Route")
+                            parameter_preset_names.append(param_name)
+                            parameter_preset_values.append(param_value)
+                            
+            #Route Group Routes
+            for group in start_page.transition_route_groups:
+                route_group = self.route_group_data[group]
+                for route in route_group:
+                    if hasattr(route, "trigger_fulfillment")
+                        and route.trigger_fulfillment:
+                        route_ful_data = route.trigger_fulfillment
+                        if hasattr(route_ful_data, "set_parameter_actions") 
+                            and route_ful_data.set_parameter_actions:
+                            for param_data in route_ful_data.set_parameter_actions:
+                                param_name = param_data.parameter
+                                #TODO: parse parameter value
+                                param_value = param_data.value
+                                flow_names.append(flow_name)
+                                page_names.append("Start")
+                                if hasattr(route, "intent") and route.intent and route.intent in self.intents_map:
+                                    route_intents.append(self.intents_map[route.intent])
+                                else:
+                                    route_intents.append("")
+                                route_events.append("")
+                                route_group_names.append(route_group.display_name)
+                                page_param_names.append("")
+                                if hasattr(route, "condition") and route.condition:
+                                    route_conditions.append(route.condition)
+                                else:
+                                    route_conditions.append("")
+                                location_names.append("Route Group")
+                                parameter_preset_names.append(param_name)
+                                parameter_preset_values.append(param_value)
+                                
+                                
+            #All Other Pages
+            for page in self.page_data[flow_id].values():
+                page_name = page.display_name
+                
+                #Entry Fulfillment
+                if hasattr(page, "entry_fulfillment") and page.entry_fulfillment:
+                    page_ful = page.entry_fulfillment
+                    if hasattr(page_ful, "set_parameter_actions") and page_ful.set_parameter_actions:
+                        for param_data in page_ful.set_parameter_actions:
+                            param_name = param_data.parameter
+                            #TODO: parse parameter value
+                            param_value = param_data.value
+                            flow_names.append(flow_name)
+                            page_names.append(page_name)
+                            route_intents.append("")
+                            route_events.append("")
+                            page_param_names.append("")
+                            route_group_names.append("")
+                            route_conditions.append("")
+                            location_names.append("Entry Fulfillment")
+                            parameter_preset_names.append(param_name)
+                            parameter_preset_values.append(param_value)
+                
+                #Page Parameters
+                if hasattr(page, "form") and page.form:
+                    page_forms = page.form
+                    if hasattr(page_forms, "parameters") and page_forms.parameters:
+                        for page_param in page_forms.parameters:
+                            #Form Filling Parameter Presets
+                            if hasattr(page_param, "fill_behavior") and page_param.fill_behavior:
+                                page_ful_behavior = page_param.fill_behavior
+                                if hasattr(page_ful_behavior, "initial_prompt_fulfillment") and page_ful_behavior.initial_prompt_fulfillment
+                                    initial_page_ful = page_ful_behavior.initial_prompt_fulfillment
+                                    if hasattr(initial_page_ful, "set_parameter_actions") and initial_page_ful.set_parameter_actions:
+                                        for param_data in initial_page_ful.set_parameter_actions:
+                                            param_name = param_data.parameter
+                                            #TODO: parse parameter value
+                                            param_value = param_data.value
+                                            flow_names.append(flow_name)
+                                            page_names.append(page_name)
+                                            route_intents.append("")
+                                            route_events.append("")
+                                            page_param_names.append(page_param.display_name)
+                                            route_group_names.append("")
+                                            route_conditions.append("")
+                                            location_names.append("Form Filling")
+                                            parameter_preset_names.append(param_name)
+                                            parameter_preset_values.append(param_value)
+                                            
+                                #Form Filling Event Handlers
+                                if hasattr(page_ful_behavior, "reprompt_event_handlers") and page_ful_behavior.reprompt_event_handlers:
+                                    for event_handler in page_param.reprompt_event_handlers:
+                                    if hasattr(event_handler, "trigger_fulfillent") 
+                                        and event_handler.trigger_fulfillment:
+                                        event_ful_data = event_handler.trigger_fulfillment
+                                        if hasattr(event_ful_data, "set_parameter_actions") 
+                                            and event_ful_data.set_parameter_actions:
+                                            for param_data in event_ful_data.set_parameter_actions:
+                                                param_name = param_data.parameter
+                                                #TODO: parse parameter value
+                                                param_value = param_data.value
+                                                flow_names.append(flow_name)
+                                                page_names.append(page_name)
+                                                route_intents.append("")
+                                                route_events.append(event_handler.event)
+                                                page_param_names.append(page_param.display_name)
+                                                route_group_names.append("")
+                                                if hasattr(event_handler, "condition") and event_handler.condition:
+                                                    route_conditions.append(event_handler.condition)
+                                                else:
+                                                    route_conditions.append("")
+                                                location_names.append("Form Filling Event Handler")
+                                                parameter_preset_names.append(param_name)
+                                                parameter_preset_values.append(param_value)
+                                        
+                                                                                           
+                #Event Handlers
+                for event_handler in page.event_handlers:
+                    if hasattr(event_handler, "trigger_fulfillent") 
+                        and event_handler.trigger_fulfillment:
+                        event_ful_data = event_handler.trigger_fulfillment
+                        if hasattr(event_ful_data, "set_parameter_actions") 
+                            and event_ful_data.set_parameter_actions:
+                            for param_data in event_ful_data.set_parameter_actions:
+                                param_name = param_data.parameter
+                                #TODO: parse parameter value
+                                param_value = param_data.value
+                                flow_names.append(flow_name)
+                                page_names.append(page_name)
+                                route_intents.append("")
+                                route_events.append(event_handler.event)
+                                page_param_names.append("")
+                                route_group_names.append("")
+                                if hasattr(event_handler, "condition") and event_handler.condition:
+                                    route_conditions.append(event_handler.condition)
+                                else:
+                                    route_conditions.append("")
+                                location_names.append("Event Handler")
+                                parameter_preset_names.append(param_name)
+                                parameter_preset_values.append(param_value)
 
+                #Transition Routes
+                for route in page.transition_routes:
+                    if hasattr(route, "trigger_fulfillment")
+                        and route.trigger_fulfillment:
+                        route_ful_data = route.trigger_fulfillment
+                        if hasattr(route_ful_data, "set_parameter_actions") 
+                            and route_ful_data.set_parameter_actions:
+                            for param_data in route_ful_data.set_parameter_actions:
+                                param_name = param_data.parameter
+                                #TODO: parse parameter value
+                                param_value = param_data.value
+                                flow_names.append(flow_name)
+                                page_names.append(page_name)
+                                if hasattr(route, "intent") and route.intent and route.intent in self.intents_map:
+                                    route_intents.append(self.intents_map[route.intent])
+                                else:
+                                    route_intents.append("")
+                                route_events.append("")
+                                page_param_names.append("")
+                                route_group_names.append("")
+                                if hasattr(route, "condition") and route.condition:
+                                    route_conditions.append(route.condition)
+                                else:
+                                    route_conditions.append("")
+                                location_names.append("Transition Route")
+                                parameter_preset_names.append(param_name)
+                                parameter_preset_values.append(param_value)
+
+                #Route Group Routes
+                for group in page.transition_route_groups:
+                    route_group = self.route_group_data[group]
+                    for route in route_group:
+                        if hasattr(route, "trigger_fulfillment")
+                            and route.trigger_fulfillment:
+                            route_ful_data = route.trigger_fulfillment
+                            if hasattr(route_ful_data, "set_parameter_actions") 
+                                and route_ful_data.set_parameter_actions:
+                                for param_data in route_ful_data.set_parameter_actions:
+                                    param_name = param_data.parameter
+                                    #TODO: parse parameter value
+                                    param_value = param_data.value
+                                    flow_names.append(flow_name)
+                                    page_names.append(page_name)
+                                    if hasattr(route, "intent") and route.intent and route.intent in self.intents_map:
+                                        route_intents.append(self.intents_map[route.intent])
+                                    else:
+                                        route_intents.append("")
+                                    route_events.append("")
+                                    page_param_names.append("")
+                                    route_group_names.append(route_group.display_name)
+                                    if hasattr(route, "condition") and route.condition:
+                                        route_conditions.append(route.condition)
+                                    else:
+                                        route_conditions.append("")
+                                    location_names.append("Route Group")
+                                    parameter_preset_names.append(param_name)
+                                    parameter_preset_values.append(param_value)
+                    
+                    
+        #Combine Lists to DataFrame
+        return pd.DataFrame({"flow":flow_names, 
+        "page":page_names,
+        "intent":route_intents,
+        "event":route_events,
+        "route_group":route_group_names,
+        "condition":route_conditions,
+        "form_filling":page_param_names,
+        "location":location_names,
+        "param_name":parameter_preset_names,
+        "param_value":parameter_preset_values})
+    
+    
     def search_conditionals_page(self, page_id, search):
         """Search page for an exact string in conditional routes
 
