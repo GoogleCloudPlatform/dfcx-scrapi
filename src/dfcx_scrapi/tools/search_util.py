@@ -706,7 +706,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
                                 #Form Filling Event Handlers
                                 if hasattr(fill_behavior, "reprompt_event_handlers") and fill_behavior.reprompt_event_handlers:
-                                    for event_handler in page_ful_behavior.reprompt_event_handlers:
+                                    for event_handler in fill_behavior.reprompt_event_handlers:
                                         df = self.get_param_presets_helper(flow_name, page_name, event_handler, page_param_name, "")
                                         param_dfs.append(df)
                                         """
