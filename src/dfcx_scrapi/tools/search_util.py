@@ -548,131 +548,108 @@ class SearchUtil(scrapi_base.ScrapiBase):
             )
 
         param_dfs = []
-
         for flow_id in flow_id_list:
             #Start Page
             start_page = self.flow_data[flow_id]
             flow_name = start_page.display_name
-            #Event Handlers
-            for event_handler in start_page.event_handlers:
-                df = self.get_param_presets_helper(
-                    flow_name,
-                    "Start",
-                    event_handler,
-                    "",
-                    ""
-                )
-                param_dfs.append(df)
-
-            #Transition Routes
-            for route in start_page.transition_routes:
-                df = self.get_param_presets_helper(
-                    flow_name,
-                    "Start",
-                    route,
-                    "",
-                    ""
-                )
-                param_dfs.append(df)
-
-            #Route Group Routes
-            for route_group_id in start_page.transition_route_groups:
-                if flow_id in self.route_group_data and route_group_id in self.route_group_data[flow_id]:
-                    route_group = self.route_group_data[flow_id][route_group_id]
-                    route_group_name = route_group.display_name
-                    for route in route_group.transition_routes:
-                        df = self.get_param_presets_helper(
-                            flow_name,
-                            "Start",
-                            route,
-                            "",
-                            route_group_name
-                        )
-                        param_dfs.append(df)
-
+            df = self.process_param_presets_in_page(flow_name, start_page)
+            param_dfs.append(df)
             #All Other Pages
             for page in self.page_data[flow_id].values():
-                page_name = page.display_name
-
-                #Entry Fulfillment
-                df = self.get_param_presets_helper(
-                    flow_name,
-                    page_name,
-                    page,
-                    "",
-                    ""
-                )
+                #page_name = page.display_name
+                df = self.process_param_presets_in_page(flow_name, page)
                 param_dfs.append(df)
-
-                #Page Parameters
-                if hasattr(page, "form") and page.form:
-                    page_forms = page.form
-                    if hasattr(page_forms, "parameters") and page_forms.parameters:
-                        for page_param in page_forms.parameters:
-                            page_param_name = page_param.display_name
-                            #Form Filling Parameter Presets
-                            if hasattr(page_param, "fill_behavior") and page_param.fill_behavior:
-                                fill_behavior = page_param.fill_behavior
-                                df = self.get_param_presets_helper(
-                                    flow_name,
-                                    page_name,
-                                    fill_behavior,
-                                    page_param_name,
-                                    ""
-                                )
-                                param_dfs.append(df)
-
-                                #Form Filling Event Handlers
-                                if hasattr(fill_behavior, "reprompt_event_handlers") and fill_behavior.reprompt_event_handlers:
-                                    for event_handler in fill_behavior.reprompt_event_handlers:
-                                        df = self.get_param_presets_helper(
-                                            flow_name,
-                                            page_name,
-                                            event_handler,
-                                            page_param_name,
-                                            ""
-                                        )
-                                        param_dfs.append(df)
-
-                #Event Handlers
-                for event_handler in page.event_handlers:
-                    df = self.get_param_presets_helper(
-                        flow_name,
-                        page_name,
-                        event_handler,
-                        "",
-                        ""
-                    )
-                    param_dfs.append(df)
-
-                #Transition Routes
-                for route in page.transition_routes:
-                    df = self.get_param_presets_helper(
-                        flow_name,
-                        page_name,
-                        route,
-                        "",
-                        ""
-                    )
-                    param_dfs.append(df)
-
-                #Route Group Routes
-                for route_group_id in page.transition_route_groups:
-                    if flow_id in self.route_group_data and route_group_id in self.route_group_data[flow_id]:
-                        route_group = self.route_group_data[flow_id][route_group_id]
-                        route_group_name = route_group.display_name
-                        for route in route_group.transition_routes:
-                            df = self.get_param_presets_helper(
-                                flow_name,
-                                page_name,
-                                route,
-                                "",
-                                route_group_name
-                            )
-                            param_dfs.append(df)
-
         #Combine Lists to DataFrame
         return pd.concat(param_dfs)
+    
+    def process_param_presets_in_page(self, flow, page):
+        page_name = page.display_name
+        if page_name == flow:
+            page_name = "Start"
+        df_list = []
+        # Entry fulfillment
+        df = self.get_param_presets_helper(
+            flow, 
+            page_name, 
+            page, 
+            "", 
+            ""
+        )
+        df_list.append(df)
+        #Page Parameters
+        if hasattr(page, "form") and page.form:
+            if hasattr(page.form, "parameters") and page.form.parameters:
+                for page_param in page.form.parameters:
+                    df = self.process_param_presets_in_form(flow, page_name, page_param)
+                    df_list.append(df)
+        #Event Handlers
+        for event_handler in page.event_handlers:
+            df = self.get_param_presets_helper(
+                flow,
+                page_name,
+                event_handler,
+                "",
+                ""
+            )
+            df_list.append(df)
+        #Transition Routes
+        for route in page.transition_routes:
+            df = self.get_param_presets_helper(
+                flow,
+                page_name,
+                route,
+                "",
+                ""
+            )
+            df_list.append(df)
+        #Route Group Routes
+        for route_group_id in page.transition_route_groups:
+            if flow_id in self.route_group_data and route_group_id in self.route_group_data[flow_id]:
+                route_group = self.route_group_data[flow_id][route_group_id]
+                df = self.process_param_presets_in_route_group(flow, page_name, route_group)
+                df_list.append(df)
+        return pd.concat(df_list)
+    
+    def process_param_presets_in_form(self, flow, page, page_param):
+        df_list = []
+        page_param_name = page_param.display_name
+        #Form Filling Parameter Presets
+        if hasattr(page_param, "fill_behavior") and page_param.fill_behavior:
+            fill_behavior = page_param.fill_behavior
+            df = self.get_param_presets_helper(
+                flow,
+                page,
+                fill_behavior,
+                page_param_name,
+                ""
+            )
+            df_list.append(df)
+            #Form Filling Event Handlers
+            if hasattr(fill_behavior, "reprompt_event_handlers") and fill_behavior.reprompt_event_handlers:
+                for event_handler in fill_behavior.reprompt_event_handlers:
+                    df = self.get_param_presets_helper(
+                        flow,
+                        page,
+                        event_handler,
+                        page_param_name,
+                        ""
+                    )
+                    df_list.append(df)
+        return pd.concat(df_list)
+    
+    def process_param_presets_in_route_group(self, flow, page, route_group):
+        df_list = []
+        route_group_name = route_group.display_name
+        for route in route_group.transition_routes:
+            df = self.get_param_presets_helper(
+                flow,
+                page,
+                route,
+                "",
+                route_group_name
+            )
+            df_list.append(df)
+        return pd.concat(df_list)
 
     def get_param_presets_helper(self, flow, page, cx_obj, page_param, route_group):
         flow_names = []
