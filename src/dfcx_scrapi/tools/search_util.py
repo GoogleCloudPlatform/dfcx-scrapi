@@ -553,7 +553,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             param_name,
             param_value
         """
-        
+
         flow_id_list = []
         if flow_name_list is None:
             flow_id_list = list(self.flows_map.values())
@@ -608,7 +608,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             param_name,
             param_value
         """
-        
+
         page_name = page.display_name
         if page_name == flow_name:
             page_name = "Start"
@@ -668,15 +668,15 @@ class SearchUtil(scrapi_base.ScrapiBase):
         return None
 
     def process_param_presets_in_form(self, flow_name, page_name, page_param):
-        """For a given form filling parameter finds all parameter 
+        """For a given form filling parameter finds all parameter
         presets and returns a dataframe.
 
-        
+
         Args:
           flow_name: plain text (string) name of flow reference.
           page_name: plain text (string) name of page reference.
           page_param: DFCX page_param object.
-          
+
         Returns:
           Dataframe of parameter presets with columns:
             flow,
@@ -690,7 +690,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             param_name,
             param_value
         """
-        
+
         df_list = []
         page_param_name = page_param.display_name
         #Form Filling Parameter Presets
@@ -722,12 +722,12 @@ class SearchUtil(scrapi_base.ScrapiBase):
     def process_param_presets_in_route_group(self, flow_name, page_name, route_group):
         """For a given route_group finds all parameter presets and
         returns a dataframe.
-        
+
         Args:
           flow_name: plain text (string) name of flow reference.
           page_name: plain text (string) name of page reference.
           route_group: DFCX route_group object.
-          
+
         Returns:
           Dataframe of parameter presets with columns:
             flow,
@@ -741,7 +741,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             param_name,
             param_value
         """
-        
+
         df_list = []
         route_group_name = route_group.display_name
         for route in route_group.transition_routes:
@@ -759,14 +759,14 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
     def get_param_presets_helper(self, flow_name, page_name, cx_obj, page_param, route_group):
         """Combines parameter presets into a dataframe for a given CX object
-        
+
         Args:
           flow_name: plain text (string) name of flow reference.
           page_name: plain text (string) name of page reference.
           cx_obj: DFCX object ie: flow, page, route, etc.
           page_param: plain text (string) name of page_param reference.
           route_group: plain text (string) name of route_group reference.
-          
+
         Returns:
           Dataframe of parameter presets with columns:
             flow,
@@ -780,7 +780,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             param_name,
             param_value
         """
-        
+
         flow_names = []
         page_names = []
         route_intents = []
@@ -855,9 +855,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
         })
 
     def convert_protobuf(self, obj):
-        """Recursive function to convert protobuf object to 
+        """Recursive function to convert protobuf object to
         python object with lists and/or dictionaries"""
-        
+
         if isinstance(obj, MapComposite):
             res = {}
             for key, value in obj.items():
