@@ -821,43 +821,47 @@ class SearchUtil(scrapi_base.ScrapiBase):
             fulfillment_type = "initial_prompt_fulfillment"
             location = "Parameter Filling"
 
-        if hasattr(cxobj, fulfillment_type):
-            if getattr(cxobj, fulfillment_type):
-                ful_data = getattr(cxobj, fulfillment_type)
-                if hasattr(ful_data, "set_parameter_actions"):
-                    if ful_data.set_parameter_actions:
-                        for param_data in ful_data.set_parameter_actions:
-                            param_name = param_data.parameter
-                            #TODO: parse parameter value
-                            param_value = param_data.value
-                            if isinstance(param_value, MapComposite):
-                                param_value=self.convert_protobuf(param_value)
-                            if isinstance(param_value, RepeatedComposite):
-                                param_value=self.convert_protobuf(param_value)
-                            flow_names.append(flow_name)
-                            page_names.append(page_name)
-                            if hasattr(cxobj, "intent") and cxobj.intent:
-                                if cxobj.intent in self.intents_map:
-                                    route_intents.append(
-                                        self.intents_map[cxobj.intent]
-                                    )
-                                else:
-                                    route_intents.append("")
-                            else:
-                                route_intents.append("")
-                            if hasattr(cxobj, "event") and cxobj.event:
-                                route_events.append(cxobj.event)
-                            else:
-                                route_events.append("")
-                            route_group_names.append(route_group)
-                            page_param_names.append(page_param)
-                            if hasattr(cxobj,"condition") and cxobj.condition:
-                                route_conditions.append(cxobj.condition)
-                            else:
-                                route_conditions.append("")
-                            location_names.append(location)
-                            parameter_preset_names.append(param_name)
-                            parameter_preset_values.append(param_value)
+        # Error checking
+        if not hasattr(cxobj, fulfillment_type):
+            return None
+        if not getattr(cxobj, fulfillment_type):
+            return None
+        ful_data = getattr(cxobj, fulfillment_type)
+        if not hasattr(ful_data, "set_parameter_actions"):
+            return None
+        if not ful_data.set_parameter_actions:
+            return None
+
+        for param_data in ful_data.set_parameter_actions:
+            param_name = param_data.parameter
+            #TODO: parse parameter value
+            param_value = param_data.value
+            if isinstance(param_value, MapComposite):
+                param_value=self.convert_protobuf(param_value)
+            if isinstance(param_value, RepeatedComposite):
+                param_value=self.convert_protobuf(param_value)
+            flow_names.append(flow_name)
+            page_names.append(page_name)
+            if hasattr(cxobj, "intent") and cxobj.intent:
+                if cxobj.intent in self.intents_map:
+                    route_intents.append(self.intents_map[cxobj.intent])
+                else:
+                    route_intents.append("")
+            else:
+                route_intents.append("")
+            if hasattr(cxobj, "event") and cxobj.event:
+                route_events.append(cxobj.event)
+            else:
+                route_events.append("")
+            route_group_names.append(route_group)
+            page_param_names.append(page_param)
+            if hasattr(cxobj,"condition") and cxobj.condition:
+                route_conditions.append(cxobj.condition)
+            else:
+                route_conditions.append("")
+            location_names.append(location)
+            parameter_preset_names.append(param_name)
+            parameter_preset_values.append(param_value)
 
         return pd.DataFrame({"flow": flow_names,
             "page": page_names,
