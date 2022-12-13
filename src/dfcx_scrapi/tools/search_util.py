@@ -538,17 +538,6 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 "flow_name_list parameter needs to be a list of flow names"
             )
 
-        flow_names = []
-        page_names = []
-        route_intents = []
-        route_events = []
-        route_group_names = []
-        route_conditions = []
-        page_param_names = []
-        location_names = []
-        parameter_preset_names = []
-        parameter_preset_values = []
-
         param_dfs = []
 
         for flow_id in flow_id_list:
@@ -557,12 +546,24 @@ class SearchUtil(scrapi_base.ScrapiBase):
             flow_name = start_page.display_name
             #Event Handlers
             for event_handler in start_page.event_handlers:
-                df = self.get_param_presets_helper(flow_name, 'Start', event_handler, "", "")
+                df = self.get_param_presets_helper(
+                    flow_name,
+                    "Start",
+                    event_handler,
+                    "",
+                    ""
+                )
                 param_dfs.append(df)
 
             #Transition Routes
             for route in start_page.transition_routes:
-                df = self.get_param_presets_helper(flow_name, 'Start', route, "", "")
+                df = self.get_param_presets_helper(
+                    flow_name,
+                    "Start",
+                    route,
+                    "",
+                    ""
+                )
                 param_dfs.append(df)
 
             #Route Group Routes
@@ -571,7 +572,13 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     route_group = self.route_group_data[flow_id][route_group_id]
                     route_group_name = route_group.display_name
                     for route in route_group.transition_routes:
-                        df = self.get_param_presets_helper(flow_name, 'Start', route, "", route_group_name)
+                        df = self.get_param_presets_helper(
+                            flow_name,
+                            "Start",
+                            route,
+                            "",
+                            route_group_name
+                        )
                         param_dfs.append(df)
 
             #All Other Pages
@@ -579,7 +586,13 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 page_name = page.display_name
 
                 #Entry Fulfillment
-                df = self.get_param_presets_helper(flow_name, page_name, page, "", "")
+                df = self.get_param_presets_helper(
+                    flow_name,
+                    page_name,
+                    page,
+                    "",
+                    ""
+                )
                 param_dfs.append(df)
 
                 #Page Parameters
@@ -591,23 +604,47 @@ class SearchUtil(scrapi_base.ScrapiBase):
                             #Form Filling Parameter Presets
                             if hasattr(page_param, "fill_behavior") and page_param.fill_behavior:
                                 fill_behavior = page_param.fill_behavior
-                                df = self.get_param_presets_helper(flow_name, page_name, fill_behavior, page_param_name, "")
+                                df = self.get_param_presets_helper(
+                                    flow_name,
+                                    page_name,
+                                    fill_behavior,
+                                    page_param_name,
+                                    ""
+                                )
                                 param_dfs.append(df)
 
                                 #Form Filling Event Handlers
                                 if hasattr(fill_behavior, "reprompt_event_handlers") and fill_behavior.reprompt_event_handlers:
                                     for event_handler in fill_behavior.reprompt_event_handlers:
-                                        df = self.get_param_presets_helper(flow_name, page_name, event_handler, page_param_name, "")
+                                        df = self.get_param_presets_helper(
+                                            flow_name,
+                                            page_name,
+                                            event_handler,
+                                            page_param_name,
+                                            ""
+                                        )
                                         param_dfs.append(df)
 
                 #Event Handlers
                 for event_handler in page.event_handlers:
-                    df = self.get_param_presets_helper(flow_name, page_name, event_handler, "", "")
+                    df = self.get_param_presets_helper(
+                        flow_name,
+                        page_name,
+                        event_handler,
+                        "",
+                        ""
+                    )
                     param_dfs.append(df)
 
                 #Transition Routes
                 for route in page.transition_routes:
-                    df = self.get_param_presets_helper(flow_name, page_name, route, "", "")
+                    df = self.get_param_presets_helper(
+                        flow_name,
+                        page_name,
+                        route,
+                        "",
+                        ""
+                    )
                     param_dfs.append(df)
 
                 #Route Group Routes
@@ -616,7 +653,13 @@ class SearchUtil(scrapi_base.ScrapiBase):
                         route_group = self.route_group_data[flow_id][route_group_id]
                         route_group_name = route_group.display_name
                         for route in route_group.transition_routes:
-                            df = self.get_param_presets_helper(flow_name, page_name, route, "", route_group_name)
+                            df = self.get_param_presets_helper(
+                                flow_name,
+                                page_name,
+                                route,
+                                "",
+                                route_group_name
+                            )
                             param_dfs.append(df)
 
         #Combine Lists to DataFrame
