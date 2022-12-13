@@ -83,15 +83,17 @@ class SearchUtil(scrapi_base.ScrapiBase):
             self.page_data = {}
             for flow_id in self.flows_map.values():
                 page_list = self.pages.list_pages(flow_id=flow_id)
-                self.page_data[flow_id] = {page.name: page for page in page_list}
+                self.page_data[flow_id] = {
+                    page.name: page for page in page_list
+                }
             self.route_group_data = {}
             for flow_id in self.flows_map.values():
-                route_group_list = self.route_groups.list_transition_route_groups(
+                group_list = self.route_groups.list_transition_route_groups(
                     flow_id=flow_id
                 )
-                self.route_group_data[flow_id] = {
-                    route_group.name: route_group for route_group in route_group_list
-                }
+                self.route_group_data[flow_id] = {}
+                for route_group in group_list:
+                    self.route_group_data[route_group.name] = route_group
 
     @staticmethod
     def get_route_df(page_df: pd.DataFrame, route_group_df: pd.DataFrame):
@@ -116,7 +118,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
         """
         routes_df = (
             pd.concat(
-                [page_df[["flow_name", "page_name", "routes"]], route_group_df],
+                [page_df[["flow_name", "page_name", "routes"]],
+                route_group_df],
                 ignore_index=True,
             )
             .explode("routes", ignore_index=True)
@@ -511,22 +514,24 @@ class SearchUtil(scrapi_base.ScrapiBase):
                         params_list.append(param.display_name)
 
         return params_list
-    
+
     def get_param_presets_df(self, flow_name_list=None):
         flow_id_list = []
         if flow_name_list is None:
             flow_id_list = list(self.flows_map.values())
-        elif type(flow_name_list) == list:
+        elif isinstance(flow_name_list, list):
             for flow_name in flow_name_list:
                 flow_id_list.append(self.flows_map[flow_name])
-        elif type(flow_name_list) == str:
+        elif isinstance(flow_name_list, str):
             if flow_name_list in self.flows_map:
                 flow_id_list = list(self.flows_map[flow_name_list])
             else:
                 raise TypeError("Flow not found")
         else:
-            raise TypeError("flow_name_list parameter needs to be a list of flow names")
-            
+            raise TypeError(
+                "flow_name_list parameter needs to be a list of flow names"
+            )
+
         flow_names = []
         page_names = []
         route_intents = []
@@ -537,7 +542,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         location_names = []
         parameter_preset_names = []
         parameter_preset_values = []
-        
+
         for flow_id in flow_id_list:
             #Start Page
             start_page = self.flow_data[flow_id]
@@ -564,7 +569,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                             location_names.append("Event Handler")
                             parameter_preset_names.append(param_name)
                             parameter_preset_values.append(param_value)
-                
+
             #Transition Routes
             for route in start_page.transition_routes:
                 if hasattr(route, "trigger_fulfillment") and route.trigger_fulfillment:
@@ -590,7 +595,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                             location_names.append("Transition Route")
                             parameter_preset_names.append(param_name)
                             parameter_preset_values.append(param_value)
-                            
+
             #Route Group Routes
             for route_group_id in start_page.transition_route_groups:
                 if flow_id in self.route_group_data and route_group_id in self.route_group_data[flow_id]:
@@ -619,12 +624,11 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                     location_names.append("Route Group")
                                     parameter_preset_names.append(param_name)
                                     parameter_preset_values.append(param_value)
-                                
-                                
+
             #All Other Pages
             for page in self.page_data[flow_id].values():
                 page_name = page.display_name
-                
+
                 #Entry Fulfillment
                 if hasattr(page, "entry_fulfillment") and page.entry_fulfillment:
                     page_ful = page.entry_fulfillment
@@ -643,7 +647,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                             location_names.append("Entry Fulfillment")
                             parameter_preset_names.append(param_name)
                             parameter_preset_values.append(param_value)
-                
+
                 #Page Parameters
                 if hasattr(page, "form") and page.form:
                     page_forms = page.form
@@ -669,7 +673,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                             location_names.append("Form Filling")
                                             parameter_preset_names.append(param_name)
                                             parameter_preset_values.append(param_value)
-                                            
+
                                 #Form Filling Event Handlers
                                 if hasattr(page_ful_behavior, "reprompt_event_handlers") and page_ful_behavior.reprompt_event_handlers:
                                     for event_handler in page_ful_behavior.reprompt_event_handlers:
@@ -693,8 +697,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                                     location_names.append("Form Filling Event Handler")
                                                     parameter_preset_names.append(param_name)
                                                     parameter_preset_values.append(param_value)
-                                        
-                                                                                           
+
                 #Event Handlers
                 for event_handler in page.event_handlers:
                     if hasattr(event_handler, "trigger_fulfillent") and event_handler.trigger_fulfillment:
@@ -772,10 +775,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                         location_names.append("Route Group")
                                         parameter_preset_names.append(param_name)
                                         parameter_preset_values.append(param_value)
-                    
-                    
+
         #Combine Lists to DataFrame
-        return pd.DataFrame({"flow":flow_names, 
+        return pd.DataFrame({"flow":flow_names,
             "page":page_names,
             "intent":route_intents,
             "event":route_events,
@@ -786,8 +788,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             "param_name":parameter_preset_names,
             "param_value":parameter_preset_values
         })
-    
-    
+
     def search_conditionals_page(self, page_id, search):
         """Search page for an exact string in conditional routes
 
@@ -1244,7 +1245,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         # add in the start pages (flow objects)
         page_df = pd.concat(
-            [page_df, flow_df.assign(page_name="START_PAGE")], ignore_index=True
+            [page_df, flow_df.assign(page_name="START_PAGE")],
+            ignore_index=True
         ).drop(columns="flow_id")
 
         return page_df
