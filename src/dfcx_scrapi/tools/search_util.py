@@ -655,8 +655,9 @@ class SearchUtil(scrapi_base.ScrapiBase):
         #Route Group Routes
         for route_group_id in page.transition_route_groups:
             flow_id = self.flows_map[flow_name]
-            if flow_id in self.route_group_data and route_group_id in self.route_group_data[flow_id]:
-                route_group = self.route_group_data[flow_id][route_group_id]
+            frgd = self.route_group_data[flow_id]
+            if flow_id in self.route_group_data and route_group_id in frgd:
+                route_group = frgd[route_group_id]
                 df = self.process_param_presets_in_route_group(
                     flow_name,
                     page_name,
@@ -705,21 +706,25 @@ class SearchUtil(scrapi_base.ScrapiBase):
             )
             df_list.append(df)
             #Form Filling Event Handlers
-            if hasattr(fill_behavior, "reprompt_event_handlers") and fill_behavior.reprompt_event_handlers:
-                for event_handler in fill_behavior.reprompt_event_handlers:
-                    df = self.get_param_presets_helper(
-                        flow_name,
-                        page_name,
-                        event_handler,
-                        page_param_name,
-                        ""
-                    )
-                    df_list.append(df)
+            if hasattr(fill_behavior, "reprompt_event_handlers"):
+                if fill_behavior.reprompt_event_handlers:
+                    for event_handler in fill_behavior.reprompt_event_handlers:
+                        df = self.get_param_presets_helper(
+                            flow_name,
+                            page_name,
+                            event_handler,
+                            page_param_name,
+                            ""
+                        )
+                        df_list.append(df)
         if len(df_list) > 0:
             return pd.concat(df_list)
         return None
 
-    def process_param_presets_in_route_group(self, flow_name, page_name, route_group):
+    def process_param_presets_in_route_group(self,
+                                             flow_name,
+                                             page_name,
+                                             route_group):
         """For a given route_group finds all parameter presets and
         returns a dataframe.
 
@@ -757,13 +762,18 @@ class SearchUtil(scrapi_base.ScrapiBase):
             return pd.concat(df_list)
         return None
 
-    def get_param_presets_helper(self, flow_name, page_name, cx_obj, page_param, route_group):
+    def get_param_presets_helper(self,
+                                 flow_name,
+                                 page_name,
+                                 cxobj,
+                                 page_param,
+                                 route_group):
         """Combines parameter presets into a dataframe for a given CX object
 
         Args:
           flow_name: plain text (string) name of flow reference.
           page_name: plain text (string) name of page reference.
-          cx_obj: DFCX object ie: flow, page, route, etc.
+          cxobj: DFCX object ie: flow, page, route, etc.
           page_param: plain text (string) name of page_param reference.
           route_group: plain text (string) name of route_group reference.
 
@@ -794,53 +804,60 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         fulfillment_type = ""
         location = ""
-        if isinstance(cx_obj, DFCXRoute):
+        if isinstance(cxobj, DFCXRoute):
             fulfillment_type = "trigger_fulfillment"
             location = "Transition Route"
             if route_group:
                 location = "Route Group"
-        elif isinstance(cx_obj, DFCXEventHandler):
+        elif isinstance(cxobj, DFCXEventHandler):
             fulfillment_type = "trigger_fulfillment"
             location = "Event Handler"
             if page_param:
                 location = "Form Filling Event Handler"
-        elif isinstance(cx_obj, DFCXPage):
+        elif isinstance(cxobj, DFCXPage):
             fulfillment_type = "entry_fulfillment"
             location = "Entry Fulfillment"
         else:
             fulfillment_type = "initial_prompt_fulfillment"
             location = "Parameter Filling"
 
-        if hasattr(cx_obj, fulfillment_type) and getattr(cx_obj, fulfillment_type):
-            ful_data = getattr(cx_obj, fulfillment_type)
-            if hasattr(ful_data, "set_parameter_actions") and ful_data.set_parameter_actions:
-                for param_data in ful_data.set_parameter_actions:
-                    param_name = param_data.parameter
-                    #TODO: parse parameter value
-                    param_value = param_data.value
-                    if isinstance(param_value, MapComposite):
-                        param_value = self.convert_protobuf(param_value)
-                    if isinstance(param_value, RepeatedComposite):
-                        param_value = self.convert_protobuf(param_value)
-                    flow_names.append(flow_name)
-                    page_names.append(page_name)
-                    if hasattr(cx_obj, "intent") and cx_obj.intent and cx_obj.intent in self.intents_map:
-                        route_intents.append(self.intents_map[cx_obj.intent])
-                    else:
-                        route_intents.append("")
-                    if hasattr(cx_obj, "event") and cx_obj.event:
-                        route_events.append(cx_obj.event)
-                    else:
-                        route_events.append("")
-                    route_group_names.append(route_group)
-                    page_param_names.append(page_param)
-                    if hasattr(cx_obj, "condition") and cx_obj.condition:
-                        route_conditions.append(cx_obj.condition)
-                    else:
-                        route_conditions.append("")
-                    location_names.append(location)
-                    parameter_preset_names.append(param_name)
-                    parameter_preset_values.append(param_value)
+        if hasattr(cxobj, fulfillment_type):
+            if getattr(cxobj, fulfillment_type):
+                ful_data = getattr(cxobj, fulfillment_type)
+                if hasattr(ful_data, "set_parameter_actions"):
+                    if ful_data.set_parameter_actions:
+                        for param_data in ful_data.set_parameter_actions:
+                            param_name = param_data.parameter
+                            #TODO: parse parameter value
+                            param_value = param_data.value
+                            if isinstance(param_value, MapComposite):
+                                param_value=self.convert_protobuf(param_value)
+                            if isinstance(param_value, RepeatedComposite):
+                                param_value=self.convert_protobuf(param_value)
+                            flow_names.append(flow_name)
+                            page_names.append(page_name)
+                            if hasattr(cxobj, "intent") and cxobj.intent:
+                                if cxobj.intent in self.intents_map:
+                                    route_intents.append(
+                                        self.intents_map[cxobj.intent]
+                                    )
+                                else:
+                                    route_intents.append("")
+                            else:
+                                route_intents.append("")
+                            if hasattr(cxobj, "event") and cxobj.event:
+                                route_events.append(cxobj.event)
+                            else:
+                                route_events.append("")
+                            route_group_names.append(route_group)
+                            page_param_names.append(page_param)
+                            if hasattr(cxobj,"condition") and cxobj.condition:
+                                route_conditions.append(cxobj.condition)
+                            else:
+                                route_conditions.append("")
+                            location_names.append(location)
+                            parameter_preset_names.append(param_name)
+                            parameter_preset_values.append(param_value)
 
         return pd.DataFrame({"flow": flow_names,
             "page": page_names,
