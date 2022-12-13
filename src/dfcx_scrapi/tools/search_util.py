@@ -870,8 +870,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
             fulfillment_type = "initial_prompt_fulfillment"
             location = "Parameter Filling"
 
-        if hasattr(cx_obj, fulfillment_type) and cx_obj[fulfillment_type]:
-            ful_data = cx_obj[fulfillment_type]
+        if hasattr(cx_obj, fulfillment_type) and getattr(cx_obj, fulfillment_type):
+            ful_data = getattr(cx_obj, fulfillment_type)
             if hasattr(ful_data, "set_parameter_actions") and ful_data.set_parameter_actions:
                 for param_data in ful_data.set_parameter_actions:
                     param_name = param_data.parameter
