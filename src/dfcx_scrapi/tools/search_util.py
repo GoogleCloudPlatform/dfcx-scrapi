@@ -877,8 +877,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     param_name = param_data.parameter
                     #TODO: parse parameter value
                     param_value = param_data.value
-                    flow_names.append(flow_name)
-                    page_names.append(page_name)
+                    flow_names.append(flow)
+                    page_names.append(page)
                     if hasattr(cx_obj, "intent") and cx_obj.intent and cx_obj.intent in self.intents_map:
                         route_intents.append(self.intents_map[cx_obj.intent])
                     else:
