@@ -30,6 +30,9 @@ from dfcx_scrapi.core import transition_route_groups
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 
+from proto.marshal.collections.maps import MapComposite
+from proto.marshal.collections.repeated import RepeatedComposite
+
 # Type aliases
 DFCXFlow = types.flow.Flow
 DFCXPage = types.page.Page
@@ -706,6 +709,10 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     param_name = param_data.parameter
                     #TODO: parse parameter value
                     param_value = param_data.value
+                    if isinstance(param_value, MapComposite):
+                        param_value = self.convert_protobuf(param_value)
+                    if isinstance(param_value, RepeatedComposite):
+                        param_value = self.convert_protobuf(param_value)
                     flow_names.append(flow_name)
                     page_names.append(page_name)
                     if hasattr(cx_obj, "intent") and cx_obj.intent and cx_obj.intent in self.intents_map:
@@ -737,6 +744,20 @@ class SearchUtil(scrapi_base.ScrapiBase):
             "param_name": parameter_preset_names,
             "param_value": parameter_preset_values
         })
+
+    def convert_protobuf(self, obj):
+        if isinstance(obj, MapComposite):
+            res = {}
+            for key, value in obj.items():
+                res[key] = self.convert_protobuf(value)
+            return res
+        elif isinstance(obj, RepeatedComposite):
+            res = []
+            for value in obj:
+                res.append(self.convert_protobuf(value))
+            return res
+        else:
+            return obj
 
     def search_conditionals_page(self, page_id, search):
         """Search page for an exact string in conditional routes
