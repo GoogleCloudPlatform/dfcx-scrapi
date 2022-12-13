@@ -562,7 +562,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
         #Combine Lists to DataFrame
         if len(param_dfs) > 0:
             return pd.concat(param_dfs).reset_index(drop=True)
-    
+        return None
+
     def process_param_presets_in_page(self, flow_name, page):
         page_name = page.display_name
         if page_name == flow_name:
@@ -570,10 +571,10 @@ class SearchUtil(scrapi_base.ScrapiBase):
         df_list = []
         # Entry fulfillment
         df = self.get_param_presets_helper(
-            flow_name, 
-            page_name, 
-            page, 
-            "", 
+            flow_name,
+            page_name,
+            page,
+            "",
             ""
         )
         df_list.append(df)
@@ -581,7 +582,11 @@ class SearchUtil(scrapi_base.ScrapiBase):
         if hasattr(page, "form") and page.form:
             if hasattr(page.form, "parameters") and page.form.parameters:
                 for page_param in page.form.parameters:
-                    df = self.process_param_presets_in_form(flow_name, page_name, page_param)
+                    df = self.process_param_presets_in_form(
+                        flow_name,
+                        page_name,
+                        page_param
+                    )
                     df_list.append(df)
         #Event Handlers
         for event_handler in page.event_handlers:
@@ -608,11 +613,16 @@ class SearchUtil(scrapi_base.ScrapiBase):
             flow_id = self.flows_map[flow_name]
             if flow_id in self.route_group_data and route_group_id in self.route_group_data[flow_id]:
                 route_group = self.route_group_data[flow_id][route_group_id]
-                df = self.process_param_presets_in_route_group(flow_name, page_name, route_group)
+                df = self.process_param_presets_in_route_group(
+                    flow_name,
+                    page_name,
+                    route_group
+                )
                 df_list.append(df)
         if len(df_list) > 0:
             return pd.concat(df_list)
-    
+        return None
+
     def process_param_presets_in_form(self, flow_name, page_name, page_param):
         df_list = []
         page_param_name = page_param.display_name
@@ -640,7 +650,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
                     df_list.append(df)
         if len(df_list) > 0:
             return pd.concat(df_list)
-    
+        return None
+
     def process_param_presets_in_route_group(self, flow_name, page_name, route_group):
         df_list = []
         route_group_name = route_group.display_name
@@ -655,6 +666,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             df_list.append(df)
         if len(df_list) > 0:
             return pd.concat(df_list)
+        return None
 
     def get_param_presets_helper(self, flow_name, page_name, cx_obj, page_param, route_group):
         flow_names = []
