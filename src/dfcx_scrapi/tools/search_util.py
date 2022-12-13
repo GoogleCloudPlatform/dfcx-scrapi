@@ -31,10 +31,10 @@ from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 
 # Type aliases
-DFCXFlow = dfcx_types.flow.Flow
-DFCXPage = dfcx_types.page.Page
-DFCXRoute = dfcx_types.page.TransitionRoute
-DFCXEventHandler = dfcx_types.page.EventHandler
+DFCXFlow = types.flow.Flow
+DFCXPage = types.page.Page
+DFCXRoute = types.page.TransitionRoute
+DFCXEventHandler = types.page.EventHandler
 
 # logging config
 logging.basicConfig(
