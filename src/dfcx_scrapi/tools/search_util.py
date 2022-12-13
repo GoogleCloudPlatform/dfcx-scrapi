@@ -30,6 +30,12 @@ from dfcx_scrapi.core import transition_route_groups
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 
+# Type aliases
+DFCXFlow = dfcx_types.flow.Flow
+DFCXPage = dfcx_types.page.Page
+DFCXRoute = dfcx_types.page.TransitionRoute
+DFCXEventHandler = dfcx_types.page.EventHandler
+
 # logging config
 logging.basicConfig(
     level=logging.INFO,
@@ -787,6 +793,76 @@ class SearchUtil(scrapi_base.ScrapiBase):
             "location":location_names,
             "param_name":parameter_preset_names,
             "param_value":parameter_preset_values
+        })
+
+    def get_param_presets_helper(flow, page, cx_obj, page_param, route_group):
+        flow_names = []
+        page_names = []
+        route_intents = []
+        route_events = []
+        route_group_names = []
+        route_conditions = []
+        page_param_names = []
+        location_names = []
+        parameter_preset_names = []
+        parameter_preset_values = []
+
+        fulfillment_type = ""
+        location = ""
+        if isinstance(cx_obj, DFCXRoute):
+            fulfillment_type = "trigger_fulfillment"
+            location = "Transition Route"
+            if route_group:
+                location = "Route Group"
+        elif isinstance(cx_obj, DFCXEventHandler):
+            fulfillment_type = "trigger_fulfillment"
+            location = "Event Handler"
+            if page_param:
+                location = "Form Filling Event Handler"
+        elif isinstance(cx_obj, DFCXPage):
+            fulfillment_type = "entry_fulfillment"
+            location = "Entry Fulfillment"
+        else:
+            fulfillment_type = "initial_prompt_fulfillment"
+            location = "Parameter Filling"
+
+        if hasattr(cx_obj, fulfillment_type) and cx_obj[fulfillment_type]:
+            ful_data = cx_obj[fulfillment_type]
+            if hasattr(ful_data, "set_parameter_actions") and ful_data.set_parameter_actions:
+                for param_data in ful_data.set_parameter_actions:
+                    param_name = param_data.parameter
+                    #TODO: parse parameter value
+                    param_value = param_data.value
+                    flow_names.append(flow_name)
+                    page_names.append(page_name)
+                    if hasattr(cx_obj, "intent") and cx_obj.intent and cx_obj.intent in self.intents_map:
+                        route_intents.append(self.intents_map[cx_obj.intent])
+                    else:
+                        route_intents.append("")
+                    if hasattr(cx_obj, "event") and cx_obj.event:
+                        route_events.append(cx_obj.event)
+                    else:
+                        route_events.append("")
+                    route_group_names.append(route_group)
+                    page_param_names.append(page_param)
+                    if hasattr(cx_obj, "condition") and cx_obj.condition:
+                        route_conditions.append(cx_obj.condition)
+                    else:
+                        route_conditions.append("")
+                    location_names.append(location)
+                    parameter_preset_names.append(param_name)
+                    parameter_preset_values.append(param_value)
+
+        return pd.DataFrame({"flow": flow_names,
+            "page": page_names,
+            "intent": route_intents,
+            "event": route_events,
+            "route_group": route_group_names,
+            "condition": route_conditions,
+            "form_filling": page_param_names,
+            "location": location_names,
+            "param_name": parameter_preset_names,
+            "param_value": parameter_preset_values
         })
 
     def search_conditionals_page(self, page_id, search):
