@@ -123,21 +123,32 @@ class AgentCheckerUtil(ScrapiBase):
 
         # Get intent, flow, and page data
         self.intent_data = self.intents.list_intents(agent_id=self.agent_id)
-        self.flow_data = {}
-        for flow_id in self.flows_map.keys():
-            self.flow_data[flow_id] = self.flows.get_flow(flow_id=flow_id)
-        self.page_data = {}
-        for flow_id in self.flows_map.keys():
+        self.flow_data = self.get_all_flow_data()
+        self.page_data = self.get_all_page_data()
+        self.route_group_data = self.get_all_route_group_data()
+
+    def get_all_flow_data(self):
+        flow_data = {}
+        flow_list = self.flows.list_flows(self.agent_id)
+        for flow in flow_list:
+            flow_data[flow.name] = flow
+        return flow_data
+
+    def get_all_page_data(self):
+        page_data = {}
+        for flow_id in self.flows_map.values():
             page_list = self.pages.list_pages(flow_id=flow_id)
-            self.page_data[flow_id] = {page.name: page for page in page_list}
-        self.route_group_data = {}
-        for flow_id in self.flows_map.keys():
-            route_group_list = self.route_groups.list_transition_route_groups(
+            page_data[flow_id] = {page.name: page for page in page_list}
+        return page_data
+
+    def get_all_route_group_data(self):
+        route_group_data = {}
+        for flow_id in self.flows_map.values():
+            group_list = self.route_groups.list_transition_route_groups(
                 flow_id=flow_id
             )
-            self.route_group_data[flow_id] = {
-                route_group.name: route_group for route_group in route_group_list
-            }
+            route_group_data[flow_id] = {rg.name: rg for rg in group_list}
+        return route_group_data
 
     # Conversion utilities
 
