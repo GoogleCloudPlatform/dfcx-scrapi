@@ -1038,3 +1038,59 @@ class AgentCheckerUtil(ScrapiBase):
             flow_id, flow_name, include_groups=include_groups, verbose=verbose
         )
         return list(set(self.pages_map[flow_id].values()) - set(reachable))
+
+    def find_all_reachable_pages(
+        self,
+        include_groups: bool = True,
+        verbose: bool = False,
+    ):
+        """Gets a dataframe of all reachable pages in this agent
+
+        Args:
+          include_groups: whether or not to consider route group routes
+            as being reachable. Defaults to True.
+          verbose: whether to display debug info in the agent structure
+            traversal. Defaults to False.
+
+        Returns:
+          A dataframe with columns flow_name and page_name
+        """
+        flow_names = []
+        page_names = []
+        for flow_id, flow_name in self.flows_map.items():
+            reachable = self.find_reachable_pages(
+                flow_id=flow_id,
+                include_groups=include_groups,
+                verbose=verbose
+            )
+            flow_names.extend([flow_name for _ in reachable])
+            page_names.extend(reachable)
+        return pd.DataFrame({"flow_name": flow_names, "page_name": page_names})
+
+    def find_all_unreachable_pages(
+        self,
+        include_groups: bool = True,
+        verbose: bool = False,
+    ):
+        """Gets a dataframe of all unreachable pages in this agent
+
+        Args:
+          include_groups: whether or not to consider route group routes
+            as being reachable. Defaults to True.
+          verbose: whether to display debug info in the agent structure
+            traversal. Defaults to False.
+
+        Returns:
+          A dataframe with columns flow_name and page_name
+        """
+        flow_names = []
+        page_names = []
+        for flow_id, flow_name in self.flows_map.items():
+            unreachable = self.find_unreachable_pages(
+                flow_id=flow_id,
+                include_groups=include_groups,
+                verbose=verbose
+            )
+            flow_names.extend([flow_name for _ in unreachable])
+            page_names.extend(unreachable)
+        return pd.DataFrame({"flow_name": flow_names, "page_name": page_names})
