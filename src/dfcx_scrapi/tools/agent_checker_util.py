@@ -384,10 +384,10 @@ class AgentCheckerUtil(ScrapiBase):
         target_page = route.target_page
         target_flow = route.target_flow
         if hasattr(route, "intent") and route.intent != "":
-            return None
+            return
         if intent_route_limit and intent_route_count < intent_route_limit:
-            return None
-        if hasattr(page, "form"):
+            return
+        if hasattr(page, "form") and page.form:
             for parameter in page.form.parameters:
                 parameter_name = parameter.display_name
                 # Need to also account for parameters being
@@ -417,47 +417,7 @@ class AgentCheckerUtil(ScrapiBase):
                 if verbose:
                     print(conversation_path, intent_route_count)
 
-                new_presets = presets.copy()
-                if hasattr(page, "entry_fulfillment"):
-                    if hasattr(page.entry_fulfillment, "set_parameter_actions"):
-                        for (
-                            param_preset
-                        ) in page.entry_fulfillment.set_parameter_actions:
-                            new_presets[param_preset.parameter] = param_preset.value
-                if hasattr(page, "form"):
-                    for parameter in page.form.parameters:
-                        if hasattr(parameter, "fill_behavior"):
-                            if hasattr(
-                                parameter.fill_behavior,
-                                "initial_prompt_fulfillment",
-                            ):
-                                if hasattr(
-                                    parameter.fill_behavior.initial_prompt_fulfillment,
-                                    "set_parameter_actions",
-                                ):
-                                    for (
-                                        param_preset
-                                    ) in (
-                                        parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
-                                    ):
-                                        new_presets[
-                                            param_preset.parameter
-                                        ] = param_preset.value
-                if hasattr(route, "trigger_fulfillment"):
-                    if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
-                        for (
-                            param_preset
-                        ) in route.trigger_fulfillment.set_parameter_actions:
-                            new_presets[param_preset.parameter] = param_preset.value
-
-                if hasattr(route, "intent") and route.intent != "":
-                    # Check the entities annotated on this intent
-                    intent_name = self.intents_map[route.intent]
-                    intent_params = self._get_intent_parameters(intent_name)
-                    for param in intent_params:
-                        new_presets[
-                            param.id
-                        ] = f"(potentially set by {intent_name})"
+                new_presets = self._get_new_presets(presets, page, route)
 
                 self._find_reachable_pages_rec(
                     flow_id,
@@ -488,47 +448,7 @@ class AgentCheckerUtil(ScrapiBase):
                 if verbose:
                     print(conversation_path, intent_route_count)
 
-                new_presets = presets.copy()
-                if hasattr(page, "entry_fulfillment"):
-                    if hasattr(page.entry_fulfillment, "set_parameter_actions"):
-                        for (
-                            param_preset
-                        ) in page.entry_fulfillment.set_parameter_actions:
-                            new_presets[param_preset.parameter] = param_preset.value
-                if hasattr(page, "form"):
-                    for parameter in page.form.parameters:
-                        if hasattr(parameter, "fill_behavior"):
-                            if hasattr(
-                                parameter.fill_behavior,
-                                "initial_prompt_fulfillment",
-                            ):
-                                if hasattr(
-                                    parameter.fill_behavior.initial_prompt_fulfillment,
-                                    "set_parameter_actions",
-                                ):
-                                    for (
-                                        param_preset
-                                    ) in (
-                                        parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
-                                    ):
-                                        new_presets[
-                                            param_preset.parameter
-                                        ] = param_preset.value
-                if hasattr(route, "trigger_fulfillment"):
-                    if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
-                        for (
-                            param_preset
-                        ) in route.trigger_fulfillment.set_parameter_actions:
-                            new_presets[param_preset.parameter] = param_preset.value
-
-                if hasattr(route, "intent") and route.intent != "":
-                    # Check the entities annotated on this intent
-                    intent_name = self.intents_map[route.intent]
-                    intent_params = self._get_intent_parameters(intent_name)
-                    for param in intent_params:
-                        new_presets[
-                            param.id
-                        ] = f"(potentially set by {intent_name})"
+                new_presets = self._get_new_presets(presets, page, route)
 
                 self._find_reachable_pages_rec(
                     flow_id,
@@ -591,6 +511,7 @@ class AgentCheckerUtil(ScrapiBase):
                 and intent_route_count
                 < min_intent_counts[reachable.index(page_name)]
             ):
+                # TODO: barely too long
                 min_intent_counts[reachable.index(page_name)] = intent_route_count
         elif "PREVIOUS_PAGE" in target_page:
             if verbose:
@@ -620,47 +541,7 @@ class AgentCheckerUtil(ScrapiBase):
                 if verbose:
                     print(conversation_path, intent_route_count)
 
-                new_presets = presets.copy()
-                if hasattr(page, "entry_fulfillment"):
-                    if hasattr(page.entry_fulfillment, "set_parameter_actions"):
-                        for (
-                            param_preset
-                        ) in page.entry_fulfillment.set_parameter_actions:
-                            new_presets[param_preset.parameter] = param_preset.value
-                if hasattr(page, "form"):
-                    for parameter in page.form.parameters:
-                        if hasattr(parameter, "fill_behavior"):
-                            if hasattr(
-                                parameter.fill_behavior,
-                                "initial_prompt_fulfillment",
-                            ):
-                                if hasattr(
-                                    parameter.fill_behavior.initial_prompt_fulfillment,
-                                    "set_parameter_actions",
-                                ):
-                                    for (
-                                        param_preset
-                                    ) in (
-                                        parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
-                                    ):
-                                        new_presets[
-                                            param_preset.parameter
-                                        ] = param_preset.value
-                if hasattr(route, "trigger_fulfillment"):
-                    if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
-                        for (
-                            param_preset
-                        ) in route.trigger_fulfillment.set_parameter_actions:
-                            new_presets[param_preset.parameter] = param_preset.value
-
-                if hasattr(route, "intent") and route.intent != "":
-                    # Check the entities annotated on this intent
-                    intent_name = self.intents_map[route.intent]
-                    intent_params = self._get_intent_parameters(intent_name)
-                    for param in intent_params:
-                        new_presets[
-                            param.id
-                        ] = f"(potentially set by {intent_name})"
+                new_presets = self._get_new_presets(presets, page, route)
 
                 self._find_reachable_pages_rec(
                     flow_id,
@@ -691,47 +572,7 @@ class AgentCheckerUtil(ScrapiBase):
                 if verbose:
                     print(conversation_path, intent_route_count)
 
-                new_presets = presets.copy()
-                if hasattr(page, "entry_fulfillment"):
-                    if hasattr(page.entry_fulfillment, "set_parameter_actions"):
-                        for (
-                            param_preset
-                        ) in page.entry_fulfillment.set_parameter_actions:
-                            new_presets[param_preset.parameter] = param_preset.value
-                if hasattr(page, "form"):
-                    for parameter in page.form.parameters:
-                        if hasattr(parameter, "fill_behavior"):
-                            if hasattr(
-                                parameter.fill_behavior,
-                                "initial_prompt_fulfillment",
-                            ):
-                                if hasattr(
-                                    parameter.fill_behavior.initial_prompt_fulfillment,
-                                    "set_parameter_actions",
-                                ):
-                                    for (
-                                        param_preset
-                                    ) in (
-                                        parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
-                                    ):
-                                        new_presets[
-                                            param_preset.parameter
-                                        ] = param_preset.value
-                if hasattr(route, "trigger_fulfillment"):
-                    if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
-                        for (
-                            param_preset
-                        ) in route.trigger_fulfillment.set_parameter_actions:
-                            new_presets[param_preset.parameter] = param_preset.value
-
-                if hasattr(route, "intent") and route.intent != "":
-                    # Check the entities annotated on this intent
-                    intent_name = self.intents_map[route.intent]
-                    intent_params = self._get_intent_parameters(intent_name)
-                    for param in intent_params:
-                        new_presets[
-                            param.id
-                        ] = f"(potentially set by {intent_name})"
+                new_presets = self._get_new_presets(presets, page, route)
 
                 self._find_reachable_pages_rec(
                     flow_id,
@@ -767,6 +608,7 @@ class AgentCheckerUtil(ScrapiBase):
                 and intent_route_count
                 < min_intent_counts[reachable.index(flow_name)]
             ):
+                # TODO: barely too long
                 min_intent_counts[reachable.index(flow_name)] = intent_route_count
         else:
             if verbose:
@@ -777,7 +619,48 @@ class AgentCheckerUtil(ScrapiBase):
                 and intent_route_count
                 < min_intent_counts[reachable.index(page_name)]
             ):
+                # TODO: barely too long
                 min_intent_counts[reachable.index(page_name)] = intent_route_count
+
+    def _get_new_presets(self, presets, page, route):
+        new_presets = presets.copy()
+        if hasattr(page, "entry_fulfillment"):
+            if hasattr(page.entry_fulfillment, "set_parameter_actions"):
+                for (
+                    param_preset
+                ) in page.entry_fulfillment.set_parameter_actions:
+                    new_presets[param_preset.parameter] = param_preset.value
+        if hasattr(page, "form"):
+            for parameter in page.form.parameters:
+                if (hasattr(parameter, "fill_behavior")
+                    and hasattr(parameter.fill_behavior, "initial_prompt_fulfillment")):
+                    if hasattr(
+                        parameter.fill_behavior.initial_prompt_fulfillment,
+                        "set_parameter_actions",
+                    ):
+                        for (
+                            param_preset
+                        ) in (
+                            parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
+                        ):
+                            new_presets[
+                                param_preset.parameter
+                            ] = param_preset.value
+        if hasattr(route, "trigger_fulfillment"):
+            if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
+                for (
+                    param_preset
+                ) in route.trigger_fulfillment.set_parameter_actions:
+                    new_presets[param_preset.parameter] = param_preset.value
+        if hasattr(route, "intent") and route.intent != "":
+            # Check the entities annotated on this intent
+            intent_name = self.intents_map[route.intent]
+            intent_params = self._get_intent_parameters(intent_name)
+            for param in intent_params:
+                new_presets[
+                    param.id
+                ] = f"(potentially set by {intent_name})"
+        return new_presets
 
     def _find_reachable_pages_rec(
         self,
