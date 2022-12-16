@@ -136,14 +136,14 @@ class AgentCheckerUtil(ScrapiBase):
 
     def get_all_page_data(self):
         page_data = {}
-        for flow_id in self.flows_map.values():
+        for flow_id in self.flows_map.keys():
             page_list = self.pages.list_pages(flow_id=flow_id)
             page_data[flow_id] = {page.name: page for page in page_list}
         return page_data
 
     def get_all_route_group_data(self):
         route_group_data = {}
-        for flow_id in self.flows_map.values():
+        for flow_id in self.flows_map.keys():
             group_list = self.route_groups.list_transition_route_groups(
                 flow_id=flow_id
             )
