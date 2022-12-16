@@ -194,6 +194,7 @@ class AgentCheckerUtil(ScrapiBase):
         for intent in self.intent_data:
             if intent.display_name == intent_name:
                 return intent.parameters
+        return None
 
     def _get_page(
         self,
@@ -329,7 +330,7 @@ class AgentCheckerUtil(ScrapiBase):
                 # Results may not be in the same order as they went in
                 # Process the name a bit to remove the /results/id part
                 tc_id_full = "/".join(result.name.split("/")[:-2])
-                tc_id = tc_id_full.split("/")[-1]
+                tc_id = tc_id_full.rsplit("/", maxsplit=1)[-1]
 
                 # Update dataframe where id = tc_id_full
                 # row = test_case_df.loc[test_case_df['id']==tc_id_full]
