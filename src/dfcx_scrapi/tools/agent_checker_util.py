@@ -301,7 +301,7 @@ class AgentCheckerUtil(ScrapiBase):
             test_results.append(str(response.last_test_result.test_result))
             test_times.append(response.last_test_result.test_time)
             passed.append(
-                str(response.last_test_result.test_result) == "TestResult.PASSED"
+                str(response.last_test_result.test_result)=="TestResult.PASSED"
             )
 
         # Create dataframe
@@ -328,21 +328,21 @@ class AgentCheckerUtil(ScrapiBase):
             for result in response.results:
                 # Results may not be in the same order as they went in
                 # Process the name a bit to remove the /results/id part
-                test_case_id_full = "/".join(result.name.split("/")[:-2])
-                test_case_id = test_case_id_full.split("/")[-1]
+                tc_id_full = "/".join(result.name.split("/")[:-2])
+                tc_id = tc_id_full.split("/")[-1]
 
-                # Update dataframe where id = test_case_id_full
-                # row = test_case_df.loc[test_case_df['id']==test_case_id_full]
+                # Update dataframe where id = tc_id_full
+                # row = test_case_df.loc[test_case_df['id']==tc_id_full]
                 test_case_df.loc[
-                    test_case_df["id"] == test_case_id_full, "short_id"
-                ] = test_case_id
+                    test_case_df["id"] == tc_id_full, "short_id"
+                ] = tc_id
                 test_case_df.loc[
-                    test_case_df["id"] == test_case_id_full, "test_result"
+                    test_case_df["id"] == tc_id_full, "test_result"
                 ] = str(result.test_result)
                 test_case_df.loc[
-                    test_case_df["id"] == test_case_id_full, "test_time"
+                    test_case_df["id"] == tc_id_full, "test_time"
                 ] = result.test_time
-                test_case_df.loc[test_case_df["id"] == test_case_id_full, "passed"] = (
+                test_case_df.loc[test_case_df["id"] == tc_id_full,"passed"] = (
                     str(result.test_result) == "TestResult.PASSED"
                 )
 
