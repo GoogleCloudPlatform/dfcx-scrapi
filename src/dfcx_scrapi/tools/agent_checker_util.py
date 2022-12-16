@@ -116,9 +116,9 @@ class AgentCheckerUtil(ScrapiBase):
                 flow_id=flow_id, reverse=True
             )
         self.route_groups_map = {}
-        for flow_id in self.flows_map.keys():
-            self.route_groups_map[flow_id] = self.route_groups.get_route_groups_map(
-                flow_id=flow_id
+        for fid in self.flows_map.keys():
+            self.route_groups_map[fid] = self.route_groups.get_route_groups_map(
+                flow_id=fid
             )
 
         # Get intent, flow, and page data
@@ -443,7 +443,7 @@ class AgentCheckerUtil(ScrapiBase):
                 < min_intent_counts[reachable.index(page_name)]
             ):
                 # Better route found, traverse from here
-                min_intent_counts[reachable.index(page_name)] = intent_route_count
+                min_intent_counts[reachable.index(page_name)]=intent_route_count
                 conversation_path.append(page_name)
                 if verbose:
                     print(conversation_path, intent_route_count)
@@ -511,8 +511,7 @@ class AgentCheckerUtil(ScrapiBase):
                 and intent_route_count
                 < min_intent_counts[reachable.index(page_name)]
             ):
-                # TODO: barely too long
-                min_intent_counts[reachable.index(page_name)] = intent_route_count
+                min_intent_counts[reachable.index(page_name)]=intent_route_count
         elif "PREVIOUS_PAGE" in target_page:
             if verbose:
                 print(page.display_name, "-> PREVIOUS PAGE")
@@ -567,7 +566,7 @@ class AgentCheckerUtil(ScrapiBase):
                 < min_intent_counts[reachable.index(page_name)]
             ):
                 # Better route found, traverse from here
-                min_intent_counts[reachable.index(page_name)] = intent_route_count
+                min_intent_counts[reachable.index(page_name)]=intent_route_count
                 conversation_path.append(page_name)
                 if verbose:
                     print(conversation_path, intent_route_count)
@@ -608,8 +607,7 @@ class AgentCheckerUtil(ScrapiBase):
                 and intent_route_count
                 < min_intent_counts[reachable.index(flow_name)]
             ):
-                # TODO: barely too long
-                min_intent_counts[reachable.index(flow_name)] = intent_route_count
+                min_intent_counts[reachable.index(flow_name)]=intent_route_count
         else:
             if verbose:
                 print(page.display_name, "->", route.target_flow, "(empty)")
@@ -619,8 +617,7 @@ class AgentCheckerUtil(ScrapiBase):
                 and intent_route_count
                 < min_intent_counts[reachable.index(page_name)]
             ):
-                # TODO: barely too long
-                min_intent_counts[reachable.index(page_name)] = intent_route_count
+                min_intent_counts[reachable.index(page_name)]=intent_route_count
 
     def _get_new_presets(self, presets, page, route):
         new_presets = presets.copy()
@@ -633,19 +630,20 @@ class AgentCheckerUtil(ScrapiBase):
         if hasattr(page, "form"):
             for parameter in page.form.parameters:
                 if (hasattr(parameter, "fill_behavior")
-                    and hasattr(parameter.fill_behavior, "initial_prompt_fulfillment")):
-                    if hasattr(
+                    and hasattr(
+                        parameter.fill_behavior,
+                        "initial_prompt_fulfillment",
+                    )
+                    and hasattr(
                         parameter.fill_behavior.initial_prompt_fulfillment,
                         "set_parameter_actions",
-                    ):
-                        for (
-                            param_preset
-                        ) in (
-                            parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
-                        ):
-                            new_presets[
-                                param_preset.parameter
-                            ] = param_preset.value
+                    )
+                ):
+                    ipf = parameter.fill_behavior.initial_prompt_fulfillment
+                    for param_preset in ipf.set_parameter_actions:
+                        new_presets[
+                            param_preset.parameter
+                        ] = param_preset.value
         if hasattr(route, "trigger_fulfillment"):
             if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
                 for (
