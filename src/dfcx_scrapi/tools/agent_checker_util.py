@@ -383,9 +383,10 @@ class AgentCheckerUtil(ScrapiBase):
             flow_name = self.flows_map[flow_id]
         target_page = route.target_page
         target_flow = route.target_flow
-        if hasattr(route, "intent") and route.intent != "":
-            return
-        if intent_route_limit and intent_route_count < intent_route_limit:
+        if (
+            hasattr(route, "intent") and route.intent != ""
+            and intent_route_limit and intent_route_count >= intent_route_limit
+        ):
             return
         if hasattr(page, "form") and page.form:
             for parameter in page.form.parameters:
