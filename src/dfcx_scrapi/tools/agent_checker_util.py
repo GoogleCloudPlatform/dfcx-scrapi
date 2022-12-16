@@ -383,403 +383,401 @@ class AgentCheckerUtil(ScrapiBase):
             flow_name = self.flows_map[flow_id]
         target_page = route.target_page
         target_flow = route.target_flow
-        if (
-            intent_route_limit is None
-            or not hasattr(route, "intent")
-            or route.intent == ""
-            or intent_route_count < intent_route_limit
-        ):
-            if hasattr(page, "form"):
-                for parameter in page.form.parameters:
-                    parameter_name = parameter.display_name
-                    # Need to also account for parameters being
-                    # set by intents (or by webhooks...)
-                    if (
-                        parameter_name not in presets
-                        or presets[parameter_name] == "NULL"
-                    ):
-                        # This page has an unfilled parameter
-                        if limit_intent_to_initial and not is_initial:
-                            return
-            if hasattr(route, "intent") and route.intent != "":
-                if limit_intent_to_initial and not is_initial:
-                    # Don't continue on this path
-                    return
-                intent_route_count += 1
-            if target_page in self.page_data[flow_id]:
-                page_name = self.page_data[flow_id][target_page].display_name
+        if hasattr(route, "intent") and route.intent != "":
+            return None
+        if intent_route_limit and intent_route_count < intent_route_limit:
+            return None
+        if hasattr(page, "form"):
+            for parameter in page.form.parameters:
+                parameter_name = parameter.display_name
+                # Need to also account for parameters being
+                # set by intents (or by webhooks...)
+                if (
+                    parameter_name not in presets
+                    or presets[parameter_name] == "NULL"
+                ):
+                    # This page has an unfilled parameter
+                    if limit_intent_to_initial and not is_initial:
+                        return
+        if hasattr(route, "intent") and route.intent != "":
+            if limit_intent_to_initial and not is_initial:
+                # Don't continue on this path
+                return
+            intent_route_count += 1
+        if target_page in self.page_data[flow_id]:
+            page_name = self.page_data[flow_id][target_page].display_name
+            if verbose:
+                print(page.display_name, "->", page_name)
+            # Move to this page (this is also the recursion limiting step
+            # to prevent infinite loops)
+            if page_name not in reachable:
+                reachable.append(page_name)
+                min_intent_counts.append(intent_route_count)
+                conversation_path.append(page_name)
                 if verbose:
-                    print(page.display_name, "->", page_name)
-                # Move to this page (this is also the recursion limiting step
-                # to prevent infinite loops)
+                    print(conversation_path, intent_route_count)
+
+                new_presets = presets.copy()
+                if hasattr(page, "entry_fulfillment"):
+                    if hasattr(page.entry_fulfillment, "set_parameter_actions"):
+                        for (
+                            param_preset
+                        ) in page.entry_fulfillment.set_parameter_actions:
+                            new_presets[param_preset.parameter] = param_preset.value
+                if hasattr(page, "form"):
+                    for parameter in page.form.parameters:
+                        if hasattr(parameter, "fill_behavior"):
+                            if hasattr(
+                                parameter.fill_behavior,
+                                "initial_prompt_fulfillment",
+                            ):
+                                if hasattr(
+                                    parameter.fill_behavior.initial_prompt_fulfillment,
+                                    "set_parameter_actions",
+                                ):
+                                    for (
+                                        param_preset
+                                    ) in (
+                                        parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
+                                    ):
+                                        new_presets[
+                                            param_preset.parameter
+                                        ] = param_preset.value
+                if hasattr(route, "trigger_fulfillment"):
+                    if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
+                        for (
+                            param_preset
+                        ) in route.trigger_fulfillment.set_parameter_actions:
+                            new_presets[param_preset.parameter] = param_preset.value
+
+                if hasattr(route, "intent") and route.intent != "":
+                    # Check the entities annotated on this intent
+                    intent_name = self.intents_map[route.intent]
+                    intent_params = self._get_intent_parameters(intent_name)
+                    for param in intent_params:
+                        new_presets[
+                            param.id
+                        ] = f"(potentially set by {intent_name})"
+
+                self._find_reachable_pages_rec(
+                    flow_id,
+                    flow_name,
+                    self.page_data[flow_id][target_page],
+                    reachable,
+                    conversation_path,
+                    min_intent_counts,
+                    new_presets,
+                    intent_route_count=intent_route_count,
+                    intent_route_limit=intent_route_limit,
+                    include_groups=include_groups,
+                    include_start_page_routes=include_start_page_routes,
+                    limit_intent_to_initial=limit_intent_to_initial,
+                    is_initial=False,
+                    include_meta=include_meta,
+                    verbose=verbose,
+                )
+                conversation_path.pop(-1)
+            elif (
+                page_name in reachable
+                and intent_route_count
+                < min_intent_counts[reachable.index(page_name)]
+            ):
+                # Better route found, traverse from here
+                min_intent_counts[reachable.index(page_name)] = intent_route_count
+                conversation_path.append(page_name)
+                if verbose:
+                    print(conversation_path, intent_route_count)
+
+                new_presets = presets.copy()
+                if hasattr(page, "entry_fulfillment"):
+                    if hasattr(page.entry_fulfillment, "set_parameter_actions"):
+                        for (
+                            param_preset
+                        ) in page.entry_fulfillment.set_parameter_actions:
+                            new_presets[param_preset.parameter] = param_preset.value
+                if hasattr(page, "form"):
+                    for parameter in page.form.parameters:
+                        if hasattr(parameter, "fill_behavior"):
+                            if hasattr(
+                                parameter.fill_behavior,
+                                "initial_prompt_fulfillment",
+                            ):
+                                if hasattr(
+                                    parameter.fill_behavior.initial_prompt_fulfillment,
+                                    "set_parameter_actions",
+                                ):
+                                    for (
+                                        param_preset
+                                    ) in (
+                                        parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
+                                    ):
+                                        new_presets[
+                                            param_preset.parameter
+                                        ] = param_preset.value
+                if hasattr(route, "trigger_fulfillment"):
+                    if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
+                        for (
+                            param_preset
+                        ) in route.trigger_fulfillment.set_parameter_actions:
+                            new_presets[param_preset.parameter] = param_preset.value
+
+                if hasattr(route, "intent") and route.intent != "":
+                    # Check the entities annotated on this intent
+                    intent_name = self.intents_map[route.intent]
+                    intent_params = self._get_intent_parameters(intent_name)
+                    for param in intent_params:
+                        new_presets[
+                            param.id
+                        ] = f"(potentially set by {intent_name})"
+
+                self._find_reachable_pages_rec(
+                    flow_id,
+                    flow_name,
+                    self.page_data[flow_id][target_page],
+                    reachable,
+                    conversation_path,
+                    min_intent_counts,
+                    new_presets,
+                    intent_route_count=intent_route_count,
+                    intent_route_limit=intent_route_limit,
+                    include_groups=include_groups,
+                    include_start_page_routes=include_start_page_routes,
+                    limit_intent_to_initial=limit_intent_to_initial,
+                    is_initial=False,
+                    include_meta=include_meta,
+                    verbose=verbose,
+                )
+                conversation_path.pop(-1)
+        elif "END_FLOW" in target_page:
+            if verbose:
+                print(page.display_name, "-> END FLOW")
+            if include_meta:
+                page_name = "END FLOW"
                 if page_name not in reachable:
                     reachable.append(page_name)
                     min_intent_counts.append(intent_route_count)
-                    conversation_path.append(page_name)
-                    if verbose:
-                        print(conversation_path, intent_route_count)
-
-                    new_presets = presets.copy()
-                    if hasattr(page, "entry_fulfillment"):
-                        if hasattr(page.entry_fulfillment, "set_parameter_actions"):
-                            for (
-                                param_preset
-                            ) in page.entry_fulfillment.set_parameter_actions:
-                                new_presets[param_preset.parameter] = param_preset.value
-                    if hasattr(page, "form"):
-                        for parameter in page.form.parameters:
-                            if hasattr(parameter, "fill_behavior"):
-                                if hasattr(
-                                    parameter.fill_behavior,
-                                    "initial_prompt_fulfillment",
-                                ):
-                                    if hasattr(
-                                        parameter.fill_behavior.initial_prompt_fulfillment,
-                                        "set_parameter_actions",
-                                    ):
-                                        for (
-                                            param_preset
-                                        ) in (
-                                            parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
-                                        ):
-                                            new_presets[
-                                                param_preset.parameter
-                                            ] = param_preset.value
-                    if hasattr(route, "trigger_fulfillment"):
-                        if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
-                            for (
-                                param_preset
-                            ) in route.trigger_fulfillment.set_parameter_actions:
-                                new_presets[param_preset.parameter] = param_preset.value
-
-                    if hasattr(route, "intent") and route.intent != "":
-                        # Check the entities annotated on this intent
-                        intent_name = self.intents_map[route.intent]
-                        intent_params = self._get_intent_parameters(intent_name)
-                        for param in intent_params:
-                            new_presets[
-                                param.id
-                            ] = f"(potentially set by {intent_name})"
-
-                    self._find_reachable_pages_rec(
-                        flow_id,
-                        flow_name,
-                        self.page_data[flow_id][target_page],
-                        reachable,
-                        conversation_path,
-                        min_intent_counts,
-                        new_presets,
-                        intent_route_count=intent_route_count,
-                        intent_route_limit=intent_route_limit,
-                        include_groups=include_groups,
-                        include_start_page_routes=include_start_page_routes,
-                        limit_intent_to_initial=limit_intent_to_initial,
-                        is_initial=False,
-                        include_meta=include_meta,
-                        verbose=verbose,
-                    )
-                    conversation_path.pop(-1)
                 elif (
                     page_name in reachable
                     and intent_route_count
                     < min_intent_counts[reachable.index(page_name)]
                 ):
-                    # Better route found, traverse from here
-                    min_intent_counts[reachable.index(page_name)] = intent_route_count
-                    conversation_path.append(page_name)
-                    if verbose:
-                        print(conversation_path, intent_route_count)
-
-                    new_presets = presets.copy()
-                    if hasattr(page, "entry_fulfillment"):
-                        if hasattr(page.entry_fulfillment, "set_parameter_actions"):
-                            for (
-                                param_preset
-                            ) in page.entry_fulfillment.set_parameter_actions:
-                                new_presets[param_preset.parameter] = param_preset.value
-                    if hasattr(page, "form"):
-                        for parameter in page.form.parameters:
-                            if hasattr(parameter, "fill_behavior"):
-                                if hasattr(
-                                    parameter.fill_behavior,
-                                    "initial_prompt_fulfillment",
-                                ):
-                                    if hasattr(
-                                        parameter.fill_behavior.initial_prompt_fulfillment,
-                                        "set_parameter_actions",
-                                    ):
-                                        for (
-                                            param_preset
-                                        ) in (
-                                            parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
-                                        ):
-                                            new_presets[
-                                                param_preset.parameter
-                                            ] = param_preset.value
-                    if hasattr(route, "trigger_fulfillment"):
-                        if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
-                            for (
-                                param_preset
-                            ) in route.trigger_fulfillment.set_parameter_actions:
-                                new_presets[param_preset.parameter] = param_preset.value
-
-                    if hasattr(route, "intent") and route.intent != "":
-                        # Check the entities annotated on this intent
-                        intent_name = self.intents_map[route.intent]
-                        intent_params = self._get_intent_parameters(intent_name)
-                        for param in intent_params:
-                            new_presets[
-                                param.id
-                            ] = f"(potentially set by {intent_name})"
-
-                    self._find_reachable_pages_rec(
-                        flow_id,
-                        flow_name,
-                        self.page_data[flow_id][target_page],
-                        reachable,
-                        conversation_path,
-                        min_intent_counts,
-                        new_presets,
-                        intent_route_count=intent_route_count,
-                        intent_route_limit=intent_route_limit,
-                        include_groups=include_groups,
-                        include_start_page_routes=include_start_page_routes,
-                        limit_intent_to_initial=limit_intent_to_initial,
-                        is_initial=False,
-                        include_meta=include_meta,
-                        verbose=verbose,
-                    )
-                    conversation_path.pop(-1)
-            elif "END_FLOW" in target_page:
-                if verbose:
-                    print(page.display_name, "-> END FLOW")
-                if include_meta:
-                    page_name = "END FLOW"
-                    if page_name not in reachable:
-                        reachable.append(page_name)
-                        min_intent_counts.append(intent_route_count)
-                    elif (
-                        page_name in reachable
-                        and intent_route_count
-                        < min_intent_counts[reachable.index(page_name)]
-                    ):
-                        min_intent_counts[
-                            reachable.index(page_name)
-                        ] = intent_route_count
-                # reachable.append('END FLOW')
-            elif "END_SESSION" in target_page:
-                if verbose:
-                    print(page.display_name, "-> END SESSION")
-                if include_meta:
-                    page_name = "END SESSION"
-                    if page_name not in reachable:
-                        reachable.append(page_name)
-                        min_intent_counts.append(intent_route_count)
-                    elif (
-                        page_name in reachable
-                        and intent_route_count
-                        < min_intent_counts[reachable.index(page_name)]
-                    ):
-                        min_intent_counts[
-                            reachable.index(page_name)
-                        ] = intent_route_count
-                # reachable.append('END SESSION')
-            elif "CURRENT_PAGE" in target_page:
-                if verbose:
-                    print(page.display_name, "-> CURRENT PAGE")
-                page_name = page.display_name
-                if (
-                    page_name in reachable
-                    and intent_route_count
-                    < min_intent_counts[reachable.index(page_name)]
-                ):
-                    min_intent_counts[reachable.index(page_name)] = intent_route_count
-            elif "PREVIOUS_PAGE" in target_page:
-                if verbose:
-                    print(page.display_name, "-> PREVIOUS PAGE")
-                if include_meta:
-                    page_name = "PREVIOUS PAGE"
-                    if page_name not in reachable:
-                        reachable.append(page_name)
-                        min_intent_counts.append(intent_route_count)
-                    elif (
-                        page_name in reachable
-                        and intent_route_count
-                        < min_intent_counts[reachable.index(page_name)]
-                    ):
-                        min_intent_counts[
-                            reachable.index(page_name)
-                        ] = intent_route_count
-                # TODO: This could cause huge problems...
-            elif "START_PAGE" in target_page:
-                if verbose:
-                    print(page.display_name, "-> START PAGE")
-                page_name = "Start"
+                    min_intent_counts[
+                        reachable.index(page_name)
+                    ] = intent_route_count
+            # reachable.append('END FLOW')
+        elif "END_SESSION" in target_page:
+            if verbose:
+                print(page.display_name, "-> END SESSION")
+            if include_meta:
+                page_name = "END SESSION"
                 if page_name not in reachable:
                     reachable.append(page_name)
                     min_intent_counts.append(intent_route_count)
-                    conversation_path.append(page_name)
-                    if verbose:
-                        print(conversation_path, intent_route_count)
-
-                    new_presets = presets.copy()
-                    if hasattr(page, "entry_fulfillment"):
-                        if hasattr(page.entry_fulfillment, "set_parameter_actions"):
-                            for (
-                                param_preset
-                            ) in page.entry_fulfillment.set_parameter_actions:
-                                new_presets[param_preset.parameter] = param_preset.value
-                    if hasattr(page, "form"):
-                        for parameter in page.form.parameters:
-                            if hasattr(parameter, "fill_behavior"):
-                                if hasattr(
-                                    parameter.fill_behavior,
-                                    "initial_prompt_fulfillment",
-                                ):
-                                    if hasattr(
-                                        parameter.fill_behavior.initial_prompt_fulfillment,
-                                        "set_parameter_actions",
-                                    ):
-                                        for (
-                                            param_preset
-                                        ) in (
-                                            parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
-                                        ):
-                                            new_presets[
-                                                param_preset.parameter
-                                            ] = param_preset.value
-                    if hasattr(route, "trigger_fulfillment"):
-                        if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
-                            for (
-                                param_preset
-                            ) in route.trigger_fulfillment.set_parameter_actions:
-                                new_presets[param_preset.parameter] = param_preset.value
-
-                    if hasattr(route, "intent") and route.intent != "":
-                        # Check the entities annotated on this intent
-                        intent_name = self.intents_map[route.intent]
-                        intent_params = self._get_intent_parameters(intent_name)
-                        for param in intent_params:
-                            new_presets[
-                                param.id
-                            ] = f"(potentially set by {intent_name})"
-
-                    self._find_reachable_pages_rec(
-                        flow_id,
-                        flow_name,
-                        self.flow_data[flow_id],
-                        reachable,
-                        conversation_path,
-                        min_intent_counts,
-                        new_presets,
-                        intent_route_count=intent_route_count,
-                        intent_route_limit=intent_route_limit,
-                        include_groups=include_groups,
-                        include_start_page_routes=include_start_page_routes,
-                        limit_intent_to_initial=limit_intent_to_initial,
-                        is_initial=False,
-                        include_meta=include_meta,
-                        verbose=verbose,
-                    )
-                    conversation_path.pop(-1)
                 elif (
                     page_name in reachable
                     and intent_route_count
                     < min_intent_counts[reachable.index(page_name)]
                 ):
-                    # Better route found, traverse from here
-                    min_intent_counts[reachable.index(page_name)] = intent_route_count
-                    conversation_path.append(page_name)
-                    if verbose:
-                        print(conversation_path, intent_route_count)
-
-                    new_presets = presets.copy()
-                    if hasattr(page, "entry_fulfillment"):
-                        if hasattr(page.entry_fulfillment, "set_parameter_actions"):
-                            for (
-                                param_preset
-                            ) in page.entry_fulfillment.set_parameter_actions:
-                                new_presets[param_preset.parameter] = param_preset.value
-                    if hasattr(page, "form"):
-                        for parameter in page.form.parameters:
-                            if hasattr(parameter, "fill_behavior"):
-                                if hasattr(
-                                    parameter.fill_behavior,
-                                    "initial_prompt_fulfillment",
-                                ):
-                                    if hasattr(
-                                        parameter.fill_behavior.initial_prompt_fulfillment,
-                                        "set_parameter_actions",
-                                    ):
-                                        for (
-                                            param_preset
-                                        ) in (
-                                            parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
-                                        ):
-                                            new_presets[
-                                                param_preset.parameter
-                                            ] = param_preset.value
-                    if hasattr(route, "trigger_fulfillment"):
-                        if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
-                            for (
-                                param_preset
-                            ) in route.trigger_fulfillment.set_parameter_actions:
-                                new_presets[param_preset.parameter] = param_preset.value
-
-                    if hasattr(route, "intent") and route.intent != "":
-                        # Check the entities annotated on this intent
-                        intent_name = self.intents_map[route.intent]
-                        intent_params = self._get_intent_parameters(intent_name)
-                        for param in intent_params:
-                            new_presets[
-                                param.id
-                            ] = f"(potentially set by {intent_name})"
-
-                    self._find_reachable_pages_rec(
-                        flow_id,
-                        flow_name,
-                        self.flow_data[flow_id],
-                        reachable,
-                        conversation_path,
-                        min_intent_counts,
-                        new_presets,
-                        intent_route_count=intent_route_count,
-                        intent_route_limit=intent_route_limit,
-                        include_groups=include_groups,
-                        include_start_page_routes=include_start_page_routes,
-                        limit_intent_to_initial=limit_intent_to_initial,
-                        is_initial=False,
-                        include_meta=include_meta,
-                        verbose=verbose,
-                    )
-                    conversation_path.pop(-1)
-            elif len(target_page) > 0:
-                print(page.display_name, "->", target_page)
-                # This should not happen, and if it does it needs to be fixed
-                input()
-            elif len(target_flow) > 0:
-                flow_name = self.flows_map[route.target_flow]
-                if verbose:
-                    print(page.display_name, "->", flow_name)
-                if flow_name not in reachable:
-                    reachable.append(flow_name)
+                    min_intent_counts[
+                        reachable.index(page_name)
+                    ] = intent_route_count
+            # reachable.append('END SESSION')
+        elif "CURRENT_PAGE" in target_page:
+            if verbose:
+                print(page.display_name, "-> CURRENT PAGE")
+            page_name = page.display_name
+            if (
+                page_name in reachable
+                and intent_route_count
+                < min_intent_counts[reachable.index(page_name)]
+            ):
+                min_intent_counts[reachable.index(page_name)] = intent_route_count
+        elif "PREVIOUS_PAGE" in target_page:
+            if verbose:
+                print(page.display_name, "-> PREVIOUS PAGE")
+            if include_meta:
+                page_name = "PREVIOUS PAGE"
+                if page_name not in reachable:
+                    reachable.append(page_name)
                     min_intent_counts.append(intent_route_count)
                 elif (
-                    flow_name in reachable
-                    and intent_route_count
-                    < min_intent_counts[reachable.index(flow_name)]
-                ):
-                    min_intent_counts[reachable.index(flow_name)] = intent_route_count
-            else:
-                if verbose:
-                    print(page.display_name, "->", route.target_flow, "(empty)")
-                page_name = page.display_name
-                if (
                     page_name in reachable
                     and intent_route_count
                     < min_intent_counts[reachable.index(page_name)]
                 ):
-                    min_intent_counts[reachable.index(page_name)] = intent_route_count
+                    min_intent_counts[
+                        reachable.index(page_name)
+                    ] = intent_route_count
+            # TODO: This could cause huge problems...
+        elif "START_PAGE" in target_page:
+            if verbose:
+                print(page.display_name, "-> START PAGE")
+            page_name = "Start"
+            if page_name not in reachable:
+                reachable.append(page_name)
+                min_intent_counts.append(intent_route_count)
+                conversation_path.append(page_name)
+                if verbose:
+                    print(conversation_path, intent_route_count)
+
+                new_presets = presets.copy()
+                if hasattr(page, "entry_fulfillment"):
+                    if hasattr(page.entry_fulfillment, "set_parameter_actions"):
+                        for (
+                            param_preset
+                        ) in page.entry_fulfillment.set_parameter_actions:
+                            new_presets[param_preset.parameter] = param_preset.value
+                if hasattr(page, "form"):
+                    for parameter in page.form.parameters:
+                        if hasattr(parameter, "fill_behavior"):
+                            if hasattr(
+                                parameter.fill_behavior,
+                                "initial_prompt_fulfillment",
+                            ):
+                                if hasattr(
+                                    parameter.fill_behavior.initial_prompt_fulfillment,
+                                    "set_parameter_actions",
+                                ):
+                                    for (
+                                        param_preset
+                                    ) in (
+                                        parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
+                                    ):
+                                        new_presets[
+                                            param_preset.parameter
+                                        ] = param_preset.value
+                if hasattr(route, "trigger_fulfillment"):
+                    if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
+                        for (
+                            param_preset
+                        ) in route.trigger_fulfillment.set_parameter_actions:
+                            new_presets[param_preset.parameter] = param_preset.value
+
+                if hasattr(route, "intent") and route.intent != "":
+                    # Check the entities annotated on this intent
+                    intent_name = self.intents_map[route.intent]
+                    intent_params = self._get_intent_parameters(intent_name)
+                    for param in intent_params:
+                        new_presets[
+                            param.id
+                        ] = f"(potentially set by {intent_name})"
+
+                self._find_reachable_pages_rec(
+                    flow_id,
+                    flow_name,
+                    self.flow_data[flow_id],
+                    reachable,
+                    conversation_path,
+                    min_intent_counts,
+                    new_presets,
+                    intent_route_count=intent_route_count,
+                    intent_route_limit=intent_route_limit,
+                    include_groups=include_groups,
+                    include_start_page_routes=include_start_page_routes,
+                    limit_intent_to_initial=limit_intent_to_initial,
+                    is_initial=False,
+                    include_meta=include_meta,
+                    verbose=verbose,
+                )
+                conversation_path.pop(-1)
+            elif (
+                page_name in reachable
+                and intent_route_count
+                < min_intent_counts[reachable.index(page_name)]
+            ):
+                # Better route found, traverse from here
+                min_intent_counts[reachable.index(page_name)] = intent_route_count
+                conversation_path.append(page_name)
+                if verbose:
+                    print(conversation_path, intent_route_count)
+
+                new_presets = presets.copy()
+                if hasattr(page, "entry_fulfillment"):
+                    if hasattr(page.entry_fulfillment, "set_parameter_actions"):
+                        for (
+                            param_preset
+                        ) in page.entry_fulfillment.set_parameter_actions:
+                            new_presets[param_preset.parameter] = param_preset.value
+                if hasattr(page, "form"):
+                    for parameter in page.form.parameters:
+                        if hasattr(parameter, "fill_behavior"):
+                            if hasattr(
+                                parameter.fill_behavior,
+                                "initial_prompt_fulfillment",
+                            ):
+                                if hasattr(
+                                    parameter.fill_behavior.initial_prompt_fulfillment,
+                                    "set_parameter_actions",
+                                ):
+                                    for (
+                                        param_preset
+                                    ) in (
+                                        parameter.fill_behavior.initial_prompt_fulfillment.set_parameter_actions
+                                    ):
+                                        new_presets[
+                                            param_preset.parameter
+                                        ] = param_preset.value
+                if hasattr(route, "trigger_fulfillment"):
+                    if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
+                        for (
+                            param_preset
+                        ) in route.trigger_fulfillment.set_parameter_actions:
+                            new_presets[param_preset.parameter] = param_preset.value
+
+                if hasattr(route, "intent") and route.intent != "":
+                    # Check the entities annotated on this intent
+                    intent_name = self.intents_map[route.intent]
+                    intent_params = self._get_intent_parameters(intent_name)
+                    for param in intent_params:
+                        new_presets[
+                            param.id
+                        ] = f"(potentially set by {intent_name})"
+
+                self._find_reachable_pages_rec(
+                    flow_id,
+                    flow_name,
+                    self.flow_data[flow_id],
+                    reachable,
+                    conversation_path,
+                    min_intent_counts,
+                    new_presets,
+                    intent_route_count=intent_route_count,
+                    intent_route_limit=intent_route_limit,
+                    include_groups=include_groups,
+                    include_start_page_routes=include_start_page_routes,
+                    limit_intent_to_initial=limit_intent_to_initial,
+                    is_initial=False,
+                    include_meta=include_meta,
+                    verbose=verbose,
+                )
+                conversation_path.pop(-1)
+        elif len(target_page) > 0:
+            print(page.display_name, "->", target_page)
+            # This should not happen, and if it does it needs to be fixed
+            input()
+        elif len(target_flow) > 0:
+            flow_name = self.flows_map[route.target_flow]
+            if verbose:
+                print(page.display_name, "->", flow_name)
+            if flow_name not in reachable:
+                reachable.append(flow_name)
+                min_intent_counts.append(intent_route_count)
+            elif (
+                flow_name in reachable
+                and intent_route_count
+                < min_intent_counts[reachable.index(flow_name)]
+            ):
+                min_intent_counts[reachable.index(flow_name)] = intent_route_count
+        else:
+            if verbose:
+                print(page.display_name, "->", route.target_flow, "(empty)")
+            page_name = page.display_name
+            if (
+                page_name in reachable
+                and intent_route_count
+                < min_intent_counts[reachable.index(page_name)]
+            ):
+                min_intent_counts[reachable.index(page_name)] = intent_route_count
 
     def _find_reachable_pages_rec(
         self,
