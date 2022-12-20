@@ -487,9 +487,10 @@ class DataframeFunctions(ScrapiBase):
     def _create_intent_from_dataframe(
         self,
         display_name: str,
-        tp_df: pd.DataFrame,
-        params_df: pd.DataFrame = None,
-        meta: Dict[str, str] = None,
+        # tp_df: pd.DataFrame,
+        # params_df: pd.DataFrame = None,
+        # meta: Dict[str, str] = None,
+        df: pd.DataFrame,
         mode: str = "basic",
     ):
         """Create an intent from a DataFrame.
@@ -508,9 +509,9 @@ class DataframeFunctions(ScrapiBase):
           The new intents protobuf object
         """
         if mode == "basic":
-            if all(k in tp_df for k in ["text"]):
-                tp_df = tp_df[["text"]]
-                tp_df = self._coerce_to_string(tp_df, ["text"])
+            if all(k in df for k in ["text"]):
+                df = df[["text"]]
+                df = self._coerce_to_string(df, ["text"])
 
             else:
                 tp_schema = self._make_schema(["text", "parameter_id"])
@@ -527,25 +528,29 @@ class DataframeFunctions(ScrapiBase):
 
         elif mode == "advanced":
             if all(
-                k in tp_df
-                for k in ["training_phrase", "part", "text", "parameter_id"]
+                k in df
+                for k in ["training_phrase", "part", "text", "parameter_id","id",
+                        "entity_type"]
             ):
-                tp_df = tp_df[
-                    ["training_phrase", "part", "text", "parameter_id"]
+                df = df[
+                    ["training_phrase", "part", "text", "parameter_id", "id",
+                        "entity_type"]
                 ]
-                tp_df = self._coerce_to_string(tp_df, ["text", "parameter_id"])
-                tp_df = self._coerce_to_int(tp_df, ["training_phrase", "part"])
+                df = self._coerce_to_string(df, ["text", "parameter_id", "id",
+                        "entity_type"])
+                df = self._coerce_to_int(df, ["training_phrase", "part"])
 
-                if not params_df.empty:
-                    params_df = params_df[["id", "entity_type"]]
-                    params_df = params_df.astype(
-                        {"id": "string", "entity_type": "string"}
-                    )
+                # if not params_df.empty:
+                #     params_df = params_df[["id", "entity_type"]]
+                #     params_df = params_df.astype(
+                #         {"id": "string", "entity_type": "string"}
+                #     )
             else:
                 tp_schema = self._make_schema(
-                    ["training_phrase", "part", "text", "parameter_id"]
+                    ["training_phrase", "part", "text", "parameter_id", "id",
+                        "entity_type"]
                 )
-                p_schema = self._make_schema(["id", "entity_type"])
+                # p_schema = self._make_schema(["id", "entity_type"])
 
                 logging.error(
                     "%s mode train_phrases schema must be %s \n",
@@ -556,15 +561,15 @@ class DataframeFunctions(ScrapiBase):
                         tablefmt="psql",
                     ),
                 )
-                logging.error(
-                    "%s mode parameter schema must be %s \n",
-                    mode,
-                    tabulate(
-                        p_schema.transpose(),
-                        headers="keys",
-                        tablefmt="psql",
-                    ),
-                )
+                # logging.error(
+                #     "%s mode parameter schema must be %s \n",
+                #     mode,
+                #     tabulate(
+                #         p_schema.transpose(),
+                #         headers="keys",
+                #         tablefmt="psql",
+                #     ),
+                # )
 
         else:
             raise ValueError("mode must be basic or advanced")
@@ -572,18 +577,20 @@ class DataframeFunctions(ScrapiBase):
         intent = {}
         intent["display_name"] = display_name
 
-        if meta:
-            intent["priority"] = meta.get("priority", 500000)
-            intent["is_fallback"] = meta.get("is_fallback", False)
-            intent["labels"] = meta.get("labels", {})
-            intent["description"] = meta.get("description", "")
+        # if meta:
+        #     intent["priority"] = meta.get("priority", 500000)
+        #     intent["is_fallback"] = meta.get("is_fallback", False)
+        #     intent["labels"] = meta.get("labels", {})
+        #     intent["description"] = meta.get("description", "")
 
         # training phrases
         if mode == "advanced":
             training_phrases = []
-            for phrase in list(set(tp_df["training_phrase"])):
-                tp_parts = tp_df[
-                    tp_df["training_phrase"].astype(int) == int(phrase)
+            for phrase in list(set(df["training_phrase"])):
+                tp_parts = df[
+                    
+                    df["training_phrase"].astype(int) == int(phrase) # this is not int anymore
+                    
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
@@ -599,7 +606,7 @@ class DataframeFunctions(ScrapiBase):
 
             intent["training_phrases"] = training_phrases
             parameters = []
-            for _, row in params_df.iterrows():
+            for _, row in df.iterrows():
                 parameter = {
                     "id": row["id"],
                     "entity_type": row["entity_type"],
@@ -613,7 +620,7 @@ class DataframeFunctions(ScrapiBase):
 
         elif mode == "basic":
             training_phrases = []
-            for _, row in tp_df.iterrows():
+            for _, row in df.iterrows():
                 part = {"text": row["text"], "parameter_id": None}
                 parts = [part]
                 training_phrase = {"parts": parts, "repeat_count": 1, "id": ""}
@@ -630,8 +637,9 @@ class DataframeFunctions(ScrapiBase):
     def bulk_create_intent_from_dataframe(
         self,
         agent_id: str,
-        tp_df: pd.DataFrame,
-        params_df: pd.DataFrame = None,
+        # tp_df: pd.DataFrame,
+        # params_df: pd.DataFrame = None,
+        df: pd.DataFrame,
         mode: str = "basic",
         update_flag: bool = False,
         rate_limiter: int = 5,
@@ -684,38 +692,42 @@ class DataframeFunctions(ScrapiBase):
 
         elif mode == "advanced":
             if all(
-                k in tp_df
+                k in df # tp_df
                 for k in [
                     "display_name",
                     "training_phrase",
                     "part",
                     "text",
                     "parameter_id",
+                    "id",
+                    "entity_type",
                 ]
             ):
-                if "meta" not in tp_df.columns:
-                    tp_df["meta"] = [{}] * len(tp_df)
+                # if "meta" not in tp_df.columns:
+                #     tp_df["meta"] = [{}] * len(tp_df)
 
-                tp_df = tp_df[
+                df = df[
                     [
                         "display_name",
                         "training_phrase",
                         "part",
                         "text",
                         "parameter_id",
-                        "meta",
+                        "id",
+                        "entity_type",
+                        # "meta",
                     ]
                 ]
-                tp_df = self._coerce_to_string(
-                    tp_df, ["display_name", "text", "parameter_id"]
+                df = self._coerce_to_string(
+                    df, ["display_name", "text", "parameter_id", "id", "entity_type"]
                 )
-                tp_df = self._coerce_to_int(tp_df, ["training_phrase", "part"])
+                df = self._coerce_to_int(df, ["training_phrase", "part"])
 
-                if not params_df.empty:
-                    params_df = params_df[["display_name", "id", "entity_type"]]
-                    params_df = self._coerce_to_string(
-                        params_df, ["display_name", "id", "entity_type"]
-                    )
+                # if not params_df.empty:
+                #     params_df = params_df[["display_name", "id", "entity_type"]]
+                #     params_df = self._coerce_to_string(
+                #         params_df, ["display_name", "id", "entity_type"]
+                #     )
 
             else:
                 tp_schema = self._make_schema(
@@ -725,50 +737,53 @@ class DataframeFunctions(ScrapiBase):
                         "part",
                         "text",
                         "parameter_id",
+                        "id",
+                        "entity_type"
                     ]
                 )
 
-                p_schema = self._make_schema(
-                    ["display_name", "id", "entity_type"]
-                )
+                # p_schema = self._make_schema(
+                #     ["display_name", "id", "entity_type"]
+                # )
 
                 tp_schema_error = tabulate(
                         tp_schema.transpose(),
                         headers="keys",
                         tablefmt="psql",
                     )
-                p_schema_error = tabulate(
-                        p_schema.transpose(),
-                        headers="keys",
-                        tablefmt="psql",
-                    )
+                # p_schema_error = tabulate(
+                #         p_schema.transpose(),
+                #         headers="keys",
+                #         tablefmt="psql",
+                #     )
                 raise ValueError(
                     f"{mode} mode train_phrases schema must be "\
-                    f"{tp_schema_error} \n parameter schema must be "
-                    f"{p_schema_error}"
+                    f"{tp_schema_error}"# \n parameter schema must be "
+                    # f"{p_schema_error}"
                 )
 
         else:
             raise ValueError("mode must be basic or advanced")
 
-        temp_intents = list(set(tp_df["display_name"]))
+        temp_intents = list(set(df["display_name"]))
         new_intents = {}
         i = 0
         for intent in temp_intents:
-            tps = tp_df.copy()[tp_df["display_name"] == intent].drop(
+            tps = df.copy()[df["display_name"] == intent].drop(
                 columns="display_name"
             )
-            params = pd.DataFrame()
-            if mode == "advanced":
-                params = params_df.copy()[
-                    params_df["display_name"] == intent
-                ].drop(columns="display_name")
+            # params = pd.DataFrame()
+            # if mode == "advanced":
+            #     params = params_df.copy()[
+            #         params_df["display_name"] == intent
+            #     ].drop(columns="display_name")
 
             new_intent = self._create_intent_from_dataframe(
                 display_name=intent,
-                tp_df=tps,
-                params_df=params,
-                meta=meta,
+                # tp_df=tps,
+                # params_df=params,
+                # meta=meta,
+                df=df,
                 mode=mode,
             )
             new_intents[intent] = new_intent
