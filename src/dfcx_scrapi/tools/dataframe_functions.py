@@ -139,12 +139,18 @@ class DataframeFunctions(ScrapiBase):
             "entity_type": "string",
         }
 
-        temp_data = {}
-        for column in dataframe.columns:
-            dataframe = dataframe.astype({column: type_map[column]})
-            temp_data[column] = type_map[column]
+        # filter dictionary for any missing columns
+        type_map = {k: type_map.get(k, None) for k in set(columns)}
 
-        dataframe = pd.concat([dataframe, temp_data], ignore_index=True)
+        for k, v in type_map.items():
+            dataframe[k] = dataframe[k].astype(v)
+
+        # temp_data = {}
+        # for column in dataframe.columns:
+        #     dataframe = dataframe.astype({column: type_map[column]})
+        #     temp_data[column] = type_map[column]
+
+        # dataframe = pd.concat([dataframe, temp_data], ignore_index=True)
 
         return dataframe
 
@@ -487,9 +493,6 @@ class DataframeFunctions(ScrapiBase):
     def _create_intent_from_dataframe(
         self,
         display_name: str,
-        # tp_df: pd.DataFrame,
-        # params_df: pd.DataFrame = None,
-        # meta: Dict[str, str] = None,
         df: pd.DataFrame,
         mode: str = "basic",
     ):
@@ -508,89 +511,17 @@ class DataframeFunctions(ScrapiBase):
         Returns:
           The new intents protobuf object
         """
-        if mode == "basic":
-            if all(k in df for k in ["text"]):
-                df = df[["text"]]
-                df = self._coerce_to_string(df, ["text"])
-
-            else:
-                tp_schema = self._make_schema(["text", "parameter_id"])
-
-                logging.error(
-                    "%s mode train_phrases schema must be %s \n",
-                    mode,
-                    tabulate(
-                        tp_schema.transpose(),
-                        headers="keys",
-                        tablefmt="psql",
-                    ),
-                )
-
-        elif mode == "advanced":
-            if all(
-                k in df
-                for k in ["training_phrase", "part", "text", "parameter_id","id",
-                        "entity_type"]
-            ):
-                df = df[
-                    ["training_phrase", "part", "text", "parameter_id", "id",
-                        "entity_type"]
-                ]
-                df = self._coerce_to_string(df, ["text", "parameter_id", "id",
-                        "entity_type"])
-                df = self._coerce_to_int(df, ["training_phrase", "part"])
-
-                # if not params_df.empty:
-                #     params_df = params_df[["id", "entity_type"]]
-                #     params_df = params_df.astype(
-                #         {"id": "string", "entity_type": "string"}
-                #     )
-            else:
-                tp_schema = self._make_schema(
-                    ["training_phrase", "part", "text", "parameter_id", "id",
-                        "entity_type"]
-                )
-                # p_schema = self._make_schema(["id", "entity_type"])
-
-                logging.error(
-                    "%s mode train_phrases schema must be %s \n",
-                    mode,
-                    tabulate(
-                        tp_schema.transpose(),
-                        headers="keys",
-                        tablefmt="psql",
-                    ),
-                )
-                # logging.error(
-                #     "%s mode parameter schema must be %s \n",
-                #     mode,
-                #     tabulate(
-                #         p_schema.transpose(),
-                #         headers="keys",
-                #         tablefmt="psql",
-                #     ),
-                # )
-
-        else:
-            raise ValueError("mode must be basic or advanced")
 
         intent = {}
         intent["display_name"] = display_name
-
-        # if meta:
-        #     intent["priority"] = meta.get("priority", 500000)
-        #     intent["is_fallback"] = meta.get("is_fallback", False)
-        #     intent["labels"] = meta.get("labels", {})
-        #     intent["description"] = meta.get("description", "")
 
         # training phrases
         if mode == "advanced":
             training_phrases = []
             for phrase in list(set(df["training_phrase"])):
                 tp_parts = df[
-                    
-                    df["training_phrase"].astype(int) == int(phrase) # this is not int anymore
-                    
+                    df["training_phrase"].astype(int) == int(phrase)
+                    # this is not int anymore
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
@@ -634,16 +565,90 @@ class DataframeFunctions(ScrapiBase):
 
         return intent_pb
 
+    def intent_from_dataframe_basic(self, df):
+        if all(k in df for k in ["display_name", "text"]):
+            df = df[["display_name", "text"]]
+            df = self._coerce_to_string(df, ["display_name", "text"])
+            return df
+
+        else:
+            tp_schema = self._make_schema(
+                ["display_name", "text", "parameter_id"]
+            )
+
+            schema_error = tabulate(
+                    tp_schema.transpose(),
+                    headers="keys",
+                    tablefmt="psql",
+                )
+
+            raise ValueError(
+                f"basic mode train_phrases schema must be {schema_error}"
+            )
+
+    def intent_from_dataframe_advanced(self,df):
+        if all(
+                k in df
+                for k in [
+                    "display_name",
+                    "training_phrase",
+                    "part",
+                    "text",
+                    "parameter_id",
+                    "id",
+                    "entity_type",
+                ]
+            ):
+
+            df = df[
+                [
+                    "display_name",
+                    "training_phrase",
+                    "part",
+                    "text",
+                    "parameter_id",
+                    "id",
+                    "entity_type",
+                ]
+            ]
+            df = self._coerce_to_string(
+                df, ["display_name", "text", "parameter_id", "id",
+                     "entity_type"]
+            )
+            df = self._coerce_to_int(df, ["training_phrase", "part"])
+            return df
+
+        else:
+            tp_schema = self._make_schema(
+                [
+                    "display_name",
+                    "training_phrase",
+                    "part",
+                    "text",
+                    "parameter_id",
+                    "id",
+                    "entity_type"
+                ]
+            )
+
+            tp_schema_error = tabulate(
+                    tp_schema.transpose(),
+                    headers="keys",
+                    tablefmt="psql",
+                )
+
+            raise ValueError(
+                f"advanced mode train_phrases schema must be "\
+                f"{tp_schema_error}"
+            )
+
     def bulk_create_intent_from_dataframe(
         self,
         agent_id: str,
-        # tp_df: pd.DataFrame,
-        # params_df: pd.DataFrame = None,
         df: pd.DataFrame,
         mode: str = "basic",
         update_flag: bool = False,
         rate_limiter: int = 5,
-        meta: Dict[str, str] = None,
         language_code: str = None,
     ):
         """Create Intents in DFCX from a DataFrame.
@@ -670,97 +675,12 @@ class DataframeFunctions(ScrapiBase):
             intent protobufs as values
 
         """
+
         if mode == "basic":
-            if all(k in tp_df for k in ["display_name", "text"]):
-                tp_df = tp_df[["display_name", "text"]]
-                tp_df = self._coerce_to_string(tp_df, ["display_name", "text"])
-
-            else:
-                tp_schema = self._make_schema(
-                    ["display_name", "text", "parameter_id"]
-                )
-
-                schema_error = tabulate(
-                        tp_schema.transpose(),
-                        headers="keys",
-                        tablefmt="psql",
-                    )
-
-                raise ValueError(
-                    f"{mode} mode train_phrases schema must be {schema_error}"
-                )
+            self.intent_from_dataframe_basic(df)
 
         elif mode == "advanced":
-            if all(
-                k in df # tp_df
-                for k in [
-                    "display_name",
-                    "training_phrase",
-                    "part",
-                    "text",
-                    "parameter_id",
-                    "id",
-                    "entity_type",
-                ]
-            ):
-                # if "meta" not in tp_df.columns:
-                #     tp_df["meta"] = [{}] * len(tp_df)
-
-                df = df[
-                    [
-                        "display_name",
-                        "training_phrase",
-                        "part",
-                        "text",
-                        "parameter_id",
-                        "id",
-                        "entity_type",
-                        # "meta",
-                    ]
-                ]
-                df = self._coerce_to_string(
-                    df, ["display_name", "text", "parameter_id", "id", "entity_type"]
-                )
-                df = self._coerce_to_int(df, ["training_phrase", "part"])
-
-                # if not params_df.empty:
-                #     params_df = params_df[["display_name", "id", "entity_type"]]
-                #     params_df = self._coerce_to_string(
-                #         params_df, ["display_name", "id", "entity_type"]
-                #     )
-
-            else:
-                tp_schema = self._make_schema(
-                    [
-                        "display_name",
-                        "training_phrase",
-                        "part",
-                        "text",
-                        "parameter_id",
-                        "id",
-                        "entity_type"
-                    ]
-                )
-
-                # p_schema = self._make_schema(
-                #     ["display_name", "id", "entity_type"]
-                # )
-
-                tp_schema_error = tabulate(
-                        tp_schema.transpose(),
-                        headers="keys",
-                        tablefmt="psql",
-                    )
-                # p_schema_error = tabulate(
-                #         p_schema.transpose(),
-                #         headers="keys",
-                #         tablefmt="psql",
-                #     )
-                raise ValueError(
-                    f"{mode} mode train_phrases schema must be "\
-                    f"{tp_schema_error}"# \n parameter schema must be "
-                    # f"{p_schema_error}"
-                )
+            self.intent_from_dataframe_advanced(df)
 
         else:
             raise ValueError("mode must be basic or advanced")
@@ -772,18 +692,10 @@ class DataframeFunctions(ScrapiBase):
             tps = df.copy()[df["display_name"] == intent].drop(
                 columns="display_name"
             )
-            # params = pd.DataFrame()
-            # if mode == "advanced":
-            #     params = params_df.copy()[
-            #         params_df["display_name"] == intent
-            #     ].drop(columns="display_name")
 
             new_intent = self._create_intent_from_dataframe(
                 display_name=intent,
-                # tp_df=tps,
-                # params_df=params,
-                # meta=meta,
-                df=df,
+                df=tps,
                 mode=mode,
             )
             new_intents[intent] = new_intent
