@@ -73,12 +73,12 @@ def build_agent(creds_path, project_id, gcp_region, display_name):
     # Next, we will read in our sample CSV with Intent training phrases data as
     # well as the entities used into 2 distinct Pandas DataFrames
     df = pd.read_csv("../../data/intent_sample_with_parts.csv")  # pylint: disable=C0103
-    params_df = pd.read_csv("../../data/intent_sample_params.csv")
+    # params_df = pd.read_csv("../../data/intent_sample_params.csv")
 
     # Finally, we will use `dffx` to push our Intents to our Agent
     # If intents do not exist, use bulk_create_intent_from_dataframe
     _ = dffx.bulk_create_intent_from_dataframe(
-        my_agent.name, df, params_df, update_flag=True, mode="advanced"
+        my_agent.name, df, update_flag=True, mode="advanced"
     )
 
 
