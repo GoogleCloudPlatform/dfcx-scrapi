@@ -1151,10 +1151,13 @@ class AgentCheckerUtil(ScrapiBase):
                                      page_routegroups,
                                      None)
 
+        if not flow_id:
+            flow_id = self.flows_map_rev[flow_name]
+
         # Get intents in transition route groups
         if include_groups:
             for route_group_id in page.transition_route_groups:
-                route_group = self.transition_route_groups[route_group_id]
+                route_group = self.route_group_data[flow_id][route_group_id]
                 self.add_intents_from_routes(route_group.transition_routes,
                                          page_intents,
                                          page_routegroups,
@@ -1221,7 +1224,8 @@ class AgentCheckerUtil(ScrapiBase):
 
     def find_all_unreachable_intents(self) -> List[str]:
         """Finds all unreachable intents, either because they are on
-        unreachable pages or they are unused in the agent.
+        unreachable pages or they are unused in the agent. Note that
+        Default Negative Intent will always show up here.
 
         Returns:
             A list of unreachable intent display names
