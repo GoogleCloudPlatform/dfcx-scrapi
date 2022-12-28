@@ -1186,11 +1186,12 @@ class AgentCheckerUtil(ScrapiBase):
             flow_name=flow_name,
             include_groups=include_groups)
         for page_name in reachable_pages:
-            page_intents = set(self._get_page_intents(
-                flow_name=flow_name,
-                page_name=page_name,
-                include_groups=include_groups
-            )["intent"])
+            if page_name not in self.flows_map_rev:
+                page_intents = set(self._get_page_intents(
+                    flow_name=flow_name,
+                    page_name=page_name,
+                    include_groups=include_groups
+                )["intent"])
             intents |= page_intents
         return list(intents)
 
@@ -1204,7 +1205,7 @@ class AgentCheckerUtil(ScrapiBase):
             flows - a list of flow display names that use this intent
         """
         intents = {}
-        for flow_name in self.flows_map.values():
+        for flow_name in self.flows_map_rev:
             flow_intents = self.find_reachable_intents(flow_name=flow_name,
                                                        include_groups=True)
             for intent in flow_intents:
@@ -1226,7 +1227,7 @@ class AgentCheckerUtil(ScrapiBase):
             A list of unreachable intent display names
         """
         all_reachable_intents = set()
-        for flow_name in self.flows_map.values():
+        for flow_name in self.flows_map_rev:
             flow_intents = self.find_reachable_intents(flow_name=flow_name,
                                                        include_groups=True)
             all_reachable_intents |= set(flow_intents)
