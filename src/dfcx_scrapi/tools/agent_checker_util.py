@@ -1122,7 +1122,7 @@ class AgentCheckerUtil(ScrapiBase):
                 else:
                     routegroups.append("")
 
-    def get_page_intents(self,
+    def _get_page_intents(self,
                          flow_id: Optional[str] = None,
                          flow_name: Optional[str] = None,
                          page_id: Optional[str] = None,
@@ -1140,7 +1140,7 @@ class AgentCheckerUtil(ScrapiBase):
         Returns:
           List of intent names
         """
-        page = self.get_page(flow_id=flow_id, flow_name=flow_name,
+        page = self._get_page(flow_id=flow_id, flow_name=flow_name,
                              page_id=page_id, page_name=page_name)
 
         page_routegroups = []
@@ -1186,7 +1186,7 @@ class AgentCheckerUtil(ScrapiBase):
             flow_name=flow_name,
             include_groups=include_groups)
         for page_name in reachable_pages:
-            page_intents = set(self.get_page_intents(
+            page_intents = set(self._get_page_intents(
                 flow_name=flow_name,
                 page_name=page_name,
                 include_groups=include_groups
