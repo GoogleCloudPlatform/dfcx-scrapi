@@ -1120,7 +1120,7 @@ class AgentCheckerUtil(ScrapiBase):
                 if route_group is not None:
                     routegroups.append(route_group.display_name)
                 else:
-                    routegroups.append('')
+                    routegroups.append("")
 
     def get_page_intents(self,
                          flow_id: Optional[str] = None,
@@ -1161,12 +1161,12 @@ class AgentCheckerUtil(ScrapiBase):
                                          route_group)
 
         return pd.DataFrame({
-            'route group': page_routegroups, 
-            'intent': page_intents
+            "route group": page_routegroups,
+            "intent": page_intents
         })
 
-    def find_reachable_intents(self, 
-                               flow_name, 
+    def find_reachable_intents(self,
+                               flow_name,
                                include_groups: bool = True
     ) -> List[str]:
         """Finds all intents which are on reachable pages, starting from the
@@ -1188,8 +1188,51 @@ class AgentCheckerUtil(ScrapiBase):
         for page_name in reachable_pages:
             page_intents = set(self.get_page_intents(
                 flow_name=flow_name,
-                page_name=page_name, 
+                page_name=page_name,
                 include_groups=include_groups
-            )['intent'])
+            )["intent"])
             intents |= page_intents
         return list(intents)
+
+    def find_all_reachable_intents(self) -> pd.DataFrame:
+        """Finds all intents referenced in the agent, across all flows,
+        and produces a dataframe listing which flows reference each intent.
+
+        Returns:
+            A dataframe with columns
+            intent - the intent display name
+            flows - a list of flow display names that use this intent
+        """
+        intents = {}
+        for flow_name in self.flows_map.values():
+            flow_intents = self.find_reachable_intents(flow_name=flow_name,
+                                                       include_groups=True)
+            for intent in flow_intents:
+                if intent in intents:
+                    intents[intent].append(flow_name)
+                else:
+                    intents[intent] = [flow_name]
+        # Also return the unreachable ones, because why not
+        return pd.DataFrame({
+            "intent": intents.keys(),
+            "flows": intents.values()
+        })
+
+    def find_all_unreachable_intents(self) -> List[str]:
+        """Finds all unreachable intents, either because they are on
+        unreachable pages or they are unused in the agent.
+
+        Returns:
+            A list of unreachable intent display names
+        """
+        all_reachable_intents = set()
+        for flow_name in self.flows_map.values():
+            flow_intents = self.find_reachable_intents(flow_name=flow_name,
+                                                       include_groups=True)
+            all_reachable_intents |= set(flow_intents)
+        unreachable_intents = []
+        for intent in self.intent_data:
+            if intent.display_name in all_reachable_intents:
+                continue
+            unreachable_intents.append(intent.display_name)
+        return unreachable_intents
