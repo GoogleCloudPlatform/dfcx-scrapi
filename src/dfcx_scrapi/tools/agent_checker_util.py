@@ -1094,3 +1094,102 @@ class AgentCheckerUtil(ScrapiBase):
             flow_names.extend([flow_name for _ in unreachable])
             page_names.extend(unreachable)
         return pd.DataFrame({"flow_name": flow_names, "page_name": page_names})
+
+    def add_intents_from_routes(self,
+                                transition_list: List[DFCXRoute],
+                                intents: List[str],
+                                routegroups: List[str],
+                                route_group
+    ) -> None:
+        """Helper function which adds intents from routes to a list of intents
+
+        Args:
+          transition_list, The list of transition routes
+          intents, The list of intent names
+
+        Returns:
+          Nothing (appends to the intent list)
+        """
+        for route in transition_list:
+            # Ignore empty intents (such as the true condition)
+            if len(route.intent) == 0:
+                continue
+            intent = self.intents_map[route.intent]
+            if intent not in intents:
+                intents.append(intent)
+                if route_group is not None:
+                    routegroups.append(route_group.display_name)
+                else:
+                    routegroups.append('')
+
+    def get_page_intents(self,
+                         flow_id: Optional[str] = None,
+                         flow_name: Optional[str] = None,
+                         page_id: Optional[str] = None,
+                         page_name: Optional[str] = None,
+                         include_groups: bool = True
+    ) -> List[str]:
+        """Get the list of intents for a given page of this flow.
+
+        Args:
+          flow_id OR flow_name: The ID or name of the flow
+          page_id OR page_name: The ID or name of the page
+          include_groups (Optional): If true, intents from transition route
+            groups on the given page will be included
+
+        Returns:
+          List of intent names
+        """
+        page = self.get_page(flow_id=flow_id, flow_name=flow_name,
+                             page_id=page_id, page_name=page_name)
+
+        page_routegroups = []
+        page_intents = []
+        transition_list = page.transition_routes
+        self.add_intents_from_routes(transition_list,
+                                     page_intents,
+                                     page_routegroups,
+                                     None)
+
+        # Get intents in transition route groups
+        if include_groups:
+            for route_group_id in page.transition_route_groups:
+                route_group = self.transition_route_groups[route_group_id]
+                self.add_intents_from_routes(route_group.transition_routes,
+                                         page_intents,
+                                         page_routegroups,
+                                         route_group)
+
+        return pd.DataFrame({
+            'route group': page_routegroups, 
+            'intent': page_intents
+        })
+
+    def find_reachable_intents(self, 
+                               flow_name, 
+                               include_groups: bool = True
+    ) -> List[str]:
+        """Finds all intents which are on reachable pages, starting from the
+        start page of the given flow.
+
+        Args:
+          flow_name: The name of the flow to check for reachable intents.
+          include_groups (Optional): If true, intents from transition route
+            groups will be included, but only if they are actually referenced
+            on some page.
+
+        Returns:
+          The list of intents on reachable pages in this flow
+        """
+        intents = set()
+        reachable_pages = self.find_reachable_pages(
+            flow_name=flow_name,
+            include_groups=include_groups)
+        for page_name in reachable_pages:
+            page_intents = set(self.get_page_intents(
+                flow_name=flow_name,
+                page_name=page_name, 
+                include_groups=include_groups
+            )['intent'])
+            intents |= page_intents
+        return list(intents)
