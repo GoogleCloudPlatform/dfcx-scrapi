@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import pandas as pd
 import logging
 from typing import Dict, List
 
@@ -22,7 +22,13 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
+<<<<<<< HEAD
 from dfcx_scrapi.core import scrapi_base
+=======
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.pages import Pages
+>>>>>>> Move get_test_case_results_df to TestCases
 
 # logging config
 logging.basicConfig(
@@ -453,3 +459,149 @@ class TestCases(scrapi_base.ScrapiBase):
         )
         response = client.calculate_coverage(request)
         return response
+
+    def _convert_flow(self, flow_id, flows_map):
+        """Gets a flow display name from a flow ID"""
+        if flow_id.split("/")[-1] == "-":
+            return ""
+        # flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
+        if flow_id in flows_map:
+            return flows_map[flow_id]
+        # TODO: Should throw error instead of returning default
+        return "Default Start Flow"
+
+    # Note that flow id includes agent, normally...
+    def _convert_page(self, page_id, flow_id, pages_map):
+        """Gets a page display name from a page and flow ID"""
+        if page_id == "END_SESSION":
+            return "End Session"
+        elif page_id == "END_FLOW":
+            return "End Flow"
+        elif page_id == "START_PAGE":
+            return "Start"
+        page_id_converted = str(flow_id) + "/pages/" + str(page_id)
+        if flow_id in pages_map:
+            if page_id_converted in pages_map[flow_id]:
+                return pages_map[flow_id][page_id_converted]
+            else:
+                # TODO: Should throw error instead of returning default
+                return "Start"
+        print("Flow not found")
+        # TODO: Should throw error, but returning this probably will anyway
+        return "Invalid"
+
+    def get_test_case_results_df(self, agent_id=None, retest_all=False):
+        """Gets the test case results for this agent,
+        and generates a dataframe with their details.
+        Any tests without a result will be run in a batch.
+
+        Args:
+          agent_id: required only if not set when initializing this class
+          retest_all: if true, all test cases are re-run,
+            regardless of whether or not they had a result
+
+        Returns:
+          DataFrame of test case results for this agent, with columns:
+            display_name, id, short_id (excluding agent ID),
+            tags (comma-separated string), creation_time,
+            start_flow, start_page, passed, test_time
+        """
+        if agent_id:
+            self.agent_id = agent_id
+
+        dfcx_flows = Flows(creds=self.creds, agent_id=self.agent_id)
+        dfcx_pages = Pages(creds=self.creds)
+        flows_map = dfcx_flows.get_flows_map(agent_id=self.agent_id)
+        pages_map = {}
+        for flow_id in flows_map.keys():
+            pages_map[flow_id] = dfcx_pages.get_pages_map(flow_id=flow_id)
+
+        test_case_results = self.list_test_cases(self.agent_id)
+        retest = []
+        retest_names = []
+
+        display_names = []
+        ids = []
+        short_ids = []
+        tags = []
+        creation_times = []
+        flows = []
+        pages = []
+        test_results = []
+        test_times = []
+        passed = []
+
+        for response in test_case_results:
+            # Collect untested cases to be retested
+            # (or all if retest_all is True)
+            if (
+                retest_all
+                or str(response.last_test_result.test_result)
+                == "TestResult.TEST_RESULT_UNSPECIFIED"
+            ):
+                retest.append(response.name)
+                retest_names.append(response.display_name)
+                # Collect additional information for dataframe
+            display_names.append(response.display_name)
+            ids.append(response.name)
+            short_ids.append(response.name.split("/")[-1])
+            tags.append(",".join(response.tags))
+            creation_times.append(response.creation_time)
+            flows.append(self._convert_flow(response.test_config.flow,
+                                            flows_map)
+            )
+            pages.append(
+                self._convert_page(response.test_config.page,
+                                   response.test_config.flow,
+                                   pages_map)
+            )
+            test_results.append(str(response.last_test_result.test_result))
+            test_times.append(response.last_test_result.test_time)
+            passed.append(
+                str(response.last_test_result.test_result)=="TestResult.PASSED"
+            )
+
+        # Create dataframe
+        test_case_df = pd.DataFrame(
+            {
+                "display_name": display_names,
+                "id": ids,
+                "short_id": short_ids,
+                "tags": tags,
+                "creation_time": creation_times,
+                "start_flow": flows,
+                "start_page": pages,
+                "test_result": test_results,
+                "passed": passed,
+                "test_time": test_times,
+            }
+        )
+
+        # Retest any that haven't been run yet
+        print("To retest:", len(retest))
+        if len(retest) > 0:
+            response = self.batch_run_test_cases(retest, self.agent_id)
+            for result in response.results:
+                # Results may not be in the same order as they went in
+                # Process the name a bit to remove the /results/id part
+                tc_id_full = "/".join(result.name.split("/")[:-2])
+                tc_id = tc_id_full.rsplit("/", maxsplit=1)[-1]
+
+                # Update dataframe where id = tc_id_full
+                # row = test_case_df.loc[test_case_df['id']==tc_id_full]
+                test_case_df.loc[
+                    test_case_df["id"] == tc_id_full, "short_id"
+                ] = tc_id
+                test_case_df.loc[
+                    test_case_df["id"] == tc_id_full, "test_result"
+                ] = str(result.test_result)
+                test_case_df.loc[
+                    test_case_df["id"] == tc_id_full, "test_time"
+                ] = result.test_time
+                test_case_df.loc[test_case_df["id"] == tc_id_full,"passed"] = (
+                    str(result.test_result) == "TestResult.PASSED"
+                )
+
+        # This column is redundant, since we have passed (bool)
+        test_case_df = test_case_df.drop(columns=["test_result"])
+        return test_case_df
