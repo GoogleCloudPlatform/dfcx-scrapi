@@ -301,7 +301,6 @@ class FulfillmentBuilder:
         )
 
 
-
     def show_fulfillment(self, mode: str = "whole"):
         """Show the proto_obj information.
         Args:
@@ -327,6 +326,3 @@ class FulfillmentBuilder:
                 "['basic', 'parameters',"
                 " 'messages' or 'response messages', 'whole']"
             )
-
-
-
