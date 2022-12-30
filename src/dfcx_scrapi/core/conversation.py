@@ -16,12 +16,14 @@
 
 import logging
 import time
+import traceback
 import uuid
 
-import pandas as pd
 from typing import Dict
+from operator import attrgetter
 from threading import Thread
-import traceback
+
+import pandas as pd
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -63,9 +65,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         )
 
         logging.info(
-            f"create conversation with creds_path: \
-                {creds_path} | agent_id: {agent_id}",
-        )
+            "create conversation with creds_path: %s | agent_id: %s",
+            creds_path, agent_id)
 
         if agent_id or config["agent_path"]:
             self.agent_id = agent_id or config["agent_path"]
@@ -83,6 +84,9 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     @staticmethod
     def _get_match_type_from_map(match_type: int):
+        """Translates the match_type enum int value into a more descriptive
+        string.
+        """
         match_type_map = {
             0: "MATCH_TYPE_UNSPECIFIED",
             1: "INTENT",
@@ -91,12 +95,16 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             4: "NO_MATCH",
             5: "NO_INPUT",
             6: "EVENT",
+            8: "KNOWLEDGE_CONNECTOR"
         }
 
         return match_type_map[match_type]
 
     @staticmethod
     def _validate_test_set_input(test_set: pd.DataFrame):
+        """Validates that all pages referenced in the test set exist in the
+        agent.
+        """
         mask = test_set.page_id.isna().to_list()
         invalid_pages = set(test_set.page_display_name[mask].to_list())
 
@@ -234,6 +242,11 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         return output_parameters
 
     def _page_id_mapper(self):
+        """Initializes the agent_pages_map dataframe.
+
+        This dataframe contains the flow_display_name, page_display_name,
+        and page_id for each page in the agent.
+        """
         agent_pages_map = pd.DataFrame()
         flow_map = self.flows.get_flows_map(agent_id=self.agent_id)
         for flow_id in flow_map.keys():
@@ -275,13 +288,10 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             send_obj={"text": utterance}, current_page=page_id, restart=True
         )
 
-        intent = response["intent_name"]
-        confidence = response["confidence"]
         target_page = response["page_name"]
 
-        results["detected_intent"][i] = intent or "NO_MATCH"
-        results["confidence"][i] = confidence
         results["target_page"][i] = target_page
+        results["match"][i] = response["match"]
 
     def _get_intent_detection(self, test_set: pd.DataFrame):
         """Gets the results of a subset of Intent Detection tests.
@@ -305,9 +315,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         threads = [None] * len(utterances)
         results = {
-            "detected_intent": [None] * len(utterances),
-            "confidence": [None] * len(utterances),
             "target_page": [None] * len(utterances),
+            "match":[None] * len(utterances),
         }
         for i, (utterance, page_id) in enumerate(zip(utterances, page_ids)):
             threads[i] = Thread(
@@ -316,30 +325,29 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             )
             threads[i].start()
 
-        for idx, _ in enumerate(threads):
-            threads[idx].join()
+        for _, thread in enumerate(threads):
+            thread.join()
 
-        test_set_mapped["detected_intent"] = results["detected_intent"]
-        test_set_mapped["confidence"] = results["confidence"]
         test_set_mapped["target_page"] = results["target_page"]
+        test_set_mapped["match"] = results["match"]
         test_set_mapped = test_set_mapped.drop(columns=["page_id"])
-
         intent_detection = test_set_mapped.copy()
 
         return intent_detection
 
+
     def restart(self):
-        """starts a new session/conversation for this agent"""
+        """Starts a new session/conversation for this agent"""
         self.session_id = uuid.uuid4()
         self.turn_count = 0
 
     def set_agent_env(self, param, value):
-        """setting changes related to the environment"""
+        """Setting changes related to the environment"""
         logging.info("setting agent_env param:[%s] = value:[%s]", param, value)
         self.agent_env[param] = value
 
     def checkpoint(self, msg=None, start=False):
-        """print a checkpoint to time progress and debug bottleneck"""
+        """Print a checkpoint to time progress and debug bottleneck"""
         if start:
             start_time = time.perf_counter()
             self.start_time = start_time
@@ -358,20 +366,26 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         current_page: str = None,
         checkpoints: bool = False,
     ):
-        """
-        args:
-            send_obj: Dictionary with the following structure:
-              {'text': str,
-               'params': Dict[str,str],
-               'dtmf': str}
-            restart: Boolean flag that determines whether to use the existing
-              session ID or start a new conversation with a new session ID.
-              Passing True will create a new session ID on subsequent calls.
-              Defaults to False.
-            retries: used for recurse calling this func if API fails
-            current_page: Specify the page id to start the conversation from
-            checkpoints: Boolean flag to enable/disable Checkpoint timer
-              debugging. Defaults to False.
+        """Runs intent detection on one utterance and gets the agent reply.
+
+        Args:
+          send_obj: Dictionary with the following structure:
+            {'text': str,
+            'params': Dict[str,str],
+            'dtmf': str}
+          restart: Boolean flag that determines whether to use the existing
+            session ID or start a new conversation with a new session ID.
+            Passing True will create a new session ID on subsequent calls.
+            Defaults to False.
+          retries: used for recurse calling this func if API fails
+          current_page: Specify the page id to start the conversation from
+          checkpoints: Boolean flag to enable/disable Checkpoint timer
+            debugging. Defaults to False.
+
+        Returns:
+          A dictionary for the agent reply to to the submitted text.
+            Includes keys response_messages, confidence, page_name,
+            intent_name, match_type, match, other_intents, and params.
         """
         text = send_obj.get("text")
         send_params = send_obj.get("params")
@@ -490,6 +504,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         reply["match_type"] = self._get_match_type_from_map(
             query_result.match.match_type
         )
+        reply["match"] = query_result.match
         reply["other_intents"] = self.format_other_intents(query_result)
         reply["params"] = params
 
@@ -498,7 +513,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         return reply
 
     def format_other_intents(self, query_result):
-        """unwind protobufs into more friendly dict"""
+        """Unwind protobufs into more friendly dict"""
         other_intents = query_result.diagnostic_info.get(
             "Alternative Matched Intents"
         )
@@ -520,7 +535,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         return None
 
     def getpath(self, obj, xpath, default=None):
-        """get data at a pathed location out of object internals"""
+        """Get data at a pathed location out of object internals"""
         elem = obj
         try:
             for xpitem in xpath.strip("/").split("/"):
@@ -565,7 +580,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
           rate_limit: Number of seconds to wait between running test set chunks
 
         Returns:
-          intent_detection: A Pandas DataFrame consisting of the original
+          A Pandas DataFrame consisting of the original
             DataFrame plus an additional column for the detected intent with
             the following schema.
               flow_display_name: str
@@ -583,7 +598,39 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             result = pd.concat([result, result_chunk])
             self.progress_bar(start, test_set.shape[0])
             time.sleep(rate_limit)
-
         self.progress_bar(test_set.shape[0], test_set.shape[0])
 
+        result = self._unpack_match(result)
         return result
+
+    def _unpack_match(self, df: pd.DataFrame):
+        """ Unpacks a 'match' column into four component columns.
+
+        Args:
+          df: dataframe containing a column named match of types.Match
+
+        Returns:
+          A copy of df with columns match_type, confidence, parameters_set,
+            and detected_intent instead of match.
+        """
+        df = (
+            df
+            .copy()
+            .assign(
+                match_type = lambda df: df.match.apply(
+                    attrgetter("match_type._name_")),
+                confidence = lambda df: df.match.apply(
+                    attrgetter("confidence")),
+                parameters_set = lambda df: df.match.apply(
+                    attrgetter("parameters")),
+                detected_intent = lambda df: df.match.apply(
+                    attrgetter("intent.display_name"))
+            )
+            .assign(
+                parameters_set = lambda df: df.parameters_set.apply(
+                    lambda p: self.recurse_proto_marshal_to_dict(
+                        p) if p else "")
+            )
+            .drop(columns="match")
+        )
+        return df

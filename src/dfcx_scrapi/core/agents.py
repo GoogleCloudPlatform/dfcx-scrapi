@@ -83,6 +83,7 @@ class Agents(scrapi_base.ScrapiBase):
               `projects/<GCP PROJECT ID>/locations/<LOCATION ID>`
               `projects/my-gcp-project/locations/us-central1`
           project_id: The GCP Project ID as a string
+
         Returns:
           List of Agent objects
         """
@@ -125,13 +126,13 @@ class Agents(scrapi_base.ScrapiBase):
         return agents
 
     def get_agent(self, agent_id: str) -> types.Agent:
-        """Retrieves a single CX agent resource object.
+        """Retrieves a single CX Agent resource object.
 
         Args:
           agent_id: The formatted CX Agent ID
 
         Returns:
-        A single types.Agent object
+          A single CX Agent resource object
         """
 
         request = types.agent.GetAgentRequest()
@@ -171,6 +172,7 @@ class Agents(scrapi_base.ScrapiBase):
               display names.
               Syntax for region ID can be found here:
               https://cloud.google.com/dialogflow/cx/docs/concept/region#avail
+
         Returns:
           CX agent resource object. If no agent is found, returns None.
         """
@@ -217,7 +219,7 @@ class Agents(scrapi_base.ScrapiBase):
     def create_agent(
         self,
         project_id: str,
-        display_name: str,
+        display_name: str = None,
         gcp_region: str = "global",
         obj: types.Agent = None,
         **kwargs,
@@ -225,41 +227,48 @@ class Agents(scrapi_base.ScrapiBase):
         """Create a Dialogflow CX Agent with given display name.
 
         By default the CX Agent will be created in the project that the user
-        is currently authenticated to
-        If the user provides an existing Agent object, create a new CX agent
-        based on this object.
+        is currently authenticated to.
+        If the user provides an existing Agent object, a new CX Agent will be
+        created based on this object and any other input/kwargs will be
+        discarded.
 
         Args:
           project_id: GCP project id where the CX agent will be created
           display_name: Human readable display name for the CX agent
           gcp_region: GCP region to create CX agent. Defaults to 'global'
           obj: (Optional) Agent object to create new agent from
+            Refer to `builders.agents.AgentBuilder` to build one.
 
         Returns:
-          A single types.Agent resource.
+          The newly created CX Agent resource object.
         """
 
+        parent = f"projects/{project_id}/locations/{gcp_region}"
+
         if obj:
-            agent = obj
-            parent = f"projects/{project_id}/locations/{gcp_region}"
-            agent.display_name = display_name
+            agent_obj = obj
+            agent_obj.name = ""
+
         else:
-            agent = types.agent.Agent()
-            parent = f"projects/{project_id}/locations/{gcp_region}"
-            agent.display_name = display_name
+            if not display_name:
+                raise ValueError(
+                    "At least display_name or obj should be specified."
+                )
+            agent_obj = types.Agent(
+                display_name=display_name,
+                default_language_code="en",
+                time_zone="America/Chicago"
+            )
 
-        agent.default_language_code = "en"
-        agent.time_zone = "America/Chicago"
-
-        # set optional args as agent attributes
-        for key, value in kwargs.items():
-            setattr(agent, key, value)
+            # set optional args as agent attributes
+            for key, value in kwargs.items():
+                setattr(agent_obj, key, value)
 
         client_options = self._set_region(parent)
         client = services.agents.AgentsClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.create_agent(parent=parent, agent=agent)
+        response = client.create_agent(parent=parent, agent=agent_obj)
 
         return response
 
@@ -317,12 +326,12 @@ class Agents(scrapi_base.ScrapiBase):
         that Flow ID.
 
         Args:
-        agent_id: CX Agent ID string in the following format
+          agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-        timeout: (Optional) The timeout for this request
+          timeout: (Optional) The timeout for this request
 
         Returns:
-        Dictionary of Validation results for the entire Agent.
+          Dictionary of Validation results for the entire Agent.
         """
 
         if not agent_id:
@@ -395,6 +404,7 @@ class Agents(scrapi_base.ScrapiBase):
 
     def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
         """Restores a CX agent from a gcs_bucket location.
+
         Currently there is no way to restore back to default
         settings via the api. The feature request for this is logged.
 
@@ -436,6 +446,8 @@ class Agents(scrapi_base.ScrapiBase):
           kwargs: You may find a list of agent attributes here:
               https://cloud.google.com/python/docs/reference/dialogflow-cx/
                   latest/google.cloud.dialogflowcx_v3beta1.types.Agent
+        Returns:
+          The updated CX Agent resource object.
         """
 
         if obj:
@@ -464,6 +476,9 @@ class Agents(scrapi_base.ScrapiBase):
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+
+        Returns:
+          String "Agent '(agent_id)' successfully deleted."
         """
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(

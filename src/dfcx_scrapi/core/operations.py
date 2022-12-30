@@ -54,7 +54,7 @@ class Operations(ScrapiBase):
                 <operation-uuid>'
 
         Returns:
-        response: Response status and payload from LRO
+          Response status and payload from LRO
         """
         location = lro.split("/")[3]
         if location != "global":

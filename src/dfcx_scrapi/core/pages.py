@@ -16,11 +16,11 @@
 
 import logging
 from typing import Dict, List
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
+from google.cloud.dialogflowcx_v3beta1.services import pages
+from google.cloud.dialogflowcx_v3beta1.types import page as gcdc_page
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -29,14 +29,15 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-class Pages(ScrapiBase):
+
+class Pages(scrapi_base.ScrapiBase):
     """Core Class for CX Page Resource functions."""
 
     def __init__(
         self,
         creds_path: str = None,
         creds_dict: Dict = None,
-        scope=False,
+        scope=None,
         creds=None,
         page_id: str = None,
         flow_id: str = None,
@@ -48,27 +49,47 @@ class Pages(ScrapiBase):
             scope=scope,
         )
 
-        if page_id:
-            self.page_id = page_id
-            self.client_options = self._set_region(page_id)
+        self.page_id = page_id
+        self.flow_id = flow_id
 
-        if flow_id:
-            self.flow_id = flow_id
+    @staticmethod
+    def _add_generic_pages_to_map(flow_id, pages_map, reverse):
+        """Add the generic page names to each Page map.
+
+        Dialogflow CX contains a few `special` pages names that are reserved
+        and do not have UUID4 format IDs. This will take the existing page
+        map and insert them in for downstream lookups.
+
+        Args:
+          flow_id: The Flow ID that contains the Pages in the pages_map
+          pages_map: The existing pages_map Dict from `get_pages_map` that
+            we will add the new special pages to.
+          reverse: Boolean flag to swap key:value -> value:key
+        """
+        page_names = ["START_PAGE", "END_FLOW", "END_SESSION"]
+
+        if reverse:
+            for page in page_names:
+                pages_map[page] = f"{flow_id}/pages/{page}"
+        else:
+            for page in page_names:
+                pages_map[f"{flow_id}/pages/{page}"] = page
+
+        return pages_map
 
     def get_pages_map(
-        self,
-        flow_id: str = None,
-        reverse=False) -> Dict[str, str]:
+        self, flow_id: str = None, reverse=False
+    ) -> Dict[str, str]:
         """Exports Agent Page UUIDs and Names into a user friendly dict.
 
         Args:
-          - flow_id, the formatted CX Agent Flow ID to use
-          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+          flow_id: the formatted CX Agent Flow ID to use
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          - webhooks_map, Dictionary containing Webhook UUIDs as keys and
-              webhook.display_name as values. If Optional reverse=True, the
-              output will return page_name:ID mapping instead of ID:page_name
+          Dictionary containing Page UUIDs as keys and display names as values.
+          If Optional reverse=True, the output will return page_name:ID mapping
+          instead of ID:page_name
         """
         if not flow_id:
             flow_id = self.flow_id
@@ -85,22 +106,26 @@ class Pages(ScrapiBase):
                 for page in self.list_pages(flow_id)
             }
 
+        pages_dict = self._add_generic_pages_to_map(
+            flow_id, pages_dict, reverse
+        )
+
         return pages_dict
 
-    def list_pages(self, flow_id: str = None) -> List[types.Page]:
+    def list_pages(self, flow_id: str = None) -> List[gcdc_page.Page]:
         """Get a List of all pages for the specified Flow ID.
 
         Args:
-          flow_id, the properly formatted Flow ID string
+          flow_id: the properly formatted Flow ID string
 
         Returns:
-          cx_pages, A List of CX Page objects for the specific Flow ID
+          A List of CX Page objects for the specific Flow ID
         """
-        request = types.page.ListPagesRequest()
+        request = gcdc_page.ListPagesRequest()
         request.parent = flow_id
 
         client_options = self._set_region(flow_id)
-        client = services.pages.PagesClient(
+        client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
         response = client.list_pages(request)
@@ -112,20 +137,20 @@ class Pages(ScrapiBase):
 
         return cx_pages
 
-    def get_page(self, page_id: str = None) -> types.Page:
+    def get_page(self, page_id: str = None) -> gcdc_page.Page:
         """Get a single CX Page object based on the provided Page ID.
 
         Args:
-          page_id, a properly formatted CX Page ID
+          page_id: a properly formatted CX Page ID
 
         Returns:
-          response, a single CX Page Object of types.Page
+          A single CX Page Object
         """
         if not page_id:
             page_id = self.page_id
 
         client_options = self._set_region(page_id)
-        client = services.pages.PagesClient(
+        client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
 
@@ -134,18 +159,16 @@ class Pages(ScrapiBase):
         return response
 
     def create_page(
-        self,
-        flow_id: str = None,
-        obj: types.Page = None,
-        **kwargs) -> types.Page:
+        self, flow_id: str = None, obj: gcdc_page.Page = None, **kwargs
+    ) -> gcdc_page.Page:
         """Create a single CX Page object in the specified Flow ID.
 
         Args:
-          flow_id, the CX Flow ID where the Page object will be created
-          obj, (Optional) a CX Page object of types.Page
+          flow_id: the CX Flow ID where the Page object will be created
+          obj: (Optional) a CX Page object of gcdc_page.Page
 
         Returns:
-          response, a copy of the successful Page object that was created
+          A copy of the successful Page object that was created
         """
         if not flow_id:
             flow_id = self.flow_id
@@ -154,13 +177,13 @@ class Pages(ScrapiBase):
             page = obj
             page.name = ""
         else:
-            page = types.page.Page()
+            page = gcdc_page.Page()
 
         for key, value in kwargs.items():
             setattr(page, key, value)
 
         client_options = self._set_region(flow_id)
-        client = services.pages.PagesClient(
+        client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
 
@@ -169,18 +192,16 @@ class Pages(ScrapiBase):
         return response
 
     def update_page(
-        self,
-        page_id: str = None,
-        obj: types.Page = None,
-        **kwargs) -> types.Page:
+        self, page_id: str = None, obj: gcdc_page.Page = None, **kwargs
+    ) -> gcdc_page.Page:
         """Update a single CX Page object.
 
         Args:
-          page_id, the CX Page ID to update
-          obj, (Optional) a CX Page object of types.Page
+          page_id: the CX Page ID to update
+          obj: (Optional) a CX Page object of gcdc_page.Page
 
         Returns:
-          response, a copy of the successful Page object that was created
+          A copy of the successful Page object that was created
         """
         if obj:
             page = obj
@@ -196,10 +217,29 @@ class Pages(ScrapiBase):
         mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(page_id)
-        client = services.pages.PagesClient(
+        client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
 
         response = client.update_page(page=page, update_mask=mask)
 
         return response
+
+    def delete_page(self, page_id: str = None) -> str:
+        """Deletes the specified Page.
+
+        Args:
+          page_id: CX Page ID string in the following Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+              flows/<Flow ID>/pages/<Page ID>``
+
+        Returns:
+          String "Page `{page_id}` successfully deleted."
+        """
+        client_options = self._set_region(page_id)
+        client = pages.PagesClient(
+            credentials=self.creds, client_options=client_options
+        )
+        client.delete_page(name=page_id)
+
+        return f"Page `{page_id}` successfully deleted."

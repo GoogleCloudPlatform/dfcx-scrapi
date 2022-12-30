@@ -109,13 +109,13 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         """Exports Agent Route Group UUIDs and Names into a user friendly dict.
 
         Args:
-          - flow_id, the formatted CX Agent Flow ID to use
-          - reverse, (Optional) Boolean flag to swap key:value -> value:key
+          flow_id: the formatted CX Agent Flow ID to use
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          - webhooks_map, Dictionary containing Webhook UUIDs as keys and
-              webhook.display_name as values. If Optional reverse=True, the
-              output will return page_name:ID mapping instead of ID:page_name
+          Dictionary containing Route Group UUIDs as keys and display names
+          as values. If Optional reverse=True, the output will return
+          route group name:ID mapping instead of ID:route group name
         """
         if not flow_id:
             flow_id = self.flow_id
@@ -138,10 +138,10 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         """Exports List of all Route Groups in the specified CX Flow ID.
 
         Args:
-          flow_id, The formatted CX Flow ID to list the route groups from
+          flow_id: The formatted CX Flow ID to list the route groups from
 
         Returns:
-          cx_route_groups, List of Route Group objects
+          List of Route Group objects
         """
         if not flow_id:
             flow_id = self.flow_id
@@ -168,10 +168,10 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         """Get a single Transition Route Group object.
 
         Args:
-          route_group_id, the formatted CX Route Group ID to retrieve.
+          route_group_id: the formatted CX Route Group ID to retrieve.
 
         Returns:
-          response, a single Route Group object
+          A single Route Group object
         """
         request = types.transition_route_group.GetTransitionRouteGroupRequest()
         request.name = route_group_id
@@ -192,13 +192,13 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         """Create a single Transition Route Group resource.
 
         Args:
-          flow_id, the formatted CX Flow ID to create the route group in
-          obj, (Optional) the Transition Route Group object of type
+          flow_id: the formatted CX Flow ID to create the route group in
+          obj: (Optional) the Transition Route Group object of type
             types.TransitionRouteGroup that you want the new route group
             to be built from.
 
         Returns:
-          response, a copy of the successfully created Route Group object
+          A copy of the successfully created Route Group object
         """
         if not flow_id:
             flow_id = self.flow_id
@@ -232,14 +232,14 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         """Update a single Route Group resource.
 
         Args:
-          route_group_id, the formatted CX Route Group ID to update.
-          obj, (Optional) the Transition Route Group object of type
+          route_group_id: the formatted CX Route Group ID to update.
+          obj: (Optional) the Transition Route Group object of type
             types.TransitionRouteGroup that you want to update.
-          language_code, (Optional) the language in which the agent should
+          language_code: (Optional) the language in which the agent should
             update the TransitionRouteGroup
 
         Returns:
-          response, a copy of the successfully updated Route Group object
+          A copy of the successfully updated Route Group object
         """
         if obj:
             route_group = obj
@@ -291,7 +291,10 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
             to control hitting Quota limits on your project.
 
         Returns:
-          a Pandas Dataframe
+          a Pandas Dataframe with columns: flow, route_group_name, target_page,
+          intent, condition, webhook, webhook_tag, custom_payload,
+          live_agent_handoff, conversation_success, play_audio,
+          output_audio_text, fulfillment_message
         """
         if not agent_id:
             agent_id = self.agent_id

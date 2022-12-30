@@ -69,7 +69,7 @@ class TestCasesAsync(ScrapiBase):
              `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`.
 
         Returns:
-          response: List of test cases from an agent as a coroutine
+          List of test cases from an agent as a coroutine
         """
 
         if not agent_id:
@@ -114,7 +114,7 @@ class TestCasesAsync(ScrapiBase):
               exact resource name "t1" or "t2".
 
         Returns:
-          response: Long running operation for export as a coroutine
+          Long running operation for export as a coroutine
         """
 
         if not agent_id:
@@ -145,7 +145,7 @@ class TestCasesAsync(ScrapiBase):
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`.
 
         Returns:
-          response: test case which was created as a coroutine
+          Test case which was created as a coroutine
         """
 
         if not agent_id:
@@ -171,7 +171,7 @@ class TestCasesAsync(ScrapiBase):
               testCases/<TestCase ID>`.
 
         Returns:
-          response: Test Case object as coroutine
+          Test Case object as coroutine
         """
 
         request = types.test_case.GetTestCaseRequest()
@@ -194,8 +194,7 @@ class TestCasesAsync(ScrapiBase):
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`.
 
         Returns:
-          response: long running operation for importing test cases as
-            couroutine.
+          Long running operation for importing test cases as a couroutine.
         """
 
         if not agent_id:
@@ -226,7 +225,7 @@ class TestCasesAsync(ScrapiBase):
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`.
 
         Returns:
-          response: deleted test cases
+          None
         """
 
         if not agent_id:
@@ -240,8 +239,7 @@ class TestCasesAsync(ScrapiBase):
         client = services.test_cases.TestCasesAsyncClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.batch_delete_test_cases(request)
-        return response
+        client.batch_delete_test_cases(request)
 
     def list_test_case_results(self, test_case_id: str):
         """List a set of Test Case results for a given Test Case ID.
@@ -253,7 +251,7 @@ class TestCasesAsync(ScrapiBase):
               TestCase ID to list results across multiple test cases.
 
         Returns:
-          response: List of Test Case results
+          List of Test Case results
         """
 
         request = types.test_case.ListTestCaseResultsRequest()
@@ -282,7 +280,7 @@ class TestCasesAsync(ScrapiBase):
             environments/<Environment ID>`.
 
         Returns:
-          response: Results for the set of Test Cases as a coroutine.
+          Results for the set of Test Cases as a coroutine.
         """
 
         if not agent_id:
@@ -311,7 +309,7 @@ class TestCasesAsync(ScrapiBase):
           test_case_id: (Optional) The Test Case ID to update.
 
         Returns:
-          response: updated test case as coroutine.
+          Updated test case as coroutine.
         """
         test_case = obj
         if test_case_id:
@@ -345,7 +343,7 @@ class TestCasesAsync(ScrapiBase):
               <Location ID>/agents/<Agent ID>/environments/<Environment ID>`.
 
         Returns:
-          response: Test Case result as coroutine
+          Test Case result as coroutine
         """
 
         request = types.test_case.RunTestCaseRequest()
@@ -368,7 +366,7 @@ class TestCasesAsync(ScrapiBase):
               testCases/<TestCase ID>/results/<TestCaseResult ID>
 
         Returns:
-          response: Test Case result as coroutine.
+          Test Case result as coroutine.
         """
 
         request = types.test_case.GetTestCaseResultRequest()
@@ -393,7 +391,7 @@ class TestCasesAsync(ScrapiBase):
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`.
 
         Returns:
-          response: coroutine for returning the coverage of the test cases for
+          Coroutine for returning the coverage of the test cases for
             the type_ specified.
         """
 

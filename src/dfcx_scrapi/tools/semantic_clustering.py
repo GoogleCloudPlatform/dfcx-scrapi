@@ -60,11 +60,12 @@ class SemanticClustering:
     @staticmethod
     def _string_cleaner(string):
         """Clean text by removing tokens, punctuation, and applying lower().
+
         Args:
-            string: text string to be cleaned
+          string: text string to be cleaned
 
         Returns:
-            x: cleaned string
+          Cleaned string
         """
         string = re.sub(r"[^\w\s]", "", string.lower())
         tokens = ["\n", "\r", "\t"]
@@ -85,23 +86,24 @@ class SemanticClustering:
         n_jobs=-1,
     ):
         """Cluster phrases using a model with set hyperparameters
+
         Args:
-            data: DataFrame to cluster
-            eps: max distance between two points for them to be
-                considered in same neighborhood.
-            min_samples: minimum number of samples a cluster can have
-            metric: metric for measuring distance between instances
-                in a feature array.
-            metric_params: additional keywords for metric function
-            algorithm: algo used to compute pointwise distances and
-                find nearest neighbors.
-            leaf-size: only passed to BallTree or cKDTree algorithms.
-            p: power of Minkowski metric to calculate distance between points.
-                DEFAULT = 2 (Euclidean distance)
-            n_jobs: number of parallel jobs to run. -1 means all processors
+          data: DataFrame to cluster
+          eps: max distance between two points for them to be
+            considered in same neighborhood.
+          min_samples: minimum number of samples a cluster can have
+          metric: metric for measuring distance between instances
+            in a feature array.
+          metric_params: additional keywords for metric function
+          algorithm: algo used to compute pointwise distances and
+            find nearest neighbors.
+          leaf-size: only passed to BallTree or cKDTree algorithms.
+          p: power of Minkowski metric to calculate distance between points.
+            DEFAULT = 2 (Euclidean distance)
+          n_jobs: number of parallel jobs to run. -1 means all processors
 
         Returns:
-            data: input data with associated clusters by the text column.
+          Input data with associated clusters by the text column.
         """
 
         input_data = list(data["cleaned_text"])
@@ -149,25 +151,25 @@ class SemanticClustering:
             with increasing neighborhood sizes.
 
         Args:
-            stop_threshold: Percentage of data which can be in no cluster
-                to signify that new models can stop being created.
-            max_rounds: maximum number of rounds that take place of
-                trying new model hyperparameters to get to the stop_threshold.
-            iterator: eps value to change by in each round.
-            start_eps: eps value to run on the first algo.
-            min_samples: minimum number of samples a cluster can have
-            metric: metric for measuring distance between instances
-                in a feature array.
-            metric_params: additional keywords for metric function
-            algorithm: algo used to compute pointwise distances and find
-                nearest neighbors.
-            leaf-size: only passed to BallTree or cKDTree algorithms.
-            p: power of Minkowski metric to calculate distance between points.
-                DEFAULT = 2 (Euclidean distance)
-            n_jobs: number of parallel jobs to run. -1 means all processors
+          stop_threshold: Percentage of data which can be in no cluster
+            to signify that new models can stop being created.
+          max_rounds: maximum number of rounds that take place of
+            trying new model hyperparameters to get to the stop_threshold.
+          iterator: eps value to change by in each round.
+          start_eps: eps value to run on the first algo.
+          min_samples: minimum number of samples a cluster can have
+          metric: metric for measuring distance between instances
+            in a feature array.
+          metric_params: additional keywords for metric function
+          algorithm: algo used to compute pointwise distances and find
+            nearest neighbors.
+          leaf-size: only passed to BallTree or cKDTree algorithms.
+          p: power of Minkowski metric to calculate distance between points.
+            DEFAULT = 2 (Euclidean distance)
+          n_jobs: number of parallel jobs to run. -1 means all processors
 
         Returns:
-            clustered: DataFrame of clustered data.
+          clustered: DataFrame of clustered data.
         """
 
         if not hasattr(self, "transformed_data"):
@@ -220,7 +222,7 @@ class SemanticClustering:
                 )
                 clustered_this_round.insert(0, "eps", eps)
                 clustered_this_round.insert(0, "round", cluster_round)
-                clustered = clustered.append(clustered_this_round)
+                clustered = pd.concat([clustered, clustered_this_round])
                 unclustered = cluster_attempt.copy()[
                     cluster_attempt["cluster"] == -1
                 ]
@@ -247,9 +249,8 @@ class SemanticClustering:
             return clustered
 
         unclustered = unclustered.drop(columns="cluster")
-        clustered = clustered.sort_values(by="cluster", ascending=True).append(
-            unclustered
-        )
+        clustered = pd.concat(
+            [clustered.sort_values(by="cluster", ascending=True), unclustered])
 
         if cluster_round > max_rounds:
             logging.info("max clutering rounds reached before stop threshold")

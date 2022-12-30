@@ -28,6 +28,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+logger = logging.getLogger(__name__)
+
 
 class Flows(scrapi_base.ScrapiBase):
     """Core Class for CX Flow Resource functions."""
@@ -53,20 +55,64 @@ class Flows(scrapi_base.ScrapiBase):
 
         self.agent_id = agent_id
 
-    def get_flows_map(
-        self,
-        agent_id: str,
-        reverse=False
+    # TODO: Migrate to Flow Builder class when ready
+    @staticmethod
+    def _build_nlu_settings(
+        model_type: str = "STANDARD",
+        classification_threshold: float = 0.3,
+        model_training_mode: str = "MANUAL",
     ):
+        """Builds the NLU Settings object to be used with Flow objects.
+
+        Args:
+          model_type: ONEOF `STANDARD`, `ADVANCED`, `CUSTOM`. Defaults to
+            `STANDARD`.
+          classification_threshold: To filter out false positive results and
+            still get variety in matched natural language inputs for your
+            agent, you can tune the machine learning classification threshold.
+            If the returned score value is less than the threshold value, then
+            a no-match event will be triggered. The score values range from 0.0
+            (completely uncertain) to 1.0 (completely certain). If set to 0.0,
+            the default of 0.3 is used.
+          model_training_mode: ONEOF `AUTOMATIC`, `MANUAL`. Defaults to
+            `MANUAL`
+        """
+        model_type_map = {"STANDARD": 1, "CUSTOM": 2, "ADVANCED": 3}
+
+        model_training_map = {"AUTOMATIC": 1, "MANUAL": 2}
+
+        nlu_settings = types.NluSettings()
+        nlu_settings.classification_threshold = classification_threshold
+
+        if model_type in model_type_map:
+            nlu_settings.model_type = model_type_map[model_type]
+        else:
+            raise KeyError(
+                f"`{model_type}` is invalid. `model_type` must be "
+                "one of `STANDARD`, `ADVANCED`, `CUSTOM`."
+            )
+
+        if model_training_mode in model_training_map:
+            nlu_settings.model_training_mode = model_training_map[
+                model_training_mode
+            ]
+        else:
+            raise KeyError(
+                f"`{model_training_mode}` is invalid. "
+                "`model_training_mode` must be one of `AUTOMATIC`, `MANUAL`."
+            )
+
+        return nlu_settings
+
+    def get_flows_map(self, agent_id: str, reverse=False):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
-            - agent_id, the formatted CX Agent ID to use
-            - reverse, (Optional) Boolean flag to swap key:value -> value:key
+          agent_id: the formatted CX Agent ID to use
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-            - flows_dict, Dictionary containing flow UUIDs as keys and
-                flow.display_name as values
+          Dictionary containing flow UUIDs as keys and display names as values
         """
 
         if reverse:
@@ -84,7 +130,7 @@ class Flows(scrapi_base.ScrapiBase):
         return flows_dict
 
     def train_flow(self, flow_id: str) -> str:
-        """trains the specified flow.
+        """Trains the specified flow.
 
         Args:
           flow_id: CX flow ID string in the following format
@@ -92,7 +138,7 @@ class Flows(scrapi_base.ScrapiBase):
               flows/<FLOW ID>
 
         Returns:
-          response: A Long Running Operation (LRO) ID that can be used to
+          A Long Running Operation (LRO) ID that can be used to
             check the status of the export using
               dfcx_scrapi.core.operations->get_lro()
         """
@@ -102,20 +148,18 @@ class Flows(scrapi_base.ScrapiBase):
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
-            credentials=self.creds, client_options=client_options)
+            credentials=self.creds, client_options=client_options
+        )
 
         response = client.train_flow(request)
 
         return response
 
-    def list_flows(
-        self,
-        agent_id: str
-    ) -> List[types.Flow]:
+    def list_flows(self, agent_id: str) -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
         Args:
-          agent_id, CX Agent ID string in the proper format
+          agent_id: CX Agent ID string in the proper format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
 
         Returns:
@@ -138,9 +182,7 @@ class Flows(scrapi_base.ScrapiBase):
         return flows
 
     def get_flow_by_display_name(
-        self,
-        display_name: str,
-        agent_id: str
+        self, display_name: str, agent_id: str
     ) -> types.Flow:
         """Get a single CX Flow object based on its display name.
 
@@ -149,18 +191,16 @@ class Flows(scrapi_base.ScrapiBase):
           agent_id: CX Agent ID in which the flow exists.
 
         Returns:
-          a single CX Flow object"""
+          A single CX Flow object
+        """
 
-        flows_map = self.get_flows_map(
-            agent_id = agent_id,
-            reverse = True
-        )
+        flows_map = self.get_flows_map(agent_id=agent_id, reverse=True)
 
         if display_name in flows_map:
             flow_id = flows_map[display_name]
         else:
             raise ValueError(
-                f"Flow \"{display_name}\" " \
+                f'Flow "{display_name}" '
                 f"does not exist in the specified agent."
             )
 
@@ -175,7 +215,8 @@ class Flows(scrapi_base.ScrapiBase):
           flow_id: CX Flow ID in the proper format
 
         Returns:
-          response: a single CX Flow object"""
+          A single CX Flow object
+        """
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
@@ -185,20 +226,65 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
-    def update_flow(
+    def create_flow(
         self,
-        flow_id: str,
+        agent_id: str,
+        display_name: str = None,
+        language_code: str = "en",
         obj: types.Flow = None,
-        **kwargs
+        **kwargs,
+    ):
+        """Create a Dialogflow CX Flow with given display name.
+
+        If the user provides an existing Flow object, a new CX Flow will be
+        created based on this object and any other input/kwargs will be
+        discarded.
+
+        Args:
+          agent_id: DFCX Agent id where the Flow will be created
+          display_name: Human readable display name for the CX Flow
+          obj: (Optional) Flow object to create in proto format
+
+        Returns:
+          The newly created CX Flow resource object.
+        """
+        request = types.flow.CreateFlowRequest()
+        request.parent = agent_id
+        request.language_code = language_code
+
+        if obj:
+            flow_obj = obj
+            request.flow = flow_obj
+
+        else:
+            flow_obj = types.Flow()
+            flow_obj.display_name = display_name
+
+            # set optional args as agent attributes
+            for key, value in kwargs.items():
+                setattr(flow_obj, key, value)
+
+            request.flow = flow_obj
+
+        client_options = self._set_region(agent_id)
+        client = services.flows.FlowsClient(
+            credentials=self.creds, client_options=client_options
+        )
+        response = client.create_flow(request)
+
+        return response
+
+    def update_flow(
+        self, flow_id: str, obj: types.Flow = None, **kwargs
     ) -> types.Flow:
         """Update a single specific CX Flow object.
 
         Args:
-          flow_id, CX Flow ID in the proper format
-          obj, (Optional) a single CX Flow object of types.Flow
+          flow_id: CX Flow ID in the proper format
+          obj: (Optional) a single CX Flow object of types.Flow
 
         Returns:
-          response, a copy of the updated Flow object
+          A copy of the updated Flow object
         """
 
         if obj:
@@ -221,10 +307,11 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
-    def update_nlu_settings(self, flow_id:str, **kwargs):
-        """updates flow to new NLU setting.
+    def update_nlu_settings(self, flow_id: str, **kwargs):
+        """Updates flow to new NLU setting.
+
         Args:
-            flow_id: flow id to update nlu settings for.
+          flow_id: flow id to update nlu settings for.
             model_type: (Optional) [0:unspecified, 1:MODEL_TYPE_STANDARD,
               2:Custom, 3:Advanced]
             classification_threshold: (Optional) threshold for the flow
@@ -239,24 +326,21 @@ class Flows(scrapi_base.ScrapiBase):
         self.update_flow(flow_id=flow_id, nlu_settings=current_settings)
 
     def export_flow(
-        self,
-        flow_id: str,
-        gcs_path: str,
-        ref_flows: bool = True
+        self, flow_id: str, gcs_path: str, ref_flows: bool = True
     ) -> Dict[str, str]:
         """Exports DFCX Flow(s) into GCS bucket.
 
         Args:
-          flow_id, the formatted CX Flow ID to export
-          gcs_path, The `Google Cloud Storage URI to export the flow to. The
+          flow_id: the formatted CX Flow ID to export
+          gcs_path: The `Google Cloud Storage URI to export the flow to. The
             format of this URI must be ``gs://<bucket-name>/<object-name>``. If
             left unspecified, the serialized flow is returned inline.
-          ref_flows, Whether to export flows referenced by the specified flow.
+          ref_flows: Whether to export flows referenced by the specified flow.
 
         Returns:
-          lro.result, If successful the LRO result will return the Google Cloud
-            Storage URI from the Export Flow request. Otherwise, it will return
-            the corresponding error.
+          A Long Running Operation result. If successful the LRO result will
+            return the Google Cloud Storage URI from the Export Flow request.
+            Otherwise, it will return the corresponding error.
         """
         request = types.flow.ExportFlowRequest()
         request.name = flow_id
@@ -271,24 +355,19 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response.result()
 
-    def export_flow_inline(
-        self,
-        flow_id: str,
-        ref_flows: bool = True
-    ) -> bytes:
+    def export_flow_inline(self, flow_id: str, ref_flows: bool = True) -> bytes:
         """Export a Flow, returning uncompressed raw byte content for flow.
 
         Args:
-          flow_id, the formatted CX Flow ID to export
-          ref_flows, Whether to export flows referenced by the specified flow.
+          flow_id: the formatted CX Flow ID to export
+          ref_flows: Whether to export flows referenced by the specified flow.
 
         Returns:
-          bytes representing the content of the flow.
+          Bytes representing the content of the flow.
         """
         request = types.flow.ExportFlowRequest()
         request.name = flow_id
         request.include_referenced_flows = ref_flows
-
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
@@ -303,22 +382,22 @@ class Flows(scrapi_base.ScrapiBase):
         agent_id: str,
         gcs_path: str = None,
         flow_content: bytes = None,
-        import_option: str = "KEEP"
+        import_option: str = "KEEP",
     ) -> Dict[str, str]:
         """Imports a DFCX Flow to CX Agent. Flow can be imported from a
         GCS bucket or from raw bytes.
 
         Args:
-          agent_id, the CX Agent ID to import the flow into.
-          gcs_path, the `Google Cloud Storage URI to import flow from.
+          agent_id: the CX Agent ID to import the flow into.
+          gcs_path: the `Google Cloud Storage URI to import flow from.
             the format of this URI must be ``gs://<bucket-name>/<object-name>``.
-          flow_content, uncompressed raw byte content for flow.
-          import_option, one of 'FALLBACK' or 'KEEP'. Defaults to 'KEEP'
+          flow_content: uncompressed raw byte content for flow.
+          import_option: one of 'FALLBACK' or 'KEEP'. Defaults to 'KEEP'
 
         Returns:
-          lro.result, If successful the LRO result will return the Flow ID of
-            the newly imported Flow. Otherwise, it will return the
-            corresponding error.
+          A Long Running Operation result. If successful the LRO result will
+            return the Flow ID of the newly imported Flow.
+            Otherwise, it will return the corresponding error.
         """
 
         if gcs_path and flow_content:
@@ -346,17 +425,14 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
-    def delete_flow(
-        self,
-        flow_id: str,
-        force: bool = False
-    ):
-        """Deletes a single CX Flow Object resources.
+    def delete_flow(self, flow_id: str, force: bool = False):
+        """Deletes a single CX Flow Object resource.
 
         Args:
           flow_id: flow to delete
           force: False means a flow will not be deleted if a route to the flow
-            exists, True means the flow will be deleted and all
+            exists, True means the flow will be deleted as well as all the
+            transition routes leading to the flow.
         """
 
         request = types.DeleteFlowRequest()

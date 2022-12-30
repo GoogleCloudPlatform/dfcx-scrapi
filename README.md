@@ -147,7 +147,7 @@ Distributed under the Apache 2.0 License. See [LICENSE](LICENSE.txt) for more in
 # Contact
 Patrick Marlow - pmarlow@google.com  - [@kmaphoenix](https://github.com/kmaphoenix)  
 David "DC" Collier - dcollier@google.com  - [@DCsan](https://github.com/dcsan)  
-Henry Drescher - drescher@google.com  - [@Hgithubacct](https://github.com/Hgithubacct)  
+Lauren Greenford - greenford@google.com - [@Greenford](https://github.com/Greenford)
 
 Project Link: [https://github.com/GoogleCloudPlatform/dfcx-scrapi](https://github.com/GoogleCloudPlatform/dfcx-scrapi)
 

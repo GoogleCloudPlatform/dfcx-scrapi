@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import logging
+import uuid
 from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -36,14 +37,59 @@ class Sessions(ScrapiBase):
         creds_path: str = None,
         creds_dict: Dict = None,
         scope=False,
-        session_id: str = None,
+        agent_id: str = None,
+        session_id: str = None
     ):
         super().__init__(
             creds_path=creds_path, creds_dict=creds_dict, scope=scope
         )
 
-        if session_id:
+        self.session_id = session_id
+        self.agent_id = agent_id
+
+    @property
+    def session_id(self):
+        return self._session_id
+
+    @session_id.setter
+    def session_id(self, value):
+        if value:
+            self._parse_resource_path("session", value)
+
+        self._session_id = value
+
+    @staticmethod
+    def _build_query_input(text, language_code):
+        """Build out the query_input object for the Query Request.
+
+        Args:
+          text, the text to use for the Detect Intent request.
+          language_code, the language code to use for Detect Intent request.
+          """
+        text_input = types.session.TextInput(text=text)
+        query_input = types.session.QueryInput(
+            text=text_input, language_code=language_code)
+
+        return query_input
+
+    def build_session_id(
+        self, agent_id:str = None, overwrite:bool = True) -> str:
+        """Creates a valid UUID-4 Session ID to use with other methods.
+
+        Args:
+          overwrite (Optional), if a session_id already exists, this will
+            overwrite the existing Session ID parameter. Defaults to True.
+        """
+
+        agent_parts = self._parse_resource_path("agent", agent_id)
+        session_id = f"projects/{agent_parts['project']}/"\
+            f"locations/{agent_parts['location']}/agents/"\
+            f"{agent_parts['agent']}/sessions/{uuid.uuid4()}"
+
+        if overwrite:
             self.session_id = session_id
+
+        return session_id
 
     def run_conversation(
         self,
@@ -56,18 +102,18 @@ class Sessions(ScrapiBase):
         """Tests a full conversation with the specified CX Agent.
 
         Args:
-          agent_id, the Agent ID of the CX Agent to have the conversation with.
-          session_id, an RFC 4122 formatted UUID to be used as the unique ID
+          agent_id: the Agent ID of the CX Agent to have the conversation with.
+          session_id: an RFC 4122 formatted UUID to be used as the unique ID
             for the duration of the conversation session. When using Python
             uuid library, uuid.uuid4() is preferred.
-          conversation, a List of Strings that represent the USER utterances
+          conversation: a List of Strings that represent the USER utterances
             for the given conversation, in the order they would happen
             chronologically in the conversation.
             Ex:
               ['I want to check my bill', 'yes', 'no that is all', 'thanks!']
-          parameters, (Optional) Dict of CX Session Parameters to set in the
+          parameters: (Optional) Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
-          response_text, Will provide the Agent Response text if set to True.
+          response_text: Will provide the Agent Response text if set to True.
             Default value is False.
 
         Returns:
@@ -139,40 +185,66 @@ class Sessions(ScrapiBase):
                         )
                 print(f"Response Text: {concat_messages}\n")
 
-    def detect_intent(self, agent_id, session_id, text, parameters=None):
+
+    def detect_intent(
+        self,
+        agent_id,
+        session_id,
+        text,
+        language_code="en",
+        parameters=None):
         """Returns the result of detect intent with texts as inputs.
 
         Using the same `session_id` between requests allows continuation
-        of the conversation."""
+        of the conversation.
+
+        Args:
+          agent_id: the Agent ID of the CX Agent to have the conversation with.
+          session_id: an RFC 4122 formatted UUID to be used as the unique ID
+            for the duration of the conversation session. When using Python
+            uuid library, uuid.uuid4() is preferred.
+          text: the user utterance to run intent detection on
+          parameters: (Optional) Dict of CX Session Parameters to set in the
+            conversation. Typically this is set before a conversation starts.
+
+        Returns:
+          The CX query result from intent detection
+        """
         client_options = self._set_region(agent_id)
         session_client = services.sessions.SessionsClient(
             client_options=client_options, credentials=self.creds
         )
 
-        session_path = f"{agent_id}/sessions/{session_id}"
+        res = self._parse_resource_path("session", str(session_id), False)
+        if not res:
+            raise ValueError(
+                "Session ID must be provided in the following format: "
+                "`projects/<Project ID>/locations/<Location ID>/agents/"\
+                "<Agent ID>/sessions/<Session ID>`.\n\n"\
+                "Utilize `build_session_id` to create a new Session ID.")
+
+        logging.info(f"Starting Session ID {session_id}")
 
         if parameters:
             query_params = types.session.QueryParameters(parameters=parameters)
-            text_input = types.session.TextInput(text=text)
-            query_input = types.session.QueryInput(
-                text=text_input, language_code="en"
-            )
-            request = types.session.DetectIntentRequest(
-                session=session_path,
-                query_params=query_params,
-                query_input=query_input,
-            )
+
+            query_input = self._build_query_input(text, language_code)
+
+            request = types.session.DetectIntentRequest()
+            request.session = session_id
+            request.query_input = query_input
+            request.query_params = query_params
 
             response = session_client.detect_intent(request=request)
 
-        text_input = types.session.TextInput(text=text)
-        query_input = types.session.QueryInput(
-            text=text_input, language_code="en"
-        )
-        request = types.session.DetectIntentRequest(
-            session=session_path, query_input=query_input
-        )
-        response = session_client.detect_intent(request=request)
+        else:
+            query_input = self._build_query_input(text, language_code)
+
+            request = types.session.DetectIntentRequest()
+            request.session = session_id
+            request.query_input = query_input
+
+        response = session_client.detect_intent(request)
         query_result = response.query_result
 
         return query_result
@@ -182,10 +254,16 @@ class Sessions(ScrapiBase):
     ):
         """Used to set session parameters before a conversation starts.
 
-        agent_id, the Agent ID of the CX Agent to have the conversation with.
-        session_id, an RFC 4122 formatted UUID to be used as the unique ID
+        Args:
+          agent_id: the Agent ID of the CX Agent to have the conversation with.
+          session_id: an RFC 4122 formatted UUID to be used as the unique ID
             for the duration of the conversation session. When using Python
             uuid library, uuid.uuid4() is preferred.
+          parameters: Dict of CX Session Parameters to set in the
+            conversation. Typically this is set before a conversation starts.
+
+        Returns:
+          The CX query result from intent detection run with no text input
         """
         client_options = self._set_region(agent_id)
         session_client = services.sessions.SessionsClient(
