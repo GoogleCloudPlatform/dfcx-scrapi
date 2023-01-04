@@ -14,67 +14,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import List, Union
 
-from google.cloud.dialogflowcx_v3beta1.types import (
-    Page, Form, Fulfillment, TransitionRoute, EventHandler
+from google.cloud.dialogflowcx_v3beta1.types import Page
+from google.cloud.dialogflowcx_v3beta1.types import Form
+from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
+from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
+from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+from dfcx_scrapi.builders.builders_common import BuilderBase
+
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 
-class PageBuilder:
+class PageBuilder(BuilderBase):
     """Base Class for CX Page builder."""
 
-
-    def __init__(self, obj: Page = None):
-        self.proto_obj = None
-        if obj:
-            self.load_page(obj)
+    _proto_type = Page
+    _proto_type_str = "Page"
 
 
-    def _check_page_exist(self):
-        """Check if the proto_obj exists otherwise raise an error."""
-
-        if not self.proto_obj:
-            raise ValueError(
-                "There is no proto_obj!"
-                "\nUse create_new_page or load_page to continue."
-            )
-        elif not isinstance(self.proto_obj, Page):
-            raise ValueError(
-                "proto_obj is not a Page type."
-                "\nPlease create or load the correct type to continue."
-            )
+    def __init__(self, obj=None):
+        super().__init__(obj)
 
 
-    def load_page(self, obj: Page, overwrite: bool = False) -> Page:
-        """Load an existing Page to proto_obj for further uses.
-
-        Args:
-          obj (Page):
-            An existing Page obj.
-          overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already
-            contains a Page.
-
-        Returns:
-          A Page object stored in proto_obj
-        """
-        if not isinstance(obj, Page):
-            raise ValueError(
-                "The object you're trying to load is not a Page."
-            )
-        if self.proto_obj and not overwrite:
-            raise Exception(
-                "proto_obj already contains a Page."
-                " If you wish to overwrite it, pass overwrite as True."
-            )
-        if overwrite or not self.proto_obj:
-            self.proto_obj = obj
-
-        return self.proto_obj
-
-
-    def create_new_page(
+    def create_new_proto_obj(
         self,
         display_name: str,
         entry_fulfillment: Fulfillment = None,
@@ -89,129 +58,34 @@ class PageBuilder:
           entry_fulfillment (Fulfillment):
             The fulfillment to call when the session is entering the page.
           overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already contains a Flow.
+            Overwrite the new proto_obj if proto_obj already contains a Page.
 
         Returns:
           A Page object stored in proto_obj.
         """
+        # Types error checking
         if not (display_name and isinstance(display_name, str)):
-            raise ValueError("display_name should be a nonempty string.")
+            raise ValueError("`display_name` should be a nonempty string.")
         if (entry_fulfillment and
             not isinstance(entry_fulfillment, Fulfillment)):
             raise ValueError(
-                "The type of entry_fulfillment should be a Fulfillment."
+                "The type of `entry_fulfillment` should be a Fulfillment."
             )
+        # `overwrite` parameter error checking
         if self.proto_obj and not overwrite:
             raise Exception(
-                "proto_obj already contains a Flow."
-                " If you wish to overwrite it, pass overwrite as True."
+                "proto_obj already contains a Page."
+                " If you wish to overwrite it, pass `overwrite` as True."
             )
+        # Create the Page
         if overwrite or not self.proto_obj:
             if not entry_fulfillment:
-                self.proto_obj = Page(
-                    display_name=display_name,
-                    entry_fulfillment=Fulfillment()
-                )
-            else:
-                self.proto_obj = Page(
-                    display_name=display_name,
-                    entry_fulfillment=entry_fulfillment
-                )
+                entry_fulfillment = Fulfillment()
 
-        return self.proto_obj
-
-
-    def add_transition_route(
-        self,
-        transition_routes: Union[TransitionRoute, List[TransitionRoute]]
-    ) -> Page:
-        """Add single or multiple TransitionRoutes to the Page.
-
-        Args:
-          transition_routes (TransitionRoute | List[TransitionRoute]):
-            A single or list of TransitionRoutes to add
-            to the Page existed in proto_obj.
-        Returns:
-          A Page object stored in proto_obj.
-        """
-        self._check_page_exist()
-
-        if ((not isinstance(transition_routes, TransitionRoute)) or
-            (not isinstance(transition_routes, list) and all(
-                (isinstance(tr, TransitionRoute) for tr in transition_routes)
-            ))):
-            raise ValueError(
-                "transition_routes should be either a TransitionRoute or"
-                " a list of TransitionRoutes."
+            self.proto_obj = Page(
+                display_name=display_name,
+                entry_fulfillment=entry_fulfillment
             )
-
-        if not isinstance(transition_routes, list):
-            transition_routes = [transition_routes]
-        self.proto_obj.transition_routes.extend(transition_routes)
-
-        return self.proto_obj
-
-
-    def add_event_handler(
-        self,
-        event_handlers: Union[EventHandler, List[EventHandler]]
-    ) -> Page:
-        """Add single or multiple EventHandlers to the Page.
-
-        Args:
-          event_handlers (EventHandler | List[EventHandler]):
-            A single or list of EventHandler to add
-            to the Page existed in proto_obj.
-        Returns:
-          A Page object stored in proto_obj.
-        """
-        self._check_page_exist()
-
-        if ((not isinstance(event_handlers, EventHandler)) or
-            (not isinstance(event_handlers, list) and all(
-                (isinstance(eh, EventHandler) for eh in event_handlers)
-            ))):
-            raise ValueError(
-                "event_handlers should be either a EventHandler or"
-                " a list of EventHandlers."
-            )
-
-        if not isinstance(event_handlers, list):
-            event_handlers = [event_handlers]
-        self.proto_obj.event_handlers.extend(event_handlers)
-
-        return self.proto_obj
-
-
-    def add_transition_route_group(
-        self,
-        transition_route_groups: Union[str, List[str]]
-    ) -> Page:
-        """Add single or multiple TransitionRouteGroups to the Page.
-
-        Args:
-          transition_route_groups (str | List[str]):
-            A single or list of TransitionRouteGroup's id to add
-            to the Page existed in proto_obj. Format:
-            ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
-              flows/<Flow ID>/transitionRouteGroups/<TransitionRouteGroup ID>``.
-        Returns:
-          A Page object stored in proto_obj.
-        """
-        self._check_page_exist()
-
-        if ((not isinstance(transition_route_groups, str)) or
-            (not isinstance(transition_route_groups, list) and all(
-                (isinstance(trg, str) for trg in transition_route_groups)
-            ))):
-            raise ValueError(
-                "transition_route_groups should be either a string or"
-                " a list of strings."
-            )
-
-        if not isinstance(transition_route_groups, list):
-            transition_route_groups = [transition_route_groups]
-        self.proto_obj.transition_route_groups.extend(transition_route_groups)
 
         return self.proto_obj
 
@@ -227,7 +101,7 @@ class PageBuilder:
         redact: bool = False,
         reprompt_event_handlers: Union[EventHandler, List[EventHandler]] = None
     ) -> Page:
-        """Parameters to collect from the user.
+        """Add a parameter to collect from the user.
 
         Args:
           display_name (str):
@@ -282,33 +156,32 @@ class PageBuilder:
         Returns:
           A Page object stored in proto_obj.
         """
-        self._check_page_exist()
+        self._check_proto_obj_attr_exist()
 
+        # Types error checking
         if not (display_name and isinstance(display_name, str)):
-            raise ValueError("display_name should be a nonempty string.")
+            raise ValueError("`display_name` should be a nonempty string.")
         if not (entity_type and isinstance(entity_type, str)):
-            raise ValueError("entity_type should be a valid entity type id.")
+            raise ValueError("`entity_type` should be a valid entity type id.")
         if not (initial_prompt_fulfillment and
-            isinstance(initial_prompt_fulfillment, str)):
+            isinstance(initial_prompt_fulfillment, Fulfillment)):
             raise ValueError(
-                "initial_prompt_fulfillment should be a Fulfillment."
+                "`initial_prompt_fulfillment` should be a Fulfillment."
             )
-        if not (isinstance(required, bool) and
+        if not(
+            isinstance(required, bool) and
             isinstance(is_list, bool) and
-            isinstance(redact, bool)):
+            isinstance(redact, bool)
+        ):
             raise ValueError(
                 "`is_list`, `required`, and `redact` should be bool."
             )
-        if ((not isinstance(reprompt_event_handlers, EventHandler)) or
-            (not isinstance(reprompt_event_handlers, list) and all(
-                (isinstance(eh, EventHandler) for eh in reprompt_event_handlers)
-            ))):
-            raise ValueError(
-                "reprompt_event_handlers should be either a EventHandler or"
-                " a list of EventHandlers."
+        if reprompt_event_handlers:
+            self._is_type_or_list_of_types(
+                reprompt_event_handlers, EventHandler, "reprompt_event_handlers"
             )
-        if not isinstance(reprompt_event_handlers, list):
-            reprompt_event_handlers = [reprompt_event_handlers]
+            if not isinstance(reprompt_event_handlers, list):
+                reprompt_event_handlers = [reprompt_event_handlers]
 
         if required:
             the_param = Form.Parameter(
@@ -337,3 +210,492 @@ class PageBuilder:
         self.proto_obj.form.parameters.append(the_param)
 
         return self.proto_obj
+
+
+    def add_transition_route(
+        self,
+        transition_routes: Union[TransitionRoute, List[TransitionRoute]]
+    ) -> Page:
+        """Add single or multiple TransitionRoutes to the Page.
+
+        Args:
+          transition_routes (TransitionRoute | List[TransitionRoute]):
+            A single or list of TransitionRoutes to add
+            to the Page existing in proto_obj.
+        Returns:
+          A Page object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        # Type/Error checking
+        self._is_type_or_list_of_types(
+            transition_routes, TransitionRoute, "transition_routes"
+        )
+
+        if not isinstance(transition_routes, list):
+            transition_routes = [transition_routes]
+        self.proto_obj.transition_routes.extend(transition_routes)
+
+        return self.proto_obj
+
+
+    def add_event_handler(
+        self,
+        event_handlers: Union[EventHandler, List[EventHandler]]
+    ) -> Page:
+        """Add single or multiple EventHandlers to the Page.
+
+        Args:
+          event_handlers (EventHandler | List[EventHandler]):
+            A single or list of EventHandler to add
+            to the Page existing in proto_obj.
+        Returns:
+          A Page object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        # Type/Error checking
+        self._is_type_or_list_of_types(
+            event_handlers, EventHandler, "event_handlers"
+        )
+
+        if not isinstance(event_handlers, list):
+            event_handlers = [event_handlers]
+        self.proto_obj.event_handlers.extend(event_handlers)
+
+        return self.proto_obj
+
+
+    def add_transition_route_group(
+        self,
+        transition_route_groups: Union[str, List[str]]
+    ) -> Page:
+        """Add single or multiple TransitionRouteGroups to the Page.
+
+        Args:
+          transition_route_groups (str | List[str]):
+            A single or list of TransitionRouteGroup's id to add
+            to the Page existing in proto_obj. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+              flows/<Flow ID>/transitionRouteGroups/<TransitionRouteGroup ID>``.
+        Returns:
+          A Page object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        # Type/Error checking
+        self._is_type_or_list_of_types(
+            transition_route_groups, str, "transition_route_groups"
+        )
+
+        if not isinstance(transition_route_groups, list):
+            transition_route_groups = [transition_route_groups]
+        self.proto_obj.transition_route_groups.extend(transition_route_groups)
+
+        return self.proto_obj
+
+
+    def remove_parameter(
+        self,
+        display_name: Union[str, List[str]]
+    ) -> Page:
+        """Remove single or multiple parameters from the Page.
+
+        Args:
+          display_name (str | List[str]):
+            A string or a list of strings corresponding to
+            the name of the parameter(s). 
+
+        Returns:
+          A Page object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        # Types error checking
+        if not display_name:
+            raise ValueError("`display_name` should not be empty.")
+        self._is_type_or_list_of_types(display_name, str, "display_name")
+
+        if not isinstance(display_name, list):
+            display_name = [display_name]
+
+        new_params = [
+            param
+            for param in self.proto_obj.form.parameters
+            if param.display_name not in display_name
+        ]
+        self.proto_obj.form.parameters = new_params
+
+        return self.proto_obj
+
+
+    def remove_transition_route(
+        self,
+        transition_route: TransitionRoute = None,
+        intent: str = None,
+        condition: str = None
+    ) -> Page:
+        """Remove a transition route from the Page.
+
+        At least one of the `transition_route`, `intent`, or `condition` should
+        be specfied.
+
+        Args:
+            transition_route (TransitionRoute):
+              The TransitionRoute to remove from the Page.
+            intent (str):
+              TransitionRoute's intent that should be removed from the Page.
+            condition (str):
+              TransitionRoute's condition that should be removed from the Page.
+
+        Returns:
+          A Page object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        new_routes = []
+        for tr in self.proto_obj.transition_routes:
+            if self._match_transition_route(
+                transition_route=tr, target_route=transition_route,
+                intent=intent, condition=condition
+            ):
+                continue
+            new_routes.append(tr)
+        self.proto_obj.transition_routes = new_routes
+
+        return self.proto_obj
+
+
+    def remove_event_handler(
+        self,
+        event_handlers: Union[EventHandler, List[EventHandler]] = None,
+        event_names: Union[str, List[str]] = None
+    ) -> Page:
+        """Remove single or multiple EventHandlers from the Page.
+
+        Args:
+          event_handlers (EventHandler | List[EventHandler]):
+            A single or list of EventHandler to remove
+              from the Page existing in proto_obj.
+            Only one of the `event_handlers` and
+              `event_names` should be specified.
+          event_names (str | List[str]):
+            A single or list of EventHandler's event names corresponding to the
+              EventHandler to remove from the Page existing in proto_obj.
+            Only one of the `event_handlers` and
+              `event_names` should be specified.
+
+        Returns:
+          A Page object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        if event_handlers and event_names:
+            raise Exception(
+                "Only one of the `event_handlers` and "
+                "`event_names` should be specified."
+            )
+        if event_handlers:
+            # Type error checking
+            self._is_type_or_list_of_types(
+                event_handlers, EventHandler, "event_handlers"
+            )
+
+            if not isinstance(event_handlers, list):
+                event_handlers = [event_handlers]
+
+            new_ehs = [
+                eh
+                for eh in self.proto_obj.event_handlers
+                if eh not in event_handlers
+            ]
+        elif event_names:
+            # Type error checking
+            self._is_type_or_list_of_types(event_names, str, "event_names")
+
+            if not isinstance(event_names, list):
+                event_names = [event_names]
+
+            new_ehs = [
+                eh
+                for eh in self.proto_obj.event_handlers
+                if eh.event not in event_names
+            ]
+        else:
+            raise Exception(
+                "At least one of the `event_handlers` and "
+                "`event_names` should be specified."
+            )
+
+
+        self.proto_obj.event_handlers = new_ehs
+
+        return self.proto_obj
+
+    def remove_transition_route_group(
+        self,
+        transition_route_groups: Union[str, List[str]]
+    ) -> Page:
+        """Remove single or multiple TransitionRouteGroups from the Page.
+
+        Args:
+          transition_route_groups (str | List[str]):
+            A single or list of TransitionRouteGroup's id to remove
+            from the Page existing in proto_obj. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
+              flows/<Flow ID>/transitionRouteGroups/<TransitionRouteGroup ID>``.
+
+        Returns:
+          A Page object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        # Type error checking
+        self._is_type_or_list_of_types(
+            transition_route_groups, str, "transition_route_groups"
+        )
+
+        if not isinstance(transition_route_groups, list):
+            transition_route_groups = [transition_route_groups]
+
+        new_trgs = [
+            trg
+            for trg in self.proto_obj.transition_route_groups
+            if trg not in transition_route_groups
+        ]
+        self.proto_obj.transition_route_groups = new_trgs
+
+        return self.proto_obj
+
+
+    def _show_basic_info(self) -> str:
+        """String representation for the basic information of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        entry_fulfillment_str = str(
+            FulfillmentBuilder(self.proto_obj.entry_fulfillment)
+        )
+        return (
+            f"display_name: {self.proto_obj.display_name}"
+            f"\nentry_fulfillment:\n\n{entry_fulfillment_str}"
+        )
+
+    def _show_parameters(self) -> str:
+        """String representation for the parameters of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return "\n".join([
+            (
+                f"display_name: {param.display_name}"
+                f"\n\tentity_type: {param.entity_type}"
+                f"\n\trequired: {param.required}"
+                f"\n\tis_list: {param.is_list}"
+                f"\n\treadct: {param.redact}"
+                f"\n\tdefault_value: {param.default_value}"
+            )
+            for param in self.proto_obj.form.parameters
+        ])
+
+    def _show_transition_routes(self) -> str:
+        """String representation for the transition routes of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return "\n".join([
+            f"TransitionRoute {i+1}:\n{str(TransitionRouteBuilder(tr))}\n{'*'*20}\n"
+            for i, tr in enumerate(self.proto_obj.transition_routes)
+        ])
+
+    def _show_event_handlers(self) -> str:
+        """String representation for the event handlers of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return "\n".join([
+            f"EventHandler {i+1}:\n{str(EventHandlerBuilder(eh))}\n{'*'*20}\n"
+            for i, eh in enumerate(self.proto_obj.event_handlers)
+        ])
+
+    def _show_transition_route_groups(self) -> str:
+        """String representation for the transition route groups of proto_obj"""
+        self._check_proto_obj_attr_exist()
+
+        return "\n".join([
+            f"TransitionRouteGroup {i+1}: {trg_id}"
+            for i, trg_id in enumerate(self.proto_obj.transition_route_groups)
+        ])
+
+    def show_page_info(
+        self, mode: str = "whole"
+    ) -> None:
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the page to show.
+              Options:
+              ['basic', 'whole', 'parameters',
+              'routes' or 'transition routes',
+              'route groups' or 'transition route groups',
+              'events' or 'event handlers'
+              ]
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode == "parameters":
+            print(self._show_parameters())
+        elif mode in ["routes", "transition routes"]:
+            print(self._show_transition_routes())
+        elif mode in ["route groups", "transition route groups"]:
+            print(self._show_transition_route_groups())
+        elif mode in ["events", "event handlers"]:
+            print(self._show_event_handlers())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'whole', 'parameters',"
+                " 'routes', 'transition routes',"
+                " 'route groups', 'transition route groups',"
+                " 'events', 'event handlers']"
+            )
+
+
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return (
+            f"Basic Information:\n{'='*25}\n{self._show_basic_info()}"
+            f"\n\n\nParameters:\n{'='*25}\n{self._show_parameters()}"
+            f"\n\n\nTransitionRoutes:\n{'='*25}\n{self._show_transition_routes()}"
+            f"\n\n\nEventHandlers:\n{'='*25}\n{self._show_event_handlers()}"
+            f"\n\n\nTransitoinRouteGroups:\n{'='*25}\n{self._show_transition_route_groups()}")
+
+
+    def show_stats(self) -> None:
+        """Provide some stats about the Page."""
+        self._check_proto_obj_attr_exist()
+
+        # Entry Fulfillment
+        has_entry_fulfill = True if self.proto_obj.entry_fulfillment else False
+        has_entry_fulfill_str = f"Has entry fulfillment: {has_entry_fulfill}"
+
+        # Transition Routes
+        transition_routes_count = len(self.proto_obj.transition_routes)
+        routes_with_fulfill_count = 0
+        routes_with_webhook_fulfill_count = 0
+        intent_routes_count = 0
+        cond_routes_count = 0
+        intent_and_cond_routes_count = 0
+        for tr in self.proto_obj.transition_routes:
+            if tr.trigger_fulfillment:
+                routes_with_fulfill_count += 1
+                fb = FulfillmentBuilder(tr.trigger_fulfillment)
+                if fb.has_webhook():
+                    routes_with_webhook_fulfill_count += 1
+            if tr.intent and tr.condition:
+                intent_and_cond_routes_count += 1
+            elif tr.intent and not tr.condition:
+                intent_routes_count += 1
+            elif not tr.intent and tr.condition:
+                cond_routes_count += 1
+        transition_routes_str = (
+            f"# of Transition Routes: {transition_routes_count}"
+        )
+        routes_with_fulfill_str = (
+            f"# of routes with fulfillment: {routes_with_fulfill_count}"
+        )
+        routes_with_webhook_fulfill_str = (
+            "# of routes uses webhook for fulfillment:"
+            f" {routes_with_webhook_fulfill_count}"
+        )
+        intent_routes_str = f"# of intent routes: {intent_routes_count}"
+        cond_routes_str = f"# of condition routes: {cond_routes_count}"
+        intent_and_cond_routes_str = (
+            f"# of intent and condition routes: {intent_and_cond_routes_count}"
+        )
+
+        routes_stats_str = (
+            f"\n{transition_routes_str}\n\t{intent_routes_str}"
+            f"\n\t{cond_routes_str}\n\t{intent_and_cond_routes_str}"
+            f"\n\t{routes_with_fulfill_str}\n\t{routes_with_webhook_fulfill_str}"
+        )
+
+        # Parameters
+        parameters_count = len(self.proto_obj.form.parameters)
+        parameters_with_event_handler_count = 0
+        parameters_with_webhook_fulfill_count = 0
+        for param in self.proto_obj.form.parameters:
+            fb = FulfillmentBuilder(
+                param.fill_behavior.initial_prompt_fulfillment
+            )
+            if fb.has_webhook():
+                parameters_with_webhook_fulfill_count += 1
+            if param.fill_behavior.reprompt_event_handlers:
+                parameters_with_event_handler_count += 1
+
+        if parameters_count != 0:
+            parameters_ratio = (
+                parameters_with_event_handler_count/parameters_count
+            )
+        else:
+            parameters_ratio = 0
+        parameters_str = f"# of Parameters: {parameters_count}"
+        parameters_with_event_handler_str = (
+            "# of Parameters with Event Handlers:"
+            f" {parameters_with_event_handler_count} (Ratio: {parameters_ratio})"
+        )
+        parameters_with_webhook_fulfill_str = (
+            "# of Parameters uses webhook for fulfillment:"
+            f" {parameters_with_webhook_fulfill_count}"
+        )
+        
+
+        params_stats_str = (
+            f"\n{parameters_str}\n\t{parameters_with_event_handler_str}"
+            f"\n\t{parameters_with_webhook_fulfill_str}"
+        )
+
+        # Event Handlers
+        event_handlers_count = len(self.proto_obj.event_handlers)
+        events_with_fulfill_count = 0
+        events_with_webhook_fulfill_count = 0
+        for eh in self.proto_obj.event_handlers:
+            fb = FulfillmentBuilder(eh.trigger_fulfillment)
+            if fb.has_webhook():
+                events_with_webhook_fulfill_count += 1
+            if eh.trigger_fulfillment:
+                events_with_fulfill_count += 1
+        event_handlers_str = f"# of Event Handlers: {event_handlers_count}"
+        events_with_fulfill_str = (
+            "# of Event Handlers with fulfillment:"
+            f" {events_with_fulfill_count}"
+        )
+        events_with_webhook_fulfill_str = (
+            "# of Event Handlers uses webhook for fulfillment:"
+            f" {events_with_webhook_fulfill_count}"
+        )
+
+        events_stats_str = (
+            f"\n{event_handlers_str}\n\t{events_with_fulfill_str}"
+            f"\n\t{events_with_webhook_fulfill_str}"
+        )
+
+        # Transition Route Groups
+        transition_route_groups_count = len(
+            self.proto_obj.transition_route_groups
+        )
+        transition_route_groups_str = (
+            f"# of Transition Route Groups: {transition_route_groups_count}"
+        )
+        route_groups_stats_str = f"\n{transition_route_groups_str}"
+
+        # Create the output string
+        out = (
+            f"{has_entry_fulfill_str}{routes_stats_str}{params_stats_str}"
+            f"{events_stats_str}{route_groups_stats_str}"
+        )
+        print(out)
+
