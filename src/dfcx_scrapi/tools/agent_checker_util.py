@@ -155,19 +155,15 @@ class AgentCheckerUtil(ScrapiBase):
     def _convert_intent(self, intent_id):
         """Gets an intent display name from an intent ID"""
         intent_id_converted = str(self.agent_id) + "/intents/" + str(intent_id)
-        if intent_id_converted in self.intents_map:
-            return self.intents_map[intent_id_converted]
-        return ""
+        return self.intents_map.get(intent_id_converted, "")
 
     def _convert_flow(self, flow_id):
         """Gets a flow display name from a flow ID"""
         if flow_id.split("/")[-1] == "-":
             return ""
         # flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
-        if flow_id in self.flows_map:
-            return self.flows_map[flow_id]
+        return self.flows_map.get(flow_id, "Default Start Flow")
         # TODO: Should throw error instead of returning default
-        return "Default Start Flow"
 
     # Note that flow id includes agent, normally...
     def _convert_page(self, page_id, flow_id):
@@ -180,11 +176,8 @@ class AgentCheckerUtil(ScrapiBase):
             return "Start"
         page_id_converted = str(flow_id) + "/pages/" + str(page_id)
         if flow_id in self.pages_map:
-            if page_id_converted in self.pages_map[flow_id]:
-                return self.pages_map[flow_id][page_id_converted]
-            else:
-                # TODO: Should throw error instead of returning default
-                return "Start"
+            return self.pages_map[flow_id].get(page_id_converted, "Start")
+            # TODO: Should throw error instead of returning default
         print("Flow not found")
         # TODO: Should throw error, but returning this probably will anyway
         return "Invalid"
@@ -218,31 +211,23 @@ class AgentCheckerUtil(ScrapiBase):
         Raises:
           KeyError, if the page is not found
         """
-        if flow_id is None and flow_name is None:
-            raise Exception("Please specify a flow")
-        elif flow_name is not None:
-            if flow_name in self.flows_map_rev:
-                flow_id = self.flows_map_rev[flow_name]
-            else:
-                raise Exception(f"Flow not found: {flow_name}")
+        # Look up flow ID
+        if flow_name:
+            flow_id = self.flows_map_rev.get(flow_name, None)
+        if not flow_id:
+            raise Exception(f"Flow not found: {flow_name}")
         # Now that flow_id is set, look up the page
-        if page_id is None and page_name is None:
-            raise Exception("Please specify a page")
-        elif page_name is not None:
-            if page_name == "Start":
-                return self.flow_data[flow_id]
-            if page_name in self.pages_map_rev[flow_id]:
-                page_id = self.pages_map_rev[flow_id][page_name]
-                return self.page_data[flow_id][page_id]
-            else:
+        # Special case for the start page
+        if page_name == "Start" or (page_id and "START_PAGE" in page_id):
+            return self.flow_data[flow_id]
+        # Look up page ID
+        if page_name:
+            page_id = self.pages_map_rev[flow_id].get(page_name, None)
+        if not page_id:
+            if not page_name:
                 raise KeyError('Page not found. Did you forget "page_name="?')
-        else:
-            if "START_PAGE" in page_id:
-                return self.flow_data[flow_id]
-            elif page_id not in self.pages_map[flow_id]:
-                raise KeyError("Page not found.")
-            else:
-                return self.page_data[flow_id][page_id]
+            raise KeyError(f"Page not found: {page_name}")
+        return self.page_data[flow_id][page_id]
 
     # Changelogs
 
@@ -557,7 +542,7 @@ class AgentCheckerUtil(ScrapiBase):
         self,
         params: Dict
     ):
-        params["page"] = self.flow_data[params["flow_id"]]
+        page = self.flow_data[params["flow_id"]]
         for event_handler in params["page"].event_handlers:
             if hasattr(event_handler, "target_page") or hasattr(
                 event_handler, "target_flow"
@@ -638,12 +623,13 @@ class AgentCheckerUtil(ScrapiBase):
         params = {
             'flow_id': flow_id,
             'flow_name': flow_name,
-            'page': from_page,
+            'page': page_data,
             'reachable': reachable,
             'conversation_path': conversation_path,
             'min_intent_counts': min_intent_counts,
             'presets': presets,
             'intent_route_limit': intent_route_limit,
+            'intent_route_count': 0,
             'include_groups': include_groups,
             'include_start_page_routes': include_start_page_routes,
             'limit_intent_to_initial': limit_intent_to_initial,
