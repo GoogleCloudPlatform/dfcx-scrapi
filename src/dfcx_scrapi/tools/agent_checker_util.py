@@ -250,266 +250,211 @@ class AgentCheckerUtil(ScrapiBase):
 
     def _find_reachable_pages_rec_helper(
         self,
-        flow_id: str,
-        flow_name: str,
-        page: DFCXPage | DFCXFlow,
-        route: DFCXRoute,
-        reachable: List[str],
-        conversation_path: List[str],
-        min_intent_counts: List[int],
-        presets: Dict[str, str],
-        intent_route_count: int = 0,
-        intent_route_limit: Optional[int] = None,
-        include_groups: bool = True,
-        include_start_page_routes: bool = True,
-        limit_intent_to_initial: bool = False,
-        is_initial: bool = False,
-        include_meta: bool = False,
-        verbose: bool = False,
+        params: Dict
     ) -> None:
         """Helper function for the recursion involved in
         finding reachable pages
         """
-        if not flow_name:
-            flow_name = self.flows_map[flow_id]
-        target_page = route.target_page
-        target_flow = route.target_flow
+        if not params["flow_name"]:
+            params["flow_name"] = self.flows_map[params["flow_id"]]
+        target_page = params["route"].target_page
+        target_flow = params["route"].target_flow
         if (
-            hasattr(route, "intent") and route.intent != ""
-            and intent_route_limit and intent_route_count >= intent_route_limit
+            hasattr(params["route"], "intent") and params["route"].intent != ""
+            and params["intent_route_limit"] and params["intent_route_count"] >= params["intent_route_limit"]
         ):
             return
-        if hasattr(page, "form") and page.form:
-            for parameter in page.form.parameters:
+        if hasattr(params["page"], "form") and params["page"].form:
+            for parameter in params["page"].form.parameters:
                 parameter_name = parameter.display_name
                 # Need to also account for parameters being
                 # set by intents (or by webhooks...)
                 if (
-                    parameter_name not in presets
-                    or presets[parameter_name] == "NULL"
+                    parameter_name not in params["presets"]
+                    or params["presets"][parameter_name] == "NULL"
                 ):
                     # This page has an unfilled parameter
-                    if limit_intent_to_initial and not is_initial:
+                    if params["limit_intent_to_initial"] and not params["is_initial"]:
                         return
-        if hasattr(route, "intent") and route.intent != "":
-            if limit_intent_to_initial and not is_initial:
+        if hasattr(params["route"], "intent") and params["route"].intent != "":
+            if params["limit_intent_to_initial"] and not params["is_initial"]:
                 # Don't continue on this path
                 return
-            intent_route_count += 1
-        if target_page in self.page_data[flow_id]:
-            page_name = self.page_data[flow_id][target_page].display_name
-            if verbose:
-                print(page.display_name, "->", page_name)
+            params["intent_route_count"] += 1
+        if target_page in self.page_data[params["flow_id"]]:
+            page_name = self.page_data[params["flow_id"]][target_page].display_name
+            if params["verbose"]:
+                print(params["page"].display_name, "->", page_name)
             # Move to this page (this is also the recursion limiting step
             # to prevent infinite loops)
-            if page_name not in reachable:
-                reachable.append(page_name)
-                min_intent_counts.append(intent_route_count)
-                conversation_path.append(page_name)
-                if verbose:
-                    print(conversation_path, intent_route_count)
+            if page_name not in params["reachable"]:
+                params["reachable"].append(page_name)
+                params["min_intent_counts"].append(params["intent_route_count"])
+                params["conversation_path"].append(page_name)
+                if params["verbose"]:
+                    print(params["conversation_path"], params["intent_route_count"])
 
-                new_presets = self._get_new_presets(presets, page, route)
+                old_presets = params["presets"].copy()
+                new_presets = self._get_new_presets(params["presets"], params["page"], params["route"])
+                params["page"] = self.page_data[params["flow_id"]][target_page]
+                params["presets"] = new_presets
 
-                self._find_reachable_pages_rec(
-                    flow_id,
-                    flow_name,
-                    self.page_data[flow_id][target_page],
-                    reachable,
-                    conversation_path,
-                    min_intent_counts,
-                    new_presets,
-                    intent_route_count=intent_route_count,
-                    intent_route_limit=intent_route_limit,
-                    include_groups=include_groups,
-                    include_start_page_routes=include_start_page_routes,
-                    limit_intent_to_initial=limit_intent_to_initial,
-                    is_initial=False,
-                    include_meta=include_meta,
-                    verbose=verbose,
-                )
-                conversation_path.pop(-1)
+                self._find_reachable_pages_rec(params)
+
+                params["conversation_path"].pop(-1)
+                # pop presets since we can't do it if we're passing a params dict like this
+                params["presets"] = old_presets
             elif (
-                page_name in reachable
-                and intent_route_count
-                < min_intent_counts[reachable.index(page_name)]
+                page_name in params["reachable"]
+                and params["intent_route_count"]
+                < params["min_intent_counts"][params["reachable"].index(page_name)]
             ):
                 # Better route found, traverse from here
-                min_intent_counts[reachable.index(page_name)]=intent_route_count
-                conversation_path.append(page_name)
-                if verbose:
-                    print(conversation_path, intent_route_count)
+                params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
+                params["conversation_path"].append(page_name)
+                if params["verbose"]:
+                    print(params["conversation_path"], params["intent_route_count"])
 
-                new_presets = self._get_new_presets(presets, page, route)
+                old_presets = params["presets"].copy()
+                new_presets = self._get_new_presets(params["presets"], params["page"], params["route"])
+                params["page"] = self.page_data[params["flow_id"]][target_page]
+                params["presets"] = new_presets
 
-                self._find_reachable_pages_rec(
-                    flow_id,
-                    flow_name,
-                    self.page_data[flow_id][target_page],
-                    reachable,
-                    conversation_path,
-                    min_intent_counts,
-                    new_presets,
-                    intent_route_count=intent_route_count,
-                    intent_route_limit=intent_route_limit,
-                    include_groups=include_groups,
-                    include_start_page_routes=include_start_page_routes,
-                    limit_intent_to_initial=limit_intent_to_initial,
-                    is_initial=False,
-                    include_meta=include_meta,
-                    verbose=verbose,
-                )
-                conversation_path.pop(-1)
+                self._find_reachable_pages_rec(params)
+
+                params["conversation_path"].pop(-1)
+                # pop presets since we can't do it if we're passing a params dict like this
+                params["presets"] = old_presets
         elif "END_FLOW" in target_page:
-            if verbose:
-                print(page.display_name, "-> END FLOW")
-            if include_meta:
+            if params["verbose"]:
+                print(params["page"].display_name, "-> END FLOW")
+            if params["include_meta"]:
                 page_name = "END FLOW"
-                if page_name not in reachable:
-                    reachable.append(page_name)
-                    min_intent_counts.append(intent_route_count)
+                if page_name not in params["reachable"]:
+                    params["reachable"].append(page_name)
+                    params["min_intent_counts"].append(params["intent_route_count"])
                 elif (
-                    page_name in reachable
-                    and intent_route_count
-                    < min_intent_counts[reachable.index(page_name)]
+                    page_name in params["reachable"]
+                    and params["intent_route_count"]
+                    < params["min_intent_counts"][params["reachable"].index(page_name)]
                 ):
-                    min_intent_counts[
-                        reachable.index(page_name)
-                    ] = intent_route_count
+                    params["min_intent_counts"][
+                        params["reachable"].index(page_name)
+                    ] = params["intent_route_count"]
             # reachable.append('END FLOW')
         elif "END_SESSION" in target_page:
-            if verbose:
-                print(page.display_name, "-> END SESSION")
-            if include_meta:
+            if params["verbose"]:
+                print(params["page"].display_name, "-> END SESSION")
+            if params["include_meta"]:
                 page_name = "END SESSION"
-                if page_name not in reachable:
-                    reachable.append(page_name)
-                    min_intent_counts.append(intent_route_count)
+                if page_name not in params["reachable"]:
+                    params["reachable"].append(page_name)
+                    params["min_intent_counts"].append(params["intent_route_count"])
                 elif (
-                    page_name in reachable
-                    and intent_route_count
-                    < min_intent_counts[reachable.index(page_name)]
+                    page_name in params["reachable"]
+                    and params["intent_route_count"]
+                    < params["min_intent_counts"][params["reachable"].index(page_name)]
                 ):
-                    min_intent_counts[
-                        reachable.index(page_name)
-                    ] = intent_route_count
+                    params["min_intent_counts"][
+                        params["reachable"].index(page_name)
+                    ] = params["intent_route_count"]
             # reachable.append('END SESSION')
         elif "CURRENT_PAGE" in target_page:
-            if verbose:
-                print(page.display_name, "-> CURRENT PAGE")
-            page_name = page.display_name
+            if params["verbose"]:
+                print(params["page"].display_name, "-> CURRENT PAGE")
+            page_name = params["page"].display_name
             if (
-                page_name in reachable
-                and intent_route_count
-                < min_intent_counts[reachable.index(page_name)]
+                page_name in params["reachable"]
+                and params["intent_route_count"]
+                < params["min_intent_counts"][params["reachable"].index(page_name)]
             ):
-                min_intent_counts[reachable.index(page_name)]=intent_route_count
+                params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
         elif "PREVIOUS_PAGE" in target_page:
-            if verbose:
-                print(page.display_name, "-> PREVIOUS PAGE")
-            if include_meta:
+            if params["verbose"]:
+                print(params["page"].display_name, "-> PREVIOUS PAGE")
+            if params["include_meta"]:
                 page_name = "PREVIOUS PAGE"
-                if page_name not in reachable:
-                    reachable.append(page_name)
-                    min_intent_counts.append(intent_route_count)
+                if page_name not in params["reachable"]:
+                    params["reachable"].append(page_name)
+                    params["min_intent_counts"].append(params["intent_route_count"])
                 elif (
-                    page_name in reachable
-                    and intent_route_count
-                    < min_intent_counts[reachable.index(page_name)]
+                    page_name in params["reachable"]
+                    and params["intent_route_count"]
+                    < params["min_intent_counts"][params["reachable"].index(page_name)]
                 ):
-                    min_intent_counts[
-                        reachable.index(page_name)
-                    ] = intent_route_count
+                    params["min_intent_counts"][
+                        params["reachable"].index(page_name)
+                    ] = params["intent_route_count"]
             # TODO: This could cause huge problems...
         elif "START_PAGE" in target_page:
-            if verbose:
-                print(page.display_name, "-> START PAGE")
+            if params["verbose"]:
+                print(params["page"].display_name, "-> START PAGE")
             page_name = "Start"
-            if page_name not in reachable:
-                reachable.append(page_name)
-                min_intent_counts.append(intent_route_count)
-                conversation_path.append(page_name)
-                if verbose:
-                    print(conversation_path, intent_route_count)
+            if page_name not in params["reachable"]:
+                params["reachable"].append(page_name)
+                params["min_intent_counts"].append(params["intent_route_count"])
+                params["conversation_path"].append(page_name)
+                if params["verbose"]:
+                    print(params["conversation_path"], params["intent_route_count"])
 
-                new_presets = self._get_new_presets(presets, page, route)
+                old_presets = params["presets"].copy()
+                new_presets = self._get_new_presets(params["presets"], params["page"], params["route"])
+                params["page"] = self.flow_data[params["flow_id"]]
+                params["presets"] = new_presets
 
-                self._find_reachable_pages_rec(
-                    flow_id,
-                    flow_name,
-                    self.flow_data[flow_id],
-                    reachable,
-                    conversation_path,
-                    min_intent_counts,
-                    new_presets,
-                    intent_route_count=intent_route_count,
-                    intent_route_limit=intent_route_limit,
-                    include_groups=include_groups,
-                    include_start_page_routes=include_start_page_routes,
-                    limit_intent_to_initial=limit_intent_to_initial,
-                    is_initial=False,
-                    include_meta=include_meta,
-                    verbose=verbose,
-                )
-                conversation_path.pop(-1)
+                self._find_reachable_pages_rec(params)
+
+                params["conversation_path"].pop(-1)
+                # pop presets since we can't do it if we're passing a params dict like this
+                params["presets"] = old_presets
             elif (
-                page_name in reachable
-                and intent_route_count
-                < min_intent_counts[reachable.index(page_name)]
+                page_name in params["reachable"]
+                and params["intent_route_count"]
+                < params["min_intent_counts"][params["reachable"].index(page_name)]
             ):
                 # Better route found, traverse from here
-                min_intent_counts[reachable.index(page_name)]=intent_route_count
-                conversation_path.append(page_name)
-                if verbose:
-                    print(conversation_path, intent_route_count)
+                params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
+                params["conversation_path"].append(page_name)
+                if params["verbose"]:
+                    print(params["conversation_path"], params["intent_route_count"])
 
-                new_presets = self._get_new_presets(presets, page, route)
+                old_presets = params["presets"].copy()
+                new_presets = self._get_new_presets(params["presets"], params["page"], params["route"])
+                params["page"] = self.flow_data[params["flow_id"]]
+                params["presets"] = new_presets
 
-                self._find_reachable_pages_rec(
-                    flow_id,
-                    flow_name,
-                    self.flow_data[flow_id],
-                    reachable,
-                    conversation_path,
-                    min_intent_counts,
-                    new_presets,
-                    intent_route_count=intent_route_count,
-                    intent_route_limit=intent_route_limit,
-                    include_groups=include_groups,
-                    include_start_page_routes=include_start_page_routes,
-                    limit_intent_to_initial=limit_intent_to_initial,
-                    is_initial=False,
-                    include_meta=include_meta,
-                    verbose=verbose,
-                )
-                conversation_path.pop(-1)
+                self._find_reachable_pages_rec(params)
+
+                params["conversation_path"].pop(-1)
+                # pop presets since we can't do it if we're passing a params dict like this
+                params["presets"] = old_presets
         elif len(target_page) > 0:
-            print(page.display_name, "->", target_page)
+            print(params["page"].display_name, "->", target_page)
             # This should not happen, and if it does it needs to be fixed
             input()
         elif len(target_flow) > 0:
-            flow_name = self.flows_map[route.target_flow]
-            if verbose:
-                print(page.display_name, "->", flow_name)
-            if flow_name not in reachable:
-                reachable.append(flow_name)
-                min_intent_counts.append(intent_route_count)
+            flow_name = self.flows_map[params["route"].target_flow]
+            if params["verbose"]:
+                print(params["page"].display_name, "->", flow_name)
+            if flow_name not in params["reachable"]:
+                params["reachable"].append(flow_name)
+                params["min_intent_counts"].append(params["intent_route_count"])
             elif (
-                flow_name in reachable
-                and intent_route_count
-                < min_intent_counts[reachable.index(flow_name)]
+                flow_name in params["reachable"]
+                and params["intent_route_count"]
+                < params["min_intent_counts"][params["reachable"].index(flow_name)]
             ):
-                min_intent_counts[reachable.index(flow_name)]=intent_route_count
+                params["min_intent_counts"][params["reachable"].index(flow_name)] = params["intent_route_count"]
         else:
-            if verbose:
-                print(page.display_name, "->", route.target_flow, "(empty)")
-            page_name = page.display_name
+            if params["verbose"]:
+                print(params["page"].display_name, "->", params["route"].target_flow, "(empty)")
+            page_name = params["page"].display_name
             if (
-                page_name in reachable
-                and intent_route_count
-                < min_intent_counts[reachable.index(page_name)]
+                page_name in params["reachable"]
+                and params["intent_route_count"]
+                < params["min_intent_counts"][params["reachable"].index(page_name)]
             ):
-                min_intent_counts[reachable.index(page_name)]=intent_route_count
+                params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
 
     def _get_new_presets(self, presets, page, route):
         new_presets = presets.copy()
@@ -554,264 +499,83 @@ class AgentCheckerUtil(ScrapiBase):
 
     def _find_reachable_pages_rec(
         self,
-        flow_id: str,
-        flow_name: str,
-        page: DFCXPage | DFCXFlow,
-        reachable: List[str],
-        conversation_path: List[str],
-        min_intent_counts: List[int],
-        presets: Dict[str, str],
-        intent_route_count: int = 0,
-        intent_route_limit: Optional[int] = None,
-        include_groups: bool = True,
-        include_start_page_routes: bool = True,
-        limit_intent_to_initial: bool = False,
-        is_initial: bool = False,
-        include_meta: bool = False,
-        verbose: bool = False,
+        params: Dict
     ) -> None:
         """Recursive function to find reachable pages within a given flow,
         starting at a particular page. Other parameters here are used for
         more general traversal, but not currently used."""
-        if not flow_name:
-            flow_name = self.flows_map[flow_id]
-        if hasattr(page, "form") and page.form:
-            for parameter in page.form.parameters:
+        if not params["flow_name"]:
+            params["flow_name"] = self.flows_map[params["flow_id"]]
+        if hasattr(params["page"], "form") and params["page"].form:
+            for parameter in params["page"].form.parameters:
                 self._process_form_parameter_for_reachable_pages(
-                    flow_id,
-                    flow_name,
-                    page,
-                    parameter,
-                    reachable,
-                    conversation_path,
-                    min_intent_counts,
-                    presets,
-                    intent_route_count=intent_route_count,
-                    intent_route_limit=intent_route_limit,
-                    include_groups=include_groups,
-                    include_start_page_routes=include_start_page_routes,
-                    limit_intent_to_initial=limit_intent_to_initial,
-                    is_initial=is_initial,
-                    include_meta=include_meta,
-                    verbose=verbose,
+                    params,
+                    parameter
                 )
-        for event_handler in page.event_handlers:
-            if limit_intent_to_initial and not is_initial:
+        for event_handler in params["page"].event_handlers:
+            if params["limit_intent_to_initial"] and not params["is_initial"]:
                 continue
             if hasattr(event_handler, "target_page") or hasattr(
                 event_handler, "target_flow"
             ):
-                self._find_reachable_pages_rec_helper(
-                    flow_id,
-                    flow_name,
-                    page,
-                    event_handler,
-                    reachable,
-                    conversation_path,
-                    min_intent_counts,
-                    presets,
-                    intent_route_count=intent_route_count,
-                    intent_route_limit=intent_route_limit,
-                    include_groups=include_groups,
-                    include_start_page_routes=include_start_page_routes,
-                    limit_intent_to_initial=limit_intent_to_initial,
-                    is_initial=is_initial,
-                    include_meta=include_meta,
-                    verbose=verbose,
-                )
-        for route in page.transition_routes:
-            self._find_reachable_pages_rec_helper(
-                flow_id,
-                flow_name,
-                page,
-                route,
-                reachable,
-                conversation_path,
-                min_intent_counts,
-                presets,
-                intent_route_count=intent_route_count,
-                intent_route_limit=intent_route_limit,
-                include_groups=include_groups,
-                include_start_page_routes=include_start_page_routes,
-                limit_intent_to_initial=limit_intent_to_initial,
-                is_initial=is_initial,
-                include_meta=include_meta,
-                verbose=verbose,
-            )
-        if include_groups:
-            for route_group in page.transition_route_groups:
+                params["route"] = event_handler
+                self._find_reachable_pages_rec_helper(params)
+        for route in params["page"].transition_routes:
+            params["route"] = route
+            self._find_reachable_pages_rec_helper(params)
+        if params["include_groups"]:
+            for route_group in params["page"].transition_route_groups:
                 # TODO: Need to map by flow
-                for route in self.route_group_data[flow_id][
+                for route in self.route_group_data[params["flow_id"]][
                     route_group
                 ].transition_routes:
-                    self._find_reachable_pages_rec_helper(
-                        flow_id,
-                        flow_name,
-                        page,
-                        route,
-                        reachable,
-                        conversation_path,
-                        min_intent_counts,
-                        presets,
-                        intent_route_count=intent_route_count,
-                        intent_route_limit=intent_route_limit,
-                        include_groups=include_groups,
-                        include_start_page_routes=include_start_page_routes,
-                        limit_intent_to_initial=limit_intent_to_initial,
-                        is_initial=is_initial,
-                        include_meta=include_meta,
-                        verbose=verbose,
-                    )
+                    params["route"] = route
+                    self._find_reachable_pages_rec_helper(params)
         # Start page routes and route groups are also accessible from this page
         if (
-            include_start_page_routes
-            and page.display_name != flow_name
-            and (not limit_intent_to_initial or is_initial)
+            params["include_start_page_routes"]
+            and params["page"].display_name != params["flow_name"]
+            and (not params["limit_intent_to_initial"] or params["is_initial"])
         ):
-            self._process_start_page_routes_for_reachable_pages(
-                flow_id,
-                flow_name,
-                reachable,
-                conversation_path,
-                min_intent_counts,
-                presets,
-                intent_route_count=intent_route_count,
-                intent_route_limit=intent_route_limit,
-                include_groups=include_groups,
-                include_start_page_routes=include_start_page_routes,
-                limit_intent_to_initial=limit_intent_to_initial,
-                is_initial=is_initial,
-                include_meta=include_meta,
-                verbose=verbose,
-            )
+            self._process_start_page_routes_for_reachable_pages(params)
 
     def _process_form_parameter_for_reachable_pages(
         self,
-        flow_id: str,
-        flow_name: str,
-        page: DFCXPage | DFCXFlow,
-        parameter, # TODO: Data type for DFCX Parameter
-        reachable: List[str],
-        conversation_path: List[str],
-        min_intent_counts: List[int],
-        presets: Dict[str, str],
-        intent_route_count: int = 0,
-        intent_route_limit: Optional[int] = None,
-        include_groups: bool = True,
-        include_start_page_routes: bool = True,
-        limit_intent_to_initial: bool = False,
-        is_initial: bool = False,
-        include_meta: bool = False,
-        verbose: bool = False,
+        params: Dict,
+        parameter # TODO: Data type for DFCX Parameter
     ) -> None:
         for event_handler in parameter.fill_behavior.reprompt_event_handlers:
-            if limit_intent_to_initial and not is_initial:
+            if params["limit_intent_to_initial"] and not params["is_initial"]:
                 continue
             if hasattr(event_handler, "target_page") or hasattr(
                 event_handler, "target_flow"
             ):
-                self._find_reachable_pages_rec_helper(
-                    flow_id,
-                    flow_name,
-                    page,
-                    event_handler,
-                    reachable,
-                    conversation_path,
-                    min_intent_counts,
-                    presets,
-                    intent_route_count=intent_route_count,
-                    intent_route_limit=intent_route_limit,
-                    include_groups=include_groups,
-                    include_start_page_routes=include_start_page_routes,
-                    limit_intent_to_initial=limit_intent_to_initial,
-                    is_initial=is_initial,
-                    include_meta=include_meta,
-                    verbose=verbose,
-                )
+                params["route"] = event_handler
+                self._find_reachable_pages_rec_helper(params)
 
     def _process_start_page_routes_for_reachable_pages(
         self,
-        flow_id: str,
-        flow_name: str,
-        reachable: List[str],
-        conversation_path: List[str],
-        min_intent_counts: List[int],
-        presets: Dict[str, str],
-        intent_route_count: int = 0,
-        intent_route_limit: Optional[int] = None,
-        include_groups: bool = True,
-        include_start_page_routes: bool = True,
-        limit_intent_to_initial: bool = False,
-        is_initial: bool = False,
-        include_meta: bool = False,
-        verbose: bool = False,
+        params: Dict
     ):
-        for event_handler in self.flow_data[flow_id].event_handlers:
+        params["page"] = self.flow_data[params["flow_id"]]
+        for event_handler in params["page"].event_handlers:
             if hasattr(event_handler, "target_page") or hasattr(
                 event_handler, "target_flow"
             ):
-                self._find_reachable_pages_rec_helper(
-                    flow_id,
-                    flow_name,
-                    self.flow_data[flow_id],
-                    event_handler,
-                    reachable,
-                    conversation_path,
-                    min_intent_counts,
-                    presets,
-                    intent_route_count=intent_route_count,
-                    intent_route_limit=intent_route_limit,
-                    include_groups=include_groups,
-                    include_start_page_routes=include_start_page_routes,
-                    limit_intent_to_initial=limit_intent_to_initial,
-                    is_initial=is_initial,
-                    include_meta=include_meta,
-                    verbose=verbose,
-                )
-        for route in self.flow_data[flow_id].transition_routes:
+                params["route"] = event_handler
+                self._find_reachable_pages_rec_helper(params)
+        for route in params["page"].transition_routes:
             if hasattr(route, "intent") and route.intent != "":
-                self._find_reachable_pages_rec_helper(
-                    flow_id,
-                    flow_name,
-                    self.flow_data[flow_id],
-                    route,
-                    reachable,
-                    conversation_path,
-                    min_intent_counts,
-                    presets,
-                    intent_route_count=intent_route_count,
-                    intent_route_limit=intent_route_limit,
-                    include_groups=include_groups,
-                    include_start_page_routes=include_start_page_routes,
-                    limit_intent_to_initial=limit_intent_to_initial,
-                    is_initial=is_initial,
-                    include_meta=include_meta,
-                    verbose=verbose,
-                )
-        if include_groups:
-            for route_group in self.flow_data[flow_id].transition_route_groups:
-                for route in self.route_group_data[flow_id][
+                params["route"] = route
+                self._find_reachable_pages_rec_helper(params)
+        if params["include_groups"]:
+            for route_group in params["page"].transition_route_groups:
+                for route in self.route_group_data[params["flow_id"]][
                     route_group
                 ].transition_routes:
                     if hasattr(route, "intent") and route.intent != "":
-                        self._find_reachable_pages_rec_helper(
-                            flow_id,
-                            flow_name,
-                            self.flow_data[flow_id],
-                            route,
-                            reachable,
-                            conversation_path,
-                            min_intent_counts,
-                            presets,
-                            intent_route_count=intent_route_count,
-                            intent_route_limit=intent_route_limit,
-                            include_groups=include_groups,
-                            include_start_page_routes=include_start_page_routes,
-                            limit_intent_to_initial=limit_intent_to_initial,
-                            is_initial=is_initial,
-                            include_meta=include_meta,
-                            verbose=verbose,
-                        )
+                        params["route"] = route
+                        self._find_reachable_pages_rec_helper(params)
 
     def find_reachable_pages(
         self,
@@ -871,23 +635,23 @@ class AgentCheckerUtil(ScrapiBase):
             flow_id=flow_id, flow_name=flow_name,
             page_id=None, page_name=from_page
         )
-        self._find_reachable_pages_rec(
-            flow_id,
-            flow_name,
-            page_data,
-            reachable,
-            conversation_path,
-            min_intent_counts,
-            presets,
-            intent_route_count=0,
-            intent_route_limit=intent_route_limit,
-            include_groups=include_groups,
-            include_start_page_routes=include_start_page_routes,
-            limit_intent_to_initial=limit_intent_to_initial,
-            is_initial=is_initial,
-            include_meta=include_meta,
-            verbose=verbose,
-        )
+        params = {
+            'flow_id': flow_id,
+            'flow_name': flow_name,
+            'page': from_page,
+            'reachable': reachable,
+            'conversation_path': conversation_path,
+            'min_intent_counts': min_intent_counts,
+            'presets': presets,
+            'intent_route_limit': intent_route_limit,
+            'include_groups': include_groups,
+            'include_start_page_routes': include_start_page_routes,
+            'limit_intent_to_initial': limit_intent_to_initial,
+            'is_initial': is_initial,
+            'include_meta': include_meta,
+            'verbose': verbose
+        }
+        self._find_reachable_pages_rec(params)
         return reachable
 
     def find_unreachable_pages(
