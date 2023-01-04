@@ -14,24 +14,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+from dfcx_scrapi.builders.builders_common import BuilderBase
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
 
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
-class TransitionRouteBuilder:
+
+class TransitionRouteBuilder(BuilderBase):
     """Base Class for CX TransitionRoute builder."""
 
-    def __init__(self, obj: TransitionRoute = None):
-        self.proto_obj = None
-        if obj:
-            self.load_transition_route(obj)
+    _proto_type = TransitionRoute
+    _proto_type_str = "TransitionRoute"
+
+
+    def __init__(self, obj=None):
+        super().__init__(obj)
+
 
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
-        self._check_transition_route_exist()
+        self._check_proto_obj_attr_exist()
 
         target_str = self._show_target()
         transition_criteria = self._show_transition_criteria()
@@ -46,7 +59,7 @@ class TransitionRouteBuilder:
 
     def _show_transition_criteria(self) -> str:
         """String representation for the transition criteria of proto_obj."""
-        self._check_transition_route_exist()
+        self._check_proto_obj_attr_exist()
 
         intent_str, cond_str = "Not Specified", "Not Specified"
         if self.proto_obj.intent:
@@ -62,7 +75,7 @@ class TransitionRouteBuilder:
 
     def _show_target(self) -> str:
         """String representation for the target of proto_obj."""
-        self._check_transition_route_exist()
+        self._check_proto_obj_attr_exist()
 
         if self.proto_obj.target_page:
             target_type = "Page"
@@ -78,7 +91,7 @@ class TransitionRouteBuilder:
 
     def _show_fulfillment(self) -> str:
         """String representation for the fulfillment of proto_obj."""
-        self._check_transition_route_exist()
+        self._check_proto_obj_attr_exist()
 
         fulfillment_str = ""
         if self.proto_obj.trigger_fulfillment:
@@ -89,51 +102,7 @@ class TransitionRouteBuilder:
         return fulfillment_str
 
 
-    def _check_transition_route_exist(self):
-        """Check if the proto_obj exists otherwise raise an error."""
-        if not self.proto_obj:
-            raise ValueError(
-                "There is no proto_obj!\nUse create_new_transition_route"
-                " or load_transition_route to continue."
-            )
-        elif not isinstance(self.proto_obj, TransitionRoute):
-            raise ValueError(
-                "proto_obj is not a TransitionRoute type."
-                "\nPlease create or load the correct type to continue."
-            )
-
-
-    def load_transition_route(
-        self, obj: TransitionRoute, overwrite: bool = False
-    ) -> TransitionRoute:
-        """Load an existing TransitionRoute to proto_obj for further uses.
-
-        Args:
-          obj (TransitionRoute):
-            An existing TransitionRoute obj.
-          overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already
-            contains a TransitionRoute.
-
-        Returns:
-          A TransitionRoute object stored in proto_obj
-        """
-        if not isinstance(obj, TransitionRoute):
-            raise ValueError(
-                "The object you're trying to load is not a TransitionRoute!"
-            )
-        if self.proto_obj and not overwrite:
-            raise Exception(
-                "proto_obj already contains a TransitionRoute."
-                " If you wish to overwrite it, pass `overwrite` as True."
-            )
-        if overwrite or not self.proto_obj:
-            self.proto_obj = obj
-
-        return self.proto_obj
-
-
-    def create_new_transition_route(
+    def create_new_proto_obj(
         self,
         intent: str = None,
         condition: str = None,
@@ -242,7 +211,7 @@ class TransitionRouteBuilder:
               ['target', 'fulfillment',
                'transition criteria' or 'conditions', 'whole']
         """
-        self._check_transition_route_exist()
+        self._check_proto_obj_attr_exist()
 
         if mode == "target":
             print(self._show_target())
@@ -260,18 +229,20 @@ class TransitionRouteBuilder:
             )
 
 
-class EventHandlerBuilder:
+class EventHandlerBuilder(BuilderBase):
     """Base Class for CX EventHandler builder."""
 
-    def __init__(self, obj: EventHandler = None):
-        self.proto_obj = None
-        if obj:
-            self.load_event_handler(obj)
+    _proto_type = EventHandler
+    _proto_type_str = "EventHandler"
+
+
+    def __init__(self, obj=None):
+        super().__init__(obj)
 
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
-        self._check_event_handler_exist()
+        self._check_proto_obj_attr_exist()
 
         event_and_target_str = self._show_event_and_target()
         fulfillment_str = self._show_fulfillment()
@@ -284,7 +255,7 @@ class EventHandlerBuilder:
 
     def _show_event_and_target(self) -> str:
         """String representation for the target of proto_obj."""
-        self._check_event_handler_exist()
+        self._check_proto_obj_attr_exist()
 
         # Event str
         event_str = f"Event: {self.proto_obj.event}"
@@ -307,7 +278,7 @@ class EventHandlerBuilder:
 
     def _show_fulfillment(self) -> str:
         """String representation for the fulfillment of proto_obj."""
-        self._check_event_handler_exist()
+        self._check_proto_obj_attr_exist()
 
         fulfillment_str = ""
         if self.proto_obj.trigger_fulfillment:
@@ -318,51 +289,7 @@ class EventHandlerBuilder:
         return fulfillment_str
 
 
-    def _check_event_handler_exist(self):
-        """Check if the proto_obj exists otherwise raise an error."""
-        if not self.proto_obj:
-            raise ValueError(
-                "There is no proto_obj!\nUse create_new_event_handler"
-                " or load_event_handler to continue."
-            )
-        elif not isinstance(self.proto_obj, EventHandler):
-            raise ValueError(
-                "proto_obj is not an EventHandler type."
-                "\nPlease create or load the correct type to continue."
-            )
-
-
-    def load_event_handler(
-        self, obj: EventHandler, overwrite: bool = False
-    ) -> EventHandler:
-        """Load an existing EventHandler to proto_obj for further uses.
-
-        Args:
-          obj (EventHandler):
-            An existing EventHandler obj.
-          overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already
-            contains an EventHandler.
-
-        Returns:
-          An EventHandler object stored in proto_obj
-        """
-        if not isinstance(obj, EventHandler):
-            raise ValueError(
-                "The object you're trying to load is not an EventHandler!"
-            )
-        if self.proto_obj and not overwrite:
-            raise Exception(
-                "proto_obj already contains an EventHandler."
-                " If you wish to overwrite it, pass overwrite as True."
-            )
-        if overwrite or not self.proto_obj:
-            self.proto_obj = obj
-
-        return self.proto_obj
-
-
-    def create_new_event_handler(
+    def create_new_proto_obj(
         self,
         event: str,
         trigger_fulfillment: Fulfillment = None,
@@ -443,7 +370,7 @@ class EventHandlerBuilder:
             Options:
               ['basic' or 'target' or 'event', 'fulfillment', 'whole']
         """
-        self._check_event_handler_exist()
+        self._check_proto_obj_attr_exist()
 
         if mode in ["basic", "target", "event"]:
             print(self._show_event_and_target())

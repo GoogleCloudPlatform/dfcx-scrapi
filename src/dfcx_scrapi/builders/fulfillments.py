@@ -14,71 +14,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import Dict
 
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
+from dfcx_scrapi.builders.builders_common import BuilderBase
 from dfcx_scrapi.builders.response_messages import ResponseMessageBuilder
 
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
-class FulfillmentBuilder:
+
+class FulfillmentBuilder(BuilderBase):
     """Base Class for CX Fulfillment builder."""
     # TODO: ConditionalCases: def add_conditional_case(self) -> Fulfillment:
 
-    def __init__(self, obj: Fulfillment = None):
-        self.proto_obj = None
-        if obj:
-            self.load_fulfillment(obj)
+    _proto_type = Fulfillment
+    _proto_type_str = "Fulfillment"
 
 
-    def _check_fulfillment_exist(self):
-        """Check if the proto_obj exists otherwise raise an error."""
-        if not self.proto_obj:
-            if isinstance(self.proto_obj, Fulfillment):
-                return
-            raise ValueError(
-                "There is no proto_obj!"
-                "\nUse create_new_fulfillment or load_fulfillment to continue."
-            )
-        elif not isinstance(self.proto_obj, Fulfillment):
-            raise ValueError(
-                "proto_obj is not a Fulfillment type."
-                "\nPlease create or load the correct type to continue."
-            )
+    def __init__(self, obj=None):
+        super().__init__(obj)
 
 
-    def load_fulfillment(
-        self, obj: Fulfillment, overwrite: bool = False
-    ) -> Fulfillment:
-        """Load an existing Fulfillment to proto_obj for further uses.
-
-        Args:
-          obj (Fulfillment):
-            An existing Fulfillment obj.
-          overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already
-            contains a Fulfillment.
-
-        Returns:
-          A Fulfillment object stored in proto_obj
-        """
-        if not isinstance(obj, Fulfillment):
-            raise ValueError(
-                "The object you're trying to load is not a Fulfillment!"
-            )
-        if self.proto_obj and not overwrite:
-            raise Exception(
-                "proto_obj already contains a Fulfillment."
-                " If you wish to overwrite it, pass overwrite as True."
-            )
-
-        if overwrite or not self.proto_obj:
-            self.proto_obj = obj
-
-        return self.proto_obj
-
-
-    def create_new_fulfillment(
+    def create_new_proto_obj(
         self,
         webhook: str = None,
         tag: str = None,
@@ -157,7 +121,7 @@ class FulfillmentBuilder:
         Returns:
           A Fulfillment object stored in proto_obj
         """
-        self._check_fulfillment_exist()
+        self._check_proto_obj_attr_exist()
 
         if not isinstance(response_message, ResponseMessage):
             raise ValueError(
@@ -184,7 +148,7 @@ class FulfillmentBuilder:
         Returns:
           A Fulfillment object stored in proto_obj
         """
-        self._check_fulfillment_exist()
+        self._check_proto_obj_attr_exist()
 
         # Type error checking
         if isinstance(parameter_map, dict):
@@ -223,7 +187,7 @@ class FulfillmentBuilder:
         Returns:
           A Fulfillment object stored in proto_obj
         """
-        self._check_fulfillment_exist()
+        self._check_proto_obj_attr_exist()
 
         # Type error checking
         if isinstance(parameter_map, dict):
@@ -245,7 +209,7 @@ class FulfillmentBuilder:
                     continue
 
                 new_params.append(param)
-
+            
             self.proto_obj.set_parameter_actions = new_params
             return self.proto_obj
         else:
@@ -256,7 +220,7 @@ class FulfillmentBuilder:
 
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
-        self._check_fulfillment_exist()
+        self._check_proto_obj_attr_exist()
 
         partial_resp = self.proto_obj.return_partial_responses
         return (
@@ -268,7 +232,7 @@ class FulfillmentBuilder:
 
     def _show_parameters(self) -> str:
         """String representation for the parameters presets of proto_obj."""
-        self._check_fulfillment_exist()
+        self._check_proto_obj_attr_exist()
 
         return "\n".join([
             f"{param.parameter}: {param.value if param.value else 'null'}"
@@ -278,26 +242,29 @@ class FulfillmentBuilder:
 
     def _show_response_messages(self) -> str:
         """String representation of response messages in proto_obj."""
-        self._check_fulfillment_exist()
+        self._check_proto_obj_attr_exist()
 
         return "\n".join([
-            f"{i+1}:\n{str(ResponseMessageBuilder(msg))}"
+            f"ResponseMessage {i+1}:\n{str(ResponseMessageBuilder(msg))}"
             for i, msg in enumerate(self.proto_obj.messages)
         ])
 
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
-        self._check_fulfillment_exist()
+        try:
+            self._check_proto_obj_attr_exist()
+        except ValueError:
+            return ""
 
         basic_info_str = self._show_basic_info()
         resp_msgs_str = self._show_response_messages()
         params_str = self._show_parameters()
 
         return (
-            f"Basic Information:\n{'-'*20}\n{basic_info_str}"
-            f"\n\n\nResponseMessages:\n{'-'*20}\n{resp_msgs_str}"
-            f"\n\n\nParameters:\n{'-'*20}\n{params_str}"
+            f"Fulfillment Basic Information:\n{'-'*20}\n{basic_info_str}"
+            f"\n\n\nFulfillment ResponseMessages:\n{'-'*20}\n{resp_msgs_str}"
+            f"\n\n\nFulfillment Parameters:\n{'-'*20}\n{params_str}"
         )
 
 
@@ -310,7 +277,7 @@ class FulfillmentBuilder:
               ['basic', 'parameters',
                 'messages' or 'response messages', 'whole']
         """
-        self._check_fulfillment_exist()
+        self._check_proto_obj_attr_exist()
 
         if mode == "basic":
             print(self._show_basic_info())
@@ -326,3 +293,16 @@ class FulfillmentBuilder:
                 "['basic', 'parameters',"
                 " 'messages' or 'response messages', 'whole']"
             )
+
+    def has_webhook(self) -> bool:
+        """Check whether the Fulfillment in proto_obj uses a Webhook.
+
+        Returns:
+          True if proto_obj uses a Webhook and False otherwise
+        """
+        try:
+            self._check_proto_obj_attr_exist()
+        except ValueError:
+            return False
+
+        return True if self.proto_obj.webhook else False

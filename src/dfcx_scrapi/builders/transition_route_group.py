@@ -14,26 +14,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import List, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRouteGroup
+from dfcx_scrapi.builders.builders_common import BuilderBase
 from dfcx_scrapi.builders.routes import TransitionRouteBuilder
 
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
-class TransitionRouteGroupBuilder:
+
+class TransitionRouteGroupBuilder(BuilderBase):
     """Base Class for CX TransitionRouteGroup builder."""
-    # TODO: def remove_transition_route(self) -> TransitionRouteGroup
 
-    def __init__(self, obj: TransitionRouteGroup = None):
-        self.proto_obj = None
-        if obj:
-            self.load_transition_route_group(obj)
+    _proto_type = TransitionRouteGroup
+    _proto_type_str = "TransitionRouteGroup"
+
+
+    def __init__(self, obj=None):
+        super().__init__(obj)
 
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
-        self._check_transition_route_group_exist()
+        self._check_proto_obj_attr_exist()
 
         transition_routes_str = "\n".join([
             f"\n\n - Transition Route{i+1}:\n{str(TransitionRouteBuilder(tr))}"
@@ -46,53 +56,7 @@ class TransitionRouteGroupBuilder:
         )
 
 
-    def _check_transition_route_group_exist(self):
-        """Check if the proto_obj exists otherwise raise an error."""
-
-        if not self.proto_obj:
-            raise ValueError(
-                "There is no proto_obj!"
-                "\nUse create_new_transition_route_group or"
-                " load_transition_route_group to continue."
-            )
-        elif not isinstance(self.proto_obj, TransitionRouteGroup):
-            raise ValueError(
-                "proto_obj is not a TransitionRouteGroup type."
-                "\nPlease create or load the correct type to continue."
-            )
-
-
-    def load_transition_route_group(
-        self, obj: TransitionRouteGroup, overwrite: bool = False
-    ) -> TransitionRouteGroup:
-        """Load an existing TransitionRouteGroup to proto_obj for further uses.
-
-        Args:
-          obj (TransitionRouteGroup):
-            An existing TransitionRouteGroup obj.
-          overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already
-            contains a TransitionRouteGroup.
-
-        Returns:
-          A TransitionRouteGroup object stored in proto_obj
-        """
-        if not isinstance(obj, TransitionRouteGroup):
-            raise ValueError(
-                "The object you're trying to load is not a TransitionRouteGroup"
-            )
-        if self.proto_obj and not overwrite:
-            raise Exception(
-                "proto_obj already contains a TransitionRouteGroup."
-                " If you wish to overwrite it, pass overwrite as True."
-            )
-        if overwrite or not self.proto_obj:
-            self.proto_obj = obj
-
-        return self.proto_obj
-
-
-    def create_new_transition_route_group(
+    def create_new_proto_obj(
         self,
         display_name: str,
         transition_routes: Union[TransitionRoute, List[TransitionRoute]] = None,
@@ -160,17 +124,11 @@ class TransitionRouteGroupBuilder:
         Returns:
           A TransitionRouteGroup object stored in proto_obj.
         """
-        self._check_transition_route_group_exist()
+        self._check_proto_obj_attr_exist()
 
-        if not (
-            isinstance(transition_routes, TransitionRoute) or
-            (isinstance(transition_routes, list) and all(
-                isinstance(tr, TransitionRoute) for tr in transition_routes))
-        ):
-            raise ValueError(
-                "transition_routes should be either a TransitionRoute or"
-                " a list of TransitionRoutes."
-            )
+        self._is_type_or_list_of_types(
+            transition_routes, TransitionRoute, "transition_routes"
+        )
 
         if not isinstance(transition_routes, list):
             transition_routes = [transition_routes]
@@ -181,6 +139,45 @@ class TransitionRouteGroupBuilder:
 
     def show_transition_route_group(self):
         """Show the proto_obj information."""
-        self._check_transition_route_group_exist()
+        self._check_proto_obj_attr_exist()
 
         print(self)
+
+
+    def remove_transition_route(
+        self,
+        transition_route: TransitionRoute = None,
+        intent: str = None,
+        condition: str = None
+    ) -> TransitionRouteGroup:
+        """Remove a transition route from the TransitionRouteGroup.
+
+        At least one of the `transition_route`, `intent`, or `condition` should
+        be specfied.
+
+        Args:
+            transition_route (TransitionRoute):
+              The TransitionRoute to remove from the TransitionRouteGroup.
+            intent (str):
+              TransitionRoute's intent that should be removed from
+              the TransitionRouteGroup.
+            condition (str):
+              TransitionRoute's condition that should be removed from
+              the TransitionRouteGroup.
+
+        Returns:
+          A TransitionRouteGroup object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        new_routes = []
+        for tr in self.proto_obj.transition_routes:
+            if self._match_transition_route(
+                transition_route=tr, target_route=transition_route,
+                intent=intent, condition=condition
+            ):
+                continue
+            new_routes.append(tr)
+        self.proto_obj.transition_routes = new_routes
+
+        return self.proto_obj

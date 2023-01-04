@@ -15,68 +15,33 @@
 # limitations under the License.
 
 import re
+import logging
 from typing import List, Dict, Union, Any
 
 from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
 from google.protobuf import struct_pb2
+from dfcx_scrapi.builders.builders_common import BuilderBase
+
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
-class ResponseMessageBuilder:
+class ResponseMessageBuilder(BuilderBase):
     """Base Class for CX ResponseMessage builder."""
 
-    def __init__(self, obj: ResponseMessage = None):
-        self.proto_obj = None
-        if obj:
-            self.load_response_message(obj)
+    _proto_type = ResponseMessage
+    _proto_type_str = "ResponseMessage"
 
 
-    def _check_response_message_exist(self):
-        """Check if the proto_obj exists otherwise raise an error."""
-        if not self.proto_obj:
-            raise ValueError(
-                "There is no proto_obj!"
-                "\nUse create_new_response_message or"
-                " load_response_message to continue."
-            )
-        elif not isinstance(self.proto_obj, ResponseMessage):
-            raise ValueError(
-                "proto_obj is not a ResponseMessage type."
-                "\nPlease create or load the correct type to continue."
-            )
+    def __init__(self, obj=None):
+        super().__init__(obj)
 
 
-    def load_response_message(
-        self, obj: ResponseMessage, overwrite: bool = False
-    ) -> ResponseMessage:
-        """Load an existing ResponseMessage to proto_obj for further uses.
-
-        Args:
-          obj (ResponseMessage):
-            An existing ResponseMessage obj.
-          overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already
-            contains a ResponseMessage.
-
-        Returns:
-          A ResponseMessage object stored in proto_obj
-        """
-        if not isinstance(obj, ResponseMessage):
-            raise ValueError(
-                "The object you're trying to load is not a ResponseMessage!"
-            )
-        if self.proto_obj and not overwrite:
-            raise Exception(
-                "proto_obj already contains a ResponseMessage."
-                " If you wish to overwrite it, pass overwrite as True."
-            )
-
-        if overwrite or not self.proto_obj:
-            self.proto_obj = obj
-
-        return self.proto_obj
-
-
-    def create_new_response_message(
+    def create_new_proto_obj(
         self,
         response_type: str,
         message: Union[str, List[str], Dict[str, Any]],
@@ -99,7 +64,7 @@ class ResponseMessageBuilder:
                 multiple messages as a list of strings
               payload --> Dict[str, Any]
                 Any dictionary which its keys are string.
-                Dialogflow doesn't impose any structure on the values.
+                Dialogflow doesn't impose any structure on the values.                
               conversation_success --> Dict[str, Any]
                 Any dictionary which its keys are string.
                 Dialogflow doesn't impose any structure on the values.
@@ -192,7 +157,7 @@ class ResponseMessageBuilder:
                     "For `live_agent_handoff`, message should be"
                     " a dictionary and its keys should be strings."
                 )
-
+                
             proto_struct = struct_pb2.Struct()
             proto_struct.update(message)
             live_agent_handoff = ResponseMessage.LiveAgentHandoff(
@@ -241,7 +206,7 @@ class ResponseMessageBuilder:
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
-        self._check_response_message_exist()
+        self._check_proto_obj_attr_exist()
 
         if self.proto_obj.text:
             resp_type = "text"
@@ -277,7 +242,7 @@ class ResponseMessageBuilder:
         elif self.proto_obj.telephony_transfer_call:
             resp_type = "telephony_transfer_call"
             resp_msg = self.proto_obj.telephony_transfer_call.phone_number
-
+        
         return (
             f"Response Type: {resp_type}\nMessage:\n\t{resp_msg}"
         )
@@ -285,5 +250,5 @@ class ResponseMessageBuilder:
 
     def show_response_message(self):
         """Show the proto_obj information."""
-        self._check_response_message_exist()
+        self._check_proto_obj_attr_exist()
         print(self)
