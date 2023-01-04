@@ -22,6 +22,9 @@ from google.cloud.dialogflowcx_v3beta1.types import NluSettings
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
 from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.routes import TransitionRouteBuilder
+from dfcx_scrapi.builders.routes import EventHandlerBuilder
+from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
 
 # logging config
 logging.basicConfig(
@@ -404,7 +407,8 @@ class FlowBuilder(BuilderBase):
         self._check_proto_obj_attr_exist()
 
         return "\n".join([
-            f"TransitionRoute {i+1}:\n{str(TransitionRouteBuilder(tr))}\n{'*'*20}\n"
+            f"TransitionRoute {i+1}:\n{str(TransitionRouteBuilder(tr))}"
+            f"\n{'*'*20}\n"
             for i, tr in enumerate(self.proto_obj.transition_routes)
         ])
 
@@ -469,9 +473,11 @@ class FlowBuilder(BuilderBase):
 
         return (
             f"Basic Information:\n{'='*25}\n{self._show_basic_info()}"
-            f"\n\n\nTransitionRoutes:\n{'='*25}\n{self._show_transition_routes()}"
+            f"\n\n\nTransitionRoutes:\n{'='*25}"
+            f"\n{self._show_transition_routes()}"
             f"\n\n\nEventHandlers:\n{'='*25}\n{self._show_event_handlers()}"
-            f"\n\n\nTransitoinRouteGroups:\n{'='*25}\n{self._show_transition_route_groups()}")
+            f"\n\n\nTransitoinRouteGroups:\n{'='*25}"
+            f"\n{self._show_transition_route_groups()}")
 
 
     def show_stats(self) -> None:
@@ -516,7 +522,8 @@ class FlowBuilder(BuilderBase):
         routes_stats_str = (
             f"{transition_routes_str}\n\t{intent_routes_str}"
             f"\n\t{cond_routes_str}\n\t{intent_and_cond_routes_str}"
-            f"\n\t{routes_with_fulfill_str}\n\t{routes_with_webhook_fulfill_str}"
+            f"\n\t{routes_with_fulfill_str}"
+            f"\n\t{routes_with_webhook_fulfill_str}"
         )
 
         # Event Handlers

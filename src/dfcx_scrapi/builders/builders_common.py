@@ -46,7 +46,7 @@ class BuilderBase:
                 "There is no proto_obj!"
                 "\nUse `create_new_proto_obj` or `load_proto_obj` to continue."
             )
-        elif not isinstance(self.proto_obj, self._proto_type):
+        elif not isinstance(self.proto_obj, self._proto_type):  # pylint: disable=W1116
             raise ValueError(
                 f"proto_obj is not {self._proto_type_str} type."
                 "\nPlease create or load the correct type to continue."
@@ -66,7 +66,7 @@ class BuilderBase:
         Returns:
           An object stored in proto_obj
         """
-        if not isinstance(obj, self._proto_type):
+        if not isinstance(obj, self._proto_type):  # pylint: disable=W1116
             raise ValueError(
                 "The object you're trying to load"
                 f" is not {self._proto_type_str}!"
@@ -95,7 +95,8 @@ class BuilderBase:
         intent: str = None,
         condition: str = None
     ) -> bool:
-        """Check if transition_route's intent and condition matches with the input. 
+        """Check if transition_route's intent and condition
+        matches with the input.
 
         At least one of the `transition_route`, `intent`, or `condition` should
         be specfied.
@@ -187,7 +188,7 @@ class BuilderBase:
 
         if not(
             isinstance(obj, type_) or
-            (isinstance(obj, list) and 
+            (isinstance(obj, list) and
              all(isinstance(item, type_) for item in obj))
         ):
             msg = error_msg_map.get(obj, default_error_msg)

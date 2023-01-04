@@ -209,7 +209,7 @@ class FulfillmentBuilder(BuilderBase):
                     continue
 
                 new_params.append(param)
-            
+
             self.proto_obj.set_parameter_actions = new_params
             return self.proto_obj
         else:
@@ -305,4 +305,4 @@ class FulfillmentBuilder(BuilderBase):
         except ValueError:
             return False
 
-        return True if self.proto_obj.webhook else False
+        return bool(self.proto_obj.webhook)

@@ -64,7 +64,7 @@ class ResponseMessageBuilder(BuilderBase):
                 multiple messages as a list of strings
               payload --> Dict[str, Any]
                 Any dictionary which its keys are string.
-                Dialogflow doesn't impose any structure on the values.                
+                Dialogflow doesn't impose any structure on the values.
               conversation_success --> Dict[str, Any]
                 Any dictionary which its keys are string.
                 Dialogflow doesn't impose any structure on the values.
@@ -157,7 +157,7 @@ class ResponseMessageBuilder(BuilderBase):
                     "For `live_agent_handoff`, message should be"
                     " a dictionary and its keys should be strings."
                 )
-                
+
             proto_struct = struct_pb2.Struct()
             proto_struct.update(message)
             live_agent_handoff = ResponseMessage.LiveAgentHandoff(
@@ -242,7 +242,7 @@ class ResponseMessageBuilder(BuilderBase):
         elif self.proto_obj.telephony_transfer_call:
             resp_type = "telephony_transfer_call"
             resp_msg = self.proto_obj.telephony_transfer_call.phone_number
-        
+
         return (
             f"Response Type: {resp_type}\nMessage:\n\t{resp_msg}"
         )

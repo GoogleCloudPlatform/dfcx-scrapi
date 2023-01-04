@@ -31,8 +31,8 @@ logging.basicConfig(
 class EntityTypeBuilder(BuilderBase):
     """Base Class for CX EntityType builder."""
 
-    _proto_type = Agent
-    _proto_type_str = "Agent"
+    _proto_type = EntityType
+    _proto_type_str = "EntityType"
 
 
     def __init__(self, obj=None):

@@ -23,6 +23,9 @@ from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
 from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.routes import TransitionRouteBuilder
+from dfcx_scrapi.builders.routes import EventHandlerBuilder
+from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
 
 # logging config
 logging.basicConfig(
@@ -304,7 +307,7 @@ class PageBuilder(BuilderBase):
         Args:
           display_name (str | List[str]):
             A string or a list of strings corresponding to
-            the name of the parameter(s). 
+            the name of the parameter(s).
 
         Returns:
           A Page object stored in proto_obj.
@@ -501,7 +504,8 @@ class PageBuilder(BuilderBase):
         self._check_proto_obj_attr_exist()
 
         return "\n".join([
-            f"TransitionRoute {i+1}:\n{str(TransitionRouteBuilder(tr))}\n{'*'*20}\n"
+            f"TransitionRoute {i+1}:\n{str(TransitionRouteBuilder(tr))}"
+            f"\n{'*'*20}\n"
             for i, tr in enumerate(self.proto_obj.transition_routes)
         ])
 
@@ -569,9 +573,11 @@ class PageBuilder(BuilderBase):
         return (
             f"Basic Information:\n{'='*25}\n{self._show_basic_info()}"
             f"\n\n\nParameters:\n{'='*25}\n{self._show_parameters()}"
-            f"\n\n\nTransitionRoutes:\n{'='*25}\n{self._show_transition_routes()}"
+            f"\n\n\nTransitionRoutes:\n{'='*25}"
+            f"\n{self._show_transition_routes()}"
             f"\n\n\nEventHandlers:\n{'='*25}\n{self._show_event_handlers()}"
-            f"\n\n\nTransitoinRouteGroups:\n{'='*25}\n{self._show_transition_route_groups()}")
+            f"\n\n\nTransitoinRouteGroups:\n{'='*25}"
+            f"\n{self._show_transition_route_groups()}")
 
 
     def show_stats(self) -> None:
@@ -579,7 +585,7 @@ class PageBuilder(BuilderBase):
         self._check_proto_obj_attr_exist()
 
         # Entry Fulfillment
-        has_entry_fulfill = True if self.proto_obj.entry_fulfillment else False
+        has_entry_fulfill = bool(self.proto_obj.entry_fulfillment)
         has_entry_fulfill_str = f"Has entry fulfillment: {has_entry_fulfill}"
 
         # Transition Routes
@@ -620,7 +626,8 @@ class PageBuilder(BuilderBase):
         routes_stats_str = (
             f"\n{transition_routes_str}\n\t{intent_routes_str}"
             f"\n\t{cond_routes_str}\n\t{intent_and_cond_routes_str}"
-            f"\n\t{routes_with_fulfill_str}\n\t{routes_with_webhook_fulfill_str}"
+            f"\n\t{routes_with_fulfill_str}"
+            f"\n\t{routes_with_webhook_fulfill_str}"
         )
 
         # Parameters
@@ -645,13 +652,13 @@ class PageBuilder(BuilderBase):
         parameters_str = f"# of Parameters: {parameters_count}"
         parameters_with_event_handler_str = (
             "# of Parameters with Event Handlers:"
-            f" {parameters_with_event_handler_count} (Ratio: {parameters_ratio})"
+            f" {parameters_with_event_handler_count}"
+            f" (Ratio: {parameters_ratio})"
         )
         parameters_with_webhook_fulfill_str = (
             "# of Parameters uses webhook for fulfillment:"
             f" {parameters_with_webhook_fulfill_count}"
         )
-        
 
         params_stats_str = (
             f"\n{parameters_str}\n\t{parameters_with_event_handler_str}"
