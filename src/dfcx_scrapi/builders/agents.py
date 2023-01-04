@@ -14,24 +14,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import List
 
 from google.cloud.dialogflowcx_v3beta1.types import Agent
 from google.cloud.dialogflowcx_v3beta1.types import SpeechToTextSettings
+from dfcx_scrapi.builders.builders_common import BuilderBase
+
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
-class AgentBuilder:
+class AgentBuilder(BuilderBase):
     """Base Class for CX Agent builder."""
 
-    def __init__(self, obj: Agent = None):
-        self.proto_obj = None
-        if obj:
-            self.load_agent(obj)
+    _proto_type = Agent
+    _proto_type_str = "Agent"
+
+
+    def __init__(self, obj=None):
+        super().__init__(obj)
 
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
-        self._check_agent_exist()
+        self._check_proto_obj_attr_exist()
 
         logs = self.proto_obj.advanced_settings.logging_settings
         speech_2_txt = self.proto_obj.speech_to_text_settings
@@ -54,52 +65,7 @@ class AgentBuilder:
             f"\nsecurity_settings: {self.proto_obj.security_settings}")
 
 
-    def _check_agent_exist(self):
-        """Check if the proto_obj exists otherwise raise an error."""
-        if not self.proto_obj:
-            raise ValueError(
-                "There is no proto_obj!"
-                "\nUse create_new_agent or load_agent to continue."
-            )
-        elif not isinstance(self.proto_obj, Agent):
-            raise ValueError(
-                "proto_obj is not an Agent type."
-                "\nPlease create or load the correct type to continue."
-            )
-
-
-    def load_agent(
-        self, obj: Agent, overwrite: bool = False
-    ) -> Agent:
-        """Load an existing agent to proto_obj for further uses.
-
-        Args:
-          obj (Agent):
-            An existing Agent obj.
-          overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already
-            contains an Agent.
-
-        Returns:
-          An Agent object stored in proto_obj
-        """
-        if not isinstance(obj, Agent):
-            raise ValueError(
-                "The object you're trying to load is not an Agent!"
-            )
-        if self.proto_obj and not overwrite:
-            raise Exception(
-                "proto_obj already contains an Agent."
-                " If you wish to overwrite it, pass overwrite as True."
-            )
-
-        if overwrite or not self.proto_obj:
-            self.proto_obj = obj
-
-        return self.proto_obj
-
-
-    def create_new_agent(
+    def create_new_proto_obj(
         self,
         display_name: str,
         time_zone: str,
@@ -185,7 +151,7 @@ class AgentBuilder:
         Returns:
           An Agent object stored in proto_obj
         """
-        self._check_agent_exist()
+        self._check_proto_obj_attr_exist()
 
         if isinstance(enable_speech_adaptation, bool):
             self.proto_obj.speech_to_text_settings=SpeechToTextSettings(
@@ -234,7 +200,7 @@ class AgentBuilder:
         Returns:
           An Agent object stored in proto_obj
         """
-        self._check_agent_exist()
+        self._check_proto_obj_attr_exist()
 
         logs = self.proto_obj.advanced_settings.logging_settings
         if isinstance(enable_stackdriver_logging, bool):
@@ -249,6 +215,6 @@ class AgentBuilder:
 
     def show_agent_info(self):
         """Show the proto_obj information."""
-        self._check_agent_exist()
+        self._check_proto_obj_attr_exist()
 
         print(self)
