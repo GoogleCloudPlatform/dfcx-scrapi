@@ -232,6 +232,39 @@ class AgentCheckerUtil(ScrapiBase):
     # Changelogs
 
     # Reachable and unreachable pages
+    
+    def _continue_page_recursion(
+        self,
+        page: DFCXPage | DFCXFlow,
+        page_name: str,
+        route: DFCXRoute,
+        target_page: str,
+        params: Dict
+    ) -> None:
+        if page_name not in params["reachable"]:
+            params["reachable"].append(page_name)
+            params["min_intent_counts"].append(params["intent_route_count"])
+        else:
+            # Better route found, traverse from here
+            params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
+        
+        params["conversation_path"].append(page_name)
+        if params["verbose"]:
+            print(params["conversation_path"], params["intent_route_count"])
+
+        old_presets = params["presets"].copy()
+        new_presets = self._get_new_presets(params["presets"], page, route)
+        if "START_PAGE" in target_page:
+            next_page = self.flow_data[params["flow_id"]]
+        else:
+            next_page = self.page_data[params["flow_id"]][target_page]
+        params["presets"] = new_presets
+
+        self._find_reachable_pages_rec(next_page, params)
+
+        params["conversation_path"].pop(-1)
+        # pop presets since we can't do it if we're passing a params dict like this
+        params["presets"] = old_presets
 
     def _find_reachable_pages_rec_helper(
         self,
@@ -274,44 +307,13 @@ class AgentCheckerUtil(ScrapiBase):
                 print(page.display_name, "->", page_name)
             # Move to this page (this is also the recursion limiting step
             # to prevent infinite loops)
-            if page_name not in params["reachable"]:
-                params["reachable"].append(page_name)
-                params["min_intent_counts"].append(params["intent_route_count"])
-                params["conversation_path"].append(page_name)
-                if params["verbose"]:
-                    print(params["conversation_path"], params["intent_route_count"])
-
-                old_presets = params["presets"].copy()
-                new_presets = self._get_new_presets(params["presets"], page, route)
-                next_page = self.page_data[params["flow_id"]][target_page]
-                params["presets"] = new_presets
-
-                self._find_reachable_pages_rec(next_page, params)
-
-                params["conversation_path"].pop(-1)
-                # pop presets since we can't do it if we're passing a params dict like this
-                params["presets"] = old_presets
-            elif (
-                page_name in params["reachable"]
+            if (
+                page_name not in params["reachable"]
+                or (page_name in params["reachable"]
                 and params["intent_route_count"]
-                < params["min_intent_counts"][params["reachable"].index(page_name)]
+                < params["min_intent_counts"][params["reachable"].index(page_name)])
             ):
-                # Better route found, traverse from here
-                params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
-                params["conversation_path"].append(page_name)
-                if params["verbose"]:
-                    print(params["conversation_path"], params["intent_route_count"])
-
-                old_presets = params["presets"].copy()
-                new_presets = self._get_new_presets(params["presets"], page, route)
-                next_page = self.page_data[params["flow_id"]][target_page]
-                params["presets"] = new_presets
-
-                self._find_reachable_pages_rec(next_page, params)
-
-                params["conversation_path"].pop(-1)
-                # pop presets since we can't do it if we're passing a params dict like this
-                params["presets"] = old_presets
+                self._continue_page_recursion(page, page_name, route, target_page, params)
         elif "END_FLOW" in target_page:
             if params["verbose"]:
                 print(page.display_name, "-> END FLOW")
@@ -377,44 +379,12 @@ class AgentCheckerUtil(ScrapiBase):
             if params["verbose"]:
                 print(page.display_name, "-> START PAGE")
             page_name = "Start"
-            if page_name not in params["reachable"]:
-                params["reachable"].append(page_name)
-                params["min_intent_counts"].append(params["intent_route_count"])
-                params["conversation_path"].append(page_name)
-                if params["verbose"]:
-                    print(params["conversation_path"], params["intent_route_count"])
-
-                old_presets = params["presets"].copy()
-                new_presets = self._get_new_presets(params["presets"], page, route)
-                next_page = self.flow_data[params["flow_id"]]
-                params["presets"] = new_presets
-
-                self._find_reachable_pages_rec(next_page, params)
-
-                params["conversation_path"].pop(-1)
-                # pop presets since we can't do it if we're passing a params dict like this
-                params["presets"] = old_presets
-            elif (
-                page_name in params["reachable"]
+            if (page_name not in params["reachable"]
+                or (page_name in params["reachable"]
                 and params["intent_route_count"]
-                < params["min_intent_counts"][params["reachable"].index(page_name)]
+                < params["min_intent_counts"][params["reachable"].index(page_name)])
             ):
-                # Better route found, traverse from here
-                params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
-                params["conversation_path"].append(page_name)
-                if params["verbose"]:
-                    print(params["conversation_path"], params["intent_route_count"])
-
-                old_presets = params["presets"].copy()
-                new_presets = self._get_new_presets(params["presets"], page, route)
-                next_page = self.flow_data[params["flow_id"]]
-                params["presets"] = new_presets
-
-                self._find_reachable_pages_rec(next_page, params)
-
-                params["conversation_path"].pop(-1)
-                # pop presets since we can't do it if we're passing a params dict like this
-                params["presets"] = old_presets
+                self._continue_page_recursion(page, page_name, route, target_page, params)
         elif len(target_page) > 0:
             print(page.display_name, "->", target_page)
             # This should not happen, and if it does it needs to be fixed
