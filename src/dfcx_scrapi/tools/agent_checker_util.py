@@ -266,6 +266,37 @@ class AgentCheckerUtil(ScrapiBase):
         # pop presets since we can't do it if we're passing a params dict like this
         params["presets"] = old_presets
 
+    def _handle_meta_page(
+        self,
+        page: DFCXPage | DFCXFlow,
+        target_page: str,
+        params: Dict
+    ) -> None:
+        page_name = page.display_name
+        if "END_SESSION" in target_page:
+            page_name = "END SESSION"
+        elif "END_FLOW" in target_page:
+            page_name = "END FLOW"
+        elif "PREVIOUS_PAGE" in target_page:
+            page_name = "PREVIOUS PAGE"
+        #elif "CURRENT_PAGE" in target_page:
+        #    page_name = page.display_name
+
+        if params["verbose"]:
+            print(page.display_name, "->", page_name)
+        if page_name == page.display_name or params["include_meta"]:
+            if page_name not in params["reachable"]:
+                params["reachable"].append(page_name)
+                params["min_intent_counts"].append(params["intent_route_count"])
+            elif (
+                page_name in params["reachable"]
+                and params["intent_route_count"]
+                < params["min_intent_counts"][params["reachable"].index(page_name)]
+            ):
+                params["min_intent_counts"][
+                    params["reachable"].index(page_name)
+                ] = params["intent_route_count"]
+    
     def _find_reachable_pages_rec_helper(
         self,
         page: DFCXPage | DFCXFlow,
@@ -314,67 +345,12 @@ class AgentCheckerUtil(ScrapiBase):
                 < params["min_intent_counts"][params["reachable"].index(page_name)])
             ):
                 self._continue_page_recursion(page, page_name, route, target_page, params)
-        elif "END_FLOW" in target_page:
-            if params["verbose"]:
-                print(page.display_name, "-> END FLOW")
-            if params["include_meta"]:
-                page_name = "END FLOW"
-                if page_name not in params["reachable"]:
-                    params["reachable"].append(page_name)
-                    params["min_intent_counts"].append(params["intent_route_count"])
-                elif (
-                    page_name in params["reachable"]
-                    and params["intent_route_count"]
-                    < params["min_intent_counts"][params["reachable"].index(page_name)]
-                ):
-                    params["min_intent_counts"][
-                        params["reachable"].index(page_name)
-                    ] = params["intent_route_count"]
-            # reachable.append('END FLOW')
-        elif "END_SESSION" in target_page:
-            if params["verbose"]:
-                print(page.display_name, "-> END SESSION")
-            if params["include_meta"]:
-                page_name = "END SESSION"
-                if page_name not in params["reachable"]:
-                    params["reachable"].append(page_name)
-                    params["min_intent_counts"].append(params["intent_route_count"])
-                elif (
-                    page_name in params["reachable"]
-                    and params["intent_route_count"]
-                    < params["min_intent_counts"][params["reachable"].index(page_name)]
-                ):
-                    params["min_intent_counts"][
-                        params["reachable"].index(page_name)
-                    ] = params["intent_route_count"]
-            # reachable.append('END SESSION')
-        elif "CURRENT_PAGE" in target_page:
-            if params["verbose"]:
-                print(page.display_name, "-> CURRENT PAGE")
-            page_name = page.display_name
-            if (
-                page_name in params["reachable"]
-                and params["intent_route_count"]
-                < params["min_intent_counts"][params["reachable"].index(page_name)]
-            ):
-                params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
-        elif "PREVIOUS_PAGE" in target_page:
-            if params["verbose"]:
-                print(page.display_name, "-> PREVIOUS PAGE")
-            if params["include_meta"]:
-                page_name = "PREVIOUS PAGE"
-                if page_name not in params["reachable"]:
-                    params["reachable"].append(page_name)
-                    params["min_intent_counts"].append(params["intent_route_count"])
-                elif (
-                    page_name in params["reachable"]
-                    and params["intent_route_count"]
-                    < params["min_intent_counts"][params["reachable"].index(page_name)]
-                ):
-                    params["min_intent_counts"][
-                        params["reachable"].index(page_name)
-                    ] = params["intent_route_count"]
-            # TODO: This could cause huge problems...
+        elif ("END_FLOW" in target_page
+            or "END_SESSION" in target_page
+            or "PREVIOUS_PAGE" in target_page
+            or "CURRENT_PAGE" in target_page
+        ):
+            self._handle_meta_page(page, target_page, params)
         elif "START_PAGE" in target_page:
             if params["verbose"]:
                 print(page.display_name, "-> START PAGE")
