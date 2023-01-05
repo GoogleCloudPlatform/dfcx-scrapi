@@ -232,7 +232,7 @@ class AgentCheckerUtil(ScrapiBase):
     # Changelogs
 
     # Reachable and unreachable pages
-    
+
     def _continue_page_recursion(
         self,
         page: DFCXPage | DFCXFlow,
@@ -246,8 +246,10 @@ class AgentCheckerUtil(ScrapiBase):
             params["min_intent_counts"].append(params["intent_route_count"])
         else:
             # Better route found, traverse from here
-            params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
-        
+            params["min_intent_counts"][
+                params["reachable"].index(page_name)
+            ] = params["intent_route_count"]
+
         params["conversation_path"].append(page_name)
         if params["verbose"]:
             print(params["conversation_path"], params["intent_route_count"])
@@ -263,7 +265,7 @@ class AgentCheckerUtil(ScrapiBase):
         self._find_reachable_pages_rec(next_page, params)
 
         params["conversation_path"].pop(-1)
-        # pop presets since we can't do it if we're passing a params dict like this
+        # pop presets since we can't if we're passing a params dict like this
         params["presets"] = old_presets
 
     def _handle_meta_page(
@@ -287,16 +289,20 @@ class AgentCheckerUtil(ScrapiBase):
         if page_name == page.display_name or params["include_meta"]:
             if page_name not in params["reachable"]:
                 params["reachable"].append(page_name)
-                params["min_intent_counts"].append(params["intent_route_count"])
+                params["min_intent_counts"].append(
+                    params["intent_route_count"]
+                )
             elif (
                 page_name in params["reachable"]
                 and params["intent_route_count"]
-                < params["min_intent_counts"][params["reachable"].index(page_name)]
+                < params["min_intent_counts"][
+                    params["reachable"].index(page_name)
+                ]
             ):
                 params["min_intent_counts"][
                     params["reachable"].index(page_name)
                 ] = params["intent_route_count"]
-    
+
     def _find_reachable_pages_rec_helper(
         self,
         page: DFCXPage | DFCXFlow,
@@ -312,7 +318,8 @@ class AgentCheckerUtil(ScrapiBase):
         target_flow = route.target_flow
         if (
             hasattr(route, "intent") and route.intent != ""
-            and params["intent_route_limit"] and params["intent_route_count"] >= params["intent_route_limit"]
+            and params["intent_route_limit"]
+            and params["intent_route_count"] >= params["intent_route_limit"]
         ):
             return
         if hasattr(page, "form") and page.form:
@@ -325,7 +332,9 @@ class AgentCheckerUtil(ScrapiBase):
                     or params["presets"][parameter_name] == "NULL"
                 ):
                     # This page has an unfilled parameter
-                    if params["limit_intent_to_initial"] and not params["is_initial"]:
+                    if (params["limit_intent_to_initial"]
+                        and not params["is_initial"]
+                    ):
                         return
         if hasattr(route, "intent") and route.intent != "":
             if params["limit_intent_to_initial"] and not params["is_initial"]:
@@ -333,7 +342,9 @@ class AgentCheckerUtil(ScrapiBase):
                 return
             params["intent_route_count"] += 1
         if target_page in self.page_data[params["flow_id"]]:
-            page_name = self.page_data[params["flow_id"]][target_page].display_name
+            page_name = self.page_data[params["flow_id"]][
+                target_page
+            ].display_name
             if params["verbose"]:
                 print(page.display_name, "->", page_name)
             # Move to this page (this is also the recursion limiting step
@@ -342,9 +353,12 @@ class AgentCheckerUtil(ScrapiBase):
                 page_name not in params["reachable"]
                 or (page_name in params["reachable"]
                 and params["intent_route_count"]
-                < params["min_intent_counts"][params["reachable"].index(page_name)])
+                < params["min_intent_counts"][
+                    params["reachable"].index(page_name)
+                ])
             ):
-                self._continue_page_recursion(page, page_name, route, target_page, params)
+                self._continue_page_recursion(page, page_name, route,
+                                              target_page, params)
         elif ("END_FLOW" in target_page
             or "END_SESSION" in target_page
             or "PREVIOUS_PAGE" in target_page
@@ -358,9 +372,12 @@ class AgentCheckerUtil(ScrapiBase):
             if (page_name not in params["reachable"]
                 or (page_name in params["reachable"]
                 and params["intent_route_count"]
-                < params["min_intent_counts"][params["reachable"].index(page_name)])
+                < params["min_intent_counts"][
+                    params["reachable"].index(page_name)
+                ])
             ):
-                self._continue_page_recursion(page, page_name, route, target_page, params)
+                self._continue_page_recursion(page, page_name, route,
+                                              target_page, params)
         elif len(target_page) > 0:
             print(page.display_name, "->", target_page)
             # This should not happen, and if it does it needs to be fixed
@@ -371,13 +388,19 @@ class AgentCheckerUtil(ScrapiBase):
                 print(page.display_name, "->", flow_name)
             if flow_name not in params["reachable"]:
                 params["reachable"].append(flow_name)
-                params["min_intent_counts"].append(params["intent_route_count"])
+                params["min_intent_counts"].append(
+                    params["intent_route_count"]
+                )
             elif (
                 flow_name in params["reachable"]
                 and params["intent_route_count"]
-                < params["min_intent_counts"][params["reachable"].index(flow_name)]
+                < params["min_intent_counts"][
+                    params["reachable"].index(flow_name)
+                ]
             ):
-                params["min_intent_counts"][params["reachable"].index(flow_name)] = params["intent_route_count"]
+                params["min_intent_counts"][
+                    params["reachable"].index(flow_name)
+                ] = params["intent_route_count"]
         else:
             if params["verbose"]:
                 print(page.display_name, "->", route.target_flow, "(empty)")
@@ -385,9 +408,13 @@ class AgentCheckerUtil(ScrapiBase):
             if (
                 page_name in params["reachable"]
                 and params["intent_route_count"]
-                < params["min_intent_counts"][params["reachable"].index(page_name)]
+                < params["min_intent_counts"][
+                    params["reachable"].index(page_name)
+                ]
             ):
-                params["min_intent_counts"][params["reachable"].index(page_name)] = params["intent_route_count"]
+                params["min_intent_counts"][
+                    params["reachable"].index(page_name)
+                ] = params["intent_route_count"]
 
     def _get_new_presets(self, presets, page, route):
         new_presets = presets.copy()
@@ -453,7 +480,8 @@ class AgentCheckerUtil(ScrapiBase):
             if hasattr(event_handler, "target_page") or hasattr(
                 event_handler, "target_flow"
             ):
-                self._find_reachable_pages_rec_helper(page, event_handler, params)
+                self._find_reachable_pages_rec_helper(page, event_handler,
+                                                      params)
         for route in page.transition_routes:
             self._find_reachable_pages_rec_helper(page, route, params)
         if params["include_groups"]:
@@ -483,7 +511,8 @@ class AgentCheckerUtil(ScrapiBase):
             if hasattr(event_handler, "target_page") or hasattr(
                 event_handler, "target_flow"
             ):
-                self._find_reachable_pages_rec_helper(page, event_handler, params)
+                self._find_reachable_pages_rec_helper(page, event_handler,
+                                                      params)
 
     def _process_start_page_routes_for_reachable_pages(
         self,
@@ -494,7 +523,8 @@ class AgentCheckerUtil(ScrapiBase):
             if hasattr(event_handler, "target_page") or hasattr(
                 event_handler, "target_flow"
             ):
-                self._find_reachable_pages_rec_helper(page, event_handler, params)
+                self._find_reachable_pages_rec_helper(page, event_handler,
+                                                      params)
         for route in page.transition_routes:
             if hasattr(route, "intent") and route.intent != "":
                 self._find_reachable_pages_rec_helper(page, route, params)
@@ -504,7 +534,8 @@ class AgentCheckerUtil(ScrapiBase):
                     route_group
                 ].transition_routes:
                     if hasattr(route, "intent") and route.intent != "":
-                        self._find_reachable_pages_rec_helper(page, route, params)
+                        self._find_reachable_pages_rec_helper(page, route,
+                                                              params)
 
     def find_reachable_pages(
         self,
@@ -565,20 +596,20 @@ class AgentCheckerUtil(ScrapiBase):
             page_id=None, page_name=from_page
         )
         params = {
-            'flow_id': flow_id,
-            'flow_name': flow_name,
-            'reachable': reachable,
-            'conversation_path': conversation_path,
-            'min_intent_counts': min_intent_counts,
-            'presets': presets,
-            'intent_route_limit': intent_route_limit,
-            'intent_route_count': 0,
-            'include_groups': include_groups,
-            'include_start_page_routes': include_start_page_routes,
-            'limit_intent_to_initial': limit_intent_to_initial,
-            'is_initial': is_initial,
-            'include_meta': include_meta,
-            'verbose': verbose
+            "flow_id": flow_id,
+            "flow_name": flow_name,
+            "reachable": reachable,
+            "conversation_path": conversation_path,
+            "min_intent_counts": min_intent_counts,
+            "presets": presets,
+            "intent_route_limit": intent_route_limit,
+            "intent_route_count": 0,
+            "include_groups": include_groups,
+            "include_start_page_routes": include_start_page_routes,
+            "limit_intent_to_initial": limit_intent_to_initial,
+            "is_initial": is_initial,
+            "include_meta": include_meta,
+            "verbose": verbose
         }
         self._find_reachable_pages_rec(page_data, params)
         return reachable
