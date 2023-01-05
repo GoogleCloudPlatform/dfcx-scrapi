@@ -20,7 +20,7 @@ from typing import List, Dict, Union, Any
 
 from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
 from google.protobuf import struct_pb2
-from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config
 logging.basicConfig(
@@ -30,15 +30,11 @@ logging.basicConfig(
 )
 
 
-class ResponseMessageBuilder(BuilderBase):
+class ResponseMessageBuilder(BuildersCommon):
     """Base Class for CX ResponseMessage builder."""
 
     _proto_type = ResponseMessage
     _proto_type_str = "ResponseMessage"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
 
 
     def create_new_proto_obj(

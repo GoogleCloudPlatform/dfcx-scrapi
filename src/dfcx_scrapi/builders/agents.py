@@ -19,7 +19,7 @@ from typing import List
 
 from google.cloud.dialogflowcx_v3beta1.types import Agent
 from google.cloud.dialogflowcx_v3beta1.types import SpeechToTextSettings
-from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config
 logging.basicConfig(
@@ -29,15 +29,11 @@ logging.basicConfig(
 )
 
 
-class AgentBuilder(BuilderBase):
+class AgentBuilder(BuildersCommon):
     """Base Class for CX Agent builder."""
 
     _proto_type = Agent
     _proto_type_str = "Agent"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
 
 
     def __str__(self) -> str:

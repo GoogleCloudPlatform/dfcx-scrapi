@@ -19,7 +19,7 @@ import logging
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
-from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
 
 # logging config
@@ -30,16 +30,11 @@ logging.basicConfig(
 )
 
 
-class TransitionRouteBuilder(BuilderBase):
+class TransitionRouteBuilder(BuildersCommon):
     """Base Class for CX TransitionRoute builder."""
 
     _proto_type = TransitionRoute
     _proto_type_str = "TransitionRoute"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
-
 
 
     def __str__(self) -> str:
@@ -229,15 +224,11 @@ class TransitionRouteBuilder(BuilderBase):
             )
 
 
-class EventHandlerBuilder(BuilderBase):
+class EventHandlerBuilder(BuildersCommon):
     """Base Class for CX EventHandler builder."""
 
     _proto_type = EventHandler
     _proto_type_str = "EventHandler"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
 
 
     def __str__(self) -> str:

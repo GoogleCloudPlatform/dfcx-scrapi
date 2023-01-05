@@ -22,7 +22,7 @@ from google.cloud.dialogflowcx_v3beta1.types import Form
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
-from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.routes import TransitionRouteBuilder
 from dfcx_scrapi.builders.routes import EventHandlerBuilder
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
@@ -35,15 +35,11 @@ logging.basicConfig(
 )
 
 
-class PageBuilder(BuilderBase):
+class PageBuilder(BuildersCommon):
     """Base Class for CX Page builder."""
 
     _proto_type = Page
     _proto_type_str = "Page"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
 
 
     def create_new_proto_obj(

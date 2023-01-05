@@ -21,7 +21,7 @@ from google.cloud.dialogflowcx_v3beta1.types import Flow
 from google.cloud.dialogflowcx_v3beta1.types import NluSettings
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
-from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.routes import TransitionRouteBuilder
 from dfcx_scrapi.builders.routes import EventHandlerBuilder
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
@@ -34,15 +34,11 @@ logging.basicConfig(
 )
 
 
-class FlowBuilder(BuilderBase):
+class FlowBuilder(BuildersCommon):
     """Base Class for CX Flow builder."""
 
     _proto_type = Flow
     _proto_type_str = "Flow"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
 
 
     def create_new_proto_obj(

@@ -18,7 +18,7 @@ import logging
 from typing import List, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import EntityType
-from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config
 logging.basicConfig(
@@ -28,15 +28,11 @@ logging.basicConfig(
 )
 
 
-class EntityTypeBuilder(BuilderBase):
+class EntityTypeBuilder(BuildersCommon):
     """Base Class for CX EntityType builder."""
 
     _proto_type = EntityType
     _proto_type_str = "EntityType"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
 
 
     def __str__(self) -> str:

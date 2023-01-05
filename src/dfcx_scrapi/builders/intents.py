@@ -21,7 +21,7 @@ from collections import defaultdict
 from typing import List, Dict, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import Intent
-from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config
 logging.basicConfig(
@@ -31,15 +31,11 @@ logging.basicConfig(
 )
 
 
-class IntentBuilder(BuilderBase):
+class IntentBuilder(BuildersCommon):
     """Base Class for CX Intent builder."""
 
     _proto_type = Intent
     _proto_type_str = "Intent"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
 
 
     def __str__(self) -> str:

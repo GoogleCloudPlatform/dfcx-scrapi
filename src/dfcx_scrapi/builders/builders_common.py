@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 
 
-class BuilderBase:
+class BuildersCommon:
     """Base class for other Builder classes"""
     _proto_type = None
     _proto_type_str = "None"
@@ -85,7 +85,7 @@ class BuilderBase:
 
     def create_new_proto_obj(self):
         """Prototype method for creating a new proto object."""
-        ...
+        pass
 
 
     def _match_transition_route(
@@ -138,17 +138,16 @@ class BuilderBase:
                 transition_route.intent == target_route.intent
             ):
                 return True
-        if intent:
-            if condition:
-                if (
-                    transition_route.condition == condition and
-                    transition_route.intent == intent
-                ):
-                    return True
-            else:
-                if transition_route.intent == intent:
-                    return True
-        else:
+        if intent and condition:
+            if (
+                transition_route.condition == condition and
+                transition_route.intent == intent
+            ):
+                return True
+        elif intent and not condition:
+            if transition_route.intent == intent:
+                return True
+        elif not intent and condition:
             if transition_route.condition == condition:
                 return True
 
@@ -193,4 +192,3 @@ class BuilderBase:
         ):
             msg = error_msg_map.get(obj, default_error_msg)
             raise ValueError(msg)
-

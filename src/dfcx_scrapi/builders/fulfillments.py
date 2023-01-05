@@ -19,7 +19,7 @@ from typing import Dict
 
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
-from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.response_messages import ResponseMessageBuilder
 
 # logging config
@@ -30,16 +30,12 @@ logging.basicConfig(
 )
 
 
-class FulfillmentBuilder(BuilderBase):
+class FulfillmentBuilder(BuildersCommon):
     """Base Class for CX Fulfillment builder."""
     # TODO: ConditionalCases: def add_conditional_case(self) -> Fulfillment:
 
     _proto_type = Fulfillment
     _proto_type_str = "Fulfillment"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
 
 
     def create_new_proto_obj(

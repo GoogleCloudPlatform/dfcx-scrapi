@@ -19,7 +19,7 @@ from typing import List, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRouteGroup
-from dfcx_scrapi.builders.builders_common import BuilderBase
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.routes import TransitionRouteBuilder
 
 # logging config
@@ -30,15 +30,11 @@ logging.basicConfig(
 )
 
 
-class TransitionRouteGroupBuilder(BuilderBase):
+class TransitionRouteGroupBuilder(BuildersCommon):
     """Base Class for CX TransitionRouteGroup builder."""
 
     _proto_type = TransitionRouteGroup
     _proto_type_str = "TransitionRouteGroup"
-
-
-    def __init__(self, obj=None):
-        super().__init__(obj)
 
 
     def __str__(self) -> str:
