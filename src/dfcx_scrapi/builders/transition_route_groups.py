@@ -52,6 +52,13 @@ class TransitionRouteGroupBuilder(BuildersCommon):
         )
 
 
+    def show_transition_route_group(self):
+        """Show the proto_obj information."""
+        self._check_proto_obj_attr_exist()
+
+        print(self)
+
+
     def create_new_proto_obj(
         self,
         display_name: str,
@@ -131,13 +138,6 @@ class TransitionRouteGroupBuilder(BuildersCommon):
         self.proto_obj.transition_routes.extend(transition_routes)
 
         return self.proto_obj
-
-
-    def show_transition_route_group(self):
-        """Show the proto_obj information."""
-        self._check_proto_obj_attr_exist()
-
-        print(self)
 
 
     def remove_transition_route(

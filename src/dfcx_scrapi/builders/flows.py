@@ -41,6 +41,193 @@ class FlowBuilder(BuildersCommon):
     _proto_type_str = "Flow"
 
 
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return (
+            f"Basic Information:\n{'='*25}\n{self._show_basic_info()}"
+            f"\n\n\nTransitionRoutes:\n{'='*25}"
+            f"\n{self._show_transition_routes()}"
+            f"\n\n\nEventHandlers:\n{'='*25}\n{self._show_event_handlers()}"
+            f"\n\n\nTransitoinRouteGroups:\n{'='*25}"
+            f"\n{self._show_transition_route_groups()}")
+
+
+    def _show_basic_info(self) -> str:
+        """String representation for the basic information of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        nlu_settings_str = (
+            f"\tModel type: {self.proto_obj.nlu_settings.model_type.name}"
+            "\n\tClassification threshold:"
+            f" {self.proto_obj.nlu_settings.classification_threshold}"
+            "\n\tTraining mode:"
+            f" {self.proto_obj.nlu_settings.model_training_mode.name}"
+        )
+
+        return (
+            f"display_name: {self.proto_obj.display_name}"
+            f"\ndescription:\n\t{self.proto_obj.description}"
+            f"\nNLU settings:\n{nlu_settings_str}"
+        )
+
+
+    def _show_transition_routes(self) -> str:
+        """String representation for the transition routes of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return "\n".join([
+            f"TransitionRoute {i+1}:\n{str(TransitionRouteBuilder(tr))}"
+            f"\n{'*'*20}\n"
+            for i, tr in enumerate(self.proto_obj.transition_routes)
+        ])
+
+
+    def _show_event_handlers(self) -> str:
+        """String representation for the event handlers of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return "\n".join([
+            f"EventHandler {i+1}:\n{str(EventHandlerBuilder(eh))}\n{'*'*20}\n"
+            for i, eh in enumerate(self.proto_obj.event_handlers)
+        ])
+
+
+    def _show_transition_route_groups(self) -> str:
+        """String representation for the transition route groups of proto_obj"""
+        self._check_proto_obj_attr_exist()
+
+        return "\n".join([
+            f"TransitionRouteGroup {i+1}: {trg_id}"
+            for i, trg_id in enumerate(self.proto_obj.transition_route_groups)
+        ])
+
+
+    def show_flow_info(
+        self, mode: str = "whole"
+    ) -> None:
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the page to show.
+              Options:
+              ['basic', 'whole',
+              'routes' or 'transition routes',
+              'route groups' or 'transition route groups',
+              'events' or 'event handlers'
+              ]
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode in ["routes", "transition routes"]:
+            print(self._show_transition_routes())
+        elif mode in ["route groups", "transition route groups"]:
+            print(self._show_transition_route_groups())
+        elif mode in ["events", "event handlers"]:
+            print(self._show_event_handlers())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'whole',"
+                " 'routes', 'transition routes',"
+                " 'route groups', 'transition route groups',"
+                " 'events', 'event handlers']"
+            )
+
+
+    def show_stats(self) -> None:
+        """Provide some stats about the Page."""
+        self._check_proto_obj_attr_exist()
+
+        # Transition Routes
+        transition_routes_count = len(self.proto_obj.transition_routes)
+        routes_with_fulfill_count = 0
+        routes_with_webhook_fulfill_count = 0
+        intent_routes_count = 0
+        cond_routes_count = 0
+        intent_and_cond_routes_count = 0
+        for tr in self.proto_obj.transition_routes:
+            if tr.trigger_fulfillment:
+                routes_with_fulfill_count += 1
+                fb = FulfillmentBuilder(tr.trigger_fulfillment)
+                if fb.has_webhook():
+                    routes_with_webhook_fulfill_count += 1
+            if tr.intent and tr.condition:
+                intent_and_cond_routes_count += 1
+            elif tr.intent and not tr.condition:
+                intent_routes_count += 1
+            elif not tr.intent and tr.condition:
+                cond_routes_count += 1
+        transition_routes_str = (
+            f"# of Transition Routes: {transition_routes_count}"
+        )
+        routes_with_fulfill_str = (
+            f"# of routes with fulfillment: {routes_with_fulfill_count}"
+        )
+        routes_with_webhook_fulfill_str = (
+            "# of routes uses webhook for fulfillment:"
+            f" {routes_with_webhook_fulfill_count}"
+        )
+        intent_routes_str = f"# of intent routes: {intent_routes_count}"
+        cond_routes_str = f"# of condition routes: {cond_routes_count}"
+        intent_and_cond_routes_str = (
+            f"# of intent and condition routes: {intent_and_cond_routes_count}"
+        )
+
+        routes_stats_str = (
+            f"{transition_routes_str}\n\t{intent_routes_str}"
+            f"\n\t{cond_routes_str}\n\t{intent_and_cond_routes_str}"
+            f"\n\t{routes_with_fulfill_str}"
+            f"\n\t{routes_with_webhook_fulfill_str}"
+        )
+
+        # Event Handlers
+        event_handlers_count = len(self.proto_obj.event_handlers)
+        events_with_fulfill_count = 0
+        events_with_webhook_fulfill_count = 0
+        for eh in self.proto_obj.event_handlers:
+            fb = FulfillmentBuilder(eh.trigger_fulfillment)
+            if fb.has_webhook():
+                events_with_webhook_fulfill_count += 1
+            if eh.trigger_fulfillment:
+                events_with_fulfill_count += 1
+        event_handlers_str = f"# of Event Handlers: {event_handlers_count}"
+        events_with_fulfill_str = (
+            "# of Event Handlers with fulfillment:"
+            f" {events_with_fulfill_count}"
+        )
+        events_with_webhook_fulfill_str = (
+            "# of Event Handlers uses webhook for fulfillment:"
+            f" {events_with_webhook_fulfill_count}"
+        )
+
+        events_stats_str = (
+            f"\n{event_handlers_str}\n\t{events_with_fulfill_str}"
+            f"\n\t{events_with_webhook_fulfill_str}"
+        )
+
+        # Transition Route Groups
+        transition_route_groups_count = len(
+            self.proto_obj.transition_route_groups
+        )
+        transition_route_groups_str = (
+            f"# of Transition Route Groups: {transition_route_groups_count}"
+        )
+        route_groups_stats_str = f"\n{transition_route_groups_str}"
+
+        # Create the output string
+        out = (
+            f"{routes_stats_str}{events_stats_str}{route_groups_stats_str}"
+        )
+        print(out)
+
+
     def create_new_proto_obj(
         self,
         display_name: str,
@@ -344,6 +531,7 @@ class FlowBuilder(BuildersCommon):
 
         return self.proto_obj
 
+
     def remove_transition_route_group(
         self,
         transition_route_groups: Union[str, List[str]]
@@ -378,186 +566,3 @@ class FlowBuilder(BuildersCommon):
         self.proto_obj.transition_route_groups = new_trgs
 
         return self.proto_obj
-
-
-    def _show_basic_info(self) -> str:
-        """String representation for the basic information of proto_obj."""
-        self._check_proto_obj_attr_exist()
-
-        nlu_settings_str = (
-            f"\tModel type: {self.proto_obj.nlu_settings.model_type.name}"
-            "\n\tClassification threshold:"
-            f" {self.proto_obj.nlu_settings.classification_threshold}"
-            "\n\tTraining mode:"
-            f" {self.proto_obj.nlu_settings.model_training_mode.name}"
-        )
-
-        return (
-            f"display_name: {self.proto_obj.display_name}"
-            f"\ndescription:\n\t{self.proto_obj.description}"
-            f"\nNLU settings:\n{nlu_settings_str}"
-        )
-
-    def _show_transition_routes(self) -> str:
-        """String representation for the transition routes of proto_obj."""
-        self._check_proto_obj_attr_exist()
-
-        return "\n".join([
-            f"TransitionRoute {i+1}:\n{str(TransitionRouteBuilder(tr))}"
-            f"\n{'*'*20}\n"
-            for i, tr in enumerate(self.proto_obj.transition_routes)
-        ])
-
-    def _show_event_handlers(self) -> str:
-        """String representation for the event handlers of proto_obj."""
-        self._check_proto_obj_attr_exist()
-
-        return "\n".join([
-            f"EventHandler {i+1}:\n{str(EventHandlerBuilder(eh))}\n{'*'*20}\n"
-            for i, eh in enumerate(self.proto_obj.event_handlers)
-        ])
-
-    def _show_transition_route_groups(self) -> str:
-        """String representation for the transition route groups of proto_obj"""
-        self._check_proto_obj_attr_exist()
-
-        return "\n".join([
-            f"TransitionRouteGroup {i+1}: {trg_id}"
-            for i, trg_id in enumerate(self.proto_obj.transition_route_groups)
-        ])
-
-    def show_flow_info(
-        self, mode: str = "whole"
-    ) -> None:
-        """Show the proto_obj information.
-
-        Args:
-          mode (str):
-            Specifies what part of the page to show.
-              Options:
-              ['basic', 'whole',
-              'routes' or 'transition routes',
-              'route groups' or 'transition route groups',
-              'events' or 'event handlers'
-              ]
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "basic":
-            print(self._show_basic_info())
-        elif mode in ["routes", "transition routes"]:
-            print(self._show_transition_routes())
-        elif mode in ["route groups", "transition route groups"]:
-            print(self._show_transition_route_groups())
-        elif mode in ["events", "event handlers"]:
-            print(self._show_event_handlers())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                "['basic', 'whole',"
-                " 'routes', 'transition routes',"
-                " 'route groups', 'transition route groups',"
-                " 'events', 'event handlers']"
-            )
-
-
-    def __str__(self) -> str:
-        """String representation of the proto_obj."""
-        self._check_proto_obj_attr_exist()
-
-        return (
-            f"Basic Information:\n{'='*25}\n{self._show_basic_info()}"
-            f"\n\n\nTransitionRoutes:\n{'='*25}"
-            f"\n{self._show_transition_routes()}"
-            f"\n\n\nEventHandlers:\n{'='*25}\n{self._show_event_handlers()}"
-            f"\n\n\nTransitoinRouteGroups:\n{'='*25}"
-            f"\n{self._show_transition_route_groups()}")
-
-
-    def show_stats(self) -> None:
-        """Provide some stats about the Page."""
-        self._check_proto_obj_attr_exist()
-
-        # Transition Routes
-        transition_routes_count = len(self.proto_obj.transition_routes)
-        routes_with_fulfill_count = 0
-        routes_with_webhook_fulfill_count = 0
-        intent_routes_count = 0
-        cond_routes_count = 0
-        intent_and_cond_routes_count = 0
-        for tr in self.proto_obj.transition_routes:
-            if tr.trigger_fulfillment:
-                routes_with_fulfill_count += 1
-                fb = FulfillmentBuilder(tr.trigger_fulfillment)
-                if fb.has_webhook():
-                    routes_with_webhook_fulfill_count += 1
-            if tr.intent and tr.condition:
-                intent_and_cond_routes_count += 1
-            elif tr.intent and not tr.condition:
-                intent_routes_count += 1
-            elif not tr.intent and tr.condition:
-                cond_routes_count += 1
-        transition_routes_str = (
-            f"# of Transition Routes: {transition_routes_count}"
-        )
-        routes_with_fulfill_str = (
-            f"# of routes with fulfillment: {routes_with_fulfill_count}"
-        )
-        routes_with_webhook_fulfill_str = (
-            "# of routes uses webhook for fulfillment:"
-            f" {routes_with_webhook_fulfill_count}"
-        )
-        intent_routes_str = f"# of intent routes: {intent_routes_count}"
-        cond_routes_str = f"# of condition routes: {cond_routes_count}"
-        intent_and_cond_routes_str = (
-            f"# of intent and condition routes: {intent_and_cond_routes_count}"
-        )
-
-        routes_stats_str = (
-            f"{transition_routes_str}\n\t{intent_routes_str}"
-            f"\n\t{cond_routes_str}\n\t{intent_and_cond_routes_str}"
-            f"\n\t{routes_with_fulfill_str}"
-            f"\n\t{routes_with_webhook_fulfill_str}"
-        )
-
-        # Event Handlers
-        event_handlers_count = len(self.proto_obj.event_handlers)
-        events_with_fulfill_count = 0
-        events_with_webhook_fulfill_count = 0
-        for eh in self.proto_obj.event_handlers:
-            fb = FulfillmentBuilder(eh.trigger_fulfillment)
-            if fb.has_webhook():
-                events_with_webhook_fulfill_count += 1
-            if eh.trigger_fulfillment:
-                events_with_fulfill_count += 1
-        event_handlers_str = f"# of Event Handlers: {event_handlers_count}"
-        events_with_fulfill_str = (
-            "# of Event Handlers with fulfillment:"
-            f" {events_with_fulfill_count}"
-        )
-        events_with_webhook_fulfill_str = (
-            "# of Event Handlers uses webhook for fulfillment:"
-            f" {events_with_webhook_fulfill_count}"
-        )
-
-        events_stats_str = (
-            f"\n{event_handlers_str}\n\t{events_with_fulfill_str}"
-            f"\n\t{events_with_webhook_fulfill_str}"
-        )
-
-        # Transition Route Groups
-        transition_route_groups_count = len(
-            self.proto_obj.transition_route_groups
-        )
-        transition_route_groups_str = (
-            f"# of Transition Route Groups: {transition_route_groups_count}"
-        )
-        route_groups_stats_str = f"\n{transition_route_groups_str}"
-
-        # Create the output string
-        out = (
-            f"{routes_stats_str}{events_stats_str}{route_groups_stats_str}"
-        )
-        print(out)

@@ -29,6 +29,7 @@ logging.basicConfig(
 
 class BuildersCommon:
     """Base class for other Builder classes"""
+
     _proto_type = None
     _proto_type_str = "None"
 
@@ -81,11 +82,6 @@ class BuildersCommon:
             self.proto_obj = obj
 
         return self.proto_obj
-
-
-    def create_new_proto_obj(self):
-        """Prototype method for creating a new proto object."""
-        pass
 
 
     def _match_transition_route(
@@ -169,7 +165,6 @@ class BuildersCommon:
         Raises:
             ValueError: If the `obj` type is not `type_` or a list of `type_`s.
         """
-
         default_error_msg = "Incorrect type!!"
         error_msg_map = {
             str: (

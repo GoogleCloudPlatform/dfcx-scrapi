@@ -61,6 +61,13 @@ class AgentBuilder(BuildersCommon):
             f"\nsecurity_settings: {self.proto_obj.security_settings}")
 
 
+    def show_agent_info(self):
+        """Show the proto_obj information."""
+        self._check_proto_obj_attr_exist()
+
+        print(self)
+
+
     def create_new_proto_obj(
         self,
         display_name: str,
@@ -209,8 +216,3 @@ class AgentBuilder(BuildersCommon):
         return self.proto_obj
 
 
-    def show_agent_info(self):
-        """Show the proto_obj information."""
-        self._check_proto_obj_attr_exist()
-
-        print(self)

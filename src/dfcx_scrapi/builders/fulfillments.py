@@ -38,6 +38,83 @@ class FulfillmentBuilder(BuildersCommon):
     _proto_type_str = "Fulfillment"
 
 
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        try:
+            self._check_proto_obj_attr_exist()
+        except ValueError:
+            return ""
+
+        basic_info_str = self._show_basic_info()
+        resp_msgs_str = self._show_response_messages()
+        params_str = self._show_parameters()
+
+        return (
+            f"Fulfillment Basic Information:\n{'-'*20}\n{basic_info_str}"
+            f"\n\n\nFulfillment ResponseMessages:\n{'-'*20}\n{resp_msgs_str}"
+            f"\n\n\nFulfillment Parameters:\n{'-'*20}\n{params_str}"
+        )
+
+
+    def _show_basic_info(self) -> str:
+        """String representation for the basic information of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        partial_resp = self.proto_obj.return_partial_responses
+        return (
+            f"webhook: {self.proto_obj.webhook}"
+            f"\ntag: {self.proto_obj.tag}"
+            f"\nreturn_partial_responses: {partial_resp}"
+        )
+
+
+    def _show_parameters(self) -> str:
+        """String representation for the parameters presets of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return "\n".join([
+            f"{param.parameter}: {param.value if param.value else 'null'}"
+            for param in self.proto_obj.set_parameter_actions
+        ])
+
+
+    def _show_response_messages(self) -> str:
+        """String representation of response messages in proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return "\n".join([
+            f"ResponseMessage {i+1}:\n{str(ResponseMessageBuilder(msg))}"
+            for i, msg in enumerate(self.proto_obj.messages)
+        ])
+
+
+    def show_fulfillment(self, mode: str = "whole"):
+        """Show the proto_obj information.
+        Args:
+          mode (str):
+            Specifies what part of the fulfillment to show.
+            Options:
+              ['basic', 'parameters',
+                'messages' or 'response messages', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode == "parameters":
+            print(self._show_parameters())
+        elif mode in ["messages", "response messages"]:
+            print(self._show_response_messages())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'parameters',"
+                " 'messages' or 'response messages', 'whole']"
+            )
+
+
     def create_new_proto_obj(
         self,
         webhook: str = None,
@@ -213,82 +290,6 @@ class FulfillmentBuilder(BuildersCommon):
                 "parameter_map should be a dictionary."
             )
 
-
-    def _show_basic_info(self) -> str:
-        """String representation for the basic information of proto_obj."""
-        self._check_proto_obj_attr_exist()
-
-        partial_resp = self.proto_obj.return_partial_responses
-        return (
-            f"webhook: {self.proto_obj.webhook}"
-            f"\ntag: {self.proto_obj.tag}"
-            f"\nreturn_partial_responses: {partial_resp}"
-        )
-
-
-    def _show_parameters(self) -> str:
-        """String representation for the parameters presets of proto_obj."""
-        self._check_proto_obj_attr_exist()
-
-        return "\n".join([
-            f"{param.parameter}: {param.value if param.value else 'null'}"
-            for param in self.proto_obj.set_parameter_actions
-        ])
-
-
-    def _show_response_messages(self) -> str:
-        """String representation of response messages in proto_obj."""
-        self._check_proto_obj_attr_exist()
-
-        return "\n".join([
-            f"ResponseMessage {i+1}:\n{str(ResponseMessageBuilder(msg))}"
-            for i, msg in enumerate(self.proto_obj.messages)
-        ])
-
-
-    def __str__(self) -> str:
-        """String representation of the proto_obj."""
-        try:
-            self._check_proto_obj_attr_exist()
-        except ValueError:
-            return ""
-
-        basic_info_str = self._show_basic_info()
-        resp_msgs_str = self._show_response_messages()
-        params_str = self._show_parameters()
-
-        return (
-            f"Fulfillment Basic Information:\n{'-'*20}\n{basic_info_str}"
-            f"\n\n\nFulfillment ResponseMessages:\n{'-'*20}\n{resp_msgs_str}"
-            f"\n\n\nFulfillment Parameters:\n{'-'*20}\n{params_str}"
-        )
-
-
-    def show_fulfillment(self, mode: str = "whole"):
-        """Show the proto_obj information.
-        Args:
-          mode (str):
-            Specifies what part of the fulfillment to show.
-            Options:
-              ['basic', 'parameters',
-                'messages' or 'response messages', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "basic":
-            print(self._show_basic_info())
-        elif mode == "parameters":
-            print(self._show_parameters())
-        elif mode in ["messages", "response messages"]:
-            print(self._show_response_messages())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                "['basic', 'parameters',"
-                " 'messages' or 'response messages', 'whole']"
-            )
 
     def has_webhook(self) -> bool:
         """Check whether the Fulfillment in proto_obj uses a Webhook.

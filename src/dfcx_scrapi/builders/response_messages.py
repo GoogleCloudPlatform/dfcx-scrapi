@@ -37,6 +37,56 @@ class ResponseMessageBuilder(BuildersCommon):
     _proto_type_str = "ResponseMessage"
 
 
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        if self.proto_obj.text:
+            resp_type = "text"
+            resp_msg = self.proto_obj.text.text
+        elif self.proto_obj.payload:
+            resp_type = "payload"
+            proto_struct = self.proto_obj.payload
+            resp_msg = "\n\t".join([
+                f"{k}: {v}" for k, v in proto_struct.items()
+            ])
+        elif self.proto_obj.conversation_success:
+            resp_type = "conversation_success"
+            proto_struct = self.proto_obj.conversation_success.metadata
+            resp_msg = "\n\t".join([
+                f"{k}: {v}" for k, v in proto_struct.items()
+            ])
+        elif self.proto_obj.output_audio_text:
+            if self.proto_obj.output_audio_text.text:
+                resp_type = "output_audio_text - text"
+                resp_msg = self.proto_obj.output_audio_text.text
+            elif self.proto_obj.output_audio_text.ssml:
+                resp_type = "output_audio_text - ssml"
+                resp_msg = self.proto_obj.output_audio_text.ssml
+        elif self.proto_obj.live_agent_handoff:
+            resp_type = "live_agent_handoff"
+            proto_struct = self.proto_obj.live_agent_handoff.metadata
+            resp_msg = "\n\t".join([
+                f"{k}: {v}" for k, v in proto_struct.items()
+            ])
+        elif self.proto_obj.play_audio:
+            resp_type = "play_audio"
+            resp_msg = self.proto_obj.play_audio.audio_uri
+        elif self.proto_obj.telephony_transfer_call:
+            resp_type = "telephony_transfer_call"
+            resp_msg = self.proto_obj.telephony_transfer_call.phone_number
+
+        return (
+            f"Response Type: {resp_type}\nMessage:\n\t{resp_msg}"
+        )
+
+
+    def show_response_message(self):
+        """Show the proto_obj information."""
+        self._check_proto_obj_attr_exist()
+        print(self)
+
+
     def create_new_proto_obj(
         self,
         response_type: str,
@@ -198,53 +248,3 @@ class ResponseMessageBuilder(BuildersCommon):
 
         self.proto_obj = response_message
         return self.proto_obj
-
-
-    def __str__(self) -> str:
-        """String representation of the proto_obj."""
-        self._check_proto_obj_attr_exist()
-
-        if self.proto_obj.text:
-            resp_type = "text"
-            resp_msg = self.proto_obj.text.text
-        elif self.proto_obj.payload:
-            resp_type = "payload"
-            proto_struct = self.proto_obj.payload
-            resp_msg = "\n\t".join([
-                f"{k}: {v}" for k, v in proto_struct.items()
-            ])
-        elif self.proto_obj.conversation_success:
-            resp_type = "conversation_success"
-            proto_struct = self.proto_obj.conversation_success.metadata
-            resp_msg = "\n\t".join([
-                f"{k}: {v}" for k, v in proto_struct.items()
-            ])
-        elif self.proto_obj.output_audio_text:
-            if self.proto_obj.output_audio_text.text:
-                resp_type = "output_audio_text - text"
-                resp_msg = self.proto_obj.output_audio_text.text
-            elif self.proto_obj.output_audio_text.ssml:
-                resp_type = "output_audio_text - ssml"
-                resp_msg = self.proto_obj.output_audio_text.ssml
-        elif self.proto_obj.live_agent_handoff:
-            resp_type = "live_agent_handoff"
-            proto_struct = self.proto_obj.live_agent_handoff.metadata
-            resp_msg = "\n\t".join([
-                f"{k}: {v}" for k, v in proto_struct.items()
-            ])
-        elif self.proto_obj.play_audio:
-            resp_type = "play_audio"
-            resp_msg = self.proto_obj.play_audio.audio_uri
-        elif self.proto_obj.telephony_transfer_call:
-            resp_type = "telephony_transfer_call"
-            resp_msg = self.proto_obj.telephony_transfer_call.phone_number
-
-        return (
-            f"Response Type: {resp_type}\nMessage:\n\t{resp_msg}"
-        )
-
-
-    def show_response_message(self):
-        """Show the proto_obj information."""
-        self._check_proto_obj_attr_exist()
-        print(self)

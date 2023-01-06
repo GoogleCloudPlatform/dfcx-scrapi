@@ -97,6 +97,33 @@ class TransitionRouteBuilder(BuildersCommon):
         return fulfillment_str
 
 
+    def show_transition_route(self, mode: str = "whole"):
+        """Show the proto_obj information.
+        Args:
+          mode (str):
+            Specifies what part of the TransitionRoute to show.
+            Options:
+              ['target', 'fulfillment',
+               'transition criteria' or 'conditions', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "target":
+            print(self._show_target())
+        elif mode in ["transition criteria", "conditions"]:
+            print(self._show_transition_criteria())
+        elif mode == "fulfillment":
+            print(self._show_fulfillment())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                " ['target', 'fulfillment',"
+                " 'transition criteria' or 'conditions', 'whole']"
+            )
+
+
     def create_new_proto_obj(
         self,
         intent: str = None,
@@ -197,31 +224,6 @@ class TransitionRouteBuilder(BuildersCommon):
         return self.proto_obj
 
 
-    def show_transition_route(self, mode: str = "whole"):
-        """Show the proto_obj information.
-        Args:
-          mode (str):
-            Specifies what part of the TransitionRoute to show.
-            Options:
-              ['target', 'fulfillment',
-               'transition criteria' or 'conditions', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "target":
-            print(self._show_target())
-        elif mode in ["transition criteria", "conditions"]:
-            print(self._show_transition_criteria())
-        elif mode == "fulfillment":
-            print(self._show_fulfillment())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                " ['target', 'fulfillment',"
-                " 'transition criteria' or 'conditions', 'whole']"
-            )
 
 
 class EventHandlerBuilder(BuildersCommon):
@@ -278,6 +280,29 @@ class EventHandlerBuilder(BuildersCommon):
             )
 
         return fulfillment_str
+
+
+    def show_event_handler(self, mode: str = "whole"):
+        """Show the proto_obj information.
+        Args:
+          mode (str):
+            Specifies what part of the EventHandler to show.
+            Options:
+              ['basic' or 'target' or 'event', 'fulfillment', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode in ["basic", "target", "event"]:
+            print(self._show_event_and_target())
+        elif mode == "fulfillment":
+            print(self._show_fulfillment())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                " ['basic' or 'target' or 'event', 'fulfillment', 'whole']"
+            )
 
 
     def create_new_proto_obj(
@@ -351,26 +376,3 @@ class EventHandlerBuilder(BuildersCommon):
             )
 
         return self.proto_obj
-
-
-    def show_event_handler(self, mode: str = "whole"):
-        """Show the proto_obj information.
-        Args:
-          mode (str):
-            Specifies what part of the EventHandler to show.
-            Options:
-              ['basic' or 'target' or 'event', 'fulfillment', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode in ["basic", "target", "event"]:
-            print(self._show_event_and_target())
-        elif mode == "fulfillment":
-            print(self._show_fulfillment())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                " ['basic' or 'target' or 'event', 'fulfillment', 'whole']"
-            )

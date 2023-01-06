@@ -57,7 +57,6 @@ class EntityTypeBuilder(BuildersCommon):
             f" {self.proto_obj.enable_fuzzy_extraction}"
             f"\nredact: {self.proto_obj.redact}")
 
-
     def _show_excluded_phrases(self) -> str:
         """Shows the excluded phrases of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -68,7 +67,6 @@ class EntityTypeBuilder(BuildersCommon):
         ])
 
         return f"excluded phrases:\n\t{excluded_phrases}"
-
 
     def _show_entities(self) -> str:
         """Shows the entities of proto_obj."""
