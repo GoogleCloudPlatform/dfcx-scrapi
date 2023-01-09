@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 import pandas as pd
 
 import google.cloud.dialogflowcx_v3beta1.types as dfcx_types
@@ -29,7 +29,6 @@ from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.pages import Pages
 from dfcx_scrapi.core.webhooks import Webhooks
 from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
-from dfcx_scrapi.core.test_cases import TestCases
 
 # Type aliases
 DFCXFlow = dfcx_types.flow.Flow
@@ -99,7 +98,6 @@ class AgentCheckerUtil(ScrapiBase):
         self.route_groups = TransitionRouteGroups(
             creds=self.creds, agent_id=self.agent_id
         )
-        self.test_cases = TestCases(creds=self.creds, agent_id=self.agent_id)
 
         # Generate maps
         self.intents_map = self.intents.get_intents_map(agent_id=self.agent_id)
@@ -195,7 +193,7 @@ class AgentCheckerUtil(ScrapiBase):
         flow_name: str = None,
         page_id: str = None,
         page_name: str = None,
-    ) -> DFCXPage | DFCXFlow:
+    ) -> Union[DFCXPage, DFCXFlow]:
         """Gets the page data for a specified page within
         a specified flow. The flow and page can be specified
         by ID or by display name.
@@ -235,7 +233,7 @@ class AgentCheckerUtil(ScrapiBase):
 
     def _continue_page_recursion(
         self,
-        page: DFCXPage | DFCXFlow,
+        page: Union[DFCXPage, DFCXFlow],
         page_name: str,
         route: DFCXRoute,
         target_page: str,
@@ -270,7 +268,7 @@ class AgentCheckerUtil(ScrapiBase):
 
     def _handle_meta_page(
         self,
-        page: DFCXPage | DFCXFlow,
+        page: Union[DFCXPage, DFCXFlow],
         target_page: str,
         params: Dict
     ) -> None:
@@ -305,7 +303,7 @@ class AgentCheckerUtil(ScrapiBase):
 
     def _find_reachable_pages_rec_helper(
         self,
-        page: DFCXPage | DFCXFlow,
+        page: Union[DFCXPage, DFCXFlow],
         route: DFCXRoute,
         params: Dict
     ) -> None:
@@ -459,7 +457,7 @@ class AgentCheckerUtil(ScrapiBase):
 
     def _find_reachable_pages_rec(
         self,
-        page: DFCXPage | DFCXFlow,
+        page: Union[DFCXPage, DFCXFlow],
         params: Dict
     ) -> None:
         """Recursive function to find reachable pages within a given flow,
@@ -501,7 +499,7 @@ class AgentCheckerUtil(ScrapiBase):
 
     def _process_form_parameter_for_reachable_pages(
         self,
-        page: DFCXPage | DFCXFlow,
+        page: Union[DFCXPage, DFCXFlow],
         parameter, # TODO: Data type for DFCX Parameter
         params: Dict
     ) -> None:
@@ -710,21 +708,22 @@ class AgentCheckerUtil(ScrapiBase):
             page_names.extend(unreachable)
         return pd.DataFrame({"flow_name": flow_names, "page_name": page_names})
 
-    def add_intents_from_routes(self,
-                                transition_list: List[DFCXRoute],
-                                intents: List[str],
-                                routegroups: List[str],
-                                route_group
-    ) -> None:
+    def _get_intents_from_routes(
+        self,
+        transition_list: List[DFCXRoute],
+        route_group
+    ) -> Dict[str, List[str]]:
         """Helper function which adds intents from routes to a list of intents
 
         Args:
           transition_list, The list of transition routes
-          intents, The list of intent names
 
         Returns:
-          Nothing (appends to the intent list)
+          A dictionary with keys 'intents' and 'routegroups' which each contain
+          a list of intent/route group names to be added
         """
+        intents = []
+        routegroups = []
         for route in transition_list:
             # Ignore empty intents (such as the true condition)
             if len(route.intent) == 0:
@@ -736,13 +735,18 @@ class AgentCheckerUtil(ScrapiBase):
                     routegroups.append(route_group.display_name)
                 else:
                     routegroups.append("")
+        return {
+            'intents': intents,
+            'routegroups': routegroups
+        }
 
-    def _get_page_intents(self,
-                         flow_id: Optional[str] = None,
-                         flow_name: Optional[str] = None,
-                         page_id: Optional[str] = None,
-                         page_name: Optional[str] = None,
-                         include_groups: bool = True
+    def _get_page_intents(
+        self,
+        flow_id: Optional[str] = None,
+        flow_name: Optional[str] = None,
+        page_id: Optional[str] = None,
+        page_name: Optional[str] = None,
+        include_groups: bool = True
     ) -> List[str]:
         """Get the list of intents for a given page of this flow.
 
@@ -758,13 +762,12 @@ class AgentCheckerUtil(ScrapiBase):
         page = self._get_page(flow_id=flow_id, flow_name=flow_name,
                              page_id=page_id, page_name=page_name)
 
-        page_routegroups = []
         page_intents = []
+        page_routegroups = []
         transition_list = page.transition_routes
-        self.add_intents_from_routes(transition_list,
-                                     page_intents,
-                                     page_routegroups,
-                                     None)
+        route_intent_dict = self._get_intents_from_routes(transition_list,None)
+        page_intents.extend(route_intent_dict["intents"])
+        page_routegroups.extend(route_intent_dict["routegroups"])
 
         if not flow_id:
             flow_id = self.flows_map_rev[flow_name]
@@ -773,19 +776,22 @@ class AgentCheckerUtil(ScrapiBase):
         if include_groups:
             for route_group_id in page.transition_route_groups:
                 route_group = self.route_group_data[flow_id][route_group_id]
-                self.add_intents_from_routes(route_group.transition_routes,
-                                         page_intents,
-                                         page_routegroups,
-                                         route_group)
+                route_intent_dict = self._get_intents_from_routes(
+                    route_group.transition_routes,
+                    route_group
+                )
+                page_intents.extend(route_intent_dict["intents"])
+                page_routegroups.extend(route_intent_dict["routegroups"])
 
         return pd.DataFrame({
             "route group": page_routegroups,
             "intent": page_intents
         })
 
-    def find_reachable_intents(self,
-                               flow_name,
-                               include_groups: bool = True
+    def find_reachable_intents(
+        self,
+        flow_name,
+        include_groups: bool = True
     ) -> List[str]:
         """Finds all intents which are on reachable pages, starting from the
         start page of the given flow.
@@ -810,7 +816,7 @@ class AgentCheckerUtil(ScrapiBase):
                     page_name=page_name,
                     include_groups=include_groups
                 )["intent"])
-            intents |= page_intents
+            intents.update(page_intents)
         return list(intents)
 
     def find_all_reachable_intents(self) -> pd.DataFrame:
@@ -831,7 +837,7 @@ class AgentCheckerUtil(ScrapiBase):
                     intents[intent].append(flow_name)
                 else:
                     intents[intent] = [flow_name]
-        # Also return the unreachable ones, because why not
+
         return pd.DataFrame({
             "intent": intents.keys(),
             "flows": intents.values()
@@ -849,7 +855,7 @@ class AgentCheckerUtil(ScrapiBase):
         for flow_name in self.flows_map_rev:
             flow_intents = self.find_reachable_intents(flow_name=flow_name,
                                                        include_groups=True)
-            all_reachable_intents |= set(flow_intents)
+            all_reachable_intents.update(set(flow_intents))
         unreachable_intents = []
         for intent in self.intent_data:
             if intent.display_name in all_reachable_intents:
