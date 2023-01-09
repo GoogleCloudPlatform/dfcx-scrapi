@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Union
 import pandas as pd
+from collections import defaultdict
 
 import google.cloud.dialogflowcx_v3beta1.types as dfcx_types
 
@@ -121,25 +122,22 @@ class AgentCheckerUtil(ScrapiBase):
 
         # Get intent, flow, and page data
         self.intent_data = self.intents.list_intents(agent_id=self.agent_id)
-        self.flow_data = self.get_all_flow_data()
-        self.page_data = self.get_all_page_data()
-        self.route_group_data = self.get_all_route_group_data()
+        self.flow_data = self._get_all_flow_data()
+        self.page_data = self._get_all_page_data()
+        self.route_group_data = self._get_all_route_group_data()
 
-    def get_all_flow_data(self):
-        flow_data = {}
+    def _get_all_flow_data(self):
         flow_list = self.flows.list_flows(self.agent_id)
-        for flow in flow_list:
-            flow_data[flow.name] = flow
-        return flow_data
+        return {flow.name: flow for flow in flow_list}
 
-    def get_all_page_data(self):
+    def _get_all_page_data(self):
         page_data = {}
         for flow_id in self.flows_map.keys():
             page_list = self.pages.list_pages(flow_id=flow_id)
             page_data[flow_id] = {page.name: page for page in page_list}
         return page_data
 
-    def get_all_route_group_data(self):
+    def _get_all_route_group_data(self):
         route_group_data = {}
         for flow_id in self.flows_map.keys():
             group_list = self.route_groups.list_transition_route_groups(
@@ -415,6 +413,8 @@ class AgentCheckerUtil(ScrapiBase):
                 ] = params["intent_route_count"]
 
     def _get_new_presets(self, presets, page, route):
+        """Gets parameter presets that have been added on a given route.
+        """
         new_presets = presets.copy()
         if hasattr(page, "entry_fulfillment"):
             if hasattr(page.entry_fulfillment, "set_parameter_actions"):
@@ -561,9 +561,12 @@ class AgentCheckerUtil(ScrapiBase):
             groups will be included, but only if they are actually referenced
             on some page
           include_start_page_routes: (Optional) Default true
-          limit_intent_to_initial: (Optional) Default False
+          limit_intent_to_initial: (Optional) Default False. If true, only
+            take intent routes on the initial page, rather than on any page
+            in the traversal.
           is_initial: (Optional) Default True
-          include_meta: (Optional) Default False
+          include_meta: (Optional) Default False. If true, includes special
+            transition targets like End Session, End Flow, etc.
           verbose: (Optional) If true, print debug information about
             route traversal
 
@@ -828,15 +831,18 @@ class AgentCheckerUtil(ScrapiBase):
             intent - the intent display name
             flows - a list of flow display names that use this intent
         """
-        intents = {}
+        intents = defaultdict(lambda: []) # {}
         for flow_name in self.flows_map_rev:
             flow_intents = self.find_reachable_intents(flow_name=flow_name,
                                                        include_groups=True)
             for intent in flow_intents:
+                intents[intent].append(flow_name)
+                """
                 if intent in intents:
                     intents[intent].append(flow_name)
                 else:
                     intents[intent] = [flow_name]
+                """
 
         return pd.DataFrame({
             "intent": intents.keys(),
