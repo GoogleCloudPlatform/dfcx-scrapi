@@ -739,8 +739,8 @@ class AgentCheckerUtil(ScrapiBase):
                 else:
                     routegroups.append("")
         return {
-            'intents': intents,
-            'routegroups': routegroups
+            "intents": intents,
+            "routegroups": routegroups
         }
 
     def _get_page_intents(
@@ -831,18 +831,12 @@ class AgentCheckerUtil(ScrapiBase):
             intent - the intent display name
             flows - a list of flow display names that use this intent
         """
-        intents = defaultdict(lambda: []) # {}
+        intents = defaultdict(lambda: [])
         for flow_name in self.flows_map_rev:
             flow_intents = self.find_reachable_intents(flow_name=flow_name,
                                                        include_groups=True)
             for intent in flow_intents:
                 intents[intent].append(flow_name)
-                """
-                if intent in intents:
-                    intents[intent].append(flow_name)
-                else:
-                    intents[intent] = [flow_name]
-                """
 
         return pd.DataFrame({
             "intent": intents.keys(),
