@@ -1,6 +1,6 @@
 """A set of builder methods to create CX proto resource objects"""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -636,37 +636,14 @@ class PageBuilder(BuildersCommon):
                 "`event_names` should be specified."
             )
         if event_handlers:
-            # Type error checking
-            self._is_type_or_list_of_types(
-                event_handlers, EventHandler, "event_handlers"
-            )
-
-            if not isinstance(event_handlers, list):
-                event_handlers = [event_handlers]
-
-            new_ehs = [
-                eh
-                for eh in self.proto_obj.event_handlers
-                if eh not in event_handlers
-            ]
+            new_ehs = self._find_unmatched_event_handlers(event_handlers)
         elif event_names:
-            # Type error checking
-            self._is_type_or_list_of_types(event_names, str, "event_names")
-
-            if not isinstance(event_names, list):
-                event_names = [event_names]
-
-            new_ehs = [
-                eh
-                for eh in self.proto_obj.event_handlers
-                if eh.event not in event_names
-            ]
+            new_ehs = self._find_unmatched_event_handlers_by_name(event_names)
         else:
             raise Exception(
                 "At least one of the `event_handlers` and "
                 "`event_names` should be specified."
             )
-
 
         self.proto_obj.event_handlers = new_ehs
 
