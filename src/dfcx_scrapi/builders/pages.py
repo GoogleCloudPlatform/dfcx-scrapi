@@ -583,7 +583,7 @@ class PageStats():
     parameters_with_webhook_fulfill_count: int = 0
     parameters_ratio: int = 0
 
-    # Transition Routes 
+    # Transition Routes
     transition_routes_count: int = 0
     routes_with_fulfill_count: int = 0
     routes_with_webhook_fulfill_count: int = 0
@@ -602,7 +602,9 @@ class PageStats():
 
     def calc_transition_route_stats(self):
         """Calculating TransitionRoute related stats."""
-        self.transition_routes_count = len(self.page_proto_obj.transition_routes)
+        self.transition_routes_count = len(
+            self.page_proto_obj.transition_routes
+        )
         for tr in self.page_proto_obj.transition_routes:
             if tr.trigger_fulfillment:
                 self.routes_with_fulfill_count += 1
@@ -631,7 +633,8 @@ class PageStats():
         intent_routes_str = f"# of intent routes: {self.intent_routes_count}"
         cond_routes_str = f"# of condition routes: {self.cond_routes_count}"
         intent_and_cond_routes_str = (
-            f"# of intent and condition routes: {self.intent_and_cond_routes_count}"
+            "# of intent and condition routes:"
+            f" {self.intent_and_cond_routes_count}"
         )
 
         return (
@@ -644,7 +647,7 @@ class PageStats():
 
     def calc_event_handler_stats(self):
         """Calculating EventHandler related stats."""
-        event_handlers_count = len(self.page_proto_obj.event_handlers)
+        self.event_handlers_count = len(self.page_proto_obj.event_handlers)
         for eh in self.page_proto_obj.event_handlers:
             fb = FulfillmentBuilder(eh.trigger_fulfillment)
             if fb.has_webhook():
@@ -714,11 +717,12 @@ class PageStats():
 
     def create_transition_route_group_str(self) -> str:
         """String representation of TransitionRouteGroup stats."""
-        transition_route_groups_count = len(
+        self.transition_route_groups_count = len(
             self.page_proto_obj.transition_route_groups
         )
         return (
-            f"# of Transition Route Groups: {self.transition_route_groups_count}"
+            "# of Transition Route Groups:"
+            f" {self.transition_route_groups_count}"
         )
 
 
@@ -733,7 +737,7 @@ class PageStats():
         routes_stats_str = self.create_transition_route_str()
         events_stats_str = self.create_event_handler_str()
         route_groups_stats_str = self.create_transition_route_group_str()
-        
+
         out = (
             f"{has_entry_fulfill_str}\n{params_stats_str}\n{routes_stats_str}"
             f"\n{events_stats_str}\n{route_groups_stats_str}"
