@@ -167,6 +167,7 @@ class AgentCheckerUtil(ScrapiBase):
         return route_group_data
 
     # Conversion utilities
+    # (Not currently used)
 
     def _convert_intent(self, intent_id):
         """Gets an intent display name from an intent ID"""
@@ -207,18 +208,16 @@ class AgentCheckerUtil(ScrapiBase):
 
     def _get_page(
         self,
-        flow_id: str = None,
-        flow_name: str = None,
-        page_id: str = None,
-        page_name: str = None,
+        flow_name: str,
+        page_name: str
     ) -> Union[DFCXPage, DFCXFlow]:
         """Gets the page data for a specified page within
         a specified flow. The flow and page can be specified
         by ID or by display name.
 
         Args:
-          flow_id OR flow_name: The ID or display name of the flow
-          page_id OR page_name: The ID or display name of the page
+          flow_name: The display name of the flow
+          page_name: The display name of the page
 
         Returns:
           A DFCX Page object for this page,
@@ -228,20 +227,16 @@ class AgentCheckerUtil(ScrapiBase):
           KeyError, if the page is not found
         """
         # Look up flow ID
-        if flow_name:
-            flow_id = self._flows_map_rev.get(flow_name, None)
+        flow_id = self._flows_map_rev.get(flow_name, None)
         if not flow_id:
             raise Exception(f"Flow not found: {flow_name}")
         # Now that flow_id is set, look up the page
         # Special case for the start page
-        if page_name == "Start" or (page_id and "START_PAGE" in page_id):
+        if page_name == "Start":
             return self._flow_data[flow_id]
         # Look up page ID
-        if page_name:
-            page_id = self._pages_map_rev[flow_id].get(page_name, None)
+        page_id = self._pages_map_rev[flow_id].get(page_name, None)
         if not page_id:
-            if not page_name:
-                raise KeyError('Page not found. Did you forget "page_name="?')
             raise KeyError(f"Page not found: {page_name}")
         return self._page_data[flow_id][page_id]
 
@@ -536,7 +531,7 @@ class AgentCheckerUtil(ScrapiBase):
         self,
         params: Dict
     ):
-        page = self.flow_data[params["flow_id"]]
+        page = self._flow_data[params["flow_id"]]
         for event_handler in page.event_handlers:
             if hasattr(event_handler, "target_page") or hasattr(
                 event_handler, "target_flow"
@@ -557,8 +552,7 @@ class AgentCheckerUtil(ScrapiBase):
 
     def find_reachable_pages(
         self,
-        flow_id: str = None,
-        flow_name: str = None,
+        flow_name: str,
         from_page: str = "Start",
         intent_route_limit: Optional[int] = None,
         include_groups: bool = True,
@@ -573,7 +567,7 @@ class AgentCheckerUtil(ScrapiBase):
         flow_name must be used.
 
         Args:
-          flow_id OR flow_name: The ID or name of the flow
+          flow_name: The display name of the flow
           from_page: (Optional) The page to start from. If left blank, it will
             start on the Start Page
           intent_route_limit: (Optional) Default None
@@ -593,17 +587,9 @@ class AgentCheckerUtil(ScrapiBase):
         Returns:
           The list of reachable pages in this flow
         """
+        flow_id = self._flows_map_rev.get(flow_name, None)
         if not flow_id:
-            if not flow_name:
-                raise Exception("One of flow_id or flow_name must be set")
-            if flow_name in self._flows_map_rev:
-                flow_id = self._flows_map_rev[flow_name]
-            else:
-                raise Exception(f"Flow not found: {flow_name}")
-        if flow_id in self._flows_map:
-            flow_name = self._flows_map[flow_id]
-        else:
-            raise Exception(f"Flow not found: {flow_id}")
+            raise Exception(f"Flow not found: {flow_name}")
 
         # Start at the start page...
         reachable = [from_page]
@@ -613,8 +599,8 @@ class AgentCheckerUtil(ScrapiBase):
         min_intent_counts = [25]
         presets = {}
         page_data = self._get_page(
-            flow_id=flow_id, flow_name=flow_name,
-            page_id=None, page_name=from_page
+            flow_name=flow_name,
+            page_name=from_page
         )
         params = {
             "flow_id": flow_id,
@@ -637,8 +623,7 @@ class AgentCheckerUtil(ScrapiBase):
 
     def find_unreachable_pages(
         self,
-        flow_id: str = None,
-        flow_name: str = None,
+        flow_name: str,
         include_groups: bool = True,
         verbose: bool = False,
     ) -> List[str]:
@@ -658,20 +643,12 @@ class AgentCheckerUtil(ScrapiBase):
         Returns:
           The list of unreachable pages in this flow
         """
+        flow_id = self._flows_map_rev.get(flow_name, None)
         if not flow_id:
-            if not flow_name:
-                raise Exception("One of flow_id or flow_name must be set")
-            if flow_name in self._flows_map_rev:
-                flow_id = self._flows_map_rev[flow_name]
-            else:
-                raise Exception(f"Flow not found: {flow_name}")
-        if flow_id in self._flows_map:
-            flow_name = self._flows_map[flow_id]
-        else:
-            raise Exception(f"Flow not found: {flow_id}")
+            raise Exception(f"Flow not found: {flow_name}")
 
         reachable = self.find_reachable_pages(
-            flow_id, flow_name, include_groups=include_groups, verbose=verbose
+            flow_name, include_groups=include_groups, verbose=verbose
         )
         return list(set(self._pages_map[flow_id].values()) - set(reachable))
 
@@ -767,25 +744,23 @@ class AgentCheckerUtil(ScrapiBase):
 
     def _get_page_intents(
         self,
-        flow_id: Optional[str] = None,
-        flow_name: Optional[str] = None,
-        page_id: Optional[str] = None,
-        page_name: Optional[str] = None,
+        flow_name: str,
+        page_name: str,
         include_groups: bool = True
     ) -> List[str]:
         """Get the list of intents for a given page of this flow.
 
         Args:
-          flow_id OR flow_name: The ID or name of the flow
-          page_id OR page_name: The ID or name of the page
+          flow_name: The display name of the flow
+          page_name: The display name of the page
           include_groups (Optional): If true, intents from transition route
             groups on the given page will be included
 
         Returns:
           List of intent names
         """
-        page = self._get_page(flow_id=flow_id, flow_name=flow_name,
-                             page_id=page_id, page_name=page_name)
+        page = self._get_page(flow_name=flow_name,
+                              page_name=page_name)
 
         page_intents = []
         page_routegroups = []
@@ -794,8 +769,9 @@ class AgentCheckerUtil(ScrapiBase):
         page_intents.extend(route_intent_dict["intents"])
         page_routegroups.extend(route_intent_dict["routegroups"])
 
+        flow_id = self._flows_map_rev.get(flow_name, None)
         if not flow_id:
-            flow_id = self._flows_map_rev[flow_name]
+            raise Exception(f"Flow not found: {flow_name}")
 
         # Get intents in transition route groups
         if include_groups:
@@ -815,7 +791,7 @@ class AgentCheckerUtil(ScrapiBase):
 
     def find_reachable_intents(
         self,
-        flow_name,
+        flow_name: str,
         include_groups: bool = True
     ) -> List[str]:
         """Finds all intents which are on reachable pages, starting from the
