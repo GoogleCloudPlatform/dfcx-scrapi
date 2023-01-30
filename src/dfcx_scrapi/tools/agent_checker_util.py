@@ -79,7 +79,18 @@ class AgentCheckerUtil(ScrapiBase):
         creds=None,
         scope=False,
         agent_id: str = None,
+        delay: float = 1.0
     ):
+        """
+        Args:
+          delay (optional): The time in seconds to wait between CX API calls,
+            if you need to limit the rate. 
+            
+            TODO: Total number of API calls made when
+            initializing this class is currently 5 + 5*(number of flows). This
+            can be optimized down to 2 + 2*(number of flows) by manually
+            creating the maps after listing the objects.
+        """
         super().__init__(
             creds_path=creds_path,
             creds_dict=creds_dict,
@@ -91,59 +102,68 @@ class AgentCheckerUtil(ScrapiBase):
         if not self.agent_id:
             raise Exception("agent_id parameter is required")
 
-        self.intents = Intents(creds=self.creds, agent_id=self.agent_id)
-        self.entities = EntityTypes(creds=self.creds, agent_id=self.agent_id)
-        self.flows = Flows(creds=self.creds, agent_id=self.agent_id)
-        self.pages = Pages(creds=self.creds)
-        self.webhooks = Webhooks(creds=self.creds, agent_id=self.agent_id)
-        self.route_groups = TransitionRouteGroups(
+        self._intents = Intents(creds=self.creds, agent_id=self.agent_id)
+        self._entities = EntityTypes(creds=self.creds, agent_id=self.agent_id)
+        self._flows = Flows(creds=self.creds, agent_id=self.agent_id)
+        self._pages = Pages(creds=self.creds)
+        self._webhooks = Webhooks(creds=self.creds, agent_id=self.agent_id)
+        self._route_groups = TransitionRouteGroups(
             creds=self.creds, agent_id=self.agent_id
         )
 
         # Generate maps
-        self.intents_map = self.intents.get_intents_map(agent_id=self.agent_id)
-        self.flows_map = self.flows.get_flows_map(agent_id=self.agent_id)
-        self.flows_map_rev = self.flows.get_flows_map(
+        self._intents_map = self._intents.get_intents_map(agent_id=self.agent_id)
+        time.sleep(delay)
+        self._flows_map = self._flows.get_flows_map(agent_id=self.agent_id)
+        time.sleep(delay)
+        self._flows_map_rev = self._flows.get_flows_map(
             agent_id=self.agent_id, reverse=True
         )
-        self.pages_map = {}
-        for flow_id in self.flows_map.keys():
-            self.pages_map[flow_id] = self.pages.get_pages_map(flow_id=flow_id)
-        self.pages_map_rev = {}
-        for flow_id in self.flows_map.keys():
-            self.pages_map_rev[flow_id] = self.pages.get_pages_map(
-                flow_id=flow_id, reverse=True
+        time.sleep(delay)
+        
+        self._pages_map = {}
+        self._pages_map_rev = {}
+        self._route_groups_map = {}
+        for fid in self._flows_map.keys():
+            self._pages_map[fid] = self._pages.get_pages_map(flow_id=fid)
+            time.sleep(delay)
+            self._pages_map_rev[fid] = self._pages.get_pages_map(
+                flow_id=fid, reverse=True
             )
-        self.route_groups_map = {}
-        for fid in self.flows_map.keys():
-            self.route_groups_map[fid] = self.route_groups.get_route_groups_map(
+            time.sleep(delay)
+            self._route_groups_map[fid] = self._route_groups.get_route_groups_map(
                 flow_id=fid
             )
+            time.sleep(delay)
 
         # Get intent, flow, and page data
-        self.intent_data = self.intents.list_intents(agent_id=self.agent_id)
-        self.flow_data = self._get_all_flow_data()
-        self.page_data = self._get_all_page_data()
-        self.route_group_data = self._get_all_route_group_data()
+        self._intent_data = self._intents.list_intents(agent_id=self.agent_id)
+        time.sleep(delay)
+        self._flow_data = self._get_all_flow_data(delay)
+        self._page_data = self._get_all_page_data(delay)
+        self._route_group_data = self._get_all_route_group_data(delay)
 
-    def _get_all_flow_data(self):
-        flow_list = self.flows.list_flows(self.agent_id)
+    def _get_all_flow_data(self, delay):
+        flow_list = self._flows.list_flows(self.agent_id)
+        time.sleep(delay)
         return {flow.name: flow for flow in flow_list}
 
-    def _get_all_page_data(self):
+    def _get_all_page_data(self, delay):
         page_data = {}
-        for flow_id in self.flows_map.keys():
-            page_list = self.pages.list_pages(flow_id=flow_id)
+        for flow_id in self._flows_map.keys():
+            page_list = self._pages.list_pages(flow_id=flow_id)
             page_data[flow_id] = {page.name: page for page in page_list}
+            time.sleep(delay)
         return page_data
 
-    def _get_all_route_group_data(self):
+    def _get_all_route_group_data(self, delay):
         route_group_data = {}
-        for flow_id in self.flows_map.keys():
-            group_list = self.route_groups.list_transition_route_groups(
+        for flow_id in self._flows_map.keys():
+            group_list = self._route_groups.list_transition_route_groups(
                 flow_id=flow_id
             )
             route_group_data[flow_id] = {rg.name: rg for rg in group_list}
+            time.sleep(delay)
         return route_group_data
 
     # Conversion utilities
@@ -151,14 +171,14 @@ class AgentCheckerUtil(ScrapiBase):
     def _convert_intent(self, intent_id):
         """Gets an intent display name from an intent ID"""
         intent_id_converted = str(self.agent_id) + "/intents/" + str(intent_id)
-        return self.intents_map.get(intent_id_converted, "")
+        return self._intents_map.get(intent_id_converted, "")
 
     def _convert_flow(self, flow_id):
         """Gets a flow display name from a flow ID"""
         if flow_id.split("/")[-1] == "-":
             return ""
         # flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
-        return self.flows_map.get(flow_id, "Default Start Flow")
+        return self._flows_map.get(flow_id, "Default Start Flow")
         # TODO: Should throw error instead of returning default
 
     # Note that flow id includes agent, normally...
@@ -171,16 +191,16 @@ class AgentCheckerUtil(ScrapiBase):
         elif page_id == "START_PAGE":
             return "Start"
         page_id_converted = str(flow_id) + "/pages/" + str(page_id)
-        if flow_id in self.pages_map:
-            return self.pages_map[flow_id].get(page_id_converted, "Start")
+        if flow_id in self._pages_map:
+            return self._pages_map[flow_id].get(page_id_converted, "Start")
             # TODO: Should throw error instead of returning default
-        print("Flow not found")
+        logging.info("Flow not found")
         # TODO: Should throw error, but returning this probably will anyway
         return "Invalid"
 
     def _get_intent_parameters(self, intent_name):
         """Gets the parameters for a particular intent, by display name"""
-        for intent in self.intent_data:
+        for intent in self._intent_data:
             if intent.display_name == intent_name:
                 return intent.parameters
         return None
@@ -209,21 +229,21 @@ class AgentCheckerUtil(ScrapiBase):
         """
         # Look up flow ID
         if flow_name:
-            flow_id = self.flows_map_rev.get(flow_name, None)
+            flow_id = self._flows_map_rev.get(flow_name, None)
         if not flow_id:
             raise Exception(f"Flow not found: {flow_name}")
         # Now that flow_id is set, look up the page
         # Special case for the start page
         if page_name == "Start" or (page_id and "START_PAGE" in page_id):
-            return self.flow_data[flow_id]
+            return self._flow_data[flow_id]
         # Look up page ID
         if page_name:
-            page_id = self.pages_map_rev[flow_id].get(page_name, None)
+            page_id = self._pages_map_rev[flow_id].get(page_name, None)
         if not page_id:
             if not page_name:
                 raise KeyError('Page not found. Did you forget "page_name="?')
             raise KeyError(f"Page not found: {page_name}")
-        return self.page_data[flow_id][page_id]
+        return self._page_data[flow_id][page_id]
 
     # Changelogs
 
@@ -248,14 +268,14 @@ class AgentCheckerUtil(ScrapiBase):
 
         params["conversation_path"].append(page_name)
         if params["verbose"]:
-            print(params["conversation_path"], params["intent_route_count"])
+            logging.info(params["conversation_path"], params["intent_route_count"])
 
         old_presets = params["presets"].copy()
         new_presets = self._get_new_presets(params["presets"], page, route)
         if "START_PAGE" in target_page:
-            next_page = self.flow_data[params["flow_id"]]
+            next_page = self._flow_data[params["flow_id"]]
         else:
-            next_page = self.page_data[params["flow_id"]][target_page]
+            next_page = self._page_data[params["flow_id"]][target_page]
         params["presets"] = new_presets
 
         self._find_reachable_pages_rec(next_page, params)
@@ -281,7 +301,7 @@ class AgentCheckerUtil(ScrapiBase):
         #    page_name = page.display_name
 
         if params["verbose"]:
-            print(page.display_name, "->", page_name)
+            logging.info(page.display_name, "->", page_name)
         if page_name == page.display_name or params["include_meta"]:
             if page_name not in params["reachable"]:
                 params["reachable"].append(page_name)
@@ -309,7 +329,7 @@ class AgentCheckerUtil(ScrapiBase):
         finding reachable pages
         """
         if not params["flow_name"]:
-            params["flow_name"] = self.flows_map[params["flow_id"]]
+            params["flow_name"] = self._flows_map[params["flow_id"]]
         target_page = route.target_page
         target_flow = route.target_flow
         if (
@@ -337,12 +357,12 @@ class AgentCheckerUtil(ScrapiBase):
                 # Don't continue on this path
                 return
             params["intent_route_count"] += 1
-        if target_page in self.page_data[params["flow_id"]]:
-            page_name = self.page_data[params["flow_id"]][
+        if target_page in self._page_data[params["flow_id"]]:
+            page_name = self._page_data[params["flow_id"]][
                 target_page
             ].display_name
             if params["verbose"]:
-                print(page.display_name, "->", page_name)
+                logging.info(page.display_name, "->", page_name)
             # Move to this page (this is also the recursion limiting step
             # to prevent infinite loops)
             if (
@@ -363,7 +383,7 @@ class AgentCheckerUtil(ScrapiBase):
             self._handle_meta_page(page, target_page, params)
         elif "START_PAGE" in target_page:
             if params["verbose"]:
-                print(page.display_name, "-> START PAGE")
+                logging.info(page.display_name, "-> START PAGE")
             page_name = "Start"
             if (page_name not in params["reachable"]
                 or (page_name in params["reachable"]
@@ -375,13 +395,13 @@ class AgentCheckerUtil(ScrapiBase):
                 self._continue_page_recursion(page, page_name, route,
                                               target_page, params)
         elif len(target_page) > 0:
-            print(page.display_name, "->", target_page)
+            logging.info(page.display_name, "->", target_page)
             # This should not happen, and if it does it needs to be fixed
             input()
         elif len(target_flow) > 0:
-            flow_name = self.flows_map[route.target_flow]
+            flow_name = self._flows_map[route.target_flow]
             if params["verbose"]:
-                print(page.display_name, "->", flow_name)
+                logging.info(page.display_name, "->", flow_name)
             if flow_name not in params["reachable"]:
                 params["reachable"].append(flow_name)
                 params["min_intent_counts"].append(
@@ -399,7 +419,7 @@ class AgentCheckerUtil(ScrapiBase):
                 ] = params["intent_route_count"]
         else:
             if params["verbose"]:
-                print(page.display_name, "->", route.target_flow, "(empty)")
+                logging.info(page.display_name, "->", route.target_flow, "(empty)")
             page_name = page.display_name
             if (
                 page_name in params["reachable"]
@@ -447,7 +467,7 @@ class AgentCheckerUtil(ScrapiBase):
                     new_presets[param_preset.parameter] = param_preset.value
         if hasattr(route, "intent") and route.intent != "":
             # Check the entities annotated on this intent
-            intent_name = self.intents_map[route.intent]
+            intent_name = self._intents_map[route.intent]
             intent_params = self._get_intent_parameters(intent_name)
             for param in intent_params:
                 new_presets[
@@ -464,8 +484,8 @@ class AgentCheckerUtil(ScrapiBase):
         starting at a particular page. Other parameters here are used for
         more general traversal, but not currently used."""
         if not params["flow_name"]:
-            params["flow_name"] = self.flows_map[params["flow_id"]]
-        if hasattr(page, "form") and page.form:
+            params["flow_name"] = self._flows_map[params["flow_id"]]
+        if hasattr(page, "form") and page.form: # if getattr(page, "form", None):
             for parameter in page.form.parameters:
                 self._process_form_parameter_for_reachable_pages(
                     page,
@@ -485,7 +505,7 @@ class AgentCheckerUtil(ScrapiBase):
         if params["include_groups"]:
             for route_group in page.transition_route_groups:
                 # TODO: Need to map by flow
-                for route in self.route_group_data[params["flow_id"]][
+                for route in self._route_group_data[params["flow_id"]][
                     route_group
                 ].transition_routes:
                     self._find_reachable_pages_rec_helper(page, route, params)
@@ -528,7 +548,7 @@ class AgentCheckerUtil(ScrapiBase):
                 self._find_reachable_pages_rec_helper(page, route, params)
         if params["include_groups"]:
             for route_group in page.transition_route_groups:
-                for route in self.route_group_data[params["flow_id"]][
+                for route in self._route_group_data[params["flow_id"]][
                     route_group
                 ].transition_routes:
                     if hasattr(route, "intent") and route.intent != "":
@@ -576,12 +596,12 @@ class AgentCheckerUtil(ScrapiBase):
         if not flow_id:
             if not flow_name:
                 raise Exception("One of flow_id or flow_name must be set")
-            if flow_name in self.flows_map_rev:
-                flow_id = self.flows_map_rev[flow_name]
+            if flow_name in self._flows_map_rev:
+                flow_id = self._flows_map_rev[flow_name]
             else:
                 raise Exception(f"Flow not found: {flow_name}")
-        if flow_id in self.flows_map:
-            flow_name = self.flows_map[flow_id]
+        if flow_id in self._flows_map:
+            flow_name = self._flows_map[flow_id]
         else:
             raise Exception(f"Flow not found: {flow_id}")
 
@@ -641,19 +661,19 @@ class AgentCheckerUtil(ScrapiBase):
         if not flow_id:
             if not flow_name:
                 raise Exception("One of flow_id or flow_name must be set")
-            if flow_name in self.flows_map_rev:
-                flow_id = self.flows_map_rev[flow_name]
+            if flow_name in self._flows_map_rev:
+                flow_id = self._flows_map_rev[flow_name]
             else:
                 raise Exception(f"Flow not found: {flow_name}")
-        if flow_id in self.flows_map:
-            flow_name = self.flows_map[flow_id]
+        if flow_id in self._flows_map:
+            flow_name = self._flows_map[flow_id]
         else:
             raise Exception(f"Flow not found: {flow_id}")
 
         reachable = self.find_reachable_pages(
             flow_id, flow_name, include_groups=include_groups, verbose=verbose
         )
-        return list(set(self.pages_map[flow_id].values()) - set(reachable))
+        return list(set(self._pages_map[flow_id].values()) - set(reachable))
 
     def find_all_reachable_pages(
         self,
@@ -673,7 +693,7 @@ class AgentCheckerUtil(ScrapiBase):
         """
         flow_names = []
         page_names = []
-        for flow_id, flow_name in self.flows_map.items():
+        for flow_id, flow_name in self._flows_map.items():
             reachable = self.find_reachable_pages(
                 flow_id=flow_id,
                 include_groups=include_groups,
@@ -701,7 +721,7 @@ class AgentCheckerUtil(ScrapiBase):
         """
         flow_names = []
         page_names = []
-        for flow_id, flow_name in self.flows_map.items():
+        for flow_id, flow_name in self._flows_map.items():
             unreachable = self.find_unreachable_pages(
                 flow_id=flow_id,
                 include_groups=include_groups,
@@ -719,7 +739,9 @@ class AgentCheckerUtil(ScrapiBase):
         """Helper function which adds intents from routes to a list of intents
 
         Args:
-          transition_list, The list of transition routes
+          transition_list: The list of transition routes
+          route_group (Optional): The route group where the route is
+            located.
 
         Returns:
           A dictionary with keys 'intents' and 'routegroups' which each contain
@@ -731,7 +753,7 @@ class AgentCheckerUtil(ScrapiBase):
             # Ignore empty intents (such as the true condition)
             if len(route.intent) == 0:
                 continue
-            intent = self.intents_map[route.intent]
+            intent = self._intents_map[route.intent]
             if intent not in intents:
                 intents.append(intent)
                 if route_group is not None:
@@ -773,12 +795,12 @@ class AgentCheckerUtil(ScrapiBase):
         page_routegroups.extend(route_intent_dict["routegroups"])
 
         if not flow_id:
-            flow_id = self.flows_map_rev[flow_name]
+            flow_id = self._flows_map_rev[flow_name]
 
         # Get intents in transition route groups
         if include_groups:
             for route_group_id in page.transition_route_groups:
-                route_group = self.route_group_data[flow_id][route_group_id]
+                route_group = self._route_group_data[flow_id][route_group_id]
                 route_intent_dict = self._get_intents_from_routes(
                     route_group.transition_routes,
                     route_group
@@ -813,7 +835,7 @@ class AgentCheckerUtil(ScrapiBase):
             flow_name=flow_name,
             include_groups=include_groups)
         for page_name in reachable_pages:
-            if page_name not in self.flows_map_rev:
+            if page_name not in self._flows_map_rev:
                 page_intents = set(self._get_page_intents(
                     flow_name=flow_name,
                     page_name=page_name,
@@ -832,7 +854,7 @@ class AgentCheckerUtil(ScrapiBase):
             flows - a list of flow display names that use this intent
         """
         intents = defaultdict(lambda: [])
-        for flow_name in self.flows_map_rev:
+        for flow_name in self._flows_map_rev:
             flow_intents = self.find_reachable_intents(flow_name=flow_name,
                                                        include_groups=True)
             for intent in flow_intents:
@@ -852,13 +874,9 @@ class AgentCheckerUtil(ScrapiBase):
             A list of unreachable intent display names
         """
         all_reachable_intents = set()
-        for flow_name in self.flows_map_rev:
+        for flow_name in self._flows_map_rev:
             flow_intents = self.find_reachable_intents(flow_name=flow_name,
                                                        include_groups=True)
             all_reachable_intents.update(set(flow_intents))
-        unreachable_intents = []
-        for intent in self.intent_data:
-            if intent.display_name in all_reachable_intents:
-                continue
-            unreachable_intents.append(intent.display_name)
-        return unreachable_intents
+        all_intents = {intent.display_name for intent in self._intent_data}
+        return all_intents - all_reachable_intents
