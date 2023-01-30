@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import logging
+from dataclasses import dataclass
 from typing import List, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import Page
@@ -160,127 +161,8 @@ class PageBuilder(BuildersCommon):
         """Provide some stats about the Page."""
         self._check_proto_obj_attr_exist()
 
-        # Entry Fulfillment
-        has_entry_fulfill = bool(self.proto_obj.entry_fulfillment)
-        has_entry_fulfill_str = f"Has entry fulfillment: {has_entry_fulfill}"
-
-        # Transition Routes
-        transition_routes_count = len(self.proto_obj.transition_routes)
-        routes_with_fulfill_count = 0
-        routes_with_webhook_fulfill_count = 0
-        intent_routes_count = 0
-        cond_routes_count = 0
-        intent_and_cond_routes_count = 0
-        for tr in self.proto_obj.transition_routes:
-            if tr.trigger_fulfillment:
-                routes_with_fulfill_count += 1
-                fb = FulfillmentBuilder(tr.trigger_fulfillment)
-                if fb.has_webhook():
-                    routes_with_webhook_fulfill_count += 1
-            if tr.intent and tr.condition:
-                intent_and_cond_routes_count += 1
-            elif tr.intent and not tr.condition:
-                intent_routes_count += 1
-            elif not tr.intent and tr.condition:
-                cond_routes_count += 1
-        transition_routes_str = (
-            f"# of Transition Routes: {transition_routes_count}"
-        )
-        routes_with_fulfill_str = (
-            f"# of routes with fulfillment: {routes_with_fulfill_count}"
-        )
-        routes_with_webhook_fulfill_str = (
-            "# of routes uses webhook for fulfillment:"
-            f" {routes_with_webhook_fulfill_count}"
-        )
-        intent_routes_str = f"# of intent routes: {intent_routes_count}"
-        cond_routes_str = f"# of condition routes: {cond_routes_count}"
-        intent_and_cond_routes_str = (
-            f"# of intent and condition routes: {intent_and_cond_routes_count}"
-        )
-
-        routes_stats_str = (
-            f"\n{transition_routes_str}\n\t{intent_routes_str}"
-            f"\n\t{cond_routes_str}\n\t{intent_and_cond_routes_str}"
-            f"\n\t{routes_with_fulfill_str}"
-            f"\n\t{routes_with_webhook_fulfill_str}"
-        )
-
-        # Parameters
-        parameters_count = len(self.proto_obj.form.parameters)
-        parameters_with_event_handler_count = 0
-        parameters_with_webhook_fulfill_count = 0
-        for param in self.proto_obj.form.parameters:
-            fb = FulfillmentBuilder(
-                param.fill_behavior.initial_prompt_fulfillment
-            )
-            if fb.has_webhook():
-                parameters_with_webhook_fulfill_count += 1
-            if param.fill_behavior.reprompt_event_handlers:
-                parameters_with_event_handler_count += 1
-
-        if parameters_count != 0:
-            parameters_ratio = (
-                parameters_with_event_handler_count/parameters_count
-            )
-        else:
-            parameters_ratio = 0
-        parameters_str = f"# of Parameters: {parameters_count}"
-        parameters_with_event_handler_str = (
-            "# of Parameters with Event Handlers:"
-            f" {parameters_with_event_handler_count}"
-            f" (Ratio: {parameters_ratio})"
-        )
-        parameters_with_webhook_fulfill_str = (
-            "# of Parameters uses webhook for fulfillment:"
-            f" {parameters_with_webhook_fulfill_count}"
-        )
-
-        params_stats_str = (
-            f"\n{parameters_str}\n\t{parameters_with_event_handler_str}"
-            f"\n\t{parameters_with_webhook_fulfill_str}"
-        )
-
-        # Event Handlers
-        event_handlers_count = len(self.proto_obj.event_handlers)
-        events_with_fulfill_count = 0
-        events_with_webhook_fulfill_count = 0
-        for eh in self.proto_obj.event_handlers:
-            fb = FulfillmentBuilder(eh.trigger_fulfillment)
-            if fb.has_webhook():
-                events_with_webhook_fulfill_count += 1
-            if eh.trigger_fulfillment:
-                events_with_fulfill_count += 1
-        event_handlers_str = f"# of Event Handlers: {event_handlers_count}"
-        events_with_fulfill_str = (
-            "# of Event Handlers with fulfillment:"
-            f" {events_with_fulfill_count}"
-        )
-        events_with_webhook_fulfill_str = (
-            "# of Event Handlers uses webhook for fulfillment:"
-            f" {events_with_webhook_fulfill_count}"
-        )
-
-        events_stats_str = (
-            f"\n{event_handlers_str}\n\t{events_with_fulfill_str}"
-            f"\n\t{events_with_webhook_fulfill_str}"
-        )
-
-        # Transition Route Groups
-        transition_route_groups_count = len(
-            self.proto_obj.transition_route_groups
-        )
-        transition_route_groups_str = (
-            f"# of Transition Route Groups: {transition_route_groups_count}"
-        )
-        route_groups_stats_str = f"\n{transition_route_groups_str}"
-
-        # Create the output string
-        out = (
-            f"{has_entry_fulfill_str}{routes_stats_str}{params_stats_str}"
-            f"{events_stats_str}{route_groups_stats_str}"
-        )
-        print(out)
+        stats_instance = PageStats(self.proto_obj)
+        stats_instance.generate_stats()
 
 
     def create_new_proto_obj(
@@ -684,3 +566,176 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.transition_route_groups = new_trgs
 
         return self.proto_obj
+
+
+
+@dataclass
+class PageStats():
+    """A class for tracking the stats of CX Page object."""
+    page_proto_obj: Page
+
+    # Entry Fulfillment
+    has_entry_fulfill: bool = False
+
+    # Parameters
+    parameters_count: int = 0
+    parameters_with_event_handler_count: int = 0
+    parameters_with_webhook_fulfill_count: int = 0
+    parameters_ratio: int = 0
+
+    # Transition Routes 
+    transition_routes_count: int = 0
+    routes_with_fulfill_count: int = 0
+    routes_with_webhook_fulfill_count: int = 0
+    intent_routes_count: int = 0
+    cond_routes_count: int = 0
+    intent_and_cond_routes_count: int = 0
+
+    # Event Handlers
+    event_handlers_count: int = 0
+    events_with_fulfill_count: int = 0
+    events_with_webhook_fulfill_count: int = 0
+
+    # Transition Route Groups
+    transition_route_groups_count: int = 0
+
+
+    def calc_transition_route_stats(self):
+        """Calculating TransitionRoute related stats."""
+        self.transition_routes_count = len(self.page_proto_obj.transition_routes)
+        for tr in self.page_proto_obj.transition_routes:
+            if tr.trigger_fulfillment:
+                self.routes_with_fulfill_count += 1
+                fb = FulfillmentBuilder(tr.trigger_fulfillment)
+                if fb.has_webhook():
+                    self.routes_with_webhook_fulfill_count += 1
+            if tr.intent and tr.condition:
+                self.intent_and_cond_routes_count += 1
+            elif tr.intent and not tr.condition:
+                self.intent_routes_count += 1
+            elif not tr.intent and tr.condition:
+                self.cond_routes_count += 1
+
+    def create_transition_route_str(self) -> str:
+        """String representation of TransitionRoutes stats."""
+        transition_routes_str = (
+            f"# of Transition Routes: {self.transition_routes_count}"
+        )
+        routes_with_fulfill_str = (
+            f"# of routes with fulfillment: {self.routes_with_fulfill_count}"
+        )
+        routes_with_webhook_fulfill_str = (
+            "# of routes uses webhook for fulfillment:"
+            f" {self.routes_with_webhook_fulfill_count}"
+        )
+        intent_routes_str = f"# of intent routes: {self.intent_routes_count}"
+        cond_routes_str = f"# of condition routes: {self.cond_routes_count}"
+        intent_and_cond_routes_str = (
+            f"# of intent and condition routes: {self.intent_and_cond_routes_count}"
+        )
+
+        return (
+            f"{transition_routes_str}\n\t{intent_routes_str}"
+            f"\n\t{cond_routes_str}\n\t{intent_and_cond_routes_str}"
+            f"\n\t{routes_with_fulfill_str}"
+            f"\n\t{routes_with_webhook_fulfill_str}"
+        )
+
+
+    def calc_event_handler_stats(self):
+        """Calculating EventHandler related stats."""
+        event_handlers_count = len(self.page_proto_obj.event_handlers)
+        for eh in self.page_proto_obj.event_handlers:
+            fb = FulfillmentBuilder(eh.trigger_fulfillment)
+            if fb.has_webhook():
+                self.events_with_webhook_fulfill_count += 1
+            if eh.trigger_fulfillment:
+                self.events_with_fulfill_count += 1
+
+    def create_event_handler_str(self) -> str:
+        """String representation of EventHandlers stats."""
+        event_handlers_str = f"# of Event Handlers: {self.event_handlers_count}"
+        events_with_fulfill_str = (
+            "# of Event Handlers with fulfillment:"
+            f" {self.events_with_fulfill_count}"
+        )
+        events_with_webhook_fulfill_str = (
+            "# of Event Handlers uses webhook for fulfillment:"
+            f" {self.events_with_webhook_fulfill_count}"
+        )
+
+        return (
+            f"{event_handlers_str}\n\t{events_with_fulfill_str}"
+            f"\n\t{events_with_webhook_fulfill_str}"
+        )
+
+
+    def calc_parameter_stats(self):
+        """Calculating Parameter related stats."""
+        self.parameters_count = len(self.page_proto_obj.form.parameters)
+        for param in self.page_proto_obj.form.parameters:
+            fb = FulfillmentBuilder(
+                param.fill_behavior.initial_prompt_fulfillment
+            )
+            if fb.has_webhook():
+                self.parameters_with_webhook_fulfill_count += 1
+            if param.fill_behavior.reprompt_event_handlers:
+                self.parameters_with_event_handler_count += 1
+
+        if self.parameters_count != 0:
+            self.parameters_ratio = (
+                self.parameters_with_event_handler_count/self.parameters_count
+            )
+
+    def create_parameter_str(self) -> str:
+        """String representation of Page's parameters stats."""
+        parameters_str = f"# of Parameters: {self.parameters_count}"
+        parameters_with_event_handler_str = (
+            "# of Parameters with Event Handlers:"
+            f" {self.parameters_with_event_handler_count}"
+            f" (Ratio: {self.parameters_ratio})"
+        )
+        parameters_with_webhook_fulfill_str = (
+            "# of Parameters uses webhook for fulfillment:"
+            f" {self.parameters_with_webhook_fulfill_count}"
+        )
+
+        return (
+            f"{parameters_str}\n\t{parameters_with_event_handler_str}"
+            f"\n\t{parameters_with_webhook_fulfill_str}"
+        )
+
+
+    def create_entry_fulfillment_str(self) -> str:
+        """String representation for Page's Entry Fulfillment."""
+        self.has_entry_fulfill = bool(self.page_proto_obj.entry_fulfillment)
+        return f"Has entry fulfillment: {self.has_entry_fulfill}"
+
+
+    def create_transition_route_group_str(self) -> str:
+        """String representation of TransitionRouteGroup stats."""
+        transition_route_groups_count = len(
+            self.page_proto_obj.transition_route_groups
+        )
+        return (
+            f"# of Transition Route Groups: {self.transition_route_groups_count}"
+        )
+
+
+    def generate_stats(self):
+        """Generate stats for the Page."""
+        self.calc_parameter_stats()
+        self.calc_transition_route_stats()
+        self.calc_event_handler_stats()
+
+        has_entry_fulfill_str = self.create_entry_fulfillment_str()
+        params_stats_str = self.create_parameter_str()
+        routes_stats_str = self.create_transition_route_str()
+        events_stats_str = self.create_event_handler_str()
+        route_groups_stats_str = self.create_transition_route_group_str()
+        
+        out = (
+            f"{has_entry_fulfill_str}\n{params_stats_str}\n{routes_stats_str}"
+            f"\n{events_stats_str}\n{route_groups_stats_str}"
+        )
+        print(out)

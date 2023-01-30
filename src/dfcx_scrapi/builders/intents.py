@@ -18,6 +18,8 @@ import logging
 from string import ascii_lowercase
 from string import digits
 from collections import defaultdict
+from dataclasses import dataclass
+from dataclasses import field
 from typing import List, Dict, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import Intent
@@ -209,50 +211,8 @@ class IntentBuilder(BuildersCommon):
         """Provide some stats about the intent."""
         self._check_proto_obj_attr_exist()
 
-        repeat_count_dict = defaultdict(lambda: 0)
-        annotated_count = 0
-        for tp in self.proto_obj.training_phrases:
-            repeat_count_dict[tp.repeat_count] += 1
-
-            for part in tp.parts:
-                if part.parameter_id:
-                    annotated_count += 1
-                    break
-
-        phrases_count = len(self.proto_obj.training_phrases)
-        params_count = len(self.proto_obj.parameters)
-        annotated_pct = round(100*annotated_count/phrases_count, 1)
-        uniques_count = repeat_count_dict[1]
-        uniques_pct = round(100*uniques_count/phrases_count, 1)
-        non_uniques_count = phrases_count - uniques_count
-        non_uniques_pct = round(100*non_uniques_count/phrases_count, 1)
-
-        phrases_str = f"# of training phrases: {phrases_count}"
-        params_str = f"# of parameters: {params_count}"
-        annotated_str = (
-            "Annotated training phrases:"
-            f" {annotated_pct}% ({annotated_count})"
-        )
-
-        uniques_str = (
-            "Unique training phrases:"
-            f" {uniques_pct}% ({uniques_count})"
-        )
-        non_uniques_str = (
-            "Non-unique training phrases:"
-            f" {non_uniques_pct}% ({non_uniques_count})"
-        )
-
-        repeat_count_srt = "\n\t".join([
-            f"with repeat count {i}: {repeat_count_dict[i]}"
-            for i in sorted(repeat_count_dict.keys())
-        ])
-
-        out = (
-            f"{phrases_str}\n{annotated_str}\n{params_str}\n"
-            f"\n{uniques_str}\n{non_uniques_str}\n\t{repeat_count_srt}"
-        )
-        print(out)
+        stats_instance = IntentStats(self.proto_obj)
+        stats_instance.generate_stats()
 
 
     def parameter_checking(self, raise_error: bool = False) -> bool:
@@ -637,3 +597,92 @@ class IntentBuilder(BuildersCommon):
             )
 
         return self.proto_obj
+
+
+
+@dataclass
+class IntentStats():
+    """A class for tracking the stats of CX Intent object."""
+    intent_proto_obj: Intent
+
+    # Training Phrases
+    repeat_count_dict: Dict[int, int] = field(
+        default_factory=lambda: defaultdict(int)
+    )
+    annotated_count: int = 0
+    phrases_count: int = 0
+    annotated_pct: int = 0
+    uniques_count: int = 0
+    uniques_pct: int = 0
+    non_uniques_count: int = 0
+    non_uniques_pct: int = 0
+
+    # Parameters
+    params_count: int = 0
+
+
+    def calc_tps_stats(self):
+        """Calculating stats related to training phrases."""
+        for tp in self.intent_proto_obj.training_phrases:
+            self.repeat_count_dict[tp.repeat_count] += 1
+
+            for part in tp.parts:
+                if part.parameter_id:
+                    self.annotated_count += 1
+                    break
+
+
+        self.phrases_count = len(self.intent_proto_obj.training_phrases)
+        self.uniques_count = self.repeat_count_dict[1]
+        self.non_uniques_count = self.phrases_count - self.uniques_count
+
+        annot_pct = 100 * (self.annotated_count / self.phrases_count)
+        uniq_pct = 100 * (self.uniques_count / self.phrases_count)
+        non_uniq_pct = 100 * (self.non_uniques_count / self.phrases_count)
+        self.annotated_pct = round(annot_pct, 1)
+        self.uniques_pct = round(uniq_pct, 1)
+        self.non_uniques_pct = round(non_uniq_pct, 1)
+
+    def create_tps_str(self) -> str:
+        """String representation of stats related to training phrases."""
+        phrases_str = f"# of training phrases: {self.phrases_count}"
+        annotated_str = (
+            "Annotated training phrases:"
+            f" {self.annotated_pct}% ({self.annotated_count})"
+        )
+
+        uniques_str = (
+            "Unique training phrases:"
+            f" {self.uniques_pct}% ({self.uniques_count})"
+        )
+        non_uniques_str = (
+            "Non-unique training phrases:"
+            f" {self.non_uniques_pct}% ({self.non_uniques_count})"
+        )
+
+        repeat_count_srt = "\n\t".join([
+            f"with repeat count {i}: {self.repeat_count_dict[i]}"
+            for i in sorted(self.repeat_count_dict.keys())
+        ])
+
+        return (
+            f"{phrases_str}\n{annotated_str}\n"
+            f"\n{uniques_str}\n{non_uniques_str}\n\t{repeat_count_srt}"
+        )
+
+
+    def create_parameter_str(self) -> str:
+        """String representation Intent's parameters.."""
+        self.params_count = len(self.intent_proto_obj.parameters)
+        return f"# of parameters: {self.params_count}"
+
+
+    def generate_stats(self):
+        """Generate stats for the Intent."""
+        self.calc_tps_stats()
+
+        tps_str = self.create_tps_str()
+        params_str = self.create_parameter_str()
+
+        out = f"{params_str}\n{tps_str}"
+        print(out)
