@@ -84,13 +84,10 @@ class AgentCheckerUtil(ScrapiBase):
     ):
         """
         Args:
+          agent_id (required): The agent ID
           delay (optional): The time in seconds to wait between CX API calls,
-            if you need to limit the rate. 
-            
-            TODO: Total number of API calls made when
-            initializing this class is currently 5 + 5*(number of flows). This
-            can be optimized down to 2 + 2*(number of flows) by manually
-            creating the maps after listing the objects.
+            if you need to limit the rate. The number of API calls used in this
+            initialization is 2*(number of flows) + 2.
         """
         super().__init__(
             creds_path=creds_path,
@@ -111,43 +108,43 @@ class AgentCheckerUtil(ScrapiBase):
         self._route_groups = TransitionRouteGroups(
             creds=self.creds, agent_id=self.agent_id
         )
-        
+
         # Intent data (1 API call)
         self._intent_data = self._intents.list_intents(agent_id=self.agent_id)
         # Intents map (0 API calls)
         self._intents_map = {
             intent.name: intent.display_name for intent in self._intent_data
         }
-        
+
         # Flow data (1 API call)
         self._flow_data = self._get_all_flow_data(delay)
         # Flows maps (0 API calls)
         self._flows_map = {
-            flow.name: flow.display_name for flow in self._flow_data
+            flow.name: flow.display_name for flow in self._flow_data.values()
         }
         self._flows_map_rev = {
-            flow.display_name: flow.name for flow in self._flow_data
+            flow.display_name: flow.name for flow in self._flow_data.values()
         }
-        
+
         # Page data (len(flows) API calls)
         self._page_data = self._get_all_page_data(delay)
-        
+
         # Route group data (len(flows) API calls)
         self._route_group_data = self._get_all_route_group_data(delay)
-        
+
         # Pages and route groups maps (0 API calls)
         self._pages_map = {}
         self._pages_map_rev = {}
         self._route_groups_map = {}
         for fid in self._flows_map.keys():
             self._pages_map[fid] = {
-                page.name: page.display_name for page in self._page_data[fid]
+                page.name: page.display_name for page in self._page_data[fid].values()
             }
             self._pages_map_rev[fid] = {
-                page.display_name: page.name for page in self._page_data[fid]
+                page.display_name: page.name for page in self._page_data[fid].values()
             }
             self._route_groups_map[fid] = {
-                rg.name: rg.display_name for rg in self._route_group_data[fid]
+                rg.name: rg.display_name for rg in self._route_group_data[fid].values()
             }
         # Total API calls: 2*len(flows) + 2
 
@@ -202,7 +199,6 @@ class AgentCheckerUtil(ScrapiBase):
         page_id_converted = str(flow_id) + "/pages/" + str(page_id)
         if flow_id in self._pages_map:
             return self._pages_map[flow_id].get(page_id_converted, "Start")
-            # TODO: Should throw error instead of returning default
         logging.info("Flow not found")
         # TODO: Should throw error, but returning this probably will anyway
         return "Invalid"
@@ -335,20 +331,15 @@ class AgentCheckerUtil(ScrapiBase):
         """Helper function for the recursion involved in
         finding reachable pages
         """
-        # TODO: Is this even used?
-        if not params["flow_name"]:
-            params["flow_name"] = self._flows_map[params["flow_id"]]
         target_page = route.target_page
         target_flow = route.target_flow
-        # TODO: Can this just be route.intent? Or do event routes give an error from this?
         if (
-            hasattr(route, "intent") and route.intent != ""
+            getattr(route, "intent", "") != ""
             and params["intent_route_limit"]
             and params["intent_route_count"] >= params["intent_route_limit"]
         ):
             return
-        # TODO: Could also change to a check on isinstance(page, DFCXPage)
-        if hasattr(page, "form") and page.form:
+        if isinstance(page, DFCXPage):
             for parameter in page.form.parameters:
                 parameter_name = parameter.display_name
                 # Need to also account for parameters being
@@ -362,8 +353,7 @@ class AgentCheckerUtil(ScrapiBase):
                         and not is_initial
                     ):
                         return
-        # TODO: Just route.intent?
-        if hasattr(route, "intent") and route.intent != "":
+        if getattr(route, "intent", "") != "":
             if params["limit_intent_to_initial"] and not is_initial:
                 # Don't continue on this path
                 return
@@ -376,7 +366,6 @@ class AgentCheckerUtil(ScrapiBase):
                 logging.info(page.display_name, "->", page_name)
             # Move to this page (this is also the recursion limiting step
             # to prevent infinite loops)
-            # TODO: Condition can be simplified
             if (
                 page_name not in params["reachable"]
                 or (page_name in params["reachable"]
@@ -397,7 +386,6 @@ class AgentCheckerUtil(ScrapiBase):
             if params["verbose"]:
                 logging.info(page.display_name, "-> START PAGE")
             page_name = "Start"
-            # TODO: Condition can be simplified
             if (page_name not in params["reachable"]
                 or (page_name in params["reachable"]
                 and params["intent_route_count"]
@@ -410,7 +398,7 @@ class AgentCheckerUtil(ScrapiBase):
         elif len(target_page) > 0:
             logging.info(page.display_name, "->", target_page)
             # This should not happen, and if it does it needs to be fixed
-            input()
+            logging.error(f"Page target not in list of pages: {target_page}")
         elif len(target_flow) > 0:
             flow_name = self._flows_map[route.target_flow]
             if params["verbose"]:
@@ -432,7 +420,8 @@ class AgentCheckerUtil(ScrapiBase):
                 ] = params["intent_route_count"]
         else:
             if params["verbose"]:
-                logging.info(page.display_name, "->", route.target_flow, "(empty)")
+                logging.info(page.display_name, "->", 
+                    route.target_flow, "(empty)")
             page_name = page.display_name
             if (
                 page_name in params["reachable"]
@@ -449,49 +438,21 @@ class AgentCheckerUtil(ScrapiBase):
         """Gets parameter presets that have been added on a given route.
         """
         new_presets = presets.copy()
-        # TODO: Change to check isinstance(page, DFCXPage)
-        if hasattr(page, "entry_fulfillment"):
-            # TODO: Unnecessary
-            if hasattr(page.entry_fulfillment, "set_parameter_actions"):
-                for (
-                    param_preset
-                ) in page.entry_fulfillment.set_parameter_actions:
-                    new_presets[param_preset.parameter] = param_preset.value
-        # TODO: Combine into previous condition, since again, only DFCXPages have forms
-        if hasattr(page, "form"):
+        if isinstance(page, DFCXPage):
+            for preset in page.entry_fulfillment.set_parameter_actions:
+                new_presets[preset.parameter] = preset.value
             for parameter in page.form.parameters:
-                # TODO: Probably unnecessary
-                if (hasattr(parameter, "fill_behavior")
-                    and hasattr(
-                        parameter.fill_behavior,
-                        "initial_prompt_fulfillment",
-                    )
-                    and hasattr(
-                        parameter.fill_behavior.initial_prompt_fulfillment,
-                        "set_parameter_actions",
-                    )
-                ):
-                    ipf = parameter.fill_behavior.initial_prompt_fulfillment
-                    for param_preset in ipf.set_parameter_actions:
-                        new_presets[
-                            param_preset.parameter
-                        ] = param_preset.value
-        # TODO: Probably unnecessary?
-        if hasattr(route, "trigger_fulfillment"):
-            if hasattr(route.trigger_fulfillment, "set_parameter_actions"):
-                for (
-                    param_preset
-                ) in route.trigger_fulfillment.set_parameter_actions:
-                    new_presets[param_preset.parameter] = param_preset.value
-        # TODO: Just use route.intent?
-        if hasattr(route, "intent") and route.intent != "":
+                ipf = parameter.fill_behavior.initial_prompt_fulfillment
+                for preset in ipf.set_parameter_actions:
+                    new_presets[preset.parameter] = preset.value
+        for preset in route.trigger_fulfillment.set_parameter_actions:
+            new_presets[preset.parameter] = preset.value
+        if getattr(route, "intent", "") != "":
             # Check the entities annotated on this intent
             intent_name = self._intents_map[route.intent]
             intent_params = self._get_intent_parameters(intent_name)
             for param in intent_params:
-                new_presets[
-                    param.id
-                ] = f"(potentially set by {intent_name})"
+                new_presets[param.id] = f"(potentially set by {intent_name})"
         return new_presets
 
     def _find_reachable_pages_rec(
@@ -504,25 +465,18 @@ class AgentCheckerUtil(ScrapiBase):
         """Recursive function to find reachable pages within a given flow,
         starting at a particular page. Other parameters here are used for
         more general traversal options."""
-        # TODO: Is this used?
-        if not params["flow_name"]:
-            params["flow_name"] = self._flows_map[params["flow_id"]]
-        # TODO: Change to check isinstance(page, DFCXPage)
-        if hasattr(page, "form") and page.form: # if getattr(page, "form", None):
+        if isinstance(page, DFCXPage):
             for parameter in page.form.parameters:
                 self._process_form_parameter_for_reachable_pages(
                     page,
                     parameter,
                     params,
-                    is_initial=is_initial
-                )
+                    is_initial=is_initial)
         for event_handler in page.event_handlers:
             if params["limit_intent_to_initial"] and not is_initial:
                 continue
-            # TODO: Pretty sure this is always true, but the idea was to not continue if there is no transition
-            if hasattr(event_handler, "target_page") or hasattr(
-                event_handler, "target_flow"
-            ):
+            if (event_handler.target_page != "" 
+                or event_handler.target_flow != ""):
                 self._find_reachable_pages_rec_helper(page,
                                                       event_handler,
                                                       params,
@@ -561,10 +515,8 @@ class AgentCheckerUtil(ScrapiBase):
         for event_handler in parameter.fill_behavior.reprompt_event_handlers:
             if params["limit_intent_to_initial"] and not is_initial:
                 continue
-            # TODO: Pretty sure this is always true, but the idea was to not continue if there is no transition
-            if hasattr(event_handler, "target_page") or hasattr(
-                event_handler, "target_flow"
-            ):
+            if (event_handler.target_page != "" 
+                or event_handler.target_flow != ""):
                 self._find_reachable_pages_rec_helper(page,
                                                       event_handler,
                                                       params,
@@ -577,17 +529,14 @@ class AgentCheckerUtil(ScrapiBase):
     ):
         page = self._flow_data[params["flow_id"]]
         for event_handler in page.event_handlers:
-            # TODO: Pretty sure this is always true, but the idea was to not continue if there is no transition
-            if hasattr(event_handler, "target_page") or hasattr(
-                event_handler, "target_flow"
-            ):
+            if (event_handler.target_page != "" 
+                or event_handler.target_flow != ""):
                 self._find_reachable_pages_rec_helper(page,
                                                       event_handler,
                                                       params,
                                                       is_initial=is_initial)
         for route in page.transition_routes:
-            # TODO: Just use route.intent?
-            if hasattr(route, "intent") and route.intent != "":
+            if route.intent:
                 self._find_reachable_pages_rec_helper(
                     page, route, params, is_initial=is_initial)
         if params["include_groups"]:
@@ -595,8 +544,7 @@ class AgentCheckerUtil(ScrapiBase):
                 for route in self._route_group_data[params["flow_id"]][
                     route_group
                 ].transition_routes:
-                    # TODO: Just use route.intent?
-                    if hasattr(route, "intent") and route.intent != "":
+                    if route.intent:
                         self._find_reachable_pages_rec_helper(
                             page, route, params, is_initial=is_initial)
 
