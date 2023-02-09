@@ -1,6 +1,6 @@
 """A set of builder methods to create CX proto resource objects"""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +18,12 @@ import logging
 from string import ascii_lowercase
 from string import digits
 from collections import defaultdict
+from dataclasses import dataclass
+from dataclasses import field
 from typing import List, Dict, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import Intent
+from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config
 logging.basicConfig(
@@ -30,36 +33,20 @@ logging.basicConfig(
 )
 
 
-class IntentBuilder:
+class IntentBuilder(BuildersCommon):
     """Base Class for CX Intent builder."""
 
-    def __init__(self, obj: Intent = None):
-        self.proto_obj = None
-        if obj:
-            self.load_intent(obj)
+    _proto_type = Intent
+    _proto_type_str = "Intent"
 
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         return (f"{self._show_basic_info()}"
             f"\n\n{self._show_parameters()}"
             f"\n\n{self._show_training_phrases()}")
-
-
-    def _check_intent_exist(self):
-        """Check if the proto_obj exists otherwise raise an error."""
-        if not self.proto_obj:
-            raise ValueError(
-                "There is no proto_obj!"
-                "\nUse create_new_intent or load_intent to continue."
-            )
-        elif not isinstance(self.proto_obj, Intent):
-            raise ValueError(
-                "proto_obj is not an Intent type."
-                "\nPlease create or load the correct type to continue."
-            )
 
 
     def _include_spaces_to_phrase(self, phrase: List[str], annots: List[str]):
@@ -137,7 +124,7 @@ class IntentBuilder:
 
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         labels = [
             str(key) if key == val else f"{key}: {val}"
@@ -152,7 +139,7 @@ class IntentBuilder:
 
     def _show_parameters(self) -> str:
         """String representation for the parameters of proto_obj."""
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         return "\n".join([
             (f"parameter_id: {str(param.id)}"
@@ -165,7 +152,7 @@ class IntentBuilder:
 
     def _show_training_phrases(self, repeat_count: int = None) -> str:
         """String representation for the training phrases of proto_obj."""
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         phrases = []
         for tp in self.proto_obj.training_phrases:
@@ -200,7 +187,7 @@ class IntentBuilder:
             Indicates how many times the training phrases
             was added to the intent.
         """
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         self.parameter_checking()
 
@@ -222,50 +209,10 @@ class IntentBuilder:
 
     def show_stats(self):
         """Provide some stats about the intent."""
-        repeat_count_dict = defaultdict(lambda: 0)
-        annotated_count = 0
-        for tp in self.proto_obj.training_phrases:
-            repeat_count_dict[tp.repeat_count] += 1
+        self._check_proto_obj_attr_exist()
 
-            for part in tp.parts:
-                if part.parameter_id:
-                    annotated_count += 1
-                    break
-
-        phrases_count = len(self.proto_obj.training_phrases)
-        params_count = len(self.proto_obj.parameters)
-        annotated_pct = round(100*annotated_count/phrases_count, 1)
-        uniques_count = repeat_count_dict[1]
-        uniques_pct = round(100*uniques_count/phrases_count, 1)
-        non_uniques_count = phrases_count - uniques_count
-        non_uniques_pct = round(100*non_uniques_count/phrases_count, 1)
-
-        phrases_str = f"# of training phrases: {phrases_count}"
-        params_str = f"# of parameters: {params_count}"
-        annotated_str = (
-            "Annotated training phrases:"
-            f" {annotated_pct}% ({annotated_count})"
-        )
-
-        uniques_str = (
-            "Unique training phrases:"
-            f" {uniques_pct}% ({uniques_count})"
-        )
-        non_uniques_str = (
-            "Non-unique training phrases:"
-            f" {non_uniques_pct}% ({non_uniques_count})"
-        )
-
-        repeat_count_srt = "\n\t".join([
-            f"with repeat count {i}: {repeat_count_dict[i]}"
-            for i in sorted(repeat_count_dict.keys())
-        ])
-
-        out = (
-            f"{phrases_str}\n{annotated_str}\n{params_str}\n"
-            f"\n{uniques_str}\n{non_uniques_str}\n\t{repeat_count_srt}"
-        )
-        print(out)
+        stats_instance = IntentStats(self.proto_obj)
+        stats_instance.generate_stats()
 
 
     def parameter_checking(self, raise_error: bool = False) -> bool:
@@ -279,6 +226,8 @@ class IntentBuilder:
         Returns:
           True if annotated parameters are the same as parameters in proto_obj
         """
+        self._check_proto_obj_attr_exist()
+
         tp_params_set = set()
         for tp in self.proto_obj.training_phrases:
             for part in tp.parts:
@@ -309,38 +258,7 @@ class IntentBuilder:
         return bool(return_flag)
 
 
-    def load_intent(
-        self, obj: Intent, overwrite: bool = False
-    ) -> Intent:
-        """Load an existing intent to proto_obj for further uses.
-
-        Args:
-          obj (Intent):
-            An existing Intent obj.
-          overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already
-            contains an Intent.
-
-        Returns:
-          An Intent object stored in proto_obj
-        """
-        if not isinstance(obj, Intent):
-            raise ValueError(
-                "The object you're trying to load is not an Intent!"
-            )
-        if self.proto_obj and not overwrite:
-            raise Exception(
-                "proto_obj already contains an Intent."
-                " If you wish to overwrite it, pass overwrite as True."
-            )
-
-        if overwrite or not self.proto_obj:
-            self.proto_obj = obj
-
-        return self.proto_obj
-
-
-    def create_new_intent(
+    def create_new_proto_obj(
         self,
         display_name: str,
         priority: int = 500000,
@@ -450,8 +368,7 @@ class IntentBuilder:
         Returns:
           An Intent object stored in proto_obj
         """
-
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         # Add simple training phrase
         if isinstance(phrase, str):
@@ -540,7 +457,7 @@ class IntentBuilder:
         Returns:
           An Intent object stored in proto_obj
         """
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         if not (isinstance(parameter_id, str) or isinstance(entity_type, str)):
             raise ValueError(
@@ -583,7 +500,7 @@ class IntentBuilder:
         Returns:
           An Intent object stored in proto_obj
         """
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         if isinstance(label, str):
             self._label_constraints_check(key=label, value=label)
@@ -610,7 +527,7 @@ class IntentBuilder:
         Returns:
           An Intent object stored in proto_obj
         """
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         if not isinstance(phrase, str):
             raise ValueError("phrase should be a string.")
@@ -635,7 +552,7 @@ class IntentBuilder:
         Returns:
           An Intent object stored in proto_obj
         """
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         if not isinstance(parameter_id, str):
             raise ValueError("parameter_id should be a string.")
@@ -658,7 +575,7 @@ class IntentBuilder:
         Returns:
           An Intent object stored in proto_obj
         """
-        self._check_intent_exist()
+        self._check_proto_obj_attr_exist()
 
         if isinstance(label, str):
             if self.proto_obj.labels.get(label) == label:
@@ -680,3 +597,92 @@ class IntentBuilder:
             )
 
         return self.proto_obj
+
+
+
+@dataclass
+class IntentStats():
+    """A class for tracking the stats of CX Intent object."""
+    intent_proto_obj: Intent
+
+    # Training Phrases
+    repeat_count_dict: Dict[int, int] = field(
+        default_factory=lambda: defaultdict(int)
+    )
+    annotated_count: int = 0
+    phrases_count: int = 0
+    annotated_pct: int = 0
+    uniques_count: int = 0
+    uniques_pct: int = 0
+    non_uniques_count: int = 0
+    non_uniques_pct: int = 0
+
+    # Parameters
+    params_count: int = 0
+
+
+    def calc_tps_stats(self):
+        """Calculating stats related to training phrases."""
+        for tp in self.intent_proto_obj.training_phrases:
+            self.repeat_count_dict[tp.repeat_count] += 1
+
+            for part in tp.parts:
+                if part.parameter_id:
+                    self.annotated_count += 1
+                    break
+
+
+        self.phrases_count = len(self.intent_proto_obj.training_phrases)
+        self.uniques_count = self.repeat_count_dict[1]
+        self.non_uniques_count = self.phrases_count - self.uniques_count
+
+        annot_pct = 100 * (self.annotated_count / self.phrases_count)
+        uniq_pct = 100 * (self.uniques_count / self.phrases_count)
+        non_uniq_pct = 100 * (self.non_uniques_count / self.phrases_count)
+        self.annotated_pct = round(annot_pct, 1)
+        self.uniques_pct = round(uniq_pct, 1)
+        self.non_uniques_pct = round(non_uniq_pct, 1)
+
+    def create_tps_str(self) -> str:
+        """String representation of stats related to training phrases."""
+        phrases_str = f"# of training phrases: {self.phrases_count}"
+        annotated_str = (
+            "Annotated training phrases:"
+            f" {self.annotated_pct}% ({self.annotated_count})"
+        )
+
+        uniques_str = (
+            "Unique training phrases:"
+            f" {self.uniques_pct}% ({self.uniques_count})"
+        )
+        non_uniques_str = (
+            "Non-unique training phrases:"
+            f" {self.non_uniques_pct}% ({self.non_uniques_count})"
+        )
+
+        repeat_count_srt = "\n\t".join([
+            f"with repeat count {i}: {self.repeat_count_dict[i]}"
+            for i in sorted(self.repeat_count_dict.keys())
+        ])
+
+        return (
+            f"{phrases_str}\n{annotated_str}\n"
+            f"\n{uniques_str}\n{non_uniques_str}\n\t{repeat_count_srt}"
+        )
+
+
+    def create_parameter_str(self) -> str:
+        """String representation Intent's parameters.."""
+        self.params_count = len(self.intent_proto_obj.parameters)
+        return f"# of parameters: {self.params_count}"
+
+
+    def generate_stats(self):
+        """Generate stats for the Intent."""
+        self.calc_tps_stats()
+
+        tps_str = self.create_tps_str()
+        params_str = self.create_parameter_str()
+
+        out = f"{params_str}\n{tps_str}"
+        print(out)
