@@ -111,38 +111,45 @@ class AgentCheckerUtil(ScrapiBase):
         self._route_groups = TransitionRouteGroups(
             creds=self.creds, agent_id=self.agent_id
         )
-
-        # Generate maps
-        self._intents_map = self._intents.get_intents_map(agent_id=self.agent_id)
-        time.sleep(delay)
-        self._flows_map = self._flows.get_flows_map(agent_id=self.agent_id)
-        time.sleep(delay)
-        self._flows_map_rev = self._flows.get_flows_map(
-            agent_id=self.agent_id, reverse=True
-        )
-        time.sleep(delay)
         
+        # Intent data (1 API call)
+        self._intent_data = self._intents.list_intents(agent_id=self.agent_id)
+        # Intents map (0 API calls)
+        self._intents_map = {
+            intent.name: intent.display_name for intent in self._intent_data
+        }
+        
+        # Flow data (1 API call)
+        self._flow_data = self._get_all_flow_data(delay)
+        # Flows maps (0 API calls)
+        self._flows_map = {
+            flow.name: flow.display_name for flow in self._flow_data
+        }
+        self._flows_map_rev = {
+            flow.display_name: flow.name for flow in self._flow_data
+        }
+        
+        # Page data (len(flows) API calls)
+        self._page_data = self._get_all_page_data(delay)
+        
+        # Route group data (len(flows) API calls)
+        self._route_group_data = self._get_all_route_group_data(delay)
+        
+        # Pages and route groups maps (0 API calls)
         self._pages_map = {}
         self._pages_map_rev = {}
         self._route_groups_map = {}
         for fid in self._flows_map.keys():
-            self._pages_map[fid] = self._pages.get_pages_map(flow_id=fid)
-            time.sleep(delay)
-            self._pages_map_rev[fid] = self._pages.get_pages_map(
-                flow_id=fid, reverse=True
-            )
-            time.sleep(delay)
-            self._route_groups_map[fid] = self._route_groups.get_route_groups_map(
-                flow_id=fid
-            )
-            time.sleep(delay)
-
-        # Get intent, flow, and page data
-        self._intent_data = self._intents.list_intents(agent_id=self.agent_id)
-        time.sleep(delay)
-        self._flow_data = self._get_all_flow_data(delay)
-        self._page_data = self._get_all_page_data(delay)
-        self._route_group_data = self._get_all_route_group_data(delay)
+            self._pages_map[fid] = {
+                page.name: page.display_name for page in self._page_data[fid]
+            }
+            self._pages_map_rev[fid] = {
+                page.display_name: page.name for page in self._page_data[fid]
+            }
+            self._route_groups_map[fid] = {
+                rg.name: rg.display_name for rg in self._route_group_data[fid]
+            }
+        # Total API calls: 2*len(flows) + 2
 
     def _get_all_flow_data(self, delay):
         flow_list = self._flows.list_flows(self.agent_id)
