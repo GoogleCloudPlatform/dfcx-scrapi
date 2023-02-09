@@ -115,7 +115,7 @@ class AgentBuilder(BuildersCommon):
                 "display_name and time_zone should be string."
             )
         if self.proto_obj and not overwrite:
-            raise Exception(
+            raise UserWarning(
                 "proto_obj already contains an Agent."
                 " If you wish to overwrite it, pass overwrite as True."
             )
