@@ -109,7 +109,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         invalid_pages = set(test_set.page_display_name[mask].to_list())
 
         if invalid_pages:
-            raise Exception(
+            raise UserWarning(
                 "The following Pages are invalid and missing Page "
                 f"IDs: \n{invalid_pages}\n\nPlease ensure that your Page "
                 "Display Names do not contain typos.\nFor Default Start Page "

@@ -157,7 +157,7 @@ class EntityTypeBuilder(BuildersCommon):
                 "kind should be an int between 0 and 3."
             )
         if self.proto_obj and not overwrite:
-            raise Exception(
+            raise UserWarning(
                 "proto_obj already contains an EntityType."
                 " If you wish to overwrite it, pass overwrite as True."
             )
@@ -300,7 +300,7 @@ class EntityTypeBuilder(BuildersCommon):
                 )
             )
         else:
-            raise Exception(
+            raise ValueError(
                 "Entity type's kind is not correct and should be specified."
             )
 

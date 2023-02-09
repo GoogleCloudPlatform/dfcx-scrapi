@@ -74,7 +74,7 @@ class BuildersCommon:
                 f" is not {self._proto_type_str}!"
             )
         if self.proto_obj and not overwrite:
-            raise Exception(
+            raise UserWarning(
                 f"proto_obj already contains {self._proto_type_str}."
                 " If you wish to overwrite it, pass overwrite as True."
             )

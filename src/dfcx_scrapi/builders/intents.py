@@ -251,7 +251,7 @@ class IntentBuilder(BuildersCommon):
                     "\nPlease add it using add_parameter method to continue."
                 )
                 if raise_error:
-                    raise Exception(msg)
+                    raise UserWarning(msg)
                 else:
                     logging.warning(msg)
 
@@ -303,7 +303,7 @@ class IntentBuilder(BuildersCommon):
           An Intent object stored in proto_obj
         """
         if self.proto_obj and not overwrite:
-            raise Exception(
+            raise UserWarning(
                 "proto_obj already contains an Intent."
                 " If you wish to overwrite it, pass overwrite as True."
             )

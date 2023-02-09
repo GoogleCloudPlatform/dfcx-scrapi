@@ -191,18 +191,18 @@ class TransitionRouteBuilder(BuildersCommon):
             )
         # Minimum requirement error checking
         if not(intent or condition):
-            raise Exception(
+            raise RuntimeError(
                 "At least one of `intent` or `condition` must be specified."
             )
         # Oneof error checking
         if target_page and target_flow:
-            raise Exception(
+            raise RuntimeError(
                 "At most one of `target_page` and `target_flow`"
                 " can be specified at the same time."
             )
         # `overwrite` parameter error checking
         if self.proto_obj and not overwrite:
-            raise Exception(
+            raise UserWarning(
                 "proto_obj already contains a TransitionRoute."
                 " If you wish to overwrite it, pass overwrite as True."
             )
@@ -352,13 +352,13 @@ class EventHandlerBuilder(BuildersCommon):
             )
         # Oneof error checking
         if target_page and target_flow:
-            raise Exception(
+            raise RuntimeError(
                 "At most one of `target_page` and `target_flow`"
                 " can be specified at the same time."
             )
         # `overwrite` parameter error checking
         if self.proto_obj and not overwrite:
-            raise Exception(
+            raise UserWarning(
                 "proto_obj already contains an EventHandler."
                 " If you wish to overwrite it, pass overwrite as True."
             )
