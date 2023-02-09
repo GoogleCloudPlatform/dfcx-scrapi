@@ -98,7 +98,7 @@ class AgentCheckerUtil(ScrapiBase):
 
         self.agent_id = agent_id
         if not self.agent_id:
-            raise Exception("agent_id parameter is required")
+            raise ValueError("agent_id parameter is required")
 
         self._intents = Intents(creds=self.creds, agent_id=self.agent_id)
         self._entities = EntityTypes(creds=self.creds, agent_id=self.agent_id)
@@ -236,7 +236,7 @@ class AgentCheckerUtil(ScrapiBase):
         # Look up flow ID
         flow_id = self._flows_map_rev.get(flow_name, None)
         if not flow_id:
-            raise Exception(f"Flow not found: {flow_name}")
+            raise KeyError(f"Flow not found: {flow_name}")
         # Now that flow_id is set, look up the page
         # Special case for the start page
         if page_name == "Start":
@@ -590,7 +590,7 @@ class AgentCheckerUtil(ScrapiBase):
         """
         flow_id = self._flows_map_rev.get(flow_name, None)
         if not flow_id:
-            raise Exception(f"Flow not found: {flow_name}")
+            raise KeyError(f"Flow not found: {flow_name}")
 
         # Start at the start page...
         reachable = [from_page]
@@ -649,7 +649,7 @@ class AgentCheckerUtil(ScrapiBase):
         """
         flow_id = self._flows_map_rev.get(flow_name, None)
         if not flow_id:
-            raise Exception(f"Flow not found: {flow_name}")
+            raise KeyError(f"Flow not found: {flow_name}")
 
         reachable = self.find_reachable_pages(
             flow_name, include_groups=include_groups, verbose=verbose
@@ -775,7 +775,7 @@ class AgentCheckerUtil(ScrapiBase):
 
         flow_id = self._flows_map_rev.get(flow_name, None)
         if not flow_id:
-            raise Exception(f"Flow not found: {flow_name}")
+            raise KeyError(f"Flow not found: {flow_name}")
 
         # Get intents in transition route groups
         if include_groups:
