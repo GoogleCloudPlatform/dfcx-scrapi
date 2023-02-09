@@ -134,7 +134,7 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
         page_id = page_map.get(page_display_name, None)
         if page_id is None:
             raise ValueError(
-                f'Page "f{page_display_name}" does not exist in the '
+                f'Page "{page_display_name}" does not exist in the '
                 "specified agent."
             )
         self.page = page_loader.get_page(page_id)
