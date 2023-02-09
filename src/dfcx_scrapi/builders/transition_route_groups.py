@@ -96,7 +96,7 @@ class TransitionRouteGroupBuilder(BuildersCommon):
             )
         # `overwrite` parameter error checking
         if self.proto_obj and not overwrite:
-            raise Exception(
+            raise UserWarning(
                 "proto_obj already contains a TransitionRouteGroup."
                 " If you wish to overwrite it, pass overwrite as True."
             )

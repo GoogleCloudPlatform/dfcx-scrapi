@@ -184,7 +184,7 @@ class FlowBuilder(BuildersCommon):
             )
         # `overwrite` parameter error checking
         if self.proto_obj and not overwrite:
-            raise Exception(
+            raise UserWarning(
                 "proto_obj already contains a Flow."
                 " If you wish to overwrite it, pass `overwrite` as True."
             )
@@ -412,7 +412,7 @@ class FlowBuilder(BuildersCommon):
         self._check_proto_obj_attr_exist()
 
         if event_handlers and event_names:
-            raise Exception(
+            raise UserWarning(
                 "Only one of the `event_handlers` and "
                 "`event_names` should be specified."
             )
@@ -421,7 +421,7 @@ class FlowBuilder(BuildersCommon):
         elif event_names:
             new_ehs = self._find_unmatched_event_handlers_by_name(event_names)
         else:
-            raise Exception(
+            raise UserWarning(
                 "At least one of the `event_handlers` and "
                 "`event_names` should be specified."
             )
