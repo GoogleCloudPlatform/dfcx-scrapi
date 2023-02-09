@@ -473,22 +473,14 @@ class TestCases(scrapi_base.ScrapiBase):
     # Note that flow id includes agent, normally...
     def _convert_page(self, page_id, flow_id, pages_map):
         """Gets a page display name from a page and flow ID"""
-        special_page_dict = {
-            "END_SESSION": "End Session",
-            "END_FLOW": "End Flow",
-            "START_PAGE": "Start"
-        }
-        if page_id in special_page_dict:
-            return special_page_dict[page_id]
-
         page_id_converted = str(flow_id) + "/pages/" + str(page_id)
         if flow_id in pages_map:
             # page_id is sometimes left empty for the test case if it starts
             # on the start page
-            return pages_map[flow_id].get(page_id_converted, "Start")
+            return pages_map[flow_id].get(page_id_converted, "START_PAGE")
         logging.info(f"Flow not found: {flow_id}")
         # TODO: Should throw error, but returning this probably will anyway
-        return "Invalid"
+        return "INVALID"
 
     def get_test_case_results_df(self, agent_id=None, retest_all=False):
         """Gets the test case results for this agent,

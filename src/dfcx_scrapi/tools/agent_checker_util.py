@@ -174,38 +174,6 @@ class AgentCheckerUtil(ScrapiBase):
             time.sleep(delay)
         return route_group_data
 
-    # Conversion utilities
-    # (Not currently used)
-
-    def _convert_intent(self, intent_id):
-        """Gets an intent display name from an intent ID"""
-        intent_id_converted = str(self.agent_id) + "/intents/" + str(intent_id)
-        return self._intents_map.get(intent_id_converted, "")
-
-    def _convert_flow(self, flow_id):
-        """Gets a flow display name from a flow ID"""
-        if flow_id.split("/")[-1] == "-":
-            return ""
-        # flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
-        return self._flows_map.get(flow_id, "Default Start Flow")
-        # TODO: Should throw error instead of returning default
-
-    # Note that flow id includes agent, normally...
-    def _convert_page(self, page_id, flow_id):
-        """Gets a page display name from a page and flow ID"""
-        if page_id == "END_SESSION":
-            return "End Session"
-        elif page_id == "END_FLOW":
-            return "End Flow"
-        elif page_id == "START_PAGE":
-            return "Start"
-        page_id_converted = str(flow_id) + "/pages/" + str(page_id)
-        if flow_id in self._pages_map:
-            return self._pages_map[flow_id].get(page_id_converted, "Start")
-        logging.info("Flow not found")
-        # TODO: Should throw error, but returning this probably will anyway
-        return "Invalid"
-
     def _get_intent_parameters(self, intent_name):
         """Gets the parameters for a particular intent, by display name"""
         for intent in self._intent_data:
