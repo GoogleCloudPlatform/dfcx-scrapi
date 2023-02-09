@@ -138,13 +138,16 @@ class AgentCheckerUtil(ScrapiBase):
         self._route_groups_map = {}
         for fid in self._flows_map.keys():
             self._pages_map[fid] = {
-                page.name: page.display_name for page in self._page_data[fid].values()
+                page.name: page.display_name
+                for page in self._page_data[fid].values()
             }
             self._pages_map_rev[fid] = {
-                page.display_name: page.name for page in self._page_data[fid].values()
+                page.display_name: page.name
+                for page in self._page_data[fid].values()
             }
             self._route_groups_map[fid] = {
-                rg.name: rg.display_name for rg in self._route_group_data[fid].values()
+                rg.name: rg.display_name
+                for rg in self._route_group_data[fid].values()
             }
         # Total API calls: 2*len(flows) + 2
 
@@ -267,7 +270,8 @@ class AgentCheckerUtil(ScrapiBase):
 
         params["conversation_path"].append(page_name)
         if params["verbose"]:
-            logging.info(params["conversation_path"], params["intent_route_count"])
+            logging.info(params["conversation_path"],
+                         params["intent_route_count"])
 
         old_presets = params["presets"].copy()
         new_presets = self._get_new_presets(params["presets"], page, route)
@@ -420,7 +424,7 @@ class AgentCheckerUtil(ScrapiBase):
                 ] = params["intent_route_count"]
         else:
             if params["verbose"]:
-                logging.info(page.display_name, "->", 
+                logging.info(page.display_name, "->",
                     route.target_flow, "(empty)")
             page_name = page.display_name
             if (
@@ -475,7 +479,7 @@ class AgentCheckerUtil(ScrapiBase):
         for event_handler in page.event_handlers:
             if params["limit_intent_to_initial"] and not is_initial:
                 continue
-            if (event_handler.target_page != "" 
+            if (event_handler.target_page != ""
                 or event_handler.target_flow != ""):
                 self._find_reachable_pages_rec_helper(page,
                                                       event_handler,
@@ -515,7 +519,7 @@ class AgentCheckerUtil(ScrapiBase):
         for event_handler in parameter.fill_behavior.reprompt_event_handlers:
             if params["limit_intent_to_initial"] and not is_initial:
                 continue
-            if (event_handler.target_page != "" 
+            if (event_handler.target_page != ""
                 or event_handler.target_flow != ""):
                 self._find_reachable_pages_rec_helper(page,
                                                       event_handler,
@@ -529,7 +533,7 @@ class AgentCheckerUtil(ScrapiBase):
     ):
         page = self._flow_data[params["flow_id"]]
         for event_handler in page.event_handlers:
-            if (event_handler.target_page != "" 
+            if (event_handler.target_page != ""
                 or event_handler.target_flow != ""):
                 self._find_reachable_pages_rec_helper(page,
                                                       event_handler,
