@@ -636,9 +636,13 @@ class IntentStats():
         self.uniques_count = self.repeat_count_dict[1]
         self.non_uniques_count = self.phrases_count - self.uniques_count
 
-        annot_pct = 100 * (self.annotated_count / self.phrases_count)
-        uniq_pct = 100 * (self.uniques_count / self.phrases_count)
-        non_uniq_pct = 100 * (self.non_uniques_count / self.phrases_count)
+        if self.phrases_count == 0:
+            annot_pct, uniq_pct, non_uniq_pct = 0, 0, 0
+        else:
+            annot_pct = 100 * (self.annotated_count / self.phrases_count)
+            uniq_pct = 100 * (self.uniques_count / self.phrases_count)
+            non_uniq_pct = 100 * (self.non_uniques_count / self.phrases_count)
+
         self.annotated_pct = round(annot_pct, 1)
         self.uniques_pct = round(uniq_pct, 1)
         self.non_uniques_pct = round(non_uniq_pct, 1)
