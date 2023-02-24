@@ -322,7 +322,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
                 if route.target_page:
                     t_p = all_pages_map.get(route.target_page)
                     if not t_p:
-                        t_p = str(route.target_page).split("/")[-1]
+                        t_p = str(route.target_page).rsplit("/", maxsplit=1)[-1]
 
                     temp_dict.update({"target_page": t_p})
 
