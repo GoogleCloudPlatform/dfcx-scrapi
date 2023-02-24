@@ -320,9 +320,11 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
                 temp_dict.update({"route_group_name": route_group.display_name})
 
                 if route.target_page:
-                    temp_dict.update(
-                        {"target_page": all_pages_map[route.target_page]}
-                    )
+                    t_p = all_pages_map.get(route.target_page)
+                    if not t_p:
+                        t_p = str(route.target_page).split("/")[-1]
+
+                    temp_dict.update({"target_page": t_p})
 
                 if route.intent:
                     temp_dict.update({"intent": intents_map[route.intent]})
