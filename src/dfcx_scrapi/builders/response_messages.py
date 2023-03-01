@@ -281,8 +281,8 @@ class ResponseMessageBuilder(BuildersCommon):
 
     def create_new_proto_obj(
         self,
-        response_type: str,
         message: Union[str, List[str], Dict[str, Any]],
+        response_type: str = "text",
         mode: str = None
     ) -> ResponseMessage:
         """Create a ResponseMessage that can be returned by a
@@ -290,10 +290,6 @@ class ResponseMessageBuilder(BuildersCommon):
         ResponseMessages are also used for output audio synthesis.
 
         Args:
-          response_type (str):
-            Type of the response message. It should be one of the following:
-            'text', 'payload', 'conversation_success', 'output_audio_text',
-            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
           message (str | List[str] | Dict[str, Any]):
             The output message. For each response_type
             it should be formatted like the following:
@@ -317,6 +313,10 @@ class ResponseMessageBuilder(BuildersCommon):
               telephony_transfer_call --> str
                 A phone number in E.164 format as a string.
                 `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
           mode (str):
             This argument is only applicable for `output_audio_text`.
             It should be one of the following: 'text', 'ssml'
