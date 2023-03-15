@@ -1,6 +1,6 @@
 """CX Experiment Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,13 +56,21 @@ class ScrapiExperiments(ScrapiBase):
         logging.info("created %s", self.agent_id)
 
     def list_experiments(self, environment_id=None):
-        """list out experiments"""
+        """List out experiments.
+
+        Args:
+          environment_id: (Optional) The ID for the environment from which
+            the list of experiments will be retrieved.
+
+        Returns:
+          A list of experiment JSON objects.
+        """
         environment_path = f"{self.agent_id}/environments/{environment_id}"
         logging.info("environment_path %s", environment_path)
 
         request = types.experiment.ListExperimentsRequest()
         request.parent = environment_path
-        client_options = self._set_region(environment_id)
+        client_options = self._set_region(environment_path)
         client = services.experiments.ExperimentsClient(
             client_options=client_options, credentials=self.creds
         )

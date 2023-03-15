@@ -1,6 +1,6 @@
 """Working with built in CX Validation featrure."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,12 +53,13 @@ class ValidationUtil(ScrapiBase):
         """ "Transform the Validation results into a dataframe.
         Note will not work if you call get_validation_result with a
         flow_id specified. For calling validate ensure lro is complete
+
         Args:
-            validation_results: dictionary of validation results
-                passed back from get_validation_result or validate functions
+          validation_results: dictionary of validation results
+            assed back from get_validation_result or validate functions
 
         Return:
-            df: dataframe containing the validation results
+          Dataframe containing the validation results
         """
 
         agent_id = "/".join(validation_results["name"].split("/")[0:6])
@@ -75,7 +76,7 @@ class ValidationUtil(ScrapiBase):
                 temp_df = pd.DataFrame(val_msg)
                 temp_df.insert(0, "flow", flows_map[temp])
 
-                max_cols_new = max([len(x) for x in temp_df.resourceNames])
+                max_cols_new = max(len(x) for x in temp_df.resourceNames)
 
                 if max_cols_new > max_cols_old:
                     for i in range(1, max_cols_new + 1):
@@ -90,30 +91,30 @@ class ValidationUtil(ScrapiBase):
                         ]
                         i += 1
 
-                dataframe = dataframe.append(temp_df)
+                dataframe = pd.concat([dataframe, temp_df])
                 max_cols_old = 0
 
         return dataframe
 
     def intent_disambiguation(self, agent_id, refresh=False, flow=None):
         """Obtains the intent disambiguation tasks from the validation tool
-            Args:
-                refresh: (optional) False means validation results are pulled
-                    as is. True means the validation tool is refreshed then
-                    results are pulled
-                flow: (optional) If specified results are returned
-                    for the indicated flow display name
 
+        Args:
+          refresh: (optional) False means validation results are pulled
+            as is. True means the validation tool is refreshed then
+            results are pulled
+          flow: (optional) If specified results are returned for the
+            indicated flow display name
 
         Returns:
           Dictionary of intent disambiguation Validation results
           in two dataframes.
-              extended: All intent disambiguation validtion results as
-                seperate instances. If 5 training phrases conflict
-                in 5 intents they will be shown as 5 rows.
-              compact: Only showing the first instance of a conflict
-                for each grouping. If 5 trainig phrases conflic in 5 intents
-                only the first training phrase will show.
+            extended: All intent disambiguation validtion results as
+              seperate instances. If 5 training phrases conflict
+              in 5 intents they will be shown as 5 rows.
+            compact: Only showing the first instance of a conflict
+              for each grouping. If 5 trainig phrases conflic in 5 intents
+              only the first training phrase will show.
         """
 
         if refresh:

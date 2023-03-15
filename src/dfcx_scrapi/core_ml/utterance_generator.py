@@ -1,6 +1,6 @@
 """Utility file for generating synthetic phrases from input phrases"""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ class UtteranceGenerator:
           base phrase
 
         Returns:
-          synthetic_phrases_df: dataframe with new synthetic phrases.
+          DataFrame with new synthetic phrases.
         """
 
         synthetic_phrases_df = pd.DataFrame()
@@ -114,7 +114,7 @@ class UtteranceGenerator:
             iter_frame["synthetic_phrases"] = synthetic_phrases
             for col in origin_utterances.columns:
                 iter_frame[col] = row[col]
-            synthetic_phrases_df = synthetic_phrases_df.append(iter_frame)
+            synthetic_phrases_df = pd.concat([synthetic_phrases_df, iter_frame])
             ordered_cols = [
                 "id",
                 "synthetic_instances",

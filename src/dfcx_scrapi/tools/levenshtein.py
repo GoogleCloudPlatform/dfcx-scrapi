@@ -1,6 +1,6 @@
 """Util class for performing analysis on DFCX objects and data."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
 # limitations under the License.
 
 import logging
+from typing import Union
+
 import pandas
 import numpy as np
-from typing import Union
 from dfcx_scrapi.core.intents import Intents
 from google.cloud.dialogflowcx_v3beta1 import types
 
@@ -32,9 +33,7 @@ class Levenshtein():
 
     @staticmethod
     def __levenshtein_ratio(s: str, t: str) -> float:
-        """ levenshtein_ratio_and_distance:
-            Calculates levenshtein distance between two strings.
-        """
+        """Calculates levenshtein distance between two strings."""
         rows = len(s)+1
         cols = len(t)+1
         distance = np.zeros((rows,cols),dtype = int)
@@ -69,28 +68,27 @@ class Levenshtein():
         threshold: float = 0.75,
         silent: bool = False
     ):
-        """
-        compares the training phrases between two intents to find the
+        """Compares the training phrases between two intents to find the
         levenshtein distance between all training phrases. Structure of the
         returned object depends on which intent is the key, and which is the
         comparator.
 
         Args:
           intent_key: intent protobuf or dataframe object. In the returned
-          object, the utterances of this intent are paired with a list of
-          utterances from the comparator.
+            object, the utterances of this intent are paired with a list of
+            utterances from the comparator.
 
           intent_comparator: intent protobuf or dataframe object. In the
-          returned object, the utterances of this intent will be included
-          in a list associated with every phrase whose similarity ratio
-          is above the defined threshold.
+            returned object, the utterances of this intent will be included
+            in a list associated with every phrase whose similarity ratio
+            is above the defined threshold.
 
           threshold: float describing the levenshtein distance above which
-          a pair of phrases should be associated. Default: .75
+            a pair of phrases should be associated. Default: .75
 
           silent: When set to True, the program will execute without
-          creating Info logs or updating the progress on the console.
-          Default=False
+            creating Info logs or updating the progress on the console.
+            Default=False
 
         Returns:
           Dict containing two major parts. The first ("stats") contains
@@ -99,9 +97,10 @@ class Levenshtein():
           from intent_key as the key, and utterance from intent_comparator
           with a similarity ratio above the defined threshold as the value.
         """
+        intents = Intents()
 
         if isinstance(intent_key, types.Intent):
-            list_keys = Intents.intent_proto_to_dataframe(
+            list_keys = intents.intent_proto_to_dataframe(
                 intent_key
             ).training_phrase
         elif isinstance(intent_key, pandas.core.frame.DataFrame):
@@ -115,7 +114,7 @@ class Levenshtein():
             return None
 
         if isinstance(intent_comparator, types.Intent):
-            list_comparators = Intents.intent_proto_to_dataframe(
+            list_comparators = intents.intent_proto_to_dataframe(
                 intent_comparator
             ).training_phrase
         elif isinstance(intent_comparator, pandas.core.frame.DataFrame):
@@ -128,7 +127,7 @@ class Levenshtein():
                 """)
             return None
 
-        it = 0
+        count = 0
         completed = 0.0
         tp_distances = {}
         num_keys_overlapped = 0
@@ -140,7 +139,7 @@ class Levenshtein():
             found_key_similarity = False
 
             if not silent:
-                completed = float(it/len(list_keys))*100.0
+                completed = float(count/len(list_keys))*100.0
                 #print instead of logging.info is intentional.
                 #Needed to avoid spamming new lines with every percentile.
                 print(
@@ -163,7 +162,7 @@ class Levenshtein():
                         found_key_similarity = True
 
 
-            it += 1
+            count += 1
 
             #float greatest similarities to top
             phrase_similarity_list = dict(sorted(

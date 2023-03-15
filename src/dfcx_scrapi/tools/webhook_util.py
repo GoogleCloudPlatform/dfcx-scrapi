@@ -1,6 +1,6 @@
 """Util class for building DFCX webhook payloads."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ class WebhookUtil():
           param_state: One of the following states [EMPTY, INVALID, FILLED]
 
         Returns:
-          page_info: A JSON object in the appropriate Response format
+          A JSON object in the appropriate Response format
         """
         page_info = {
             'formInfo': {
@@ -65,8 +65,7 @@ class WebhookUtil():
             session params
 
         Returns:
-          session_info: JSON object formatted for the DFCX Fulfillment Response
-            Body
+          JSON object formatted for the DFCX Fulfillment Response Body
 
         Example Input: {'key1':'value1', 'key2':'value2'}
         """
@@ -146,7 +145,7 @@ class WebhookUtil():
               punctuation, and returned as lowercase.
 
         Returns:
-          user_utterance: The final user utterance that was captured.
+          The final user utterance that was captured.
         """
 
         if cleaned:

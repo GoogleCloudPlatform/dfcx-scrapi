@@ -1,6 +1,6 @@
 """A collection of Methods to support the Change History feature in DFCX."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import logging
+
 from typing import Dict
 
 import pandas as pd
-import datetime
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -55,6 +56,7 @@ class Changelogs(ScrapiBase):
 
     @staticmethod
     def _validate_create_time(create_time: str):
+        """Validates that create_time is in the ISO 8601 datetime format."""
         try:
             datetime.datetime.strptime(create_time, "YYYY-MM-DDThh:mm:ss.sZ")
         except ValueError as err:
@@ -65,6 +67,7 @@ class Changelogs(ScrapiBase):
 
     @staticmethod
     def _validate_epoch_time(create_time_epoch_seconds: str):
+        """Validates that create_time_epoch_seconds is a Unix Timestamp."""
         try:
             datetime.datetime.fromtimestamp(int(create_time_epoch_seconds))
         except ValueError as err:
@@ -87,7 +90,7 @@ class Changelogs(ScrapiBase):
           agent_id: the formatted CX Agent ID
 
         Returns:
-          changelogs: List of Change History logs
+          List of Change History logs
         """
         request = types.changelog.ListChangelogsRequest()
         request.parent = agent_id
@@ -153,7 +156,7 @@ class Changelogs(ScrapiBase):
             <Changelog ID>`
 
         Returns:
-          changelog: A single changelog object
+          A single changelog object
         """
         request = types.changelog.GetChangelogRequest()
         request.name = changelog_id
@@ -178,7 +181,7 @@ class Changelogs(ScrapiBase):
             of the 'user_type' column. Defaults to '@google.com'.
 
         Returns:
-          df: the final dataframe output of the formatted logs
+          The final dataframe output of the formatted logs
         """
         changelogs = self.list_changelogs(agent_id)
 

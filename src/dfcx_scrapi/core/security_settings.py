@@ -1,6 +1,6 @@
 """CCAI Security Settings Methods"""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,11 +58,11 @@ class SecuritySettings(scrapi_base.ScrapiBase):
         """List Security Settings for a given Project and Region.
 
         Args:
-            location_id: CX Agent ID string in the following format
+          location_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/
 
         Returns:
-            Dict of results
+          List of security settings
         """
 
         request = self.ss_types.ListSecuritySettingsRequest()
@@ -87,12 +87,12 @@ class SecuritySettings(scrapi_base.ScrapiBase):
         """Get specified CCAI Security Setting.
 
         Args:
-            security_setting_id: Security Setting ID string in the following
-                format: projects/<PROJECT ID>/locations/<LOCATION ID>/
-                securitySettings/<SECURITY SETTINGS ID>
+          security_setting_id: Security Setting ID string in the following
+            format: projects/<PROJECT ID>/locations/<LOCATION ID>/
+            securitySettings/<SECURITY SETTINGS ID>
 
         Returns:
-            A single Security Settings object of types.SecuritySettings
+          A single Security Settings object of types.SecuritySettings
         """
 
         request = self.ss_types.GetSecuritySettingsRequest()
@@ -118,16 +118,16 @@ class SecuritySettings(scrapi_base.ScrapiBase):
         new security settings profile.
 
         Args:
-            location_id: CX Agent ID string in the following format:
-              projects/<PROJECT ID>/locations/<LOCATION ID>/
-            obj: An object of types.SecuritySettings representing the Security
+          location_id: CX Agent ID string in the following format:
+            projects/<PROJECT ID>/locations/<LOCATION ID>/
+          obj: An object of types.SecuritySettings representing the Security
             Settings object to be created
-            security_settings_dict: An optional dictionary of key/value pairs
+          security_settings_dict: An optional dictionary of key/value pairs
             that correspond to the fields and values necessary for creating a
             new Security Settings profile
 
         Returns:
-            A single Security Settings object of types.SecuritySettings
+          A single Security Settings object of types.SecuritySettings
         """
 
         if obj and security_settings_dict:
@@ -162,12 +162,12 @@ class SecuritySettings(scrapi_base.ScrapiBase):
         """Update specified CCAI Security Setting.
 
         Args:
-            security_setting_id: Security Setting ID string in the following
-                format: projects/<PROJECT ID>/locations/<LOCATION ID>/
-                securitySettings/<SECURITY SETTINGS ID>
+          security_setting_id: Security Setting ID string in the following
+            format: projects/<PROJECT ID>/locations/<LOCATION ID>/
+            securitySettings/<SECURITY SETTINGS ID>
 
         Returns:
-            A single Security Settings object of types.SecuritySettings
+          A single Security Settings object of types.SecuritySettings
         """
 
         security_settings = self.get_security_settings(security_setting_id)
@@ -197,8 +197,8 @@ class SecuritySettings(scrapi_base.ScrapiBase):
 
         Args:
           security_setting_id: Security Setting ID string in the following
-                format: projects/<PROJECT ID>/locations/<LOCATION ID>/
-                securitySettings/<SECURITY SETTINGS ID>
+            format: projects/<PROJECT ID>/locations/<LOCATION ID>/
+            securitySettings/<SECURITY SETTINGS ID>
         """
         request = self.ss_types.DeleteSecuritySettingsRequest()
         request.name = security_setting_id

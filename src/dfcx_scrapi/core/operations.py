@@ -1,6 +1,6 @@
 """Operations Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ class Operations(ScrapiBase):
                 <operation-uuid>'
 
         Returns:
-        response: Response status and payload from LRO
+          Response status and payload from LRO
         """
         location = lro.split("/")[3]
         if location != "global":

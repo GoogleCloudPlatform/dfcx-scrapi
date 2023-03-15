@@ -1,6 +1,6 @@
 """Test Cases Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class TestCases(ScrapiBase):
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
 
         Returns:
-          response: list of test cases from an agent.
+          List of test cases from an agent.
         """
 
         if not agent_id:
@@ -101,26 +101,23 @@ class TestCases(ScrapiBase):
         """Export test cases from an agent to cloud storage
 
         Args:
-          gcs_uri:
-            The GCS URI to export the test cases to. The format of this URI
-              must be `gs://<bucket-name>/<object-name>`. If unspecified,
-              the serialized test cases is returned inline.
+          gcs_uri: The GCS URI to export the test cases to. The format of this
+            URI must be `gs://<bucket-name>/<object-name>`. If unspecified,
+            the serialized test cases are returned inline.
           agent_id: The agent to export test cases from.
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
-          data_format:
-            The data format of the exported test cases. If not specified,
-            `BLOB` is assumed.
-          data_filter:
-            The filter expression used to filter exported test cases, see
-            `API Filtering <https://aip.dev/160>`__. The expression is case
-            insensitive and supports the following syntax:
+          data_format: The data format of the exported test cases. If not
+            specified, `BLOB` is assumed.
+          data_filter: The filter expression used to filter exported test
+            cases, see `API Filtering <https://aip.dev/160>`__. The expression
+            is case insensitive and supports the following syntax:
               name = [OR name = ] ...
               For example:
                 -  "name = t1 OR name = t2" matches the test case with the
                 exact resource name "t1" or "t2".
 
         Returns:
-          response: long running operation for export
+          Long running operation for export
         """
 
         if not agent_id:
@@ -144,12 +141,12 @@ class TestCases(ScrapiBase):
         """Create a new Test Case in the specified CX Agent.
 
         Args:
-            test_case: The test case to create.
-            agent_id: The agent to create the test case for. Format:
+          test_case: The test case to create.
+          agent_id: The agent to create the test case for. Format:
               `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
 
         Returns:
-          response: test case which was created
+          The test case which was created
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -174,7 +171,7 @@ class TestCases(ScrapiBase):
               testCases/<TestCase ID>`
 
         Returns:
-          response: test case
+          The test case object
         """
 
         request = types.test_case.GetTestCaseRequest()
@@ -197,7 +194,7 @@ class TestCases(ScrapiBase):
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
 
         Returns:
-          response: long running operation for importing test cases.
+          Long running operation for importing test cases.
         """
 
         if not agent_id:
@@ -229,7 +226,7 @@ class TestCases(ScrapiBase):
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`.
 
         Returns:
-          response: deleted test cases
+          None
         """
 
         if not agent_id:
@@ -252,11 +249,11 @@ class TestCases(ScrapiBase):
           test_case_id: The test case to list results for. Format:
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
               testCases/<TestCase ID>`
-              NOTE: Specify a ``-`` as a wildcard for TestCase ID to list
-                results across multiple test cases.
+            NOTE: Specify a ``-`` as a wildcard for TestCase ID to list
+            results across multiple test cases.
 
         Returns:
-          response: List of test case results
+          List of test case results
         """
 
         request = types.test_case.ListTestCaseResultsRequest()
@@ -293,7 +290,7 @@ class TestCases(ScrapiBase):
             environments/<Environment ID>`
 
         Returns:
-          response: results for the set of run test cases.
+          Results for the set of run test cases.
         """
 
         if not agent_id:
@@ -324,7 +321,7 @@ class TestCases(ScrapiBase):
           obj: The Test Case obj of types.TestCase to use for the update.
 
         Returns:
-          response: updated Test Case.
+          The updated Test Case.
         """
 
         if obj:
@@ -363,7 +360,7 @@ class TestCases(ScrapiBase):
               agents/<Agent ID>/environments/<Environment ID>`
 
         Returns:
-          response: test case result.
+          The test case result.
         """
 
         request = types.test_case.RunTestCaseRequest()
@@ -387,7 +384,7 @@ class TestCases(ScrapiBase):
               testCases/<TestCase ID>/results/<TestCaseResult ID>
 
         Returns:
-          response: test case result.
+          The test case result.
         """
         request = types.test_case.GetTestCaseResultRequest()
         request.name = test_case_result_id
@@ -411,7 +408,7 @@ class TestCases(ScrapiBase):
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
 
         Returns:
-          response: Coverage of the test cases for the type specified.
+          The Coverage response of the test cases for the type specified.
         """
 
         if not agent_id:

@@ -1,6 +1,6 @@
 """CX Environments Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,8 +106,8 @@ class Environments(scrapi_base.ScrapiBase):
         into a user friendly dict.
 
         Args:
-          agent_id, the formatted CX Agent ID to use
-          reverse, (Optional) Boolean flag to swap key:value -> value:key
+          agent_id: the formatted CX Agent ID to use
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
           Dictionary containing Environment UUIDs as keys and environment
@@ -163,7 +163,7 @@ class Environments(scrapi_base.ScrapiBase):
             <Agent ID>/environments/<Environment ID>
 
         Returns:
-            Environment object.
+          Environment object.
         """
         request = types.environment.GetEnvironmentRequest(
             name=environment_id)
@@ -188,7 +188,7 @@ class Environments(scrapi_base.ScrapiBase):
             projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>
 
         Returns:
-            Environment object.
+          Environment object.
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -211,6 +211,7 @@ class Environments(scrapi_base.ScrapiBase):
             type google.cloud.dialogflowcx_v3beta1.types.Environment
           agent_id: The targeted agent for the operation. format:
             projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>
+
         Returns:
           An object representing a long-running operation. (LRO)
         """
@@ -354,6 +355,7 @@ class Environments(scrapi_base.ScrapiBase):
         environment_id:str,
         flow_version:str):
         """Deploys a flow to the specified environment.
+
          Args:
           environment_id: unique ID associated with target environment. Format:
             projects/<Project ID>/locations/<Location ID>/agents/
@@ -361,6 +363,7 @@ class Environments(scrapi_base.ScrapiBase):
           flow_version: Required. The flow version to deploy. Format:
             projects/<Project ID>/locations/<Location ID>/agents/
             <Agent ID>/ flows/<Flow ID>/versions/<Version ID>
+
         Returns:
           An object representing a long-running operation. (LRO)
         """

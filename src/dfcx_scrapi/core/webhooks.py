@@ -1,6 +1,6 @@
 """Webhook Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ class Webhooks(scrapi_base.ScrapiBase):
 
         Returns:
           Dictionary containing Webhook UUIDs as keys and
-              webhook.display_name as values
+          webhook display names as values
         """
         if not agent_id:
             agent_id = self.agent_id
@@ -158,7 +158,7 @@ class Webhooks(scrapi_base.ScrapiBase):
             <Agent ID>/webhooks/<Webhook
 
         Returns:
-          types.Webhook object.
+          The Webhook object.
         """
         request = types.webhook.GetWebhookRequest()
         request.name = webhook_id
@@ -182,7 +182,7 @@ class Webhooks(scrapi_base.ScrapiBase):
          agent_id: Optional. The formatted CX Agent ID.
 
         Returns:
-          types.Webhook object of the specified webhook.
+          The Webhook object of the specified webhook.
         """
 
         if not agent_id:
@@ -218,7 +218,7 @@ class Webhooks(scrapi_base.ScrapiBase):
             object vs. just partial updates.
 
         Returns:
-          types.Webhook object with specified changes.
+          The Webhook object with specified changes.
         """
         if not webhook_obj:
             webhook_obj = types.Webhook()

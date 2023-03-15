@@ -1,6 +1,6 @@
 """Utility file for dataframe functions in support of Dialogflow CX."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -144,7 +144,7 @@ class DataframeFunctions(ScrapiBase):
             dataframe = dataframe.astype({column: type_map[column]})
             temp_data[column] = type_map[column]
 
-        dataframe = dataframe.append(temp_data, ignore_index=True)
+        dataframe = pd.concat([dataframe, temp_data], ignore_index=True)
 
         return dataframe
 
@@ -181,12 +181,12 @@ class DataframeFunctions(ScrapiBase):
           train_phrases: dataframe of training phrases in advanced have
             training_phrase and parts column to track the build
           params(optional): dataframe of parameters
-          mode: basic - build assuming one row is one training phrase no
-            entities, advance - build keeping track of training phrases and
+          mode: "basic" - build assuming one row is one training phrase no
+            entities, "advanced" - build keeping track of training phrases and
             parts with the training_phrase and parts column.
 
         Returns:
-          intent_pb: the new intents protobuf object
+          The new intents protobuf object
         """
 
         if mode == "basic":
@@ -266,10 +266,11 @@ class DataframeFunctions(ScrapiBase):
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
+                    param_id = row["parameter_id"]
                     part = {
                         "text": row["text"],
-                        "parameter_id": row["parameter_id"],
-                    }
+                        "parameter_id": None if pd.isna(param_id) else param_id,
+                }
                     parts.append(part)
 
                 training_phrase = {"parts": parts, "repeat_count": 1, "id": ""}
@@ -333,8 +334,8 @@ class DataframeFunctions(ScrapiBase):
             https://cloud.google.com/dialogflow/cx/docs/reference/language
 
         Returns:
-          modified_intents: dictionary with intent display names as keys and
-            the new intent protobufs as values
+          Dictionary with intent display names as keys and the new intent
+          protobufs as values
         """
 
         if mode == "basic":
@@ -496,15 +497,15 @@ class DataframeFunctions(ScrapiBase):
         Args:
           display_name: display_name parameter of the intent to create
           train_phrases: dataframe of training phrases in advanced have
-                  training_phrase and parts column to track the build
+            training_phrase and parts column to track the build
           params(optional): dataframe of parameters
           meta: dictionary
-          mode: basic - build assuming one row is one training phrase no
-                  entities, advance - build keeping track of training phrases
-                  and parts with the training_phrase and parts column.
+          mode: "basic" - build assuming one row is one training phrase no
+            entities, "advanced" - build keeping track of training phrases
+            and parts with the training_phrase and parts column.
 
         Returns:
-          intent_pb: the new intents protobuf object
+          The new intents protobuf object
         """
         if mode == "basic":
             if all(k in tp_df for k in ["text"]):
@@ -586,9 +587,10 @@ class DataframeFunctions(ScrapiBase):
                 ]
                 parts = []
                 for _, row in tp_parts.iterrows():
+                    param_id = row["parameter_id"]
                     part = {
                         "text": row["text"],
-                        "parameter_id": row["parameter_id"],
+                        "parameter_id": None if pd.isna(param_id) else param_id,
                     }
                     parts.append(part)
 
@@ -651,7 +653,7 @@ class DataframeFunctions(ScrapiBase):
               the training_phrase and parts column.
           update_flag: True to update_flag the intents in the agent
           rate_limiter: number of seconds to wait between calls
-          meta: dictionary
+          meta: dictionary of intent metadata
           language_code: Language code of the intents being uploaded. Reference:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
 
@@ -790,10 +792,10 @@ class DataframeFunctions(ScrapiBase):
         Args:
           display_name: display_name parameter of the entity to update
           entity_df: dataframe values and synonyms
-          meta: dictionary
+          meta: dictionary of entity metadata
 
         Returns:
-          entity_pb: the new entity protobuf object
+          The new entity protobuf object
         """
         if not meta:
             meta = {}
@@ -837,8 +839,8 @@ class DataframeFunctions(ScrapiBase):
           rate_limiter: seconds to sleep between operations.
 
         Returns:
-          custom_entities: dictionary with entity display names as keys and the
-            new entity protobufs as values
+          Dictionary with entity display names as keys and the
+          new entity protobufs as values
         """
 
         if "meta" in entities_df.columns:
@@ -897,8 +899,8 @@ class DataframeFunctions(ScrapiBase):
           rate_limiter: seconds to sleep between operations.
 
         Returns:
-          custom_entities: dictionary with entity display names as keys and the
-            new entity protobufs as values
+          Dictionary with entity display names as keys and the
+          new entity protobufs as values
         """
         if "meta" in entities_df.columns:
             meta = (
@@ -943,8 +945,8 @@ class DataframeFunctions(ScrapiBase):
         """Create transition route.
 
         Args:
-          route_df: dataframe with a singular routes data. Should only be one
-            row
+          route_df: dataframe with data for a single route. Should only be one
+          row. The columns required are:
             intent: intent id
             condition: string condition. ex.
               $session.params.dtmf_diy_opt_in = 1 AND
@@ -960,7 +962,7 @@ class DataframeFunctions(ScrapiBase):
             rate_limiter: seconds to sleep between operations.
 
         Returns:
-          transitionRoute: transition route protobuf
+          The created transition route protobuf object
         """
 
         transition_route = types.TransitionRoute()
@@ -1015,30 +1017,32 @@ class DataframeFunctions(ScrapiBase):
     def bulk_create_route_group_from_dataframe(
         self, display_name, agent_id, flow_id, route_group_df, update_flag=False
     ):
-        """create transition route - no support for end_session / just end flow.
+        """Create transition route - no support for end_session, just end flow.
 
         Args:
           display_name: name for the route group
           agent_id: agent id of target agent
           flow_id: flow id where to create route group
-          route_group_df: dataframe with a routes data
-            intent: intent id
-            condition: string condition. ex.
-              $session.params.dtmf_diy_opt_in = 1 AND
-              $session.params.dtmf_2_techinternet = 2
-            target_page: page id
-            target_flow: flow id
-            webhook: webhook id
-            webhook_tag: string webhook tag
-            custom_payload: a singular payload or list of payloads ex. [{}, {}]
-            fulfillment_text: = list of text ["yo", "hi"]
-            parameter_presets: = dictionary of parameter presets ex.
-              {"param1":"value","param2":"othervalues"}
-              update_flag: True to create the route group in the provided
+          route_group_df: dataframe with data for all routes in the route
+            group. Columns should have the following format:
+              intent: intent id
+              condition: string condition. ex.
+                $session.params.dtmf_diy_opt_in = 1 AND
+                $session.params.dtmf_2_techinternet = 2
+              target_page: page id
+              target_flow: flow id
+              webhook: webhook id
+              webhook_tag: string webhook tag
+              custom_payload: a singular payload or list of payloads
+                ex. [{}, {}]
+              fulfillment_text: = list of text ["yo", "hi"]
+              parameter_presets: = dictionary of parameter presets ex.
+                {"param1":"value","param2":"othervalues"}
+                update_flag: True to create the route group in the provided
                 flow id
 
         Returns:
-          rg: route group protobuf
+          The created route group protobuf object
         """
         if "intent" in route_group_df.columns:
             intents_map = self.intents.get_intents_map(

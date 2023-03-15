@@ -1,6 +1,6 @@
 """Project level cross-region functions for CX."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ class Project(ScrapiBase):
             self.project_id or error.
 
         Returns:
-          all_agents: A List of Dicts that has all agent metadata info.
+          A List of Dicts that has all agent metadata info.
 
         """
         region_list = [
@@ -96,7 +96,7 @@ class Project(ScrapiBase):
           gcs_bucket: The GCS bucket to backup all files to
 
         Returns:
-          lro_list: List of all LROs to reference backend job status
+          List of all LROs to reference backend job status
         """
         if not project_id:
             project_id = self.project_id
