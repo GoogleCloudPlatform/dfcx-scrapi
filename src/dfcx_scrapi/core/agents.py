@@ -276,7 +276,9 @@ class Agents(scrapi_base.ScrapiBase):
     def validate_agent(
         self,
         agent_id: str = None,
-        timeout: float = None) -> Dict:
+        language_code: str = None,
+        timeout: float = None,
+        ) -> Dict:
         """Initiates the Validation of the CX Agent or Flow.
 
         This function will start the Validation feature for the given Agent
@@ -296,6 +298,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         request = types.agent.ValidateAgentRequest()
         request.name = agent_id
+        request.language_code = language_code
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
