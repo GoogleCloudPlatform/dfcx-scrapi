@@ -75,7 +75,7 @@ class WebhookUtil():
 
     @staticmethod
     def build_response(
-        response_text=None, page_info=None, session_info=None, action='replace'
+        response_text=None, page_info=None, session_info=None, append=False
     ):
         """Builds a Response object for Dialogflow CX.
 
@@ -90,11 +90,10 @@ class WebhookUtil():
           session_info: (Optional) The JSON object returned by
             build_session_info()
           action: (Optional) Whether messages will replace or append to
-            the list of messages waiting to be sent to the user.
+            the list of messages waiting to be sent to the use.
+            Default behavior is to replace.
         """
-        if action.casefold() not in ['replace', 'append']:
-            raise ValueError('`action` should be in ["replace", "append"].')
-        action = action.upper()
+        action = 'APPEND' if append else 'REPLACE'
         if response_text:
             response_object = {
                 'mergeBehavior': action,
