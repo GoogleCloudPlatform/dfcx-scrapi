@@ -112,7 +112,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return pages_dict
 
-    def list_pages(self, flow_id: str = None) -> List[gcdc_page.Page]:
+    def list_pages(self, flow_id: str = None, languageCode: str) -> List[gcdc_page.Page]:
         """Get a List of all pages for the specified Flow ID.
 
         Args:
@@ -123,6 +123,7 @@ class Pages(scrapi_base.ScrapiBase):
         """
         request = gcdc_page.ListPagesRequest()
         request.parent = flow_id
+        request.languageCode = languageCode
 
         client_options = self._set_region(flow_id)
         client = pages.PagesClient(
