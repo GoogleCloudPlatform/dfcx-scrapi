@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import List, Dict, Union
 
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Intent
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 
@@ -598,6 +599,153 @@ class IntentBuilder(BuildersCommon):
 
         return self.proto_obj
 
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        @staticmethod
+        def _parse_phrase_for_parameter_info(
+            intent_dict: Dict[str,str],
+            params_dict: Dict[str,str],
+            part: Intent.TrainingPhrase.Part,
+            part_count: int
+        ):
+            """Parse through Phrase part and update Dict with Parameter info."""
+            intent_dict.update({
+                "text": part.text,
+                "text_idx": part_count
+                })
+
+            if part.parameter_id:
+                intent_dict.update(params_dict[part.parameter_id])
+            elif intent_dict.get("entity_type"):
+                # Remove existing parameter_id if exist
+                key_to_remove = [
+                    "parameter_id", "entity_type", "is_list", "redact",
+                ]
+
+                for key in key_to_remove:
+                    intent_dict.pop(key, None)
+
+            return intent_dict
+
+        def _process_intent_proto_to_df_basic(self, obj: Intent):
+            """Process Intent Proto in basic mode."""
+            cols = ["display_name", "training_phrase"]
+            intent_df = pd.DataFrame(columns=cols)
+
+            intent_dict = {"display_name": str(obj.display_name)}
+
+            if not obj.training_phrases:
+                intent_df = self._concat_dict_to_df(intent_df, intent_dict)
+
+            else:
+                for phrase in obj.training_phrases:
+                    parts_list = [part.text for part in phrase.parts]
+                    intent_dict.update({"training_phrase": "".join(parts_list)})
+
+                    intent_df = self._concat_dict_to_df(intent_df, intent_dict)
+
+            return intent_df
+
+        def _process_intent_proto_to_df_advanced(self, obj: Intent):
+            """Process Intent Proto in advanced mode."""
+            cols = [
+                "name", "display_name", "description", "priority",
+                "is_fallback", "labels", "id", "repeat_count",
+                "training_phrase", "training_phrase_idx", "text", "text_idx",
+                "parameter_id", "entity_type", "is_list", "redact",
+            ]
+
+            intent_df = pd.DataFrame(columns=cols)
+
+            intent_dict = {
+                "name": str(obj.name),
+                "display_name": str(obj.display_name),
+                "description": str(obj.description),
+                "priority": int(obj.priority),
+                "is_fallback": bool(obj.is_fallback),
+            }
+
+            # labels
+            intent_dict["labels"] = ",".join([
+                key if key == val else f"{key}:{val}"
+                for key, val in obj.labels.items()
+            ])
+            # parameters
+            params_dict = {
+                str(param.id): {
+                    "parameter_id": str(param.id),
+                    "entity_type": str(param.entity_type),
+                    "is_list": bool(param.is_list),
+                    "redact": bool(param.redact),
+                }
+                for param in obj.parameters
+            }
+            # training phrases
+            if not obj.training_phrases:
+                intent_df = self._concat_dict_to_df(intent_df, intent_dict)
+
+            else:
+                for tp_count, phrase in enumerate(obj.training_phrases):
+                    whole_phrase = "".join([part.text for part in phrase.parts])
+                    intent_dict.update({
+                        "id": str(phrase.id),
+                        "repeat_count": int(phrase.repeat_count),
+                        "training_phrase": whole_phrase,
+                        "training_phrase_idx": tp_count,
+                    })
+                    for part_count, part in enumerate(phrase.parts):
+                        intent_dict = self._parse_phrase_for_parameter_info(
+                            intent_dict, params_dict, part, part_count
+                        )
+
+                        intent_df = self._concat_dict_to_df(
+                            intent_df, intent_dict
+                        )
+
+            return intent_df
+
+        def _intent_proto_to_dataframe(
+            self, obj: Intent, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a Intent protobuf object to pandas Dataframe.
+
+            Args:
+              obj (Intent):
+                Intent protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode == "basic":
+                intent_df = self._process_intent_proto_to_df_basic(obj)
+            elif mode == "advanced":
+                intent_df = self._process_intent_proto_to_df_advanced(obj)
+            else:
+                raise ValueError("`mode` types: ['basic', 'advanced'].")
+
+            return intent_df
+
+        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
+            """Create a DataFrame for proto_obj.
+
+            Args:
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
+
+            return self._intent_proto_to_dataframe(
+                obj=self._outer_self.proto_obj, mode=mode
+            )
 
 
 @dataclass
