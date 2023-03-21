@@ -17,6 +17,7 @@
 import logging
 from typing import List, Union
 
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import EntityType
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 
@@ -360,3 +361,98 @@ class EntityTypeBuilder(BuildersCommon):
                     break
 
         return self.proto_obj
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _process_entity_proto_to_df_basic(
+            self, obj: EntityType
+        ) -> pd.DataFrame:
+            """Process EntityType Proto to DataFrame in basic mode."""
+            cols = ["display_name", "entity_value", "synonyms"]
+            df = pd.DataFrame(columns=cols)
+
+            entity_type_dict = {"display_name": str(obj.display_name)}
+            for entity in obj.entities:
+                entity_type_dict["entity_value"] = entity.value
+                for synonym in entity.synonyms:
+                    entity_type_dict["synonyms"] = synonym
+                    df = self._concat_dict_to_df(df, entity_type_dict)
+
+            return df
+
+        def _process_entity_proto_to_df_advanced(
+            self, obj: EntityType
+        ) -> pd.DataFrame:
+            """Process EntityType Proto to DataFrame in advanced mode."""
+            cols = [
+                "entity_type_id", "display_name", "kind",
+                "auto_expansion_mode", "fuzzy_extraction", "redact",
+                "entity_value", "synonyms", "excluded_phrases",
+            ]
+            df = pd.DataFrame(columns=cols)
+
+            entity_type_dict = {
+                "entity_type_id": str(obj.name),
+                "display_name": str(obj.display_name),
+                "kind": str(obj.kind.name),
+                "auto_expansion_mode": bool(obj.auto_expansion_mode),
+                "fuzzy_extraction": bool(obj.enable_fuzzy_extraction),
+                "redact": bool(obj.redact),
+            }
+            for entity in obj.entities:
+                entity_type_dict["entity_value"] = entity.value
+                for synonym in entity.synonyms:
+                    entity_type_dict["synonyms"] = synonym
+                    df = self._concat_dict_to_df(df, entity_type_dict)
+
+            # remove "entity_value" and "synonyms" from `entity_type_dict` to
+            # make it ready for "exluded_phrases"
+            entity_type_dict.pop("entity_value", None)
+            entity_type_dict.pop("synonyms", None)
+
+            for excluded_phrase in obj.excluded_phrases:
+                entity_type_dict["excluded_phrases"] = excluded_phrase.value
+                df = self._concat_dict_to_df(df, entity_type_dict)
+
+            return df
+
+        def _entity_type_proto_to_dataframe(
+            self, obj: EntityType, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a EntityType protobuf object to pandas Dataframe.
+
+            Args:
+              obj (EntityType):
+                EntityType protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode == "basic":
+                return self._process_entity_proto_to_df_basic(obj)
+            elif mode == "advanced":
+                return self._process_entity_proto_to_df_advanced(obj)
+            else:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
+            """Create a DataFrame for proto_obj.
+
+            Args:
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
+
+            return self._entity_type_proto_to_dataframe(
+                obj=self._outer_self.proto_obj, mode=mode
+            )
