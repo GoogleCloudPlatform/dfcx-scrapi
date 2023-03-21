@@ -33,6 +33,7 @@ from dfcx_scrapi.core.intents import Intents
 from dfcx_scrapi.core.entity_types import EntityTypes
 from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.pages import Pages
+from dfcx_scrapi.core.webhooks import Webhooks
 from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
 
 GLOBAL_SCOPE = [
@@ -94,6 +95,7 @@ class DataframeFunctions(ScrapiBase):
         self.intents = Intents(creds_path, creds_dict)
         self.flows = Flows(creds_path, creds_dict)
         self.pages = Pages(creds_path, creds_dict)
+        self.webhooks = Webhooks(creds_path, creds_dict)
         self.route_groups = TransitionRouteGroups(
             creds_path, creds_dict
         )
@@ -1097,3 +1099,27 @@ class DataframeFunctions(ScrapiBase):
         g_sheets = self.sheets_client.open(sheet_name)
         worksheet = g_sheets.worksheet(worksheet_name)
         set_with_dataframe(worksheet, dataframe)
+
+    def webhooks_to_dataframe(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        webhook_subset: List[str] = None,
+    ) -> pd.DataFrame:
+        """Extracts all Webhooks into a pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of webhooks
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          webhook_subset (List[str]):
+            A subset of webhooks to extract the webhooks from.
+
+        Returns:
+          A pandas Dataframe
+        """
+        return self.webhooks.webhooks_to_df(
+            agent_id=agent_id, mode=mode, webhook_subset=webhook_subset
+        )

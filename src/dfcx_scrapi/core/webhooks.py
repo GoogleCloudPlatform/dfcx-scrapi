@@ -15,12 +15,15 @@
 # limitations under the License.
 
 import logging
-from typing import Dict
+from typing import List, Dict
 
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.builders.webhooks import WebhookBuilder
+
 
 # logging config
 logging.basicConfig(
@@ -242,3 +245,42 @@ class Webhooks(scrapi_base.ScrapiBase):
         response = client.update_webhook(request)
 
         return response
+
+    def webhooks_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        webhook_subset: List[str] = None,
+    ) -> pd.DataFrame:
+        """Extracts all Webhooks into a pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of webhooks
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          webhook_subset (List[str]):
+            A subset of webhooks to extract the webhooks from.
+
+        Returns:
+          A pandas Dataframe
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        # Error checking for `mode`
+        if mode not in ["basic", "advanced"]:
+            raise ValueError("Mode types: [basic, advanced]")
+
+        main_df = pd.DataFrame()
+        webhooks = self.list_webhooks(agent_id)
+
+        for obj in webhooks:
+            if (webhook_subset) and (obj.display_name not in webhook_subset):
+                continue
+            wb = WebhookBuilder(obj)
+            webhook_df = wb.to_dataframe(mode=mode)
+            main_df = pd.concat([main_df, webhook_df], ignore_index=True)
+
+        return main_df
