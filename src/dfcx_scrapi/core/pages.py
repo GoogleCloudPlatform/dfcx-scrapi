@@ -110,7 +110,7 @@ class Pages(scrapi_base.ScrapiBase):
             }
 
         pages_dict = self._add_generic_pages_to_map(
-            flow_id, pages_dict, reverse
+            flow_id, pages_dict, language_code, reverse
         )
 
         return pages_dict
