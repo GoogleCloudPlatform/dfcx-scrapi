@@ -481,7 +481,7 @@ class BuildersCommon:
                 Unique value of the column.
             """
             if not __class__._is_df_column_has_single_value(df, column): # pylint: disable=W0212
-                raise Exception(
+                raise UserWarning(
                     f"The column `{column}` has none or"
                     " more than one unique value."
                 )
@@ -522,7 +522,7 @@ class BuildersCommon:
             disp_name = self._is_df_has_single_display_name(df)
 
             if disp_name != proto_disp_name:
-                raise Exception(
+                raise ValueError(
                     "The input DataFrame `df` refers to a proto with a"
                     " different display_name from the one stored in proto_obj."
                 )
@@ -557,7 +557,7 @@ class BuildersCommon:
             # Error checking: `dict_` keys against `df` columns
             extra_keys = [k for k in dict_ if k not in df.columns]
             if extra_keys:
-                raise Exception(
+                raise ValueError(
                     "`dict_` has a key that is not included in"
                     f" the `df` columns: {extra_keys}."
                 )
@@ -573,4 +573,4 @@ class BuildersCommon:
 
     class _Dataframe(_DataframeCommon):
         """Prototype class to create a DataFrame from a proto_obj."""
-        ...
+        pass
