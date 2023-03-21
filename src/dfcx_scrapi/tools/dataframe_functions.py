@@ -1129,7 +1129,7 @@ class DataframeFunctions(ScrapiBase):
         if not create_worksheet:
             worksheet = g_sheets.worksheet(worksheet_name)
         else:
-            worksheet = g_sheets.addworksheet(
+            worksheet = g_sheets.add_worksheet(
                 title=worksheet_name, rows=len(dataframe) + 1,
                 cols=len(dataframe.columns) + 1
             )
@@ -1269,7 +1269,7 @@ class DataframeFunctions(ScrapiBase):
             sheet_name = f"{agent_name} DFCX resources"
             tmp_g_sheets = self.sheets_client.create(sheet_name)
             tmp_g_sheets.share(
-                email_address=email_address, perm_type="user", role="writer"
+                email_address, perm_type="user", role="writer"
             )
         self.dataframe_to_sheets(
             sheet_name, "Intents", intents_df, create_worksheet=True
