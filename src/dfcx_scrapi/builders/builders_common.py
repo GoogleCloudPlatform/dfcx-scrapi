@@ -15,8 +15,9 @@
 # limitations under the License.
 
 import logging
-from typing import List, Union
+from typing import List, Dict, Union, Any
 
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
 
@@ -39,6 +40,8 @@ class BuildersCommon:
         self.proto_obj = None
         if obj is not None:
             self.load_proto_obj(obj)
+
+        self._dataframe_instance = self._Dataframe(self)
 
 
     def _check_proto_obj_attr_exist(self):
@@ -349,3 +352,225 @@ class BuildersCommon:
             for eh in self.proto_obj.event_handlers
             if eh.event not in event_names
         ]
+
+
+    def to_dataframe(self, *args, **kwargs) -> pd.DataFrame:
+        """Prototype method to create a DataFrame from a proto_obj."""
+        return self._dataframe_instance.to_dataframe(*args, **kwargs)
+
+
+    def from_dataframe(self, *args, **kwargs):
+        """Prototype method to create a proto_obj from a DataFrame."""
+        return self._dataframe_instance.from_dataframe(*args, **kwargs)
+
+
+
+    class _DataframeCommon():
+        """An internal base class to store DataFrame related methods."""
+
+        _dataframes_map = {
+            "Intent": {
+                "basic": ["display_name", "training_phrase"],
+                "advanced": [
+                    "name", "display_name", "description", "priority",
+                    "is_fallback", "labels", "id", "repeat_count",
+                    "training_phrase", "training_phrase_idx",
+                    "text", "text_idx",
+                    "parameter_id", "entity_type", "is_list", "redact",
+                ],
+            },
+            "EntityType": {
+                "basic": ["display_name", "entity_value", "synonyms"],
+                "advanced": [
+                    "entity_type_id", "display_name", "kind",
+                    "auto_expansion_mode", "fuzzy_extraction", "redact",
+                    "entity_value", "synonyms", "excluded_phrases",
+                ],
+            },
+            "TransitionRouteGroup": {
+                "basic": [
+                    "name", "display_name", "flow_id",
+                    "intent", "condition", "target_type", "target_id",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                    # "intent_name", "target_name", "flow_name"
+                ],
+                "advanced": [
+                    "name", "display_name", "flow_id",
+                    "intent", "condition", "target_type", "target_id",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                    # "intent_name", "target_name", "flow_name"
+                ],
+            },
+            "Webhook": {
+                "basic": ["display_name", "uri"],
+                "advanced": [
+                    "name", "display_name", "timeout", "disabled",
+                    "service_type", "uri",
+                    "username", "password", "request_headers",
+                ]
+            }
+        }
+
+
+        def __init__(self, outer_self):
+            self._outer_self = outer_self
+
+
+        def _find_mode(self, df: pd.DataFrame) -> str:
+            """Find the mode that the `df` represents.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame
+
+            Returns:
+                The mode as a string.
+            """
+            proto_name = self._outer_self._proto_type_str # pylint: disable=W0212
+            output_schemas = self._dataframes_map.get(proto_name)
+
+            if output_schemas is not None:
+                for mode, schema in output_schemas.items():
+                    if set(df.columns) == set(schema):
+                        return str(mode)
+
+            return None
+
+
+
+        @staticmethod
+        def _is_column_has_single_value(df: pd.DataFrame, column: str) -> bool:
+            """Check whether the column in the df has only one value.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame.
+                column (str):
+                    column name as string.
+
+            Returns:
+                True if the column has single value else False
+            """
+            if column not in df.columns:
+                raise ValueError(
+                    f"column `{column}` is not present in the df."
+                )
+
+            vals = list(df[column].unique())
+            if len(vals) != 1:
+                return False
+
+            return True
+
+
+        @staticmethod
+        def _unique_value_of_a_column(
+            df: pd.DataFrame, column: str
+        ) -> Any:
+            """Check whether the column in the df has only one value
+            and returns that value.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame.
+                column (str):
+                    column name as string.
+
+            Returns:
+                Unique value of the column.
+            """
+            if not __class__._is_df_column_has_single_value(df, column): # pylint: disable=W0212
+                raise Exception(
+                    f"The column `{column}` has none or"
+                    " more than one unique value."
+                )
+
+            return list(df[column].unique())[0]
+
+
+        @staticmethod
+        def _is_df_has_single_display_name(df: pd.DataFrame) -> str:
+            """Check whether the 'display_name' column in df has only one value
+            and returns that value.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame.
+
+            Returns:
+                display_name as a string.
+            """
+            return __class__._unique_value_of_a_column(df, "display_name") # pylint: disable=W0212
+
+
+        def _is_df_display_name_match_with_proto(self, df: pd.DataFrame):
+            """Check whether the 'display_name' column in df matches with
+            the proto_obj 'display_name'.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame.
+
+            Raises:
+                Exception: If the display_name of df does not match
+                  with the proto_obj.
+            """
+            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
+
+            proto_disp_name = self._outer_self.proto_obj.display_name
+            disp_name = self._is_df_has_single_display_name(df)
+
+            if disp_name != proto_disp_name:
+                raise Exception(
+                    "The input DataFrame `df` refers to a proto with a"
+                    " different display_name from the one stored in proto_obj."
+                )
+
+
+        def to_dataframe(self) -> pd.DataFrame:
+            """Prototype method to create a DataFrame from a proto_obj."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+
+        def from_dataframe(self):
+            """Prototype method to create a proto_obj from a DataFrame."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+
+        @staticmethod
+        def _concat_dict_to_df(
+            df: pd.DataFrame, dict_: Dict[str, Any]
+        ) -> pd.DataFrame:
+            """Transform a dictionary to a DataFrame then
+            concatenate with the existing DataFrame.
+
+            Args:
+                df (pd.DataFrame):
+                    The DataFrame to append the row to.
+                dict_ (Dict[str, Any]):
+                    The dictionary representing a row.
+
+            Returns:
+                A DataFrame with a new row.
+            """
+            # Error checking: `dict_` keys against `df` columns
+            extra_keys = [k for k in dict_ if k not in df.columns]
+            if extra_keys:
+                raise Exception(
+                    "`dict_` has a key that is not included in"
+                    f" the `df` columns: {extra_keys}."
+                )
+
+            # Alternative row creation:
+            # row = pd.DataFrame.from_dict(dict_, orient="index").transpose()
+            row = pd.DataFrame(dict_, index=[0])
+            df = pd.concat([df, row], ignore_index=True)
+
+            return df
+
+
+
+    class _Dataframe(_DataframeCommon):
+        """Prototype class to create a DataFrame from a proto_obj."""
+        ...
