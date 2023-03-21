@@ -1146,3 +1146,35 @@ class DataframeFunctions(ScrapiBase):
         return self.entities.entity_types_to_df(
             agent_id=agent_id, mode=mode, entity_type_subset=entity_type_subset
         )
+
+    def intents_to_dataframe(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        intent_subset: List[str] = None,
+        transpose: bool = False,
+        language_code: str = None) -> pd.DataFrame:
+        """Extracts all Intents and Training Phrases into a Pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of intents
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          intent_subset (List[str]):
+            A subset of intents to extract the intents from.
+          transpose (bool):
+            Return the transposed DataFrame. If this flag passed as True,
+            mode won't affect the result and the result would be like basic.
+          language_code (str):
+            Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
+
+        Returns:
+          A pandas Dataframe
+        """
+        return self.intents.intents_to_df(
+            agent_id=agent_id, mode=mode, intent_subset=intent_subset,
+            transpose=transpose, language_code=language_code
+        )
