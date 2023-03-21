@@ -29,6 +29,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from google.cloud.dialogflowcx_v3beta1 import types
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.intents import Intents
 from dfcx_scrapi.core.entity_types import EntityTypes
 from dfcx_scrapi.core.flows import Flows
@@ -91,6 +92,7 @@ class DataframeFunctions(ScrapiBase):
             self.sheets_client = gspread.authorize(creds)
 
         logging.info("create dfcx creds %s", creds_path)
+        self.agents = Agents(creds_path, creds_dict)
         self.entities = EntityTypes(creds_path, creds_dict)
         self.intents = Intents(creds_path, creds_dict)
         self.flows = Flows(creds_path, creds_dict)
@@ -1211,3 +1213,76 @@ class DataframeFunctions(ScrapiBase):
             agent_id=agent_id, mode=mode, intent_subset=intent_subset,
             transpose=transpose, language_code=language_code
         )
+
+    def route_groups_to_dataframe(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+    ) -> pd.DataFrame:
+        """docs here!"""
+        _ = agent_id + mode
+        return pd.DataFrame()
+
+    def agent_to_sheets(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        sheet_name: str = None,
+        email_address: str = None
+    ):
+        """Dump agent resources to a spreadsheet.
+
+        Args:
+          agent_id (str):
+            agent to pull the resources from.
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          sheet_name (str):
+            The spread sheet name. If it's not present, a new spreadsheet will
+            be created by the name of 'AGENT_NAME DFCX resources' and it will
+            be shared with the `email_address`
+          email_address (str):
+            The email address to share the spreadsheet with. If `sheet_name`
+            is not present you must pass `email_address` to share
+            the spreadsheet with it.
+        """
+        # Get the dataframes
+        intents_df = self.intents_to_dataframe(agent_id=agent_id, mode=mode)
+        webhooks_df = self.webhooks_to_dataframe(agent_id=agent_id, mode=mode)
+        entity_types_df = self.entity_types_to_dataframe(
+            agent_id=agent_id, mode=mode
+        )
+        route_groups_df = self.route_groups_to_dataframe(
+            agent_id=agent_id, mode=mode
+        )
+        # Get the agent name
+        the_agent = self.agents.get_agent(agent_id=agent_id)
+        agent_name = the_agent.display_name
+        # Create a spreadsheet and import the dataframes
+        if sheet_name is None:
+            if email_address is None:
+                raise ValueError(
+                    "Either enter an existing `sheet_name` or pass"
+                    " an `email_address` to share the new spreadsheet."
+                )
+            sheet_name = f"{agent_name} DFCX resources"
+            tmp_g_sheets = self.sheets_client.create(sheet_name)
+            tmp_g_sheets.share(
+                email_address=email_address, perm_type="user", role="writer"
+            )
+        self.dataframe_to_sheets(
+            sheet_name, "Intents", intents_df, create_worksheet=True
+        )
+        self.dataframe_to_sheets(
+            sheet_name, "Webhooks", webhooks_df, create_worksheet=True
+        )
+        self.dataframe_to_sheets(
+            sheet_name, "EntityTypes", entity_types_df, create_worksheet=True
+        )
+        self.dataframe_to_sheets(
+            sheet_name, "TransitionRouteGroups",
+            route_groups_df, create_worksheet=True
+        )
+
+        # logging.info("Agent's resources spreadsheet: %s", g_sheets.url)
