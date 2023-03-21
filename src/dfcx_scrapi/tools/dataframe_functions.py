@@ -1085,8 +1085,20 @@ class DataframeFunctions(ScrapiBase):
 
         return route_group
 
-    def sheets_to_dataframe(self, sheet_name, worksheet_name):
-        """Move Intent/TP data from Google Sheets to a DataFrame."""
+    def sheets_to_dataframe(
+        self, sheet_name: str, worksheet_name: str
+    ) -> pd.DataFrame:
+        """Retrieve a Google Sheets spreadsheet as a pandas DataFrame.
+
+        Args:
+          sheet_name (str):
+            The spread sheet name.
+          worksheet_name (str):
+            The worksheet tab name.
+
+        Returns:
+          The content of the spreadsheet as a pandas DataFrame.
+        """
         g_sheets = self.sheets_client.open(sheet_name)
         sheet = g_sheets.worksheet(worksheet_name)
         data_pull = sheet.get_all_values()
@@ -1094,10 +1106,31 @@ class DataframeFunctions(ScrapiBase):
 
         return data
 
-    def dataframe_to_sheets(self, sheet_name, worksheet_name, dataframe):
-        """Move Intent/TP data from a DataFrame to Google Sheets."""
+    def dataframe_to_sheets(
+        self,
+        sheet_name: str, worksheet_name: str,
+        dataframe: pd.DataFrame, create_worksheet: bool = False
+    ):
+        """Dump a pandas DataFrame to a Google Sheets spreadsheet.
+
+        Args:
+          sheet_name (str):
+            The spread sheet name.
+          worksheet_name (str):
+            The worksheet tab name.
+          dataframe (pd.DataFrame):
+            The pandas DataFrame that will export to sheets.
+          create_worksheet (bool):
+            Whether to create a new worksheet or use the existing one.
+        """
         g_sheets = self.sheets_client.open(sheet_name)
-        worksheet = g_sheets.worksheet(worksheet_name)
+        if not create_worksheet:
+            worksheet = g_sheets.worksheet(worksheet_name)
+        else:
+            worksheet = g_sheets.addworksheet(
+                title=worksheet_name, rows=len(dataframe) + 1,
+                cols=len(dataframe.columns) + 1
+            )
         set_with_dataframe(worksheet, dataframe)
 
     def webhooks_to_dataframe(

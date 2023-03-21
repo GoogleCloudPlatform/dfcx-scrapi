@@ -573,4 +573,4 @@ class BuildersCommon:
 
     class _Dataframe(_DataframeCommon):
         """Prototype class to create a DataFrame from a proto_obj."""
-        pass
+        pass # pylint: disable=W0107
