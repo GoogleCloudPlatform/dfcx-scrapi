@@ -1123,3 +1123,26 @@ class DataframeFunctions(ScrapiBase):
         return self.webhooks.webhooks_to_df(
             agent_id=agent_id, mode=mode, webhook_subset=webhook_subset
         )
+
+    def entity_types_to_dataframe(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        entity_type_subset: List[str] = None) -> pd.DataFrame:
+        """Extracts all EntityTypes into a pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of entity_types
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          entity_type_subset (List[str]):
+            A subset of entity_types to extract the entity_types from.
+
+        Returns:
+          A pandas Dataframe
+        """
+        return self.entities.entity_types_to_df(
+            agent_id=agent_id, mode=mode, webhook_subset=webhook_subset
+        )
