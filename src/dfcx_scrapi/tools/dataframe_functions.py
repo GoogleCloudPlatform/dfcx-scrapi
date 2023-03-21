@@ -1144,5 +1144,5 @@ class DataframeFunctions(ScrapiBase):
           A pandas Dataframe
         """
         return self.entities.entity_types_to_df(
-            agent_id=agent_id, mode=mode, webhook_subset=webhook_subset
+            agent_id=agent_id, mode=mode, entity_type_subset=entity_type_subset
         )
