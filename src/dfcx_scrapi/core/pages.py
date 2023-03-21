@@ -53,7 +53,7 @@ class Pages(scrapi_base.ScrapiBase):
         self.flow_id = flow_id
 
     @staticmethod
-    def _add_generic_pages_to_map(flow_id, pages_map, reverse):
+    def _add_generic_pages_to_map(flow_id, pages_map, language_code, reverse):
         """Add the generic page names to each Page map.
 
         Dialogflow CX contains a few `special` pages names that are reserved
@@ -70,15 +70,15 @@ class Pages(scrapi_base.ScrapiBase):
 
         if reverse:
             for page in page_names:
-                pages_map[page] = f"{flow_id}/pages/{page}"
+                pages_map[page] = f"{flow_id}/pages/{page}/language/{language_code}"
         else:
             for page in page_names:
-                pages_map[f"{flow_id}/pages/{page}"] = page
+                pages_map[f"{flow_id}/pages/{page}language/{language_code}"] = page
 
         return pages_map
 
     def get_pages_map(
-        self, flow_id: str = None, reverse=False
+        self, flow_id: str = None, language_code: str = None, reverse=False
     ) -> Dict[str, str]:
         """Exports Agent Page UUIDs and Names into a user friendly dict.
 
@@ -93,17 +93,20 @@ class Pages(scrapi_base.ScrapiBase):
         """
         if not flow_id:
             flow_id = self.flow_id
+        
+        if not language_code:
+            language_code:self.languge_code
 
         if reverse:
             pages_dict = {
                 page.display_name: page.name
-                for page in self.list_pages(flow_id)
+                for page in self.list_pages(flow_id, language_code)
             }
 
         else:
             pages_dict = {
                 page.name: page.display_name
-                for page in self.list_pages(flow_id)
+                for page in self.list_pages(flow_id, language_code)
             }
 
         pages_dict = self._add_generic_pages_to_map(
