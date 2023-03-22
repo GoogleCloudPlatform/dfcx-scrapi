@@ -309,11 +309,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         if not agent_id:
             agent_id = self.agent_id
 
-        flows_map = self.flows.get_flows_map(agent_id)
-        time.sleep(rate_limit)
-        intents_map = self.intents.get_intents_map(agent_id)
-        time.sleep(rate_limit)
-        webhooks_map = self.webhooks.get_webhooks_map(agent_id)
+        flows_map = self.flows.get_flows_map(agent_id)        
 
         all_pages_map = {}
         all_rgs = []
@@ -330,10 +326,15 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
             trgb_df = trgb.to_dataframe(mode=mode)
             main_df = pd.concat([main_df, trgb_df], ignore_index=True)
 
+        if main_df.empty:
+            return main_df
+
+        intents_map = self.intents.get_intents_map(agent_id)
         main_df["intent"] = main_df["intent"].map(intents_map)
         main_df["target_name"] = main_df["target_id"].map(all_pages_map)
         main_df["flow_name"] = main_df["flow_id"].map(flows_map)
         if mode == "advanced":
+            webhooks_map = self.webhooks.get_webhooks_map(agent_id)
             main_df["webhook"] = main_df["webhook"].map(webhooks_map)
 
         return main_df
