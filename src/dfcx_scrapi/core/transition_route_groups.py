@@ -27,6 +27,7 @@ from dfcx_scrapi.core import intents
 from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import webhooks
 from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.builders.transition_route_groups import TransitionRouteGroupBuilder
 
 
 # logging config
@@ -271,9 +272,13 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return response
 
-    def route_groups_to_dataframe(
-        self, agent_id: str = None, rate_limit: float = 0.5
-    ):
+
+    def route_groups_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        rate_limit: float = 0.5
+    ) -> pd.DataFrame:
         """Extracts the Transition Route Groups from a given Agent and
          returns key information about the Route Groups in a Pandas Dataframe
 
@@ -285,72 +290,50 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         Dataframe and return this to the user.
 
         Args:
-          agent_id: the Agent ID string in the following format:
-            projects/<project_id>/locations/<location_id>/agents/<agent_id>
-          rate_limit: Time in seconds to wait between each API call. Use this
-            to control hitting Quota limits on your project.
+          agent_id (str):
+            agent to pull transition routes from.
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          rate_limit (float):
+            Time in seconds to wait between each API call.
+            Use this to control hitting Quota limits on your project.
 
         Returns:
-          a Pandas Dataframe with columns: flow, route_group_name, target_page,
-          intent, condition, webhook, webhook_tag, custom_payload,
-          live_agent_handoff, conversation_success, play_audio,
-          output_audio_text, fulfillment_message
+          A pandas Dataframe
         """
+        # Error checking for `mode`
+        if mode not in ["basic", "advanced"]:
+            raise ValueError("Mode types: [basic, advanced]")
+
         if not agent_id:
             agent_id = self.agent_id
 
         flows_map = self.flows.get_flows_map(agent_id)
+        time.sleep(rate_limit)
         intents_map = self.intents.get_intents_map(agent_id)
+        time.sleep(rate_limit)
         webhooks_map = self.webhooks.get_webhooks_map(agent_id)
+
         all_pages_map = {}
         all_rgs = []
-
         for flow in flows_map:
             all_pages_map.update(self.pages.get_pages_map(flow))
+            time.sleep(rate_limit)
             all_rgs.extend(self.list_transition_route_groups(flow))
             time.sleep(rate_limit)
 
-        rows_list = []
-        for route_group in all_rgs:
-            flow = "/".join(route_group.name.split("/")[0:8])
-            for route in route_group.transition_routes:
-                temp_dict = {}
 
-                temp_dict.update({"flow": flows_map[flow]})
-                temp_dict.update({"route_group_name": route_group.display_name})
+        main_df = pd.DataFrame()
+        for obj in all_rgs:
+            trgb = TransitionRouteGroupBuilder(obj)
+            trgb_df = trgb.to_dataframe(mode=mode)
+            main_df = pd.concat([main_df, trgb_df], ignore_index=True)
 
-                if route.target_page:
-                    temp_dict.update(
-                        {"target_page": all_pages_map[route.target_page]}
-                    )
+        main_df["intent"] = main_df["intent"].map(intents_map)
+        main_df["target_name"] = main_df["target_id"].map(all_pages_map)
+        main_df["flow_name"] = main_df["flow_id"].map(flows_map)
+        if mode == "advanced":
+            main_df["webhook"] = main_df["webhook"].map(webhooks_map)
 
-                if route.intent:
-                    temp_dict.update({"intent": intents_map[route.intent]})
-
-                if route.condition:
-                    temp_dict.update({"condition": route.condition})
-
-                if route.trigger_fulfillment.webhook:
-                    temp_dict.update(
-                        {
-                            "webhook": webhooks_map[
-                                route.trigger_fulfillment.webhook
-                            ]
-                        }
-                    )
-
-                    temp_dict.update(
-                        {"webhook_tag": route.trigger_fulfillment.tag}
-                    )
-
-                if route.trigger_fulfillment.messages:
-                    for element in route.trigger_fulfillment.messages:
-                        temp_dict = self._rg_temp_dict_update(
-                            temp_dict, element
-                        )
-
-                rows_list.append(temp_dict)
-
-        final_dataframe = pd.DataFrame(rows_list)
-
-        return final_dataframe
+        return main_df

@@ -208,7 +208,9 @@ class TransitionRouteGroupBuilder(BuildersCommon):
                 trb_df = trb.to_dataframe(mode)
                 routes_df = pd.concat([routes_df, trb_df], ignore_index=True)
 
-            flow_id = str(obj.name).split("/transitionRouteGroups")[0]
+            flow_id = str(obj.name).split(
+                "/transitionRouteGroups", maxsplit=1
+            )[0]
             routes_df["name"] = str(obj.name)
             routes_df["display_name"] = str(obj.display_name)
             routes_df["flow_id"] = flow_id

@@ -1218,10 +1218,34 @@ class DataframeFunctions(ScrapiBase):
         self,
         agent_id: str = None,
         mode: str = "basic",
+        rate_limit: float = 0.5
     ) -> pd.DataFrame:
-        """docs here!"""
-        _ = agent_id + mode
-        return pd.DataFrame()
+        """Extracts the Transition Route Groups from a given Agent and
+         returns key information about the Route Groups in a Pandas Dataframe
+
+        DFCX Route Groups exist as an Agent level resource, however they are
+        categorized by the Flow they are associated with. This method will
+        extract all Flows for the given agent, then use the Flow IDs to
+        extract all Route Groups per Flow. Once all Route Groups have been
+        extracted, the method will convert the DFCX object to a Pandas
+        Dataframe and return this to the user.
+
+        Args:
+          agent_id (str):
+            agent to pull transition routes from.
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          rate_limit (float):
+            Time in seconds to wait between each API call.
+            Use this to control hitting Quota limits on your project.
+
+        Returns:
+          A pandas Dataframe
+        """
+        return self.route_groups.route_groups_to_df(
+            agent_id=agent_id, mode=mode, rate_limit=rate_limit
+        )
 
     def agent_to_sheets(
         self,
