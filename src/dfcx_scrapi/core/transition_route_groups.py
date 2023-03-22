@@ -309,7 +309,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         if not agent_id:
             agent_id = self.agent_id
 
-        flows_map = self.flows.get_flows_map(agent_id)        
+        flows_map = self.flows.get_flows_map(agent_id)
 
         all_pages_map = {}
         all_rgs = []
@@ -318,7 +318,6 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
             time.sleep(rate_limit)
             all_rgs.extend(self.list_transition_route_groups(flow))
             time.sleep(rate_limit)
-
 
         main_df = pd.DataFrame()
         for obj in all_rgs:
