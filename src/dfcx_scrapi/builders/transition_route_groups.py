@@ -215,10 +215,7 @@ class TransitionRouteGroupBuilder(BuildersCommon):
             routes_df["display_name"] = str(obj.display_name)
             routes_df["flow_id"] = flow_id
 
-            # reorder columns for better readablity
-            return routes_df[
-                self._dataframes_map["TransitionRouteGroup"][mode]
-            ]
+            return routes_df
 
         def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
             """Create a DataFrame for proto_obj.
