@@ -16,6 +16,8 @@
 
 import logging
 
+import numpy as np
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
@@ -224,6 +226,62 @@ class TransitionRouteBuilder(BuildersCommon):
         return self.proto_obj
 
 
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _process_transition_route_proto_to_dataframe(
+            self, obj: TransitionRoute, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a TransitionRoute protobuf object to pandas Dataframe.
+
+            Args:
+              obj (TransitionRoute):
+                TransitionRoute protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode not in ["basic", "advanced"]:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+            fb = FulfillmentBuilder(obj.trigger_fulfillment)
+            fulfillment_df = fb.to_dataframe(mode)
+
+            if obj.target_page:
+                target_type, target_id = "page", str(obj.target_page)
+            elif obj.target_flow:
+                target_type, target_id = "flow", str(obj.target_flow)
+            else:
+                target_type, target_id = np.nan, np.nan
+
+            route_df = pd.DataFrame({
+                "intent": [str(obj.intent)],
+                "condition": [str(obj.condition)],
+                "target_type": [target_type],
+                "target_id": [target_id],
+            })
+
+            return pd.concat([route_df, fulfillment_df], axis=1)
+
+        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
+            """Create a DataFrame for proto_obj.
+
+            Args:
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
+
+            return self._process_transition_route_proto_to_dataframe(
+                obj=self._outer_self.proto_obj, mode=mode
+            )
 
 
 class EventHandlerBuilder(BuildersCommon):

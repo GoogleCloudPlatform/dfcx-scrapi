@@ -417,6 +417,17 @@ class BuildersCommon:
                     "webhook", "webhook_tag", "return_partial_responses",
                 ]
             },
+            "TransitionRoute": {
+                "basic": [
+                    "intent", "condition", "target_type", "target_id",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "intent", "condition", "target_type", "target_id",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            }
         }
 
 
