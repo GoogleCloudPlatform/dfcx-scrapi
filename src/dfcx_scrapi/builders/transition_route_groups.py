@@ -17,6 +17,7 @@
 import logging
 from typing import List, Union
 
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRouteGroup
 from dfcx_scrapi.builders.builders_common import BuildersCommon
@@ -177,3 +178,59 @@ class TransitionRouteGroupBuilder(BuildersCommon):
         self.proto_obj.transition_routes = new_routes
 
         return self.proto_obj
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _process_route_group_proto_to_dataframe(
+            self, obj: TransitionRouteGroup, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a TransitionRouteGroup protobuf object
+            to pandas Dataframe.
+
+            Args:
+              obj (TransitionRouteGroup):
+                TransitionRouteGroup protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode not in ["basic", "advanced"]:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+            routes_df = pd.DataFrame()
+            for route in obj.transition_routes:
+                trb = TransitionRouteBuilder(route)
+                trb_df = trb.to_dataframe(mode)
+                routes_df = pd.concat([routes_df, trb_df], ignore_index=True)
+
+            flow_id = str(obj.name).split("/transitionRouteGroups")[0]
+            routes_df["name"] = str(obj.name)
+            routes_df["display_name"] = str(obj.display_name)
+            routes_df["flow_id"] = flow_id
+
+            # reorder columns for better readablity
+            return routes_df[
+                self._dataframes_map["TransitionRouteGroup"][mode]
+            ]
+
+        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
+            """Create a DataFrame for proto_obj.
+
+            Args:
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
+
+            return self._process_route_group_proto_to_dataframe(
+                obj=self._outer_self.proto_obj, mode=mode
+            )
