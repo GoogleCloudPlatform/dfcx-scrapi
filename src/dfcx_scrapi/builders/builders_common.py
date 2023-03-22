@@ -409,7 +409,14 @@ class BuildersCommon:
                     "service_type", "uri",
                     "username", "password", "request_headers",
                 ]
-            }
+            },
+            "Fulfillment": {
+                "basic": ["has_fulfillment", "has_fulfillment_webhook"],
+                "advanced": [
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ]
+            },
         }
 
 

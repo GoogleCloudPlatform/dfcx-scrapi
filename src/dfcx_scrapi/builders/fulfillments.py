@@ -17,6 +17,7 @@
 import logging
 from typing import Dict
 
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
 from dfcx_scrapi.builders.builders_common import BuildersCommon
@@ -303,3 +304,128 @@ class FulfillmentBuilder(BuildersCommon):
             return False
 
         return bool(self.proto_obj.webhook)
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _parse_response_message(self, obj: ResponseMessage):
+            """Parse the ResponseMessage as a string."""
+            if obj.text:
+                resp_type = "text"
+                resp_msg = obj.text.text
+            elif obj.payload:
+                resp_type = "payload"
+                proto_struct = obj.payload
+                resp_msg_helper = ", ".join([
+                    f"{k}: {v}" for k, v in proto_struct.items()
+                ])
+                resp_msg = f"[{resp_msg_helper}]"
+            elif obj.conversation_success:
+                resp_type = "conversation_success"
+                proto_struct = obj.conversation_success.metadata
+                resp_msg_helper = ", ".join([
+                    f"{k}: {v}" for k, v in proto_struct.items()
+                ])
+                resp_msg = f"[{resp_msg_helper}]"
+            elif obj.output_audio_text:
+                if obj.output_audio_text.text:
+                    resp_type = "output_audio_text - text"
+                    resp_msg = obj.output_audio_text.text
+                elif obj.output_audio_text.ssml:
+                    resp_type = "output_audio_text - ssml"
+                    resp_msg = obj.output_audio_text.ssml
+            elif obj.live_agent_handoff:
+                resp_type = "live_agent_handoff"
+                proto_struct = obj.live_agent_handoff.metadata
+                resp_msg_helper = ", ".join([
+                    f"{k}: {v}" for k, v in proto_struct.items()
+                ])
+                resp_msg = f"[{resp_msg_helper}]"
+            elif obj.play_audio:
+                resp_type = "play_audio"
+                resp_msg = obj.play_audio.audio_uri
+            elif obj.telephony_transfer_call:
+                resp_type = "telephony_transfer_call"
+                resp_msg = obj.telephony_transfer_call.phone_number
+
+            return f"{resp_type}: {resp_msg}"
+
+        def _process_fulfillment_proto_to_df_basic(
+            self, obj: Fulfillment
+        ) -> pd.DataFrame:
+            """Process Fulfillment Proto to DataFrame in basic mode."""
+            has_fulfillment, has_fulfillment_webhook = False, False
+            if obj.messages or obj.conditional_cases:
+                has_fulfillment = True
+            if obj.webhook and obj.tag:
+                has_fulfillment_webhook = True
+
+            return pd.DataFrame({
+                "has_fulfillment": [bool(has_fulfillment)],
+                "has_fulfillment_webhook": [bool(has_fulfillment_webhook)],
+            })
+
+        def _process_fulfillment_proto_to_df_advanced(
+            self, obj: Fulfillment
+        ) -> pd.DataFrame:
+            """Process Fulfillment Proto to DataFrame in advanced mode."""
+            messages = "\n".join([
+                self._parse_response_message(msg)
+                for msg in obj.messages
+            ])
+            params = "\n".join([
+                f"{param.parameter}: {param.value if param.value else 'null'}"
+                for param in obj.set_parameter_actions
+            ])
+            # TODO: Human readable way for conditional_cases
+            cond_cases = obj.conditional_cases
+            partial_resp = obj.return_partial_responses
+
+            return pd.DataFrame({
+                "messages": [messages],
+                "preset_parameters": [params],
+                "conditional_cases": [cond_cases],
+                "webhook": [str(obj.webhook)],
+                "webhook_tag": [str(obj.tag)],
+                "return_partial_responses": [bool(partial_resp)],
+            })
+
+        def _fulfillment_proto_to_dataframe(
+            self, obj: Fulfillment, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a Fulfillment protobuf object to pandas Dataframe.
+
+            Args:
+              obj (Fulfillment):
+                Fulfillment protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode == "basic":
+                return self._process_fulfillment_proto_to_df_basic(obj)
+            elif mode == "advanced":
+                return self._process_fulfillment_proto_to_df_advanced(obj)
+            else:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
+            """Create a DataFrame for proto_obj.
+
+            Args:
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
+
+            return self._fulfillment_proto_to_dataframe(
+                obj=self._outer_self.proto_obj, mode=mode
+            )
