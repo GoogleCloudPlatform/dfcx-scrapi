@@ -348,6 +348,8 @@ class FulfillmentBuilder(BuildersCommon):
             elif obj.telephony_transfer_call:
                 resp_type = "telephony_transfer_call"
                 resp_msg = obj.telephony_transfer_call.phone_number
+            else:
+                return f"NOT FOUND\n{obj}"
 
             return f"{resp_type}: {resp_msg}"
 
