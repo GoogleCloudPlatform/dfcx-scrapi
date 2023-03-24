@@ -89,9 +89,9 @@ class WebhookUtil():
           page_info: (Optional) The JSON object returned by build_page_info()
           session_info: (Optional) The JSON object returned by
             build_session_info()
-          action: (Optional) Whether messages will replace or append to
-            the list of messages waiting to be sent to the use.
-            Default behavior is to replace.
+          append: (Optional) Whether messages will append or replace to
+            the list of messages waiting to be sent to the user. If append
+            set to False it will replace the messages.
         """
         action = 'APPEND' if append else 'REPLACE'
         if response_text:
