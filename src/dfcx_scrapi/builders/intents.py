@@ -60,6 +60,7 @@ class IntentBuilder(BuildersCommon):
             A list of strings that represents
               parameter_id of each part in phrase.
         """
+        chars_to_ignore_at_beginning = ["'", ",", ".", "?", "!"]
         i = 0
         while True:
             p_curr, a_curr = phrase[i], annots[i]
@@ -73,7 +74,13 @@ class IntentBuilder(BuildersCommon):
                 annots.insert(i+1, "")
                 i += 2
             elif a_curr and not a_next:
-                phrase[i+1] = " " + p_next
+                flag = any(
+                    ch
+                    for ch in chars_to_ignore_at_beginning
+                    if p_next.startswith(ch)
+                )
+                if not flag:
+                    phrase[i+1] = " " + p_next
                 i += 1
             elif not a_curr and a_next:
                 phrase[i] = p_curr + " "
