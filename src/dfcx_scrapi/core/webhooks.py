@@ -225,13 +225,11 @@ class Webhooks(scrapi_base.ScrapiBase):
 
         webhook_obj.name = webhook_id
 
-        mask = None
-        if kwargs:
-            # set environment attributes from kwargs
-            for key, value in kwargs.items():
-                setattr(webhook_obj, key, value)
-            paths = kwargs.keys()
-            mask = field_mask_pb2.FieldMask(paths=paths)
+        # set environment attributes from kwargs
+        for key, value in kwargs.items():
+            setattr(webhook_obj, key, value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
 
         client_options = self._set_region(webhook_id)
         client = services.webhooks.WebhooksClient(
@@ -239,8 +237,7 @@ class Webhooks(scrapi_base.ScrapiBase):
 
         request = types.webhook.UpdateWebhookRequest()
         request.webhook = webhook_obj
-        if mask:
-            request.update_mask = mask
+        request.update_mask = mask
 
         response = client.update_webhook(request)
 
