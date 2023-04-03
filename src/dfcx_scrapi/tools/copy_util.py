@@ -628,7 +628,9 @@ class CopyUtil(ScrapiBase):
 
         # push to destination agent
         try:
-            self.entities.create_entity_type(destination_agent, entity_object)
+            self.entities.create_entity_type(
+                agent_id=destination_agent,
+                obj=entity_object)
             logging.info(
                 "Entity Type %s created successfully",
                 entity_object.display_name,
