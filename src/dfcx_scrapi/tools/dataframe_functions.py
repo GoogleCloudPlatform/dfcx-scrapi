@@ -1308,5 +1308,6 @@ class DataframeFunctions(ScrapiBase):
             sheet_name, "TransitionRouteGroups",
             route_groups_df, create_worksheet=True
         )
+        tmp_g_sheets.del_worksheet(tmp_g_sheets.worksheet("Sheet1"))
 
-        # logging.info("Agent's resources spreadsheet: %s", g_sheets.url)
+        logging.info("Agent's resources spreadsheet: %s", tmp_g_sheets.url)

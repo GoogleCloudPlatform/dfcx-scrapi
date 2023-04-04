@@ -17,6 +17,7 @@
 import logging
 from typing import Dict
 
+import numpy as np
 import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
@@ -353,7 +354,7 @@ class FulfillmentBuilder(BuildersCommon):
 
             return f"{resp_type}: {resp_msg}"
 
-        def _process_fulfillment_proto_to_df_basic(
+        def _process_proto_to_df_basic(
             self, obj: Fulfillment
         ) -> pd.DataFrame:
             """Process Fulfillment Proto to DataFrame in basic mode."""
@@ -368,7 +369,7 @@ class FulfillmentBuilder(BuildersCommon):
                 "has_fulfillment_webhook": [bool(has_fulfillment_webhook)],
             })
 
-        def _process_fulfillment_proto_to_df_advanced(
+        def _process_proto_to_df_advanced(
             self, obj: Fulfillment
         ) -> pd.DataFrame:
             """Process Fulfillment Proto to DataFrame in advanced mode."""
@@ -382,6 +383,8 @@ class FulfillmentBuilder(BuildersCommon):
             ])
             # TODO: Human readable way for conditional_cases
             cond_cases = obj.conditional_cases
+            if not cond_cases:
+                cond_cases = np.nan
             partial_resp = obj.return_partial_responses
 
             return pd.DataFrame({
@@ -392,42 +395,3 @@ class FulfillmentBuilder(BuildersCommon):
                 "webhook_tag": [str(obj.tag)],
                 "return_partial_responses": [bool(partial_resp)],
             })
-
-        def _fulfillment_proto_to_dataframe(
-            self, obj: Fulfillment, mode: str = "basic"
-        ) -> pd.DataFrame:
-            """Converts a Fulfillment protobuf object to pandas Dataframe.
-
-            Args:
-              obj (Fulfillment):
-                Fulfillment protobuf object
-              mode (str):
-                Whether to return 'basic' DataFrame or 'advanced' one.
-                Refer to `data.dataframe_schemas.json` for schemas.
-
-            Returns:
-              A pandas Dataframe
-            """
-            if mode == "basic":
-                return self._process_fulfillment_proto_to_df_basic(obj)
-            elif mode == "advanced":
-                return self._process_fulfillment_proto_to_df_advanced(obj)
-            else:
-                raise ValueError("Mode types: ['basic', 'advanced'].")
-
-        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
-            """Create a DataFrame for proto_obj.
-
-            Args:
-              mode (str):
-                Whether to return 'basic' DataFrame or 'advanced' one.
-                Refer to `data.dataframe_schemas.json` for schemas.
-
-            Returns:
-              A pandas Dataframe
-            """
-            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
-
-            return self._fulfillment_proto_to_dataframe(
-                obj=self._outer_self.proto_obj, mode=mode
-            )

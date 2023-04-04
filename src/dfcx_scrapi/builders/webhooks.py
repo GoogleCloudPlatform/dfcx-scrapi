@@ -216,7 +216,7 @@ class WebhookBuilder(BuildersCommon):
     class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
         """An internal class to store DataFrame related methods."""
 
-        def _process_webhook_proto_to_df_basic(
+        def _process_proto_to_df_basic(
             self, obj: Webhook
         ) -> pd.DataFrame:
             """Process Webhook Proto to DataFrame in basic mode."""
@@ -230,7 +230,7 @@ class WebhookBuilder(BuildersCommon):
                 "uri": [str(web_service.uri)],
             })
 
-        def _process_webhook_proto_to_df_advanced(
+        def _process_proto_to_df_advanced(
             self, obj: Webhook
         ) -> pd.DataFrame:
             """Process Webhook Proto to DataFrame in advanced mode."""
@@ -255,42 +255,3 @@ class WebhookBuilder(BuildersCommon):
                 "password": [str(web_service.password)],
                 "request_headers": [req_headers],
             })
-
-        def _webhook_proto_to_dataframe(
-            self, obj: Webhook, mode: str = "basic"
-        ) -> pd.DataFrame:
-            """Converts a Webhook protobuf object to pandas Dataframe.
-
-            Args:
-              obj (Webhook):
-                Webhook protobuf object
-              mode (str):
-                Whether to return 'basic' DataFrame or 'advanced' one.
-                Refer to `data.dataframe_schemas.json` for schemas.
-
-            Returns:
-              A pandas Dataframe
-            """
-            if mode == "basic":
-                return self._process_webhook_proto_to_df_basic(obj)
-            elif mode == "advanced":
-                return self._process_webhook_proto_to_df_advanced(obj)
-            else:
-                raise ValueError("Mode types: ['basic', 'advanced'].")
-
-        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
-            """Create a DataFrame for proto_obj.
-
-            Args:
-              mode (str):
-                Whether to return 'basic' DataFrame or 'advanced' one.
-                Refer to `data.dataframe_schemas.json` for schemas.
-
-            Returns:
-              A pandas Dataframe
-            """
-            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
-
-            return self._webhook_proto_to_dataframe(
-                obj=self._outer_self.proto_obj, mode=mode
-            )

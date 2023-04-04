@@ -354,9 +354,18 @@ class BuildersCommon:
         ]
 
 
-    def to_dataframe(self, *args, **kwargs) -> pd.DataFrame:
-        """Prototype method to create a DataFrame from a proto_obj."""
-        return self._dataframe_instance.to_dataframe(*args, **kwargs)
+    def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
+        """Creates a DataFrame for proto_obj.
+
+        Args:
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+
+        Returns:
+          A pandas DataFrame.
+        """
+        return self._dataframe_instance.to_dataframe(mode=mode)
 
 
     def from_dataframe(self, *args, **kwargs):
@@ -392,14 +401,14 @@ class BuildersCommon:
                     "name", "display_name", "flow_id",
                     "intent", "condition", "target_type", "target_id",
                     "has_fulfillment", "has_fulfillment_webhook",
-                    # "intent_name", "target_name", "flow_name"
+                    "target_name", "flow_name", # "intent_name",
                 ],
                 "advanced": [
                     "name", "display_name", "flow_id",
                     "intent", "condition", "target_type", "target_id",
                     "messages", "preset_parameters", "conditional_cases",
                     "webhook", "webhook_tag", "return_partial_responses",
-                    # "intent_name", "target_name", "flow_name"
+                    "target_name", "flow_name", # "intent_name",
                 ],
             },
             "Webhook": {
@@ -455,8 +464,6 @@ class BuildersCommon:
 
             return None
 
-
-
         @staticmethod
         def _is_column_has_single_value(df: pd.DataFrame, column: str) -> bool:
             """Check whether the column in the df has only one value.
@@ -480,7 +487,6 @@ class BuildersCommon:
                 return False
 
             return True
-
 
         @staticmethod
         def _unique_value_of_a_column(
@@ -506,7 +512,6 @@ class BuildersCommon:
 
             return list(df[column].unique())[0]
 
-
         @staticmethod
         def _is_df_has_single_display_name(df: pd.DataFrame) -> str:
             """Check whether the 'display_name' column in df has only one value
@@ -520,7 +525,6 @@ class BuildersCommon:
                 display_name as a string.
             """
             return __class__._unique_value_of_a_column(df, "display_name") # pylint: disable=W0212
-
 
         def _is_df_display_name_match_with_proto(self, df: pd.DataFrame):
             """Check whether the 'display_name' column in df matches with
@@ -544,12 +548,6 @@ class BuildersCommon:
                     "The input DataFrame `df` refers to a proto with a"
                     " different display_name from the one stored in proto_obj."
                 )
-
-
-        def to_dataframe(self) -> pd.DataFrame:
-            """Prototype method to create a DataFrame from a proto_obj."""
-            raise NotImplementedError("Subclass should implement this method!")
-
 
         def from_dataframe(self):
             """Prototype method to create a proto_obj from a DataFrame."""
@@ -587,6 +585,56 @@ class BuildersCommon:
 
             return df
 
+        def _process_proto_to_df_basic(self, obj) -> pd.DataFrame:
+            """Prototype method to create a DataFrame
+            from a proto_obj in basic mode."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_proto_to_df_advanced(self, obj) -> pd.DataFrame:
+            """Prototype method to create a DataFrame
+            from a proto_obj in advanced mode."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _proto_to_dataframe(
+            self, obj, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a protobuf object to pandas DataFrame.
+
+            Args:
+              obj:
+                A protobuf object.
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas DataFrame
+            """
+            if mode == "basic":
+                intent_df = self._process_proto_to_df_basic(obj)
+            elif mode == "advanced":
+                intent_df = self._process_proto_to_df_advanced(obj)
+            else:
+                raise ValueError("`mode` types: ['basic', 'advanced'].")
+
+            return intent_df
+
+        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
+            """Create a DataFrame for proto_obj.
+
+            Args:
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas DataFrame.
+            """
+            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
+
+            return self._proto_to_dataframe(
+                obj=self._outer_self.proto_obj, mode=mode
+            )
 
 
     class _Dataframe(_DataframeCommon):

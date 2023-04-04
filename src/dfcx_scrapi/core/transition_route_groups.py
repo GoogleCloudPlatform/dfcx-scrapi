@@ -17,6 +17,8 @@
 import logging
 import time
 from typing import Dict
+
+import numpy as np
 import pandas as pd
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -273,6 +275,18 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         return response
 
 
+    class _AllPagesCustomDict(dict):
+
+        def __missing__(self, key):
+            if (
+                (isinstance(key, str)) and
+                (key.endswith("PAGE") or key.endswith("PAGE"))
+            ):
+                return str(key).rsplit("/", maxsplit=1)[-1]
+            else:
+                return np.nan
+
+
     def route_groups_to_df(
         self,
         agent_id: str = None,
@@ -311,7 +325,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         flows_map = self.flows.get_flows_map(agent_id)
 
-        all_pages_map = {}
+        all_pages_map = self._AllPagesCustomDict()
         all_rgs = []
         for flow in flows_map:
             all_pages_map.update(self.pages.get_pages_map(flow))

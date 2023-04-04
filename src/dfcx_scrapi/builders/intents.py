@@ -629,7 +629,7 @@ class IntentBuilder(BuildersCommon):
 
             return intent_dict
 
-        def _process_intent_proto_to_df_basic(self, obj: Intent):
+        def _process_proto_to_df_basic(self, obj: Intent):
             """Process Intent Proto in basic mode."""
             cols = ["display_name", "training_phrase"]
             intent_df = pd.DataFrame(columns=cols)
@@ -648,7 +648,7 @@ class IntentBuilder(BuildersCommon):
 
             return intent_df
 
-        def _process_intent_proto_to_df_advanced(self, obj: Intent):
+        def _process_proto_to_df_advanced(self, obj: Intent):
             """Process Intent Proto in advanced mode."""
             cols = [
                 "name", "display_name", "description", "priority",
@@ -706,46 +706,6 @@ class IntentBuilder(BuildersCommon):
 
             return intent_df
 
-        def _intent_proto_to_dataframe(
-            self, obj: Intent, mode: str = "basic"
-        ) -> pd.DataFrame:
-            """Converts a Intent protobuf object to pandas Dataframe.
-
-            Args:
-              obj (Intent):
-                Intent protobuf object
-              mode (str):
-                Whether to return 'basic' DataFrame or 'advanced' one.
-                Refer to `data.dataframe_schemas.json` for schemas.
-
-            Returns:
-              A pandas Dataframe
-            """
-            if mode == "basic":
-                intent_df = self._process_intent_proto_to_df_basic(obj)
-            elif mode == "advanced":
-                intent_df = self._process_intent_proto_to_df_advanced(obj)
-            else:
-                raise ValueError("`mode` types: ['basic', 'advanced'].")
-
-            return intent_df
-
-        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
-            """Create a DataFrame for proto_obj.
-
-            Args:
-              mode (str):
-                Whether to return 'basic' DataFrame or 'advanced' one.
-                Refer to `data.dataframe_schemas.json` for schemas.
-
-            Returns:
-              A pandas Dataframe
-            """
-            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
-
-            return self._intent_proto_to_dataframe(
-                obj=self._outer_self.proto_obj, mode=mode
-            )
 
 
 @dataclass
