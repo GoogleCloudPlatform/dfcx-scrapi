@@ -706,6 +706,146 @@ class IntentBuilder(BuildersCommon):
 
             return intent_df
 
+        def _add_parameter_from_df_advanced(
+            self, df: pd.DataFrame, append: bool
+        ):
+            """docs here!"""
+            self._outer_self._check_proto_obj_attr_exist()
+
+            param_cols = ["parameter_id", "entity_type", "is_list", "redact"]
+            params_df = df[df["parameter_id"].notnull()][param_cols]
+            for param_id in params_df["parameter_id"].unique():
+                # Create a DataFrame for each parameter_id
+                tmp_df = params_df[params_df["parameter_id"] == param_id]
+
+                entity_type = self._single_unique_value_of_a_column(tmp_df, "entity_type")
+                is_list = self._single_unique_value_of_a_column(tmp_df, "is_list")
+                redact = self._single_unique_value_of_a_column(tmp_df, "redact")
+                if append:
+                    # Check if the parameter if already exists
+                    proto_params = self._outer_self.proto_obj.parameters
+                    if param_id in [pp.id for pp in proto_params]:
+                        continue
+                self._outer_self.add_parameter(
+                    parameter_id=param_id, entity_type=entity_type,
+                    is_list=is_list, redact=redact,
+                )
+
+        def _add_training_phrase_from_df_advanced(self, df: pd.DataFrame):
+            """docs here!"""
+            group_by_df = df.groupby(by=["training_phrase_idx"])
+
+            phrase_series = group_by_df["text"].apply(list)
+            annotation_series = group_by_df["parameter_id"].apply(list)
+            annotation_series = annotation_series.map(
+                lambda val: ["" if pd.isna(item) else item for item in val]
+            )
+
+            for phrase, annotations in zip(phrase_series, annotation_series):
+                # TODO: repeat_count
+                self._outer_self.add_training_phrase(
+                    phrase=phrase, annotations=annotations, include_spaces=False
+                )
+
+        def _process_from_df_create_advanced(self, df: pd.DataFrame) -> Intent:
+            """docs here!"""
+            disp_name = self._is_df_has_single_display_name(df)
+            priority = self._single_unique_value_of_a_column(df, "priority")
+            is_fallback = self._single_unique_value_of_a_column(df, "is_fallback")
+            description = self._single_unique_value_of_a_column(df, "description")
+
+            self._outer_self.create_new_proto_obj(
+                display_name=disp_name, priority=priority,
+                is_fallback=is_fallback, description=description
+            )
+            # TODO: Add Labels
+            self._add_parameter_from_df_advanced(df, append=False)
+            self._add_training_phrase_from_df_advanced(df)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_create(
+            self, df: pd.DataFrame, mode: str = "basic"
+        ) -> Intent:
+            """docs here!"""
+            disp_name = self._is_df_has_single_display_name(df)
+
+            if mode == "basic":
+                self._outer_self.create_new_proto_obj(display_name=disp_name)
+                for phrase in df["training_phrase"]:
+                    self._outer_self.add_training_phrase(phrase)
+
+            elif mode == "advanced":
+                self._process_from_df_create_advanced(df)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_append(
+            self, df: pd.DataFrame, mode: str = "basic"
+        ) -> Intent:
+            """docs here!"""
+            self._outer_self._check_proto_obj_attr_exist()
+            self._is_df_display_name_match_with_proto(df)
+
+            if mode == "basic":
+                for phrase in df["training_phrase"]:
+                    self._outer_self.add_training_phrase(phrase)
+
+            elif mode == "advanced":
+                self._add_parameter_from_df_advanced(df, append=True)
+                self._add_training_phrase_from_df_advanced(df)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_delete(
+            self, df: pd.DataFrame, mode: str = "basic"
+        ) -> Intent:
+            """docs here!"""
+            self._outer_self._check_proto_obj_attr_exist()
+            self._is_df_display_name_match_with_proto(df)
+
+            if mode == "basic":
+                for phrase in df["training_phrase"]:
+                    self._outer_self.remove_training_phrase(phrase)
+
+            elif mode == "advanced":
+                group_by_df = df.groupby(by=["training_phrase_idx"])
+                phrase_series = group_by_df["text"].apply("".join)
+                for phrase in phrase_series:
+                    self._outer_self.remove_training_phrase(phrase)
+
+            return self._outer_self.proto_obj
+
+        def from_dataframe(
+            self, df: pd.DataFrame, action: str = "create"
+        ) -> Intent:
+            """Perform an `action` from the DataFrame `df` on proto_obj.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame.
+                action (str):
+                    'create', 'delete', 'append'
+
+            Returns:
+                An Intent object stored in the proto_obj.
+            """
+            # Find the `mode` value based on passed df
+            mode = self._find_mode(df)
+
+            # TODO: Input df check: schema, values
+            if action == "create":
+                return self._process_from_df_create(df=df, mode=mode)
+            elif action == "append":
+                return self._process_from_df_append(df=df, mode=mode)
+            elif action == "delete":
+                return self._process_from_df_delete(df=df, mode=mode)
+            else:
+                raise ValueError(
+                    "`action` types: ['create', 'delete', 'append']."
+                )
+
+
 
 
 @dataclass
