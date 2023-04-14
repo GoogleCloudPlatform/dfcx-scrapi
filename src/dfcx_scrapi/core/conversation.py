@@ -87,13 +87,13 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         """
         # Config will take precedence if provided
         if config:
-          config_lang_code = config.get("language_code", None)
+            config_lang_code = config.get("language_code", None)
 
-          # We'll only return if it exist in the config on the off chance that
-          # some users have provided the langauge_code as a top level arg in
-          # addition to providing the config
-          if config_lang_code:
-              return config_lang_code
+            # We'll only return if it exist in the config on the off chance that
+            # some users have provided the langauge_code as a top level arg in
+            # addition to providing the config
+            if config_lang_code:
+                return config_lang_code
 
         return language_code
 
@@ -106,13 +106,13 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         # Config will take precedence if provided
         if config:
-          config_agent_path = config.get("agent_path", None)
+            config_agent_path = config.get("agent_path", None)
 
-          # We'll only return if it exist in the config on the off chance that
-          # some users have provided the agent_id as a top level arg in
-          # addition to providing the config
-          if config_agent_path:
-              return config_agent_path
+            # We'll only return if it exist in the config on the off chance that
+            # some users have provided the agent_id as a top level arg in
+            # addition to providing the config
+            if config_agent_path:
+                return config_agent_path
 
         elif input_agent_id:
             return input_agent_id
