@@ -19,7 +19,7 @@ import time
 import traceback
 import uuid
 
-from typing import Dict
+from typing import Dict, Any
 from operator import attrgetter
 from threading import Thread
 
@@ -64,15 +64,12 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             agent_id=agent_id,
         )
 
-        logging.info(
+        logging.debug(
             "create conversation with creds_path: %s | agent_id: %s",
             creds_path, agent_id)
 
-        if agent_id or config["agent_path"]:
-            self.agent_id = agent_id or config["agent_path"]
-
-        self.language_code = language_code or config["language_code"]
-
+        self.agent_id = self._set_agent_id(agent_id, config)
+        self.language_code = self._set_language_code(language_code, config)
         self.start_time = None
         self.query_result = None
         self.session_id = None
@@ -81,6 +78,46 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.restart()
         self.flows = flows.Flows(creds=self.creds)
         self.pages = pages.Pages(creds=self.creds)
+
+    @staticmethod
+    def _set_language_code(language_code: str, config: Dict[str, Any]) -> str:
+        """Determines how to set the language_code based on user inputs.
+
+        We implement this for backwards compatability.
+        """
+        # Config will take precedence if provided
+        if config:
+          config_lang_code = config.get("language_code", None)
+
+          # We'll only return if it exist in the config on the off chance that
+          # some users have provided the langauge_code as a top level arg in
+          # addition to providing the config
+          if config_lang_code:
+              return config_lang_code
+
+        return language_code
+
+    @staticmethod
+    def _set_agent_id(input_agent_id: str, config: Dict[str, Any]) -> str:
+        """Determines how to set the agent_id based on user inputs.
+
+        We implement this for backwards compatability.
+        """
+
+        # Config will take precedence if provided
+        if config:
+          config_agent_path = config.get("agent_path", None)
+
+          # We'll only return if it exist in the config on the off chance that
+          # some users have provided the agent_id as a top level arg in
+          # addition to providing the config
+          if config_agent_path:
+              return config_agent_path
+
+        elif input_agent_id:
+            return input_agent_id
+
+        return None
 
     @staticmethod
     def _get_match_type_from_map(match_type: int):
