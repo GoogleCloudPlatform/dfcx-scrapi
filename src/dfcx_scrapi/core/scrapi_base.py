@@ -72,7 +72,7 @@ class ScrapiBase:
             self.agent_id = agent_id
 
     @staticmethod
-    def _set_region(item_id):
+    def _set_region(resource_id: str):
         """Different regions have different API endpoints
 
         Args:
@@ -85,18 +85,27 @@ class ScrapiBase:
           if the location is "global"
         """
         try:
-            location = item_id.split("/")[3]
+            location = resource_id.split("/")[3]
         except IndexError as err:
-            logging.error("IndexError - path too short? %s", item_id)
+            logging.error("IndexError - path too short? %s", resource_id)
             raise err
+
+        project_id = resource_id.split("/")[1]
 
         if location != "global":
             api_endpoint = f"{location}-dialogflow.googleapis.com:443"
-            client_options = {"api_endpoint": api_endpoint}
+            client_options = {
+                "api_endpoint": api_endpoint,
+                "quota_project_id": project_id}
             return client_options
 
         else:
-            return None  # explicit None return when not required
+            api_endpoint = "dialogflow.googleapis.com:443"
+            client_options = {
+                "api_endpoint": api_endpoint,
+                "quota_project_id": project_id}
+
+            return client_options
 
     @staticmethod
     def pbuf_to_dict(pbuf):
