@@ -183,7 +183,7 @@ class TransitionRouteGroupBuilder(BuildersCommon):
     class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
         """An internal class to store DataFrame related methods."""
 
-        def _proto_to_dataframe(
+        def proto_to_dataframe(
             self, obj: TransitionRouteGroup, mode: str = "basic"
         ) -> pd.DataFrame:
             """Converts a TransitionRouteGroup protobuf object

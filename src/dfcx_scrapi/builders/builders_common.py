@@ -365,12 +365,29 @@ class BuildersCommon:
         Returns:
           A pandas DataFrame.
         """
-        return self._dataframe_instance.to_dataframe(mode=mode)
+        self._check_proto_obj_attr_exist()
+
+        return self._dataframe_instance.proto_to_dataframe(
+            obj=self.proto_obj, mode=mode)
 
 
-    def from_dataframe(self, *args, **kwargs):
-        """Prototype method to create a proto_obj from a DataFrame."""
-        return self._dataframe_instance.from_dataframe(*args, **kwargs)
+    def from_dataframe(self, df: pd.DataFrame, action: str):
+        """Perform an `action` from the DataFrame `df` on proto_obj.
+
+        Args:
+            df (pd.DataFrame):
+                The input DataFrame.
+            action (str):
+                'create', 'delete', 'append'
+
+        Returns:
+          A protobuf object stored in proto_obj
+        """
+        if action != "create":
+            self._check_proto_obj_attr_exist()
+
+        return self._dataframe_instance.dataframe_to_proto(
+            df=df, action=action)
 
 
 
@@ -462,11 +479,13 @@ class BuildersCommon:
                     if set(df.columns) == set(schema):
                         return str(mode)
 
-            return None
+            raise ValueError(
+                "`df` does not match with any of the schemas."
+            )
 
         @staticmethod
         def _is_column_has_single_value(df: pd.DataFrame, column: str) -> bool:
-            """Check whether the column in the df has only one value.
+            """Check whether the `column` in the `df` has only one value.
 
             Args:
                 df (pd.DataFrame):
@@ -475,7 +494,7 @@ class BuildersCommon:
                     column name as string.
 
             Returns:
-                True if the column has single value else False
+                True if the `column` has single value else False
             """
             if column not in df.columns:
                 raise ValueError(
@@ -485,14 +504,13 @@ class BuildersCommon:
             vals = list(df[column].unique())
             if len(vals) != 1:
                 return False
-
             return True
 
         @staticmethod
-        def _unique_value_of_a_column(
+        def _get_unique_value_of_a_column(
             df: pd.DataFrame, column: str
         ) -> Any:
-            """Check whether the column in the df has only one value
+            """Check whether the `column` in the `df` has only one value
             and returns that value.
 
             Args:
@@ -504,7 +522,7 @@ class BuildersCommon:
             Returns:
                 Unique value of the column.
             """
-            if not __class__._is_df_column_has_single_value(df, column): # pylint: disable=W0212
+            if not __class__._is_column_has_single_value(df, column): # pylint: disable=W0212
                 raise UserWarning(
                     f"The column `{column}` has none or"
                     " more than one unique value."
@@ -524,22 +542,20 @@ class BuildersCommon:
             Returns:
                 display_name as a string.
             """
-            return __class__._unique_value_of_a_column(df, "display_name") # pylint: disable=W0212
+            return __class__._get_unique_value_of_a_column(df, "display_name") # pylint: disable=W0212
 
         def _is_df_display_name_match_with_proto(self, df: pd.DataFrame):
             """Check whether the 'display_name' column in df matches with
             the proto_obj 'display_name'.
 
             Args:
-                df (pd.DataFrame):
-                    The input DataFrame.
+              df (pd.DataFrame):
+                The input DataFrame.
 
             Raises:
-                Exception: If the display_name of df does not match
-                  with the proto_obj.
+              ValueError: If the 'display_name' of df does not match
+              with the proto_obj.
             """
-            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
-
             proto_disp_name = self._outer_self.proto_obj.display_name
             disp_name = self._is_df_has_single_display_name(df)
 
@@ -549,9 +565,47 @@ class BuildersCommon:
                     " different display_name from the one stored in proto_obj."
                 )
 
-        def from_dataframe(self):
-            """Prototype method to create a proto_obj from a DataFrame."""
+
+        def _process_from_df_create(self, df: pd.DataFrame, mode: str):
+            """Prototype method to perform `create` action on proto_obj."""
             raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_append(self, df: pd.DataFrame, mode: str):
+            """Prototype method to perform `append` action on proto_obj."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_delete(self, df: pd.DataFrame, mode: str):
+            """Prototype method to perform `delete` action on proto_obj."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def dataframe_to_proto(
+            self, df: pd.DataFrame, action: str
+        ):
+            """Perform an `action` from the DataFrame `df` on proto_obj.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame to read the data from.
+                action (str):
+                    'create', 'delete', 'append'
+
+            Returns:
+                A protobuf object stored in the proto_obj.
+            """
+            # Find the `mode` value based on passed df
+            mode = self._find_mode(df)
+
+            # TODO: Input df check: schema, values
+            if action == "create":
+                return self._process_from_df_create(df=df, mode=mode)
+            elif action == "append":
+                return self._process_from_df_append(df=df, mode=mode)
+            elif action == "delete":
+                return self._process_from_df_delete(df=df, mode=mode)
+            else:
+                raise ValueError(
+                    "`action` types: ['create', 'delete', 'append']."
+                )
 
 
         @staticmethod
@@ -595,7 +649,7 @@ class BuildersCommon:
             from a proto_obj in advanced mode."""
             raise NotImplementedError("Subclass should implement this method!")
 
-        def _proto_to_dataframe(
+        def proto_to_dataframe(
             self, obj, mode: str = "basic"
         ) -> pd.DataFrame:
             """Converts a protobuf object to pandas DataFrame.
@@ -618,23 +672,6 @@ class BuildersCommon:
                 raise ValueError("`mode` types: ['basic', 'advanced'].")
 
             return intent_df
-
-        def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
-            """Create a DataFrame for proto_obj.
-
-            Args:
-              mode (str):
-                Whether to return 'basic' DataFrame or 'advanced' one.
-                Refer to `data.dataframe_schemas.json` for schemas.
-
-            Returns:
-              A pandas DataFrame.
-            """
-            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
-
-            return self._proto_to_dataframe(
-                obj=self._outer_self.proto_obj, mode=mode
-            )
 
 
     class _Dataframe(_DataframeCommon):

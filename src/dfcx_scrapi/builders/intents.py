@@ -706,23 +706,32 @@ class IntentBuilder(BuildersCommon):
 
             return intent_df
 
-        def _add_parameter_from_df_advanced(
-            self, df: pd.DataFrame, append: bool
-        ):
-            """docs here!"""
-            self._outer_self._check_proto_obj_attr_exist()
 
+        def _add_parameter_from_df_advanced(
+            self, df: pd.DataFrame, overwrite: bool = False
+        ):
+            """Helper method to add parameters for annotation to an Intent
+            from df in advanced mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              overwrite (bool):
+                Whether to overwrite the existing parameters with
+                the ones in the `df`.
+            """
             param_cols = ["parameter_id", "entity_type", "is_list", "redact"]
             params_df = df[df["parameter_id"].notnull()][param_cols]
             for param_id in params_df["parameter_id"].unique():
-                # Create a DataFrame for each parameter_id
+                # Create a DataFrame for each parameter_id and extract its info
                 tmp_df = params_df[params_df["parameter_id"] == param_id]
 
-                entity_type = self._single_unique_value_of_a_column(tmp_df, "entity_type")
-                is_list = self._single_unique_value_of_a_column(tmp_df, "is_list")
-                redact = self._single_unique_value_of_a_column(tmp_df, "redact")
-                if append:
-                    # Check if the parameter if already exists
+                entity_type = self._get_unique_value_of_a_column(
+                    tmp_df, "entity_type")
+                is_list = self._get_unique_value_of_a_column(tmp_df, "is_list")
+                redact = self._get_unique_value_of_a_column(tmp_df, "redact")
+                if not overwrite:
+                    # skip if the parameter already exists in the proto_obj
                     proto_params = self._outer_self.proto_obj.parameters
                     if param_id in [pp.id for pp in proto_params]:
                         continue
@@ -732,7 +741,13 @@ class IntentBuilder(BuildersCommon):
                 )
 
         def _add_training_phrase_from_df_advanced(self, df: pd.DataFrame):
-            """docs here!"""
+            """Helper method to add training phrases to an Intent
+            from df in advanced mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+            """
             group_by_df = df.groupby(by=["training_phrase_idx"])
 
             phrase_series = group_by_df["text"].apply(list)
@@ -748,26 +763,40 @@ class IntentBuilder(BuildersCommon):
                 )
 
         def _process_from_df_create_advanced(self, df: pd.DataFrame) -> Intent:
-            """docs here!"""
+            """Helper method to create an Intent from df in advanced mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+            """
             disp_name = self._is_df_has_single_display_name(df)
-            priority = self._single_unique_value_of_a_column(df, "priority")
-            is_fallback = self._single_unique_value_of_a_column(df, "is_fallback")
-            description = self._single_unique_value_of_a_column(df, "description")
+            priority = self._get_unique_value_of_a_column(df, "priority")
+            is_fallback = self._get_unique_value_of_a_column(df, "is_fallback")
+            description = self._get_unique_value_of_a_column(df, "description")
 
             self._outer_self.create_new_proto_obj(
                 display_name=disp_name, priority=priority,
                 is_fallback=is_fallback, description=description
             )
             # TODO: Add Labels
-            self._add_parameter_from_df_advanced(df, append=False)
+            self._add_parameter_from_df_advanced(df, overwrite=True)
             self._add_training_phrase_from_df_advanced(df)
 
-            return self._outer_self.proto_obj
-
         def _process_from_df_create(
-            self, df: pd.DataFrame, mode: str = "basic"
+            self, df: pd.DataFrame, mode: str
         ) -> Intent:
-            """docs here!"""
+            """Create a new intent from `df` and store it in the proto_obj.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              mode (str):
+                Whether to use 'basic' DataFrame or 'advanced' one for
+                performing the action.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
             disp_name = self._is_df_has_single_display_name(df)
 
             if mode == "basic":
@@ -781,10 +810,21 @@ class IntentBuilder(BuildersCommon):
             return self._outer_self.proto_obj
 
         def _process_from_df_append(
-            self, df: pd.DataFrame, mode: str = "basic"
+            self, df: pd.DataFrame, mode: str
         ) -> Intent:
-            """docs here!"""
-            self._outer_self._check_proto_obj_attr_exist()
+            """Append training phrases that are present in `df`
+            to the proto_obj.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              mode (str):
+                Whether to use 'basic' DataFrame or 'advanced' one for
+                performing the action.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
             self._is_df_display_name_match_with_proto(df)
 
             if mode == "basic":
@@ -792,16 +832,27 @@ class IntentBuilder(BuildersCommon):
                     self._outer_self.add_training_phrase(phrase)
 
             elif mode == "advanced":
-                self._add_parameter_from_df_advanced(df, append=True)
+                self._add_parameter_from_df_advanced(df, overwrite=False)
                 self._add_training_phrase_from_df_advanced(df)
 
             return self._outer_self.proto_obj
 
         def _process_from_df_delete(
-            self, df: pd.DataFrame, mode: str = "basic"
+            self, df: pd.DataFrame, mode: str
         ) -> Intent:
-            """docs here!"""
-            self._outer_self._check_proto_obj_attr_exist()
+            """Delete training phrases that are present in `df`
+            from the proto_obj.
+            
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              mode (str):
+                Whether to use 'basic' DataFrame or 'advanced' one for
+                performing the action.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
             self._is_df_display_name_match_with_proto(df)
 
             if mode == "basic":
@@ -815,36 +866,6 @@ class IntentBuilder(BuildersCommon):
                     self._outer_self.remove_training_phrase(phrase)
 
             return self._outer_self.proto_obj
-
-        def from_dataframe(
-            self, df: pd.DataFrame, action: str = "create"
-        ) -> Intent:
-            """Perform an `action` from the DataFrame `df` on proto_obj.
-
-            Args:
-                df (pd.DataFrame):
-                    The input DataFrame.
-                action (str):
-                    'create', 'delete', 'append'
-
-            Returns:
-                An Intent object stored in the proto_obj.
-            """
-            # Find the `mode` value based on passed df
-            mode = self._find_mode(df)
-
-            # TODO: Input df check: schema, values
-            if action == "create":
-                return self._process_from_df_create(df=df, mode=mode)
-            elif action == "append":
-                return self._process_from_df_append(df=df, mode=mode)
-            elif action == "delete":
-                return self._process_from_df_delete(df=df, mode=mode)
-            else:
-                raise ValueError(
-                    "`action` types: ['create', 'delete', 'append']."
-                )
-
 
 
 

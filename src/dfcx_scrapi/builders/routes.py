@@ -229,7 +229,7 @@ class TransitionRouteBuilder(BuildersCommon):
     class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
         """An internal class to store DataFrame related methods."""
 
-        def _proto_to_dataframe(
+        def proto_to_dataframe(
             self, obj: TransitionRoute, mode: str = "basic"
         ) -> pd.DataFrame:
             """Converts a TransitionRoute protobuf object to pandas Dataframe.
