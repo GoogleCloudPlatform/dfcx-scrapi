@@ -54,7 +54,6 @@ class EntityTypes(ScrapiBase):
         self.entity_id = entity_id
         self.agent_id = agent_id
 
-
     @staticmethod
     def entity_type_proto_to_dataframe(
         obj: types.EntityType, mode: str = "basic"
@@ -125,9 +124,9 @@ class EntityTypes(ScrapiBase):
             for excluded_phrase in obj.excluded_phrases:
                 excl_phrases_dict["excluded_phrase"] = excluded_phrase.value
                 excl_phrases_dict2df = pd.DataFrame(
-                                          excl_phrases_dict, index=[0])
+                    excl_phrases_dict, index=[0])
                 excl_phrases_df = pd.concat([excl_phrases_df,
-                                     excl_phrases_dict2df], ignore_index=True)
+                                             excl_phrases_dict2df], ignore_index=True)
 
             return {
                 "entity_types": main_df, "excluded_phrases": excl_phrases_df
@@ -137,10 +136,10 @@ class EntityTypes(ScrapiBase):
             raise ValueError("Mode types: [basic, advanced]")
 
     def entity_types_to_df(
-        self,
-        agent_id: str = None,
-        mode: str = "basic",
-        entity_type_subset: List[str] = None) -> pd.DataFrame:
+            self,
+            agent_id: str = None,
+            mode: str = "basic",
+            entity_type_subset: List[str] = None) -> pd.DataFrame:
         """Extracts all Entity Types into a Pandas DataFrame.
 
         Args:
@@ -213,7 +212,6 @@ class EntityTypes(ScrapiBase):
 
         else:
             raise ValueError("Mode types: [basic, advanced]")
-
 
     def get_entities_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Entity Type Names and UUIDs into a user friendly dict.
@@ -292,7 +290,7 @@ class EntityTypes(ScrapiBase):
 
         return response
 
-    def get_entity_type(self, entity_id: str = None, language_code: str = None):
+    def get_entity_type3(self, entity_id: str = None, language_code: str = None):
         """Returns a single Entity Type object.
 
         Args:
@@ -312,80 +310,109 @@ class EntityTypes(ScrapiBase):
         )
 
         if language_code:
-            response = client.get_entity_type(name=entity_id, language_code=language_code)
+            response = client.get_entity_type(
+                name=entity_id, language_code=language_code)
         else:
             response = client.get_entity_type(name=entity_id)
 
         return response
 
 
-    def create_entity_type(
-        self,
-        agent_id: str = None,
-        display_name: str = None,
-        language_code: str = None,
-        obj: types.EntityType = None,
-        **kwargs
-    ) -> types.EntityType:
-        """Creates a single Entity Type object resource.
+    def get_entity_type(self, entity_id: str = None, language_code: str = None):
+        """Returns a single Entity Type object.
 
         Args:
-          agent_id: the formatted CX Agent ID to create the object on
-          display_name: Human readable display name for the EntityType
-          language_code: Language code of the intents being uploaded. Ref:
+        entity_id: the formatted CX Entity ID to get
+        language_code: Language code of the Entity Type being retrieved. Ref:
             https://cloud.google.com/dialogflow/cx/docs/reference/language
-          obj: The CX EntityType object in proper format.
-            Refer to `builders.entity_types.EntityTypeBuilder` to build one.
 
         Returns:
-          A copy of the Entity Type object created
+        The single Entity Type object
         """
-        if not agent_id:
-            agent_id = self.agent_id
+        if not entity_id:
+            entity_id = self.entity_id
 
-        # If entity_type_obj is given set entity_type to it
-        if obj:
-            entity_type_obj = obj
-            entity_type_obj.name = ""
-        else:
-            if not display_name:
-                raise ValueError(
-                    "At least display_name or obj should be specified."
-                )
-            entity_type_obj = types.EntityType(
-                display_name=display_name,
-                kind=1
-            )
-
-            # set optional arguments to entity type attributes
-            for key, value in kwargs.items():
-                setattr(entity_type_obj, key, value)
-
-        client_options = self._set_region(agent_id)
+        client_options = self._set_region(entity_id)
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
         )
 
-        request = types.entity_type.CreateEntityTypeRequest()
-
-        request.parent = agent_id
-        request.entity_type = entity_type_obj
+        request = entity_type.GetEntityTypeRequest(name=entity_id)
 
         if language_code:
             request.language_code = language_code
 
-        response = client.create_entity_type(
-            request=request
-        )
+        response = client.get_entity_type(request=request)
 
         return response
 
+        def create_entity_type(
+            self,
+            agent_id: str = None,
+            display_name: str = None,
+            language_code: str = None,
+            obj: types.EntityType = None,
+            **kwargs
+        ) -> types.EntityType:
+            """Creates a single Entity Type object resource.
+
+            Args:
+            agent_id: the formatted CX Agent ID to create the object on
+            display_name: Human readable display name for the EntityType
+            language_code: Language code of the intents being uploaded. Ref:
+                https://cloud.google.com/dialogflow/cx/docs/reference/language
+            obj: The CX EntityType object in proper format.
+                Refer to `builders.entity_types.EntityTypeBuilder` to build one.
+
+            Returns:
+            A copy of the Entity Type object created
+            """
+            if not agent_id:
+                agent_id = self.agent_id
+
+            # If entity_type_obj is given set entity_type to it
+            if obj:
+                entity_type_obj = obj
+                entity_type_obj.name = ""
+            else:
+                if not display_name:
+                    raise ValueError(
+                        "At least display_name or obj should be specified."
+                    )
+                entity_type_obj = types.EntityType(
+                    display_name=display_name,
+                    kind=1
+                )
+
+                # set optional arguments to entity type attributes
+                for key, value in kwargs.items():
+                    setattr(entity_type_obj, key, value)
+
+            client_options = self._set_region(agent_id)
+            client = services.entity_types.EntityTypesClient(
+                credentials=self.creds, client_options=client_options
+            )
+
+            request = types.entity_type.CreateEntityTypeRequest()
+
+            request.parent = agent_id
+            request.entity_type = entity_type_obj
+
+            if language_code:
+                request.language_code = language_code
+
+            response = client.create_entity_type(
+                request=request
+            )
+
+            return response
+
     def update_entity_type(
-        self,
-        entity_type_id: str = None,
-        obj: types.EntityType = None,
-        language_code: str = None,
-        **kwargs):
+            self,
+            entity_type_id: str = None,
+            obj: types.EntityType = None,
+            language_code: str = None,
+            **kwargs):
         """Update a single CX Entity Type object.
 
         Pass in a the Entity Type ID and the specified kwargs for the
