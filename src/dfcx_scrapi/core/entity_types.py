@@ -272,7 +272,7 @@ class EntityTypes(ScrapiBase):
 
         return entities
 
-    def get_entity_type(self, entity_id: str = None):
+    def get_entity_type2(self, entity_id: str = None):
         """Returns a single Entity Type object.
 
         Args:
@@ -291,6 +291,33 @@ class EntityTypes(ScrapiBase):
         response = client.get_entity_type(name=entity_id)
 
         return response
+
+    def get_entity_type(self, entity_id: str = None, language_code: str = None):
+        """Returns a single Entity Type object.
+
+        Args:
+        entity_id: the formatted CX Entity ID to get
+        language_code: Language code of the Entity Type being retrieved. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
+
+        Returns:
+        The single Entity Type object
+        """
+        if not entity_id:
+            entity_id = self.entity_id
+
+        client_options = self._set_region(entity_id)
+        client = services.entity_types.EntityTypesClient(
+            credentials=self.creds, client_options=client_options
+        )
+
+        if language_code:
+            response = client.get_entity_type(name=entity_id, language_code=language_code)
+        else:
+            response = client.get_entity_type(name=entity_id)
+
+        return response
+
 
     def create_entity_type(
         self,
