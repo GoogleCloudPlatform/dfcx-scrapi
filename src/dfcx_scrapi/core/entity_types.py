@@ -319,7 +319,8 @@ class EntityTypes(ScrapiBase):
 
 
     def get_entity_type(
-            self, 
+            self,
+            agent_id: str = None,
             entity_type_id: str = None,
             language_code: str = None):
         """Returns a single Entity Type object.
@@ -332,18 +333,26 @@ class EntityTypes(ScrapiBase):
         Returns:
         The single Entity Type object
         """
+
+        if not agent_id:
+            agent_id = self.agent_id
+
         if not entity_type_id:
             entity_type_id = self.entity_type_id
 
-        client_options = self._set_region(entity_type_id)
+        
+
+        client_options = self._set_region(agent_id)
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
         )
 
-        request = entity_type_id.GetEntityTypeRequest(name=entity_type_id)
+        request = types.entity_type.GetEntityTypeRequest()
 
         if language_code:
             request.language_code = language_code
+
+        request.name = entity_type_id
 
         response = client.get_entity_type(request=request)
 
