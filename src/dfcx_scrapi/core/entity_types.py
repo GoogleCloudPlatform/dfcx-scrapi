@@ -241,7 +241,7 @@ class EntityTypes(ScrapiBase):
 
         return entities_dict
 
-    def list_entity_types(self, agent_id: str = None):
+    def list_entity_types(self, agent_id: str = None, language_code: str = None):
         """Returns a list of Entity Type objects.
 
         Args:
@@ -253,8 +253,12 @@ class EntityTypes(ScrapiBase):
         if not agent_id:
             agent_id = self.agent_id
 
+        if not language_code:
+            language_code = self.language_code
+
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
+        request.language_code = language_code
 
         client_options = self._set_region(agent_id)
         client = services.entity_types.EntityTypesClient(
