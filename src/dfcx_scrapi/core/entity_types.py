@@ -43,6 +43,7 @@ class EntityTypes(ScrapiBase):
         scope=False,
         entity_type_id: str = None,
         agent_id: str = None,
+        languageCode: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -53,6 +54,7 @@ class EntityTypes(ScrapiBase):
 
         self.entity_type_id = entity_type_id
         self.agent_id = agent_id
+        self.languageCode = languageCode
 
     @staticmethod
     def entity_type_proto_to_dataframe(
