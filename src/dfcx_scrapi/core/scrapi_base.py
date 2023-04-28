@@ -275,3 +275,16 @@ class ScrapiBase:
             new_dict[k] = v
 
         return new_dict
+
+
+def api_call_counter_decorator(func):
+    """Counts the number of API calls for the function `func`."""
+
+    def wrapper(*args, **kwargs):
+        wrapper.api_call_count += 1
+        return func(*args, **kwargs)
+
+    wrapper.api_call_count = 0
+    wrapper.__name__ = func.__name__
+
+    return wrapper
