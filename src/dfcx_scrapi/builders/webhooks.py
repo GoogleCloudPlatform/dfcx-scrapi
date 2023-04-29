@@ -18,6 +18,7 @@ import logging
 from datetime import timedelta
 from typing import Dict
 
+import numpy as np
 import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Webhook
 from dfcx_scrapi.builders.builders_common import BuildersCommon
@@ -241,17 +242,22 @@ class WebhookBuilder(BuildersCommon):
                 service_type = obj.service_directory.service
                 web_service = obj.service_directory.generic_web_service
 
+            usrname, psswrd = web_service.username, web_service.password
             req_headers = "\n".join([
                 f"{k}: {v}" for k, v in web_service.request_headers.items()
             ])
+
+            # Make NaN as default values
+            usrname = str(usrname) if usrname else np.nan
+            psswrd = str(psswrd) if psswrd else np.nan
+            req_headers = req_headers if req_headers else np.nan
+
             return pd.DataFrame({
                 "name": [str(obj.name)],
                 "display_name": [str(obj.display_name)],
                 "timeout": [int(obj.timeout.seconds)],
                 "disabled": [bool(obj.disabled)],
-                "service_type": [service_type],
-                "uri": [str(web_service.uri)],
-                "username": [str(web_service.username)],
-                "password": [str(web_service.password)],
+                "service_type": [service_type], "uri": [str(web_service.uri)],
+                "username": [usrname], "password": [psswrd],
                 "request_headers": [req_headers],
             })

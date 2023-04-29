@@ -383,15 +383,18 @@ class FulfillmentBuilder(BuildersCommon):
             ])
             # TODO: Human readable way for conditional_cases
             cond_cases = obj.conditional_cases
-            if not cond_cases:
-                cond_cases = np.nan
             partial_resp = obj.return_partial_responses
 
+            # Make NaN as default values
+            messages = messages if messages else np.nan
+            params = params if params else np.nan
+            cond_cases = cond_cases if cond_cases else np.nan
+            wbhk = str(obj.webhook) if obj.webhook else np.nan
+            tag = str(obj.tag) if obj.tag else np.nan
+
             return pd.DataFrame({
-                "messages": [messages],
-                "preset_parameters": [params],
+                "messages": [messages], "preset_parameters": [params],
                 "conditional_cases": [cond_cases],
-                "webhook": [str(obj.webhook)],
-                "webhook_tag": [str(obj.tag)],
+                "webhook": [wbhk], "webhook_tag": [tag],
                 "return_partial_responses": [bool(partial_resp)],
             })

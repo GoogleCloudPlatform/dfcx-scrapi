@@ -257,9 +257,11 @@ class TransitionRouteBuilder(BuildersCommon):
             else:
                 target_type, target_id = np.nan, np.nan
 
+            intent = str(obj.intent) if obj.intent else np.nan
+            condition = str(obj.condition) if obj.condition else np.nan
             route_df = pd.DataFrame({
-                "intent": [str(obj.intent)],
-                "condition": [str(obj.condition)],
+                "intent": [intent],
+                "condition": [condition],
                 "target_type": [target_type],
                 "target_id": [target_id],
             })

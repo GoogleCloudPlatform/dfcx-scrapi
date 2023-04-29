@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import List, Dict, Union
 
+import numpy as np
 import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Intent
 from dfcx_scrapi.builders.builders_common import BuildersCommon
@@ -659,19 +660,21 @@ class IntentBuilder(BuildersCommon):
 
             intent_df = pd.DataFrame(columns=cols)
 
+            desc = str(obj.description) if str(obj.description) else np.nan
             intent_dict = {
                 "name": str(obj.name),
                 "display_name": str(obj.display_name),
-                "description": str(obj.description),
+                "description": desc,
                 "priority": int(obj.priority),
                 "is_fallback": bool(obj.is_fallback),
             }
 
             # labels
-            intent_dict["labels"] = ",".join([
+            label = ",".join([
                 key if key == val else f"{key}:{val}"
                 for key, val in obj.labels.items()
             ])
+            intent_dict["labels"] = label if label else np.nan
             # parameters
             params_dict = {
                 str(param.id): {
