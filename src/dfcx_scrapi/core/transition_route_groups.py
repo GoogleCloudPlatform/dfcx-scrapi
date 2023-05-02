@@ -134,6 +134,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return pages_dict
 
+    @scrapi_base.api_call_counter_decorator
     def list_transition_route_groups(self, flow_id: str = None):
         """Exports List of all Route Groups in the specified CX Flow ID.
 
@@ -164,6 +165,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return cx_route_groups
 
+    @scrapi_base.api_call_counter_decorator
     def get_transition_route_group(self, route_group_id):
         """Get a single Transition Route Group object.
 
@@ -183,6 +185,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_transition_route_group(
         self,
         flow_id: str = None,
@@ -222,6 +225,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_transition_route_group(
         self,
         route_group_id: str = None,

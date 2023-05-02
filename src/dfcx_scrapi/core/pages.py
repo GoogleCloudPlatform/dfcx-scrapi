@@ -112,6 +112,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return pages_dict
 
+    @scrapi_base.api_call_counter_decorator
     def list_pages(self, flow_id: str = None) -> List[gcdc_page.Page]:
         """Get a List of all pages for the specified Flow ID.
 
@@ -137,6 +138,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return cx_pages
 
+    @scrapi_base.api_call_counter_decorator
     def get_page(self, page_id: str = None) -> gcdc_page.Page:
         """Get a single CX Page object based on the provided Page ID.
 
@@ -158,6 +160,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_page(
         self, flow_id: str = None, obj: gcdc_page.Page = None, **kwargs
     ) -> gcdc_page.Page:
@@ -191,6 +194,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_page(
         self, page_id: str = None, obj: gcdc_page.Page = None, **kwargs
     ) -> gcdc_page.Page:
@@ -225,6 +229,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_page(self, page_id: str = None) -> str:
         """Deletes the specified Page.
 

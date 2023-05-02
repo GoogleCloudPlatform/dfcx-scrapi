@@ -53,6 +53,7 @@ class Agents(scrapi_base.ScrapiBase):
             self.agent_id = agent_id
             self.client_options = self._set_region(agent_id)
 
+    @scrapi_base.api_call_counter_decorator
     def _build_list_agents_client_request(self, location_id):
         """Builds the List Agents Request object."""
 
@@ -125,6 +126,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         return agents
 
+    @scrapi_base.api_call_counter_decorator
     def get_agent(self, agent_id: str) -> types.Agent:
         """Retrieves a single CX Agent resource object.
 
@@ -216,6 +218,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         return matched_agent
 
+    @scrapi_base.api_call_counter_decorator
     def create_agent(
         self,
         project_id: str,
@@ -273,6 +276,7 @@ class Agents(scrapi_base.ScrapiBase):
         return response
 
 
+    @scrapi_base.api_call_counter_decorator
     def validate_agent(
         self,
         agent_id: str = None,
@@ -309,6 +313,7 @@ class Agents(scrapi_base.ScrapiBase):
         return val_dict
 
 
+    @scrapi_base.api_call_counter_decorator
     def get_validation_result(
         self,
         agent_id: str = None,
@@ -354,6 +359,7 @@ class Agents(scrapi_base.ScrapiBase):
         return val_results_dict
 
 
+    @scrapi_base.api_call_counter_decorator
     def export_agent(
         self,
         agent_id: str,
@@ -402,6 +408,7 @@ class Agents(scrapi_base.ScrapiBase):
         return response.operation.name
 
 
+    @scrapi_base.api_call_counter_decorator
     def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
         """Restores a CX agent from a gcs_bucket location.
 
@@ -433,6 +440,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         return response.operation.name
 
+    @scrapi_base.api_call_counter_decorator
     def update_agent(
         self, agent_id: str, obj: types.Agent = None, **kwargs
     ) -> types.Agent:
@@ -470,6 +478,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_agent(self, agent_id: str) -> str:
         """Deletes the specified Dialogflow CX Agent.
 
