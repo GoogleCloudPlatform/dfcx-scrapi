@@ -20,10 +20,10 @@ from dfcx_scrapi.tools.levenshtein import Levenshtein
 from dfcx_scrapi.tools.maker_util import MakerUtil
 from dfcx_scrapi.tools.search_util import SearchUtil
 from dfcx_scrapi.tools.stats_util import StatsUtil
-from dfcx_scrapi.tools.utterance_generator_util import UtteranceGeneratorUtils
 from dfcx_scrapi.tools.validation_util import ValidationUtil
 from dfcx_scrapi.tools.webhook_util import WebhookUtil
 
 # Couldn't import these due to `ModuleNotFound` Exception
 # from dfcx_scrapi.tools.nlu_util import NaturalLanguageUnderstandingUtil
 # from dfcx_scrapi.tools.semantic_clustering import SemanticClustering
+# from dfcx_scrapi.tools.utterance_generator_util import UtteranceGeneratorUtils
