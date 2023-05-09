@@ -276,17 +276,28 @@ class ScrapiBase:
 
         return new_dict
 
-    def api_calls_count(self) -> int:
+    def api_calls_count_dict(self) -> Dict[str, int]:
+        """The number of API calls corresponding to each method.
+
+        Returns:
+          A dictionary with keys as the method names
+          and values as number of calls.
+        """
+        out_dict = {}
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            if callable(attr) and hasattr(attr, "api_call_count"):
+                out_dict[attr_name] = getattr(attr, "api_call_count")
+
+        return out_dict
+
+    def total_api_calls(self) -> int:
         """Show the total number of API calls for this resource.
 
         Returns:
-            Total calls to the API so far.
+          Total calls to the API so far as an int.
         """
-        return sum(
-            getattr(getattr(self, f), "api_call_count", 0)
-            for f in dir(self)
-            if callable(getattr(self, f))
-        )
+        return sum(self.api_calls_count_dict().values())
 
 
 def api_call_counter_decorator(func):
