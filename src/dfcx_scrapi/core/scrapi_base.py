@@ -283,12 +283,19 @@ class ScrapiBase:
           A dictionary with keys as the method names
           and values as number of calls.
         """
-        out_dict = {}
+        out_dict, this_class_apis = {}, {}
+
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
             if callable(attr) and hasattr(attr, "api_call_count"):
-                out_dict[attr_name] = getattr(attr, "api_call_count")
+                this_class_apis[attr_name] = getattr(attr, "api_call_count")
+            if any(
+                isinstance(attr, sub_class)
+                for sub_class in ScrapiBase.__subclasses__()
+            ):
+                out_dict[attr_name] = attr.api_calls_count_dict()
 
+        out_dict["THIS"] = this_class_apis
         return out_dict
 
     def total_api_calls(self) -> int:
@@ -297,7 +304,20 @@ class ScrapiBase:
         Returns:
           Total calls to the API so far as an int.
         """
-        return sum(self.api_calls_count_dict().values())
+        return self._total_call_helper(self.api_calls_count_dict())
+
+
+    def _total_call_helper(self, dict_):
+        count = 0
+        for v in dict_.values():
+            if isinstance(v, int):
+                count += v
+            elif isinstance(v, dict):
+                count += self._total_call_helper(v)
+
+        return count
+
+
 
 
 def api_call_counter_decorator(func):
