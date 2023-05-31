@@ -20,7 +20,7 @@ from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -29,7 +29,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-class Sessions(ScrapiBase):
+class Sessions(scrapi_base.ScrapiBase):
     """Core Class for CX Session Resource functions."""
 
     def __init__(
@@ -142,6 +142,7 @@ class Sessions(ScrapiBase):
 
             response = session_client.detect_intent(request=request)
 
+        # TODO (miladt): Need to be refactored for api decorator to work
         for text in conversation:
             text_input = types.session.TextInput(text=text)
             query_input = types.session.QueryInput(
@@ -225,6 +226,7 @@ class Sessions(ScrapiBase):
 
         logging.info(f"Starting Session ID {session_id}")
 
+        # TODO (miladt): Extra response in if?
         if parameters:
             query_params = types.session.QueryParameters(parameters=parameters)
 
@@ -249,6 +251,7 @@ class Sessions(ScrapiBase):
 
         return query_result
 
+    @scrapi_base.api_call_counter_decorator
     def preset_parameters(
         self, agent_id: str = None, session_id: str = None, parameters=None
     ):

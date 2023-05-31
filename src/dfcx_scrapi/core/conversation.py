@@ -395,6 +395,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             if msg:
                 print(f"{duration:0.2f}s {msg}")
 
+    @scrapi_base.api_call_counter_decorator
     def reply(
         self,
         send_obj: Dict[str, str],
