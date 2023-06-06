@@ -276,48 +276,34 @@ class ScrapiBase:
 
         return new_dict
 
-    def api_calls_count_dict(self) -> Dict[str, int]:
+    def get_api_calls_details(self) -> Dict[str, int]:
         """The number of API calls corresponding to each method.
 
         Returns:
           A dictionary with keys as the method names
-          and values as number of calls.
+          and values as the number of calls.
         """
-        out_dict, this_class_apis = {}, {}
+        this_class_methods, sub_class_apis_dict = {}, {}
 
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
             if callable(attr) and hasattr(attr, "api_call_count"):
-                this_class_apis[attr_name] = getattr(attr, "api_call_count")
+                this_class_methods[attr_name] = getattr(attr, "api_call_count")
             if any(
                 isinstance(attr, sub_class)
                 for sub_class in ScrapiBase.__subclasses__()
             ):
-                out_dict[attr_name] = attr.api_calls_count_dict()
+                sub_class_apis_dict.update(attr.get_api_calls_details())
 
-        out_dict["THIS"] = this_class_apis
-        return out_dict
+        return {**this_class_methods, **sub_class_apis_dict}
 
-    def total_api_calls(self) -> int:
+    def get_api_calls_count(self) -> int:
         """Show the total number of API calls for this resource.
 
         Returns:
           Total calls to the API so far as an int.
         """
-        return self._total_call_helper(self.api_calls_count_dict())
-
-
-    def _total_call_helper(self, dict_):
-        count = 0
-        for v in dict_.values():
-            if isinstance(v, int):
-                count += v
-            elif isinstance(v, dict):
-                count += self._total_call_helper(v)
-
-        return count
-
-
+        return sum(self.get_api_calls_details().values())
 
 
 def api_call_counter_decorator(func):
