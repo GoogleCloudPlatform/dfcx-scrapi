@@ -17,8 +17,10 @@
 import logging
 import json
 import re
-
+import functools
+from collections import defaultdict
 from typing import Dict
+
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
@@ -70,6 +72,8 @@ class ScrapiBase:
 
         if agent_id:
             self.agent_id = agent_id
+
+        self.api_calls_dict = defaultdict(int)
 
     @staticmethod
     def _set_region(resource_id: str):
@@ -287,13 +291,16 @@ class ScrapiBase:
 
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
-            if callable(attr) and hasattr(attr, "api_call_count"):
-                this_class_methods[attr_name] = getattr(attr, "api_call_count")
+            if callable(attr) and hasattr(attr, "calls_api"):
+                this_class_methods[attr_name] = 0
             if any(
                 isinstance(attr, sub_class)
                 for sub_class in ScrapiBase.__subclasses__()
             ):
                 sub_class_apis_dict.update(attr.get_api_calls_details())
+
+        if hasattr(self, "api_calls_dict"):
+            this_class_methods.update(getattr(self, "api_calls_dict"))
 
         return {**this_class_methods, **sub_class_apis_dict}
 
@@ -309,11 +316,11 @@ class ScrapiBase:
 def api_call_counter_decorator(func):
     """Counts the number of API calls for the function `func`."""
 
-    def wrapper(*args, **kwargs):
-        wrapper.api_call_count += 1
-        return func(*args, **kwargs)
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        self.api_calls_dict[func.__name__] += 1
+        return func(self, *args, **kwargs)
 
-    wrapper.api_call_count = 0
-    wrapper.__name__ = func.__name__
+    wrapper.calls_api = True
 
     return wrapper
