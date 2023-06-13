@@ -142,7 +142,6 @@ class Sessions(scrapi_base.ScrapiBase):
 
             response = session_client.detect_intent(request=request)
 
-        # TODO (miladt): Need to be refactored for api decorator to work
         for text in conversation:
             text_input = types.session.TextInput(text=text)
             query_input = types.session.QueryInput(
@@ -226,7 +225,6 @@ class Sessions(scrapi_base.ScrapiBase):
 
         logging.info(f"Starting Session ID {session_id}")
 
-        # TODO (miladt): Extra response in if?
         if parameters:
             query_params = types.session.QueryParameters(parameters=parameters)
 
@@ -251,7 +249,6 @@ class Sessions(scrapi_base.ScrapiBase):
 
         return query_result
 
-    @scrapi_base.api_call_counter_decorator
     def preset_parameters(
         self, agent_id: str = None, session_id: str = None, parameters=None
     ):
