@@ -277,7 +277,8 @@ class Agents(scrapi_base.ScrapiBase):
     @scrapi_base.api_call_counter_decorator
     def validate_agent(
         self,
-        agent_id: str = None,
+        agent_id: str,
+        language_code: str = "en",
         timeout: float = None) -> Dict:
         """Initiates the Validation of the CX Agent or Flow.
 
@@ -298,6 +299,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         request = types.agent.ValidateAgentRequest()
         request.name = agent_id
+        request.language_code = language_code
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(

@@ -43,6 +43,7 @@ class EntityTypes(scrapi_base.ScrapiBase):
         scope=False,
         entity_id: str = None,
         agent_id: str = None,
+        language_code: str = "en"
     ):
         super().__init__(
             creds_path=creds_path,
@@ -53,6 +54,7 @@ class EntityTypes(scrapi_base.ScrapiBase):
 
         self.entity_id = entity_id
         self.agent_id = agent_id
+        self.language_code = language_code
 
 
     @staticmethod
@@ -244,11 +246,12 @@ class EntityTypes(scrapi_base.ScrapiBase):
         return entities_dict
 
     @scrapi_base.api_call_counter_decorator
-    def list_entity_types(self, agent_id: str = None):
+    def list_entity_types(self, agent_id: str, language_code: str = "en"):
         """Returns a list of Entity Type objects.
 
         Args:
           agent_id: the formatted CX Agent ID to use
+          language_code: Specifies the language of the Entity Types listed
 
         Returns:
           List of Entity Type objects
@@ -258,6 +261,7 @@ class EntityTypes(scrapi_base.ScrapiBase):
 
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
+        request.language_code = language_code
 
         client_options = self._set_region(agent_id)
         client = services.entity_types.EntityTypesClient(
@@ -274,11 +278,12 @@ class EntityTypes(scrapi_base.ScrapiBase):
         return entities
 
     @scrapi_base.api_call_counter_decorator
-    def get_entity_type(self, entity_id: str = None):
+    def get_entity_type(self, entity_id: str = None, language_code: str = "en"):
         """Returns a single Entity Type object.
 
         Args:
           entity_id: the formatted CX Entity ID to get
+          language_code: Specifies the language of the Entity Types listed
 
         Returns:
           The single Entity Type object
@@ -290,7 +295,11 @@ class EntityTypes(scrapi_base.ScrapiBase):
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.get_entity_type(name=entity_id)
+        request = types.entity_type.GetEntityTypeRequest()
+        request.name = entity_id
+        request.language_code = language_code
+
+        response = client.get_entity_type(request=request)
 
         return response
 
