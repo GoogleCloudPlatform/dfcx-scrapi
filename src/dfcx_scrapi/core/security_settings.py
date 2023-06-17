@@ -54,6 +54,7 @@ class SecuritySettings(scrapi_base.ScrapiBase):
         self.ss_service = services.security_settings_service
         self.ss_types = types.security_settings
 
+    @scrapi_base.api_call_counter_decorator
     def list_security_settings(self, location_id: str):
         """List Security Settings for a given Project and Region.
 
@@ -83,6 +84,7 @@ class SecuritySettings(scrapi_base.ScrapiBase):
         return security_settings
 
 
+    @scrapi_base.api_call_counter_decorator
     def get_security_settings(self, security_setting_id: str):
         """Get specified CCAI Security Setting.
 
@@ -107,6 +109,7 @@ class SecuritySettings(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_security_settings(
         self,
         location_id: str,
@@ -158,6 +161,7 @@ class SecuritySettings(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_security_settings(self, security_setting_id: str, **kwargs):
         """Update specified CCAI Security Setting.
 
@@ -192,6 +196,7 @@ class SecuritySettings(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_security_settings(self, security_setting_id: str):
         """Delete the specified CCAI Security Setting.
 

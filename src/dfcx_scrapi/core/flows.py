@@ -129,6 +129,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return flows_dict
 
+    @scrapi_base.api_call_counter_decorator
     def train_flow(self, flow_id: str) -> str:
         """Trains the specified flow.
 
@@ -155,6 +156,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def list_flows(self, agent_id: str) -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
@@ -208,6 +210,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return flow
 
+    @scrapi_base.api_call_counter_decorator
     def get_flow(self, flow_id: str) -> types.Flow:
         """Get a single CX Flow object.
 
@@ -226,6 +229,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_flow(
         self,
         agent_id: str,
@@ -274,6 +278,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_flow(
         self, flow_id: str, obj: types.Flow = None, **kwargs
     ) -> types.Flow:
@@ -325,6 +330,7 @@ class Flows(scrapi_base.ScrapiBase):
             setattr(current_settings, key, value)
         self.update_flow(flow_id=flow_id, nlu_settings=current_settings)
 
+    @scrapi_base.api_call_counter_decorator
     def export_flow(
         self, flow_id: str, gcs_path: str, ref_flows: bool = True
     ) -> Dict[str, str]:
@@ -355,6 +361,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response.result()
 
+    @scrapi_base.api_call_counter_decorator
     def export_flow_inline(self, flow_id: str, ref_flows: bool = True) -> bytes:
         """Export a Flow, returning uncompressed raw byte content for flow.
 
@@ -377,6 +384,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return (response.result()).flow_content
 
+    @scrapi_base.api_call_counter_decorator
     def import_flow(
         self,
         agent_id: str,
@@ -425,6 +433,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_flow(self, flow_id: str, force: bool = False):
         """Deletes a single CX Flow Object resource.
 

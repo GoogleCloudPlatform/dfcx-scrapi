@@ -23,7 +23,7 @@ import pandas as pd
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -33,7 +33,7 @@ logging.basicConfig(
 )
 
 
-class Changelogs(ScrapiBase):
+class Changelogs(scrapi_base.ScrapiBase):
     """Tools class that contains methods to support Change History feature."""
 
     def __init__(
@@ -76,6 +76,7 @@ class Changelogs(ScrapiBase):
         else:
             return True
 
+    @scrapi_base.api_call_counter_decorator
     def list_changelogs(self, agent_id: str = None, **kwargs):
         """Lists all Change History logs for a CX Agent.
 
@@ -147,6 +148,7 @@ class Changelogs(ScrapiBase):
 
         return changelogs
 
+    @scrapi_base.api_call_counter_decorator
     def get_changelog(self, changelog_id: str):
         """Get a single changelog resource object.
 

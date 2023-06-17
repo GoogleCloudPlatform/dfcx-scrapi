@@ -22,7 +22,7 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -32,7 +32,7 @@ logging.basicConfig(
 )
 
 
-class EntityTypes(ScrapiBase):
+class EntityTypes(scrapi_base.ScrapiBase):
     """Core Class for CX Entity Type Resource functions."""
 
     def __init__(
@@ -243,6 +243,7 @@ class EntityTypes(ScrapiBase):
 
         return entities_dict
 
+    @scrapi_base.api_call_counter_decorator
     def list_entity_types(self, agent_id: str = None):
         """Returns a list of Entity Type objects.
 
@@ -272,6 +273,7 @@ class EntityTypes(ScrapiBase):
 
         return entities
 
+    @scrapi_base.api_call_counter_decorator
     def get_entity_type(self, entity_id: str = None):
         """Returns a single Entity Type object.
 
@@ -292,6 +294,7 @@ class EntityTypes(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_entity_type(
         self,
         agent_id: str = None,
@@ -353,6 +356,7 @@ class EntityTypes(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_entity_type(
         self,
         entity_type_id: str = None,
@@ -407,6 +411,7 @@ class EntityTypes(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_entity_type(self, entity_id: str = None, obj=None) -> None:
         """Deletes a single Entity Type resouce object.
 

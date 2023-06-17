@@ -22,7 +22,7 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -32,7 +32,7 @@ logging.basicConfig(
 )
 
 
-class TestCases(ScrapiBase):
+class TestCases(scrapi_base.ScrapiBase):
     """Core Class for CX Test Cases."""
 
     def __init__(
@@ -59,6 +59,7 @@ class TestCases(ScrapiBase):
             self.test_case_id = test_case_id
             self.client_options = self._set_region(self.test_case_id)
 
+    @scrapi_base.api_call_counter_decorator
     def list_test_cases(
         self, agent_id: str = None, include_conversation_turns: bool = False
     ):
@@ -102,6 +103,7 @@ class TestCases(ScrapiBase):
 
         return test_cases
 
+    @scrapi_base.api_call_counter_decorator
     def export_test_cases(
         self,
         gcs_uri: str,
@@ -148,6 +150,7 @@ class TestCases(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_test_case(self, test_case: types.TestCase, agent_id: str = None):
         """Create a new Test Case in the specified CX Agent.
 
@@ -173,6 +176,7 @@ class TestCases(ScrapiBase):
         response = client.create_test_case(request)
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def get_test_case(self, test_case_id: str):
         """Get test case object from CX Agent.
 
@@ -195,6 +199,7 @@ class TestCases(ScrapiBase):
         response = client.get_test_case(request)
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def import_test_cases(self, gcs_uri: str, agent_id: str = None):
         """Import test cases from cloud storage.
 
@@ -223,6 +228,7 @@ class TestCases(ScrapiBase):
         result = response.result()
         return result
 
+    @scrapi_base.api_call_counter_decorator
     def batch_delete_test_cases(
         self,
         test_case_ids: List[str],
@@ -253,6 +259,7 @@ class TestCases(ScrapiBase):
         )
         client.batch_delete_test_cases(request)
 
+    @scrapi_base.api_call_counter_decorator
     def list_test_case_results(self, test_case_id: str):
         """List the results from a specific Test Case.
 
@@ -283,6 +290,7 @@ class TestCases(ScrapiBase):
 
         return test_case_results
 
+    @scrapi_base.api_call_counter_decorator
     def batch_run_test_cases(
         self,
         test_cases: List[str],
@@ -320,6 +328,7 @@ class TestCases(ScrapiBase):
         results = response.result()
         return results
 
+    @scrapi_base.api_call_counter_decorator
     def update_test_case(
         self,
         test_case_id: str = None,
@@ -359,6 +368,7 @@ class TestCases(ScrapiBase):
         response = client.update_test_case(request)
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def run_test_case(self, test_case_id: str, environment: str = None):
         """Run test case and get result for a specified test case.
 
@@ -386,6 +396,7 @@ class TestCases(ScrapiBase):
         results = response.result()
         return results
 
+    @scrapi_base.api_call_counter_decorator
     def get_test_case_result(self, test_case_result_id: str):
         """Get test case result for a specified run on a specified test case.
 
@@ -407,6 +418,7 @@ class TestCases(ScrapiBase):
         response = client.get_test_case_result(request)
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def calculate_coverage(self, coverage_type: int, agent_id: str = None):
         """Calculate coverage of different resources in the test case set.
 
