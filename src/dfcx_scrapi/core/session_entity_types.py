@@ -193,6 +193,7 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
 
         return st
 
+    @scrapi_base.api_call_counter_decorator
     def list_session_entity_types(
         self, session_id: str, environment_id: str = None
     ) -> List[types.SessionEntityType]:
@@ -236,6 +237,7 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
 
         return session_entities
 
+    @scrapi_base.api_call_counter_decorator
     def get_session_entity_type(
         self, session_entity_type_id: str, environment_id: str = None
     ) -> types.SessionEntityType:
@@ -272,6 +274,7 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_session_entity_type(
         self, session_id: str, session_entity_type: types.SessionEntityType
     ) -> types.SessionEntityType:
@@ -299,6 +302,7 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_session_entity_type(
         self,
         session_entity_type_id: str,
@@ -361,6 +365,7 @@ class SessionEntityTypes(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_session_entity_type(
         self, session_entity_type_id: str, environment_id: str = None
     ) -> str:

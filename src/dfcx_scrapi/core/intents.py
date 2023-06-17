@@ -23,7 +23,7 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -33,7 +33,7 @@ logging.basicConfig(
 )
 
 
-class Intents(ScrapiBase):
+class Intents(scrapi_base.ScrapiBase):
     """Core Class for CX Intent Resource functions."""
 
     def __init__(
@@ -409,6 +409,7 @@ class Intents(ScrapiBase):
 
         return intents_dict
 
+    @scrapi_base.api_call_counter_decorator
     def list_intents(
         self,
         agent_id: str = None,
@@ -445,6 +446,7 @@ class Intents(ScrapiBase):
 
         return intents
 
+    @scrapi_base.api_call_counter_decorator
     def get_intent(
         self,
         intent_id: str = None,
@@ -477,6 +479,7 @@ class Intents(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_intent(
         self,
         agent_id: str,
@@ -531,6 +534,7 @@ class Intents(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_intent(
         self,
         intent_id: str = None,
@@ -582,6 +586,7 @@ class Intents(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_intent(self, intent_id: str, obj: types.Intent = None) -> None:
         """Deletes an intent by Intent ID.
 

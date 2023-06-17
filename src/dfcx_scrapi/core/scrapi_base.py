@@ -17,8 +17,10 @@
 import logging
 import json
 import re
-
+import functools
+from collections import defaultdict
 from typing import Dict
+
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
@@ -70,6 +72,8 @@ class ScrapiBase:
 
         if agent_id:
             self.agent_id = agent_id
+
+        self.api_calls_dict = defaultdict(int)
 
     @staticmethod
     def _set_region(resource_id: str):
@@ -275,3 +279,48 @@ class ScrapiBase:
             new_dict[k] = v
 
         return new_dict
+
+    def get_api_calls_details(self) -> Dict[str, int]:
+        """The number of API calls corresponding to each method.
+
+        Returns:
+          A dictionary with keys as the method names
+          and values as the number of calls.
+        """
+        this_class_methods, sub_class_apis_dict = {}, {}
+
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            if callable(attr) and hasattr(attr, "calls_api"):
+                this_class_methods[attr_name] = 0
+            if any(
+                isinstance(attr, sub_class)
+                for sub_class in ScrapiBase.__subclasses__()
+            ):
+                sub_class_apis_dict.update(attr.get_api_calls_details())
+
+        if hasattr(self, "api_calls_dict"):
+            this_class_methods.update(getattr(self, "api_calls_dict"))
+
+        return {**this_class_methods, **sub_class_apis_dict}
+
+    def get_api_calls_count(self) -> int:
+        """Show the total number of API calls for this resource.
+
+        Returns:
+          Total calls to the API so far as an int.
+        """
+        return sum(self.get_api_calls_details().values())
+
+
+def api_call_counter_decorator(func):
+    """Counts the number of API calls for the function `func`."""
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        self.api_calls_dict[func.__name__] += 1
+        return func(self, *args, **kwargs)
+
+    wrapper.calls_api = True
+
+    return wrapper
