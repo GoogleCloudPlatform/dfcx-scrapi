@@ -60,12 +60,17 @@ class TestCases(scrapi_base.ScrapiBase):
             self.client_options = self._set_region(self.test_case_id)
 
     @scrapi_base.api_call_counter_decorator
-    def list_test_cases(self, agent_id: str = None):
+    def list_test_cases(
+        self, agent_id: str = None, include_conversation_turns: bool = False
+    ):
         """List test cases from an agent.
 
         Args:
-          agent_id: The agent to list all pages for.
+          agent_id: The agent to list all test cases for.
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
+          include_conversation_turns: Either to include the conversation turns
+            in the test cases or not. Default is False
+            which shows only the basic metadata about the test cases.
 
         Returns:
           List of test cases from an agent.
@@ -74,8 +79,14 @@ class TestCases(scrapi_base.ScrapiBase):
         if not agent_id:
             agent_id = self.agent_id
 
-        request = types.test_case.ListTestCasesRequest()
-        request.parent = agent_id
+        if include_conversation_turns:
+            test_case_view = types.ListTestCasesRequest.TestCaseView.FULL
+        else:
+            test_case_view = types.ListTestCasesRequest.TestCaseView.BASIC
+
+        request = types.test_case.ListTestCasesRequest(
+            parent=agent_id, view=test_case_view
+        )
 
         client_options = self._set_region(agent_id)
 
