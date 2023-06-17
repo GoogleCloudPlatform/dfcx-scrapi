@@ -230,7 +230,7 @@ class Pages(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def delete_page(self, page_id: str = None) -> str:
+    def delete_page(self, page_id: str = None, force: bool = False) -> str:
         """Deletes the specified Page.
 
         Args:
