@@ -113,17 +113,25 @@ class Pages(scrapi_base.ScrapiBase):
         return pages_dict
 
     @scrapi_base.api_call_counter_decorator
-    def list_pages(self, flow_id: str = None) -> List[gcdc_page.Page]:
+    def list_pages(
+        self,
+        flow_id: str = None,
+        language_code: str = "en") -> List[gcdc_page.Page]:
         """Get a List of all pages for the specified Flow ID.
 
         Args:
           flow_id: the properly formatted Flow ID string
+          language_code: Specifies the language of the Pages listed. While the
+            majority of contents of a Page is language agnostic, the contents
+            in the "Agent Says" and similar parts of a Page are affected by
+            language code.
 
         Returns:
           A List of CX Page objects for the specific Flow ID
         """
         request = gcdc_page.ListPagesRequest()
         request.parent = flow_id
+        request.language_code = language_code
 
         client_options = self._set_region(flow_id)
         client = pages.PagesClient(
