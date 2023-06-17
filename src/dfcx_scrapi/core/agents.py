@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import logging
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
@@ -54,8 +54,17 @@ class Agents(scrapi_base.ScrapiBase):
             self.client_options = self._set_region(agent_id)
 
     @scrapi_base.api_call_counter_decorator
-    def _build_list_agents_client_request(self, location_id):
-        """Builds the List Agents Request object."""
+    def _list_agents_client_request(self, location_id) -> List[
+        types.agent.Agent
+    ]:
+        """Builds the List Agents Request object.
+
+        Args:
+          location_id: The GCP Location ID in the following format:
+            `projects/<project_id>/locations/<location>`
+
+        Returns:
+          List of types.agent.Agent"""
 
         request = types.agent.ListAgentsRequest()
         request.parent = location_id
@@ -65,31 +74,34 @@ class Agents(scrapi_base.ScrapiBase):
             credentials=self.creds, client_options=client_options
         )
 
-        return client, request
+        response = client.list_agents(request)
+
+        agents = []
+        for page in response.pages:
+            for agent in page.agents:
+                agents.append(agent)
+
+        return agents
 
     def list_agents(
         self,
-        location_id: str = None,
-        project_id: str = None) -> List[types.Agent]:
+        project_id: str,
+        location: str = None) -> List[types.Agent]:
         """Get list of all CX agents in a given GCP Region or Project.
 
-        This method allows you to provide a specific Location ID consisting of
-        a GCP Project ID and Location ID (i.e. GCP Region Name) to retrieve all
-        of the CX agents associated with that Project/Region. Optionally, you
-        can provide just the Project ID and the funciton will traverse ALL
-        available GCP regions to list ALL agents across the regions.
+        This method allows you to provide a GCP Project ID to retrieve all of
+        the CX agents across ALL available GCP region. If the optional location
+        ID is provided, the method will only pull the agents for that region.
 
         Args:
-          location_id: The GCP Project/Location ID in the following format
-              `projects/<GCP PROJECT ID>/locations/<LOCATION ID>`
-              `projects/my-gcp-project/locations/us-central1`
-          project_id: The GCP Project ID as a string
+          project_id: The GCP Project ID. Ex: `my-cool-gcp-project`
+          location_id: The GCP Location ID. Ex: `global`, `us-central1`, etc.
 
         Returns:
           List of Agent objects
         """
 
-        if project_id:
+        if not location:
             region_list = [
                 "global",
                 "us-central1",
@@ -106,23 +118,11 @@ class Agents(scrapi_base.ScrapiBase):
             agents = []
             for region in region_list:
                 location_path = f"projects/{project_id}/locations/{region}"
-                client, request = self._build_list_agents_client_request(
-                    location_path
-                )
-
-                agents += self.list_agents(location_id=location_path)
+                agents += self._list_agents_client_request(location_path)
 
         else:
-            client, request = self._build_list_agents_client_request(
-                location_id
-            )
-
-            response = client.list_agents(request)
-
-            agents = []
-            for page in response.pages:
-                for agent in page.agents:
-                    agents.append(agent)
+            location_path = f"projects/{project_id}/locations/{location}"
+            agents = self._list_agents_client_request(location_path)
 
         return agents
 
@@ -181,12 +181,12 @@ class Agents(scrapi_base.ScrapiBase):
 
         if location_id:
             agent_list = self.list_agents(
-                location_id=location_id
+                location=location_id
                 )
 
         elif region:
             agent_list = self.list_agents(
-                location_id=f"projects/{project_id}/locations/{region}"
+                location=f"projects/{project_id}/locations/{region}"
             )
         else:
             agent_list = self.list_agents(project_id=project_id)
