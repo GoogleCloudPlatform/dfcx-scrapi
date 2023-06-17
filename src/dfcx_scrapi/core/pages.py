@@ -237,6 +237,9 @@ class Pages(scrapi_base.ScrapiBase):
           page_id: CX Page ID string in the following Format:
             ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
               flows/<Flow ID>/pages/<Page ID>``
+          force: (Optional) This field has no effect for pages with no incoming
+            transitions. If set to True, Dialogflow will remove the page,
+            as well as any transitions to the page.
 
         Returns:
           String "Page `{page_id}` successfully deleted."
@@ -245,6 +248,7 @@ class Pages(scrapi_base.ScrapiBase):
         client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
-        client.delete_page(name=page_id)
+        req = gcdc_page.DeletePageRequest(name=page_id, force=force)
+        client.delete_page(request=req)
 
         return f"Page `{page_id}` successfully deleted."

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
@@ -180,14 +180,12 @@ class Agents(scrapi_base.ScrapiBase):
         """
 
         if location_id:
-            agent_list = self.list_agents(
-                location=location_id
-                )
+            agent_list = self._list_agents_client_request(location_id)
 
         elif region:
-            agent_list = self.list_agents(
-                location=f"projects/{project_id}/locations/{region}"
-            )
+            agent_list = self._list_agents_client_request(
+                f"projects/{project_id}/locations/{region}"
+                )
         else:
             agent_list = self.list_agents(project_id=project_id)
 
