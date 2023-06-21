@@ -423,7 +423,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         Returns:
           A dictionary for the agent reply to to the submitted text.
             Includes keys response_messages, confidence, page_name,
-            intent_name, match_type, match, other_intents, and params.
+            intent_name, match_type, match, and params.
         """
         text = send_obj.get("text")
         send_params = send_obj.get("params")
@@ -543,34 +543,11 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             query_result.match.match_type
         )
         reply["match"] = query_result.match
-        reply["other_intents"] = self.format_other_intents(query_result)
         reply["params"] = params
 
         logging.debug("reply %s", reply)
 
         return reply
-
-    def format_other_intents(self, query_result):
-        """Unwind protobufs into more friendly dict"""
-        other_intents = query_result.diagnostic_info.get(
-            "Alternative Matched Intents"
-        )
-        items = []
-        rank = 0
-        for alt in other_intents:
-            items.append(
-                {
-                    "name": alt.get("DisplayName"),
-                    "score": alt.get("Score"),
-                    "rank": rank,
-                }
-            )
-            rank += 1
-
-        if self:
-            return items
-
-        return None
 
     def getpath(self, obj, xpath, default=None):
         """Get data at a pathed location out of object internals"""
