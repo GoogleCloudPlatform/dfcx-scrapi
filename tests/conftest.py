@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import pytest
-import json
 
 def pytest_addoption(parser):
     """Method to add option for creds in tests."""
