@@ -22,13 +22,9 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-<<<<<<< HEAD
 from dfcx_scrapi.core import scrapi_base
-=======
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.pages import Pages
->>>>>>> Move get_test_case_results_df to TestCases
 
 # logging config
 logging.basicConfig(
