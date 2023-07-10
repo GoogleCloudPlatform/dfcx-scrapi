@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import pytest
+import json
 
 def pytest_addoption(parser):
     """Method to add option for creds in tests."""
@@ -22,6 +23,8 @@ def pytest_addoption(parser):
     parser.addoption("--project_id", action="store")
     parser.addoption("--gcs_bucket", action="store")
     parser.addoption("--agent_id", action="store")
+    parser.addoption("--flow_name", action="store")
+    parser.addoption("--page_name", action="store")
 
 
 @pytest.fixture(scope="session")
@@ -42,3 +45,11 @@ def gcs_bucket(request):
 @pytest.fixture(scope="session")
 def agent_id(request):
     return request.config.getoption("agent_id")
+
+@pytest.fixture(scope="session")
+def flow_name(request):
+    return request.config.getoption("flow_name")
+
+@pytest.fixture(scope="session")
+def page_name(request):
+    return request.config.getoption("page_name")

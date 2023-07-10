@@ -827,4 +827,4 @@ class AgentCheckerUtil(ScrapiBase):
                                                        include_groups=True)
             all_reachable_intents.update(set(flow_intents))
         all_intents = {intent.display_name for intent in self._intent_data}
-        return all_intents - all_reachable_intents
+        return list(all_intents - all_reachable_intents)
