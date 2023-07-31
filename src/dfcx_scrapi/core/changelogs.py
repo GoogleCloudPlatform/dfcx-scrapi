@@ -225,7 +225,7 @@ class Changelogs(scrapi_base.ScrapiBase):
                 ],
             )
 
-            df = df.append(log_data)
+            df = pd.concat([df, log_data], ignore_index=True)
 
         df = df.reset_index(drop=True)
 
