@@ -21,6 +21,7 @@ import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
 
@@ -419,3 +420,44 @@ class EventHandlerBuilder(BuildersCommon):
             )
 
         return self.proto_obj
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def proto_to_dataframe(
+            self, obj: EventHandler, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a EventHandler protobuf object to pandas Dataframe.
+
+            Args:
+              obj (EventHandler):
+                EventHandler protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode not in ["basic", "advanced"]:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+            fb = FulfillmentBuilder(obj.trigger_fulfillment)
+            fulfillment_df = fb.to_dataframe(mode)
+
+            if obj.target_page:
+                target_type, target_id = "page", str(obj.target_page)
+            elif obj.target_flow:
+                target_type, target_id = "flow", str(obj.target_flow)
+            else:
+                target_type, target_id = np.nan, np.nan
+
+            event = str(obj.event) if obj.event else np.nan
+            event_handler_df = pd.DataFrame({
+                "event": [event],
+                "target_type": [target_type],
+                "target_id": [target_id],
+            })
+
+            return pd.concat([event_handler_df, fulfillment_df], axis=1)
