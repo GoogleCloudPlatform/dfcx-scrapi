@@ -86,7 +86,7 @@ class Agents(scrapi_base.ScrapiBase):
     def list_agents(
         self,
         project_id: str,
-        location: str = None) -> List[types.Agent]:
+        location_id: str = None) -> List[types.Agent]:
         """Get list of all CX agents in a given GCP Region or Project.
 
         This method allows you to provide a GCP Project ID to retrieve all of
@@ -101,7 +101,7 @@ class Agents(scrapi_base.ScrapiBase):
           List of Agent objects
         """
 
-        if not location:
+        if not location_id:
             region_list = [
                 "global",
                 "us-central1",
@@ -121,7 +121,7 @@ class Agents(scrapi_base.ScrapiBase):
                 agents += self._list_agents_client_request(location_path)
 
         else:
-            location_path = f"projects/{project_id}/locations/{location}"
+            location_path = f"projects/{project_id}/locations/{location_id}"
             agents = self._list_agents_client_request(location_path)
 
         return agents
