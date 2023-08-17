@@ -134,36 +134,22 @@ class CopyUtil(ScrapiBase):
     def __convert_tr_target_page(
         trans_route, pages_map, convert_type=None, flows_map=None, flow=None
     ):
+        special_pages = [
+            "END_FLOW", "END_SESSION",
+            "CURRENT_PAGE", "PREVIOUS_PAGE", "START_PAGE"
+        ]
 
         if convert_type == "source":
-            if trans_route.target_page.split("/")[-1] == "END_FLOW":
-                trans_route.target_page = "END_FLOW"
-            elif trans_route.target_page.split("/")[-1] == "END_SESSION":
-                trans_route.target_page = "END_SESSION"
-            elif trans_route.target_page.split("/")[-1] == "CURRENT_PAGE":
-                trans_route.target_page = "CURRENT_PAGE"
-            elif trans_route.target_page.split("/")[-1] == "PREVIOUS_PAGE":
-                trans_route.target_page = "PREVIOUS_PAGE"
-            elif trans_route.target_page.split("/")[-1] == "START_PAGE":
-                trans_route.target_page = "START_PAGE"
+            last_part = trans_route.target_page.split("/")[-1]
+            if last_part in special_pages:
+                trans_route.target_page = last_part
             else:
                 trans_route.target_page = pages_map[trans_route.target_page]
 
         elif convert_type == "destination":
-            if trans_route.target_page == "END_FLOW":
-                trans_route.target_page = flows_map[flow] + "/pages/END_FLOW"
-            elif trans_route.target_page == "END_SESSION":
-                trans_route.target_page = flows_map[flow] + "/pages/END_SESSION"
-            elif trans_route.target_page == "CURRENT_PAGE":
-                trans_route.target_page = (
-                    flows_map[flow] + "/pages/CURRENT_PAGE"
-                )
-            elif trans_route.target_page == "PREVIOUS_PAGE":
-                trans_route.target_page = (
-                    flows_map[flow] + "/pages/PREVIOUS_PAGE"
-                )
-            elif trans_route.target_page == "START_PAGE":
-                trans_route.target_page = flows_map[flow] + "/pages/START_PAGE"
+            if trans_route.target_page in special_pages:
+                new_page = f"{flows_map[flow]}/pages/{trans_route.target_page}"
+                trans_route.target_page = new_page
             else:
                 trans_route.target_page = pages_map[trans_route.target_page]
 

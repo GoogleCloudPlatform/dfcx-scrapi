@@ -422,7 +422,7 @@ class EntityTypes(scrapi_base.ScrapiBase):
 
     @scrapi_base.api_call_counter_decorator
     def delete_entity_type(self, entity_id: str = None, obj=None) -> None:
-        """Deletes a single Entity Type resouce object.
+        """Deletes a single Entity Type resource object.
 
         Args:
           entity_id: the formatted CX Entity ID to delete

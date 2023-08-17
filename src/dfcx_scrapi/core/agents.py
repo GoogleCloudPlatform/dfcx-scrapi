@@ -418,8 +418,8 @@ class Agents(scrapi_base.ScrapiBase):
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-          gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
-            agent to in the following format:
+          gcs_bucket_uri: The Google Cloud Storage bucket/filepath to restore
+            the agent from in the following format:
               `gs://<bucket-name>/<object-name>`
 
         Returns:
