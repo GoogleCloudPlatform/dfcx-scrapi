@@ -61,6 +61,69 @@ class TestCases(scrapi_base.ScrapiBase):
             self.test_case_id = test_case_id
             self.client_options = self._set_region(self.test_case_id)
 
+    def _convert_flow(self, flow_id, flows_map):
+        """Gets a flow display name from a flow ID"""
+        if flow_id.split("/")[-1] == "-":
+            return ""
+        # flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
+        if flow_id in flows_map:
+            return flows_map[flow_id]
+        # TODO: Should throw error instead of returning default
+        return "Default Start Flow"
+
+    # Note that flow id includes agent, normally...
+    def _convert_page(self, page_id, flow_id, pages_map):
+        """Gets a page display name from a page and flow ID"""
+        page_id_converted = str(flow_id) + "/pages/" + str(page_id)
+        if flow_id in pages_map:
+            # page_id is sometimes left empty for the test case if it starts
+            # on the start page
+            return pages_map[flow_id].get(page_id_converted, "START_PAGE")
+        logging.info(f"Flow not found: {flow_id}")
+        # TODO: Should throw error, but returning this probably will anyway
+        return "INVALID"
+
+    def _process_test_case(self, test_case, flows_map, pages_map):
+            """Takes a response from list_test_cases and returns a single row
+            dataframe of the test case result.
+
+            Args:
+            test_case: The test case response
+            flows_map: A dictionary mapping flow IDs to flow display names
+            pages_map: A dictionary with keys as flow IDs and values as
+                dictionaries mapping page IDs to page display names for that flow
+
+            Returns: A dataframe with columns:
+            display_name, id, short_id, tags, creation_time,
+            start_flow, start_page, test_result, passed, test_time
+            """
+            display_name = test_case.display_name
+            test_case_id = test_case.name
+            short_id = test_case.name.split("/")[-1]
+            tags = ",".join(test_case.tags)
+            creation_time = test_case.creation_time
+            flow = self._convert_flow(test_case.test_config.flow, flows_map)
+            page = self._convert_page(test_case.test_config.page,
+                                    test_case.test_config.flow, pages_map)
+            test_result = str(test_case.last_test_result.test_result)
+            passed_str = "TestResult.PASSED"
+            passed = str(test_case.last_test_result.test_result) == passed_str
+            test_time = test_case.last_test_result.test_time
+            return pd.DataFrame(
+                {
+                    "display_name": [display_name],
+                    "id": [test_case_id],
+                    "short_id": [short_id],
+                    "tags": [tags],
+                    "creation_time": [creation_time],
+                    "start_flow": [flow],
+                    "start_page": [page],
+                    "test_result": [test_result],
+                    "passed": [passed],
+                    "test_time": [test_time]
+                }
+            )
+
     @scrapi_base.api_call_counter_decorator
     def list_test_cases(
         self, agent_id: str = None, include_conversation_turns: bool = False
@@ -456,28 +519,6 @@ class TestCases(scrapi_base.ScrapiBase):
         response = client.calculate_coverage(request)
         return response
 
-    def _convert_flow(self, flow_id, flows_map):
-        """Gets a flow display name from a flow ID"""
-        if flow_id.split("/")[-1] == "-":
-            return ""
-        # flow_id_converted = str(agent_id) + '/flows/' + str(flow_id)
-        if flow_id in flows_map:
-            return flows_map[flow_id]
-        # TODO: Should throw error instead of returning default
-        return "Default Start Flow"
-
-    # Note that flow id includes agent, normally...
-    def _convert_page(self, page_id, flow_id, pages_map):
-        """Gets a page display name from a page and flow ID"""
-        page_id_converted = str(flow_id) + "/pages/" + str(page_id)
-        if flow_id in pages_map:
-            # page_id is sometimes left empty for the test case if it starts
-            # on the start page
-            return pages_map[flow_id].get(page_id_converted, "START_PAGE")
-        logging.info(f"Flow not found: {flow_id}")
-        # TODO: Should throw error, but returning this probably will anyway
-        return "INVALID"
-
     def get_test_case_results_df(self, agent_id=None, retest_all=False):
         """Gets the test case results for this agent,
         and generates a dataframe with their details.
@@ -547,44 +588,3 @@ class TestCases(scrapi_base.ScrapiBase):
         # This column is redundant, since we have "passed" (bool)
         test_case_df = test_case_df.drop(columns=["test_result"])
         return test_case_df
-
-    def process_test_case(self, test_case, flows_map, pages_map):
-        """Takes a response from list_test_cases and returns a single row
-        dataframe of the test case result.
-
-        Args:
-          test_case: The test case response
-          flows_map: A dictionary mapping flow IDs to flow display names
-          pages_map: A dictionary with keys as flow IDs and values as
-            dictionaries mapping page IDs to page display names for that flow
-
-        Returns: A dataframe with columns:
-          display_name, id, short_id, tags, creation_time,
-          start_flow, start_page, test_result, passed, test_time
-        """
-        display_name = test_case.display_name
-        test_case_id = test_case.name
-        short_id = test_case.name.split("/")[-1]
-        tags = ",".join(test_case.tags)
-        creation_time = test_case.creation_time
-        flow = self._convert_flow(test_case.test_config.flow, flows_map)
-        page = self._convert_page(test_case.test_config.page,
-                                  test_case.test_config.flow, pages_map)
-        test_result = str(test_case.last_test_result.test_result)
-        passed_str = "TestResult.PASSED"
-        passed = str(test_case.last_test_result.test_result) == passed_str
-        test_time = test_case.last_test_result.test_time
-        return pd.DataFrame(
-            {
-                "display_name": [display_name],
-                "id": [test_case_id],
-                "short_id": [short_id],
-                "tags": [tags],
-                "creation_time": [creation_time],
-                "start_flow": [flow],
-                "start_page": [page],
-                "test_result": [test_result],
-                "passed": [passed],
-                "test_time": [test_time]
-            }
-        )
