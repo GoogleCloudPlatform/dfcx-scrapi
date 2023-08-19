@@ -69,6 +69,8 @@ class TestCases(scrapi_base.ScrapiBase):
             return "PASSED"
         elif test_case.last_test_result.test_result == 2:
             return "FAILED"
+        else:
+            return ""
 
     def _convert_test_result_to_bool(self, test_case: types.TestCase) -> bool:
         """Converts the String result to a boolean."""
@@ -78,6 +80,8 @@ class TestCases(scrapi_base.ScrapiBase):
             return True
         elif test_result == "FAILED":
             return False
+        else:
+            return None
 
     def _get_flow_id_from_test_config(
             self, test_case: types.TestCase) -> str:
@@ -85,9 +89,9 @@ class TestCases(scrapi_base.ScrapiBase):
         if "flow" in test_case.test_config:
             return test_case.test_config.flow
         elif "page" in test_case.test_config:
-            return '/'.join(test_case.test_config.page.split("/")[:8])
+            return "/".join(test_case.test_config.page.split("/")[:8])
         else:
-            agent_id = '/'.join(test_case.name.split('/')[:6])
+            agent_id = "/".join(test_case.name.split("/")[:6])
             return f"{agent_id}/flows/00000000-0000-0000-0000-000000000000"
 
     def _get_page_id_from_test_config(
@@ -110,38 +114,38 @@ class TestCases(scrapi_base.ScrapiBase):
         return page
 
     def _process_test_case(self, test_case, flows_map, pages_map):
-            """Takes a response from list_test_cases and returns a single row
-            dataframe of the test case result.
+        """Takes a response from list_test_cases and returns a single row
+        dataframe of the test case result.
 
-            Args:
-            test_case: The test case response
-            flows_map: A dictionary mapping flow IDs to flow display names
-            pages_map: A dictionary with keys as flow IDs and values as
-                dictionaries mapping page IDs to page display names for that flow
+        Args:
+          test_case: The test case response
+          flows_map: A dictionary mapping flow IDs to flow display names
+          pages_map: A dictionary with keys as flow IDs and values as
+            dictionaries mapping page IDs to page display names for that flow
 
-            Returns: A dataframe with columns:
-              display_name, id, short_id, tags, creation_time, start_flow,
-              start_page, test_result, passed, test_time
-            """
-            flow_id = self._get_flow_id_from_test_config(test_case)
-            page_id = self._get_page_id_from_test_config(test_case, flow_id)
-            page = self._get_page_display_name(flow_id, page_id, pages_map)
-            test_result = self._convert_test_result_to_bool(test_case)
+        Returns: A dataframe with columns:
+          display_name, id, short_id, tags, creation_time, start_flow,
+          start_page, test_result, passed, test_time
+        """
+        flow_id = self._get_flow_id_from_test_config(test_case)
+        page_id = self._get_page_id_from_test_config(test_case, flow_id)
+        page = self._get_page_display_name(flow_id, page_id, pages_map)
+        test_result = self._convert_test_result_to_bool(test_case)
 
-            return pd.DataFrame(
-                {
-                    "display_name": [test_case.display_name],
-                    "id": [test_case.name],
-                    "short_id": [test_case.name.split("/")[-1]],
-                    "tags": [",".join(test_case.tags)],
-                    "creation_time": [test_case.creation_time],
-                    "start_flow": [flows_map.get(flow_id, None)],
-                    "start_page": [page],
-                    # "test_result": [test_result],
-                    "passed": [test_result],
-                    "test_time": [test_case.last_test_result.test_time]
-                }
-            )
+        return pd.DataFrame(
+            {
+                "display_name": [test_case.display_name],
+                "id": [test_case.name],
+                "short_id": [test_case.name.split("/")[-1]],
+                "tags": [",".join(test_case.tags)],
+                "creation_time": [test_case.creation_time],
+                "start_flow": [flows_map.get(flow_id, None)],
+                "start_page": [page],
+                # "test_result": [test_result],
+                "passed": [test_result],
+                "test_time": [test_case.last_test_result.test_time]
+            }
+        )
 
     def _retest_cases(
             self, test_case_df: pd.DataFrame, retest_ids: List[str]
