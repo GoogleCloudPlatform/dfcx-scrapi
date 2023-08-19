@@ -61,11 +61,22 @@ class TestCases(scrapi_base.ScrapiBase):
             self.test_case_id = test_case_id
             self.client_options = self._set_region(self.test_case_id)
 
-    def _convert_test_result(self, test_case: types.TestCase) -> bool:
-        """Converts the Enum result to a boolean."""
-        if test_case.last_test_result.test_result == 1:
+    def _convert_test_result_to_string(self, test_case: types.TestCase) -> str:
+        """Converts the Enum result to a string."""
+        if test_case.last_test_result.test_result == 0:
+            return "TEST_RESULT_UNSPECIFIED"
+        elif test_case.last_test_result.test_result == 1:
+            return "PASSED"
+        elif test_case.last_test_result.test_result == 2:
+            return "FAILED"
+
+    def _convert_test_result_to_bool(self, test_case: types.TestCase) -> bool:
+        """Converts the String result to a boolean."""
+        test_result = self._convert_test_result_to_string(test_case)
+
+        if test_result == "PASSED":
             return True
-        else:
+        elif test_result == "FAILED":
             return False
 
     def _get_flow_id_from_test_config(
@@ -115,7 +126,7 @@ class TestCases(scrapi_base.ScrapiBase):
             flow_id = self._get_flow_id_from_test_config(test_case)
             page_id = self._get_page_id_from_test_config(test_case, flow_id)
             page = self._get_page_display_name(flow_id, page_id, pages_map)
-            test_result = self._convert_test_result(test_case)
+            test_result = self._convert_test_result_to_bool(test_case)
 
             return pd.DataFrame(
                 {
@@ -126,11 +137,39 @@ class TestCases(scrapi_base.ScrapiBase):
                     "creation_time": [test_case.creation_time],
                     "start_flow": [flows_map.get(flow_id, None)],
                     "start_page": [page],
-                    "test_result": [test_result],
+                    # "test_result": [test_result],
                     "passed": [test_result],
                     "test_time": [test_case.last_test_result.test_time]
                 }
             )
+
+    def _retest_cases(
+            self, test_case_df: pd.DataFrame, retest_ids: List[str]
+            ) -> pd.DataFrame:
+        print("To retest:", len(retest_ids))
+        response = self.batch_run_test_cases(retest_ids, self.agent_id)
+        for result in response.results:
+            # Results may not be in the same order as they went in
+            # Process the name a bit to remove the /results/id part
+            tc_id_full = "/".join(result.name.split("/")[:-2])
+            tc_id = tc_id_full.rsplit("/", maxsplit=1)[-1]
+
+            # Update dataframe where id = tc_id_full
+            # row = test_case_df.loc[test_case_df['id']==tc_id_full]
+            test_case_df.loc[
+                test_case_df["id"] == tc_id_full, "short_id"
+            ] = tc_id
+            # test_case_df.loc[
+            #     test_case_df["id"] == tc_id_full, "test_result"
+            # ] = str(result.test_result)
+            test_case_df.loc[
+                test_case_df["id"] == tc_id_full, "test_time"
+            ] = result.test_time
+            test_case_df.loc[test_case_df["id"] == tc_id_full,"passed"] = (
+                str(result.test_result) == "TestResult.PASSED"
+            )
+
+        return test_case_df
 
     @scrapi_base.api_call_counter_decorator
     def list_test_cases(
@@ -528,20 +567,21 @@ class TestCases(scrapi_base.ScrapiBase):
         return response
 
     def get_test_case_results_df(self, agent_id=None, retest_all=False):
-        """Gets the test case results for this agent,
-        and generates a dataframe with their details.
-        Any tests without a result will be run in a batch.
+        """Convert Test Cases to Dataframe.
+
+        Gets the test case results for this agent, and generates a dataframe
+        with their details. Any tests without a result will be run in a batch.
 
         Args:
-          agent_id: required only if not set when initializing this class
+          agent_id: The agent to create the test case for. Format:
+              `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
           retest_all: if true, all test cases are re-run,
             regardless of whether or not they had a result
 
         Returns:
           DataFrame of test case results for this agent, with columns:
-            display_name, id, short_id (excluding agent ID),
-            tags (comma-separated string), creation_time,
-            start_flow, start_page, passed, test_time
+            display_name, id, short_id, tags, creation_time, start_flow,
+            start_page, passed, test_time
         """
         if agent_id:
             self.agent_id = agent_id
@@ -560,39 +600,15 @@ class TestCases(scrapi_base.ScrapiBase):
         for test_case in test_case_results:
             row = self._process_test_case(test_case, flows_map, pages_map)
             test_case_rows.append(row)
-            test_result = str(test_case.last_test_result.test_result)
-            untested_str = "TestResult.TEST_RESULT_UNSPECIFIED"
-            if retest_all or test_result == untested_str:
+            test_result = self._convert_test_result_to_string(test_case)
+            if retest_all or test_result == "TEST_RESULT_UNSPECIFIED":
                 retest_ids.append(test_case.name)
 
         # Create dataframe
         test_case_df = pd.concat(test_case_rows)
 
         # Retest any that haven't been run yet
-        print("To retest:", len(retest_ids))
         if len(retest_ids) > 0:
-            response = self.batch_run_test_cases(retest_ids, self.agent_id)
-            for result in response.results:
-                # Results may not be in the same order as they went in
-                # Process the name a bit to remove the /results/id part
-                tc_id_full = "/".join(result.name.split("/")[:-2])
-                tc_id = tc_id_full.rsplit("/", maxsplit=1)[-1]
+            test_case_df = self._retest_cases(test_case_df,retest_ids)
 
-                # Update dataframe where id = tc_id_full
-                # row = test_case_df.loc[test_case_df['id']==tc_id_full]
-                test_case_df.loc[
-                    test_case_df["id"] == tc_id_full, "short_id"
-                ] = tc_id
-                test_case_df.loc[
-                    test_case_df["id"] == tc_id_full, "test_result"
-                ] = str(result.test_result)
-                test_case_df.loc[
-                    test_case_df["id"] == tc_id_full, "test_time"
-                ] = result.test_time
-                test_case_df.loc[test_case_df["id"] == tc_id_full,"passed"] = (
-                    str(result.test_result) == "TestResult.PASSED"
-                )
-
-        # This column is redundant, since we have "passed" (bool)
-        test_case_df = test_case_df.drop(columns=["test_result"])
         return test_case_df
