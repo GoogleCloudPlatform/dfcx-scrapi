@@ -23,8 +23,8 @@ from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core.flows import Flows
-from dfcx_scrapi.core.pages import Pages
+from dfcx_scrapi.core import flows
+from dfcx_scrapi.core import pages
 
 # logging config
 logging.basicConfig(
@@ -497,8 +497,8 @@ class TestCases(scrapi_base.ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
 
-        dfcx_flows = Flows(creds=self.creds, agent_id=self.agent_id)
-        dfcx_pages = Pages(creds=self.creds)
+        dfcx_flows = flows.Flows(creds=self.creds, agent_id=self.agent_id)
+        dfcx_pages = pages.Pages(creds=self.creds)
         flows_map = dfcx_flows.get_flows_map(agent_id=self.agent_id)
         pages_map = {}
         for flow_id in flows_map.keys():
