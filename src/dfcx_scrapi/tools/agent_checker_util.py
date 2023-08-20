@@ -1,6 +1,6 @@
 """A set of Utility methods to check DFCX Agents."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,11 +75,11 @@ class AgentCheckerUtil(ScrapiBase):
 
     def __init__(
         self,
+        agent_id: str,
         creds_path: str = None,
         creds_dict: Dict = None,
         creds=None,
         scope=False,
-        agent_id: str = None,
         delay: float = 1.0
     ):
         """
@@ -97,8 +97,6 @@ class AgentCheckerUtil(ScrapiBase):
         )
 
         self.agent_id = agent_id
-        if not self.agent_id:
-            raise ValueError("agent_id parameter is required")
 
         self._intents = Intents(creds=self.creds, agent_id=self.agent_id)
         self._entities = EntityTypes(creds=self.creds, agent_id=self.agent_id)
