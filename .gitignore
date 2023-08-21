@@ -8,6 +8,7 @@
 .ipynb_checkpoints
 *scratch.ipynb
 *scratch.py
+tmp/
 
 # IPython
 profile_default/
