@@ -55,41 +55,6 @@ class Fulfillments:
         ):
             route.page.has_webhook_event_handler = True
 
-    def collect_transition_route_trigger(self, route):
-        """Inspect route and return all Intent/Condition info."""
-
-        trigger = []
-        intent_name = None
-
-        if "intent" in route.data:
-            trigger.append("intent")
-            intent_name = route.data.get("intent", None)
-
-        if "condition" in route.data:
-            trigger.append("condition")
-
-        if len(trigger) > 0:
-            trigger = "+".join(trigger)
-
-        else:
-            return trigger
-
-    def get_trigger_info(self, route):
-        """Extract trigger info from route based on primary key."""
-
-        if route.fulfillment_type == "event":
-            trigger = f"event : {route.data.get('event', None)}"
-
-        if route.fulfillment_type == "reprompt_handler":
-            trigger = f"{route.parameter} : event : "\
-                f"{route.data.get('event', None)}"
-
-        if route.fulfillment_type == "transition_route":
-            intent_condition = self.collect_transition_route_trigger(route)
-            trigger = f"route : {intent_condition}"
-
-        return trigger
-
     def set_route_group_targets(self, page: types.Page):
         """Determine Route Targets for Route Group routes."""
         current_page = page.display_name
@@ -188,7 +153,6 @@ class Fulfillments:
             route.agent_id = fp.page.agent_id
             route.fulfillment_type = "reprompt_handler"
             route.parameter = fp.display_name
-            route.trigger = self.get_trigger_info(route)
             route = self.set_route_targets(route)
             path = route.data.get("triggerFulfillment", None)
             event = route.data.get("event", None)
@@ -199,7 +163,8 @@ class Fulfillments:
             # Flag for Webhook Handler
             self.check_for_webhook(fp.page, path)
 
-            stats = self.process_fulfillment_type(stats, route, path, "messages")
+            stats = self.process_fulfillment_type(
+                stats, route, path, "messages")
 
         return stats
 
@@ -224,7 +189,8 @@ class Fulfillments:
             # Flag for Webhook Handler
             self.check_for_webhook_event_handlers(route)
 
-            stats = self.process_fulfillment_type(stats, route, path, "messages")
+            stats = self.process_fulfillment_type(
+                stats, route, path, "messages")
 
         return stats
 
@@ -251,7 +217,8 @@ class Fulfillments:
             # Flag for Webhook Handler
             self.check_for_webhook(page, path)
 
-            stats = self.process_fulfillment_type(stats, route, path, "messages")
+            stats = self.process_fulfillment_type(
+                stats, route, path, "messages")
 
             # Preset Params processed here
             stats = self.process_fulfillment_type(

@@ -17,13 +17,13 @@
 import time
 import os
 from typing import Dict
-import tempfile
 
 from dfcx_scrapi.core import agents
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.agent_extract import flows
 from dfcx_scrapi.agent_extract import intents
 from dfcx_scrapi.agent_extract import entity_types
+from dfcx_scrapi.agent_extract import test_cases
 from dfcx_scrapi.agent_extract import webhooks
 from dfcx_scrapi.agent_extract import gcs_utils
 from dfcx_scrapi.agent_extract import types
@@ -51,12 +51,13 @@ class Agents(scrapi_base.ScrapiBase):
         self.intents = intents.Intents()
         self.etypes = entity_types.EntityTypes()
         self.webhooks = webhooks.Webhooks()
+        self.tcs = test_cases.TestCases()
 
     def process_agent(self, agent_id: str, gcs_bucket_uri: str,
                       environment_display_name: str = None):
         """Process the specified Agent for offline data gathering."""
-        agent_local_path = 'tmp/agent'
-        lro = self._core_agents.export_agent(
+        agent_local_path = "tmp/agent"
+        _ = self._core_agents.export_agent(
             agent_id=agent_id,gcs_bucket_uri=gcs_bucket_uri, data_format="JSON",
             environment_display_name=environment_display_name)
 
@@ -76,5 +77,6 @@ class Agents(scrapi_base.ScrapiBase):
         data = self.etypes.process_entity_types_directory(
             agent_local_path, data)
         data = self.webhooks.process_webhooks_directory(agent_local_path, data)
+        data = self.tcs.process_test_cases_directory(agent_local_path, data)
 
         return data

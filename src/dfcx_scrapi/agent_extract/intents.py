@@ -110,11 +110,11 @@ class Intents:
 
             with open(tp_file, "r", encoding="UTF-8") as tps:
                 data = json.load(tps)
-                data['name'] = f"{stats.agent_id}/intents/{intent.resource_id}"
-                data['display_name'] = intent.display_name
-                data['labels'] = intent.labels
-                data['description'] = intent.description
-                data['parameters'] = intent.parameters
+                data["name"] = f"{stats.agent_id}/intents/{intent.resource_id}"
+                data["display_name"] = intent.display_name
+                data["labels"] = intent.labels
+                data["description"] = intent.description
+                data["parameters"] = intent.parameters
                 stats.intents[lang_code].append(data)
                 stats.total_training_phrases += len(data["trainingPhrases"])
 
@@ -133,7 +133,8 @@ class Intents:
 
     def process_intent(self, intent: types.Intent, stats: types.AgentData):
         """Process a single Intent directory and associated files."""
-        intent.display_name = self.common.parse_filepath(intent.dir_path, "intent")
+        intent.display_name = self.common.parse_filepath(
+            intent.dir_path, "intent")
 
         self.process_intent_metadata(intent)
         stats = self.process_training_phrases(intent, stats)

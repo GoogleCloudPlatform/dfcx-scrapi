@@ -112,7 +112,7 @@ class Pages:
         full_page_id = f"{full_flow_id}/pages/{page.resource_id}"
         stats.pages[page.flow.display_name].append(page.data)
         stats.flow_page_map[
-            page.flow.display_name]['pages'][page.display_name] = full_page_id
+            page.flow.display_name]["pages"][page.display_name] = full_page_id
 
         return stats
 

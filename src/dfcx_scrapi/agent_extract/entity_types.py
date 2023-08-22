@@ -124,9 +124,10 @@ class EntityTypes:
 
             with open(ent_file_path, "r", encoding="UTF-8") as ent_file:
                 data = json.load(ent_file)
-                data['name'] = f"{stats.agent_id}/entityTypes/{etype.resource_id}"
-                data['display_name'] = etype.display_name
-                data['kind'] = etype.kind
+                data["name"] = f"{stats.agent_id}/entityTypes/"\
+                    f"{etype.resource_id}"
+                data["display_name"] = etype.display_name
+                data["kind"] = etype.kind
                 data["entities"] = data.get("entities", None)
                 data = self.process_excluded_phrases(etype, lang_code, data)
                 stats.entity_types[lang_code].append(data)
