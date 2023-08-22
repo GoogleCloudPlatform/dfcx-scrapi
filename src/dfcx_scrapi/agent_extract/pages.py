@@ -86,25 +86,27 @@ class Pages:
         page.display_name = self.common.parse_filepath(page.page_file, "page")
         page.display_name = self.common.clean_display_name(page.display_name)
 
-        page.flow.graph.add_node(page.display_name)
+        stats.graph.add_node(page.display_name)
 
         page.flow.all_pages.add(page.display_name)
 
         with open(page.page_file, "r", encoding="UTF-8") as page_file:
             page.data = json.load(page_file)
-            # page.entry = page.data.get("entryFulfillment", None)
-            # page.events = page.data.get("eventHandlers", None)
+            page.entry = page.data.get("entryFulfillment", None)
+            page.events = page.data.get("eventHandlers", None)
             page.form = page.data.get("form", None)
-            # page.routes = page.data.get("transitionRoutes", None)
-            # page.route_groups = page.data.get("transitionRouteGroups", None)
-
+            page.routes = page.data.get("transitionRoutes", None)
+            page.route_groups = page.data.get("transitionRouteGroups", None)
             page.resource_id = page.data.get("name", None)
-            # page.flow.data[page.display_name] = page.resource_id
 
+            # Order of linting is important here
+            stats = self.routes.process_entry(page, stats)
+            stats = self.routes.process_routes(page, stats)
+            stats = self.routes.process_events(page, stats)
             stats = self.process_form(page, stats)
 
             if page.route_groups:
-                page = self.routes.set_route_group_targets(page)
+                page, stats = self.routes.set_route_group_targets(page, stats)
 
             page_file.close()
 

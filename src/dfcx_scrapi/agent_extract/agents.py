@@ -20,6 +20,7 @@ from typing import Dict
 
 from dfcx_scrapi.core import agents
 from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.agent_extract import graph
 from dfcx_scrapi.agent_extract import flows
 from dfcx_scrapi.agent_extract import intents
 from dfcx_scrapi.agent_extract import entity_types
@@ -71,6 +72,7 @@ class Agents(scrapi_base.ScrapiBase):
         self.gcs.unzip(agent_file, agent_local_path)
 
         data = types.AgentData()
+        data.graph = graph.Graph()
         data.agent_id = agent_id
         data = self.flows.process_flows_directory(agent_local_path, data)
         data = self.intents.process_intents_directory(agent_local_path, data)

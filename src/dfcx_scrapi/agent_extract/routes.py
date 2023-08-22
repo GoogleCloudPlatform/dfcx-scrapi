@@ -55,17 +55,51 @@ class Fulfillments:
         ):
             route.page.has_webhook_event_handler = True
 
-    def set_route_group_targets(self, page: types.Page):
+    def collect_transition_route_trigger(self, route):
+        """Inspect route and return all Intent/Condition info."""
+
+        trigger = []
+
+        if "intent" in route.data:
+            trigger.append("intent")
+
+        if "condition" in route.data:
+            trigger.append("condition")
+
+        if len(trigger) > 0:
+            trigger = "+".join(trigger)
+
+        else:
+            return trigger
+
+    def get_trigger_info(self, route):
+        """Extract trigger info from route based on primary key."""
+
+        if route.fulfillment_type == "event":
+            trigger = f"event : {route.data.get('event', None)}"
+
+        if route.fulfillment_type == "reprompt_handler":
+            trigger = f"{route.parameter} : event : "\
+                f"{route.data.get('event', None)}"
+
+        if route.fulfillment_type == "transition_route":
+            intent_condition = self.collect_transition_route_trigger(route)
+            trigger = f"route : {intent_condition}"
+
+        return trigger
+
+    def set_route_group_targets(self, page: types.Page, stats: types.AgentData):
         """Determine Route Targets for Route Group routes."""
         current_page = page.display_name
 
         for route_group in page.route_groups:
-            page.flow.graph.add_edge(current_page, route_group)
-            page.flow.graph.add_used_node(route_group)
+            stats.graph.add_edge(current_page, route_group)
+            stats.graph.add_used_node(route_group)
 
-        return page
+        return page, stats
 
-    def set_route_targets(self, route: types.Fulfillment):
+    def set_route_targets(
+            self, route: types.Fulfillment, stats: types.AgentData):
         """Determine the Route Targets for the specified route.
 
         Primary function is to build out the graph structure for the
@@ -79,16 +113,16 @@ class Fulfillments:
         route.target_page = route.data.get("targetPage", None)
 
         if route.target_page:
-            route.page.flow.graph.add_edge(current_page, route.target_page)
-            route.page.flow.graph.add_used_node(route.target_page)
+            stats.graph.add_edge(current_page, route.target_page)
+            stats.graph.add_used_node(route.target_page)
 
         if route.target_flow:
-            route.page.flow.graph.add_edge(
+            stats.graph.add_edge(
                 current_page, f"FLOW: {route.target_flow}"
             )
-            route.page.flow.graph.add_used_node(f"FLOW: {route.target_flow}")
+            stats.graph.add_used_node(f"FLOW: {route.target_flow}")
 
-        return route
+        return route, stats
 
     def update_route_parameters(
             self, route: types.Fulfillment, item: Dict[str, str]):
@@ -153,7 +187,8 @@ class Fulfillments:
             route.agent_id = fp.page.agent_id
             route.fulfillment_type = "reprompt_handler"
             route.parameter = fp.display_name
-            route = self.set_route_targets(route)
+            route.trigger = self.get_trigger_info(route)
+            route, stats = self.set_route_targets(route, stats)
             path = route.data.get("triggerFulfillment", None)
             event = route.data.get("event", None)
 
@@ -179,7 +214,7 @@ class Fulfillments:
             route.agent_id = page.agent_id
             route.fulfillment_type = "event"
             route.trigger = self.get_trigger_info(route)
-            route = self.set_route_targets(route)
+            route, stats = self.set_route_targets(route, stats)
             path = route.data.get("triggerFulfillment", None)
             event = route.data.get("event", None)
 
@@ -207,7 +242,7 @@ class Fulfillments:
             route.agent_id = page.agent_id
             route.fulfillment_type = "transition_route"
             route.trigger = self.get_trigger_info(route)
-            route = self.set_route_targets(route)
+            route, stats = self.set_route_targets(route, stats)
 
             path = route.data.get(tf_key, None)
 
