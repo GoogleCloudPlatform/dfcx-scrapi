@@ -17,8 +17,9 @@
 import logging
 import json
 import re
-
 from typing import Dict
+
+import numpy as np
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
@@ -266,3 +267,12 @@ class ScrapiBase:
             new_dict[k] = v
 
         return new_dict
+
+
+    class _AllPagesCustomDict(dict):
+
+        def __missing__(self, key):
+            if isinstance(key, str) and key.endswith("PAGE"):
+                return str(key).rsplit("/", maxsplit=1)[-1]
+
+            return np.nan
