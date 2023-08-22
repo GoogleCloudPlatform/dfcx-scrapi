@@ -332,10 +332,10 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         for flow in flows_map:
             all_pages_map.update(self.pages.get_pages_map(flow))
             time.sleep(rate_limit)
-
+        all_pages_map.update(flows_map)
 
         main_df["intent"] = main_df["intent"].map(intents_map)
-        main_df["target_name"] = main_df["target_id"].map(all_pages_map)
+        main_df["transition_to"] = main_df["transition_to"].map(all_pages_map)
         main_df["flow_name"] = main_df["flow_id"].map(flows_map)
         if mode == "advanced":
             webhooks_map = self.webhooks.get_webhooks_map(agent_id)

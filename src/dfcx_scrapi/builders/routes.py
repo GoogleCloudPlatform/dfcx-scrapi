@@ -263,8 +263,8 @@ class TransitionRouteBuilder(BuildersCommon):
             route_df = pd.DataFrame({
                 "intent": [intent],
                 "condition": [condition],
-                "target_type": [target_type],
-                "target_id": [target_id],
+                "transition_type": [target_type],
+                "transition_to": [target_id],
             })
 
             return pd.concat([route_df, fulfillment_df], axis=1)
@@ -456,8 +456,8 @@ class EventHandlerBuilder(BuildersCommon):
             event = str(obj.event) if obj.event else np.nan
             event_handler_df = pd.DataFrame({
                 "event": [event],
-                "target_type": [target_type],
-                "target_id": [target_id],
+                "transition_type": [target_type],
+                "transition_to": [target_id],
             })
 
             return pd.concat([event_handler_df, fulfillment_df], axis=1)

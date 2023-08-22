@@ -202,7 +202,9 @@ class TransitionRouteGroupBuilder(BuildersCommon):
             if mode not in ["basic", "advanced"]:
                 raise ValueError("Mode types: ['basic', 'advanced'].")
 
-            routes_df = pd.DataFrame()
+            routes_df = pd.DataFrame(
+                columns=self._dataframes_map["TransitionRoute"][mode]
+            )
             for route in obj.transition_routes:
                 trb = TransitionRouteBuilder(route)
                 trb_df = trb.to_dataframe(mode)
