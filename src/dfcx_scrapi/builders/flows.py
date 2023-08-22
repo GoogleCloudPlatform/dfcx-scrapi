@@ -18,6 +18,8 @@ import logging
 from dataclasses import dataclass
 from typing import List, Union
 
+import numpy as np
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Flow
 from google.cloud.dialogflowcx_v3beta1.types import NluSettings
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
@@ -26,6 +28,7 @@ from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.routes import TransitionRouteBuilder
 from dfcx_scrapi.builders.routes import EventHandlerBuilder
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
+
 
 # logging config
 logging.basicConfig(
@@ -466,6 +469,84 @@ class FlowBuilder(BuildersCommon):
 
         return self.proto_obj
 
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _parse_nlu_settings(self, obj: Flow) -> str:
+            """Return NLU settings in a human readable way.
+
+            Args:
+              obj (Flow):
+                Flow protobuf object
+
+            Returns:
+              NLU settings as a string
+            """
+            nlu = obj.nlu_settings
+            return (
+                f"Type: {nlu.model_type.name}"
+                f"\nTraining: {nlu.model_training_mode.name}"
+                f"\nThreshold: {nlu.classification_threshold}"
+            )
+            # # Alternative approach
+            # return (
+            #     f"{nlu.model_type.name} type with"
+            #     f" {nlu.model_training_mode.name} training and"
+            #     f" classification threshold of {nlu.classification_threshold}"
+            # )
+
+
+        def proto_to_dataframe(
+            self, obj: Flow, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a Flow protobuf object to pandas Dataframe.
+
+            Args:
+              obj (Flow):
+                Flow protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode not in ["basic", "advanced"]:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+            routes_df = pd.DataFrame(
+                columns=self._dataframes_map["TransitionRoute"][mode]
+            )
+            for route in obj.transition_routes:
+                trb = TransitionRouteBuilder(route)
+                trb_df = trb.to_dataframe(mode)
+                routes_df = pd.concat([routes_df, trb_df], ignore_index=True)
+
+            ehs_df = pd.DataFrame(
+                columns=self._dataframes_map["EventHandler"][mode]
+            )
+            for eh in obj.event_handlers:
+                ehb = EventHandlerBuilder(eh)
+                ehb_df = ehb.to_dataframe(mode)
+                ehs_df = pd.concat([ehs_df, ehb_df], ignore_index=True)
+
+            trgs_df = pd.DataFrame({
+                "route_groups": list(obj.transition_route_groups)
+            })
+
+            desc = str(obj.description) if str(obj.description) else np.nan
+            # Concatenate `routes_df` and `ehs_df` and add the rest of the info
+            flow_df = pd.concat(
+                [routes_df, ehs_df, trgs_df], axis=0, ignore_index=True
+            )
+            flow_df["name"] = str(obj.name)
+            flow_df["display_name"] = str(obj.display_name)
+            flow_df["description"] = desc
+            flow_df["nlu_settings"] = self._parse_nlu_settings(obj)
+
+            return flow_df[self._dataframes_map["Flow"][mode]]
 
 
 @dataclass

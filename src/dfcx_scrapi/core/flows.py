@@ -15,11 +15,20 @@
 # limitations under the License.
 
 import logging
+import time
 from typing import Dict, List
+
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
+
 from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import intents
+from dfcx_scrapi.core import pages
+from dfcx_scrapi.core import webhooks
+# from dfcx_scrapi.core import transition_route_groups
+from dfcx_scrapi.builders.flows import FlowBuilder
 
 # logging config
 logging.basicConfig(
@@ -54,6 +63,13 @@ class Flows(scrapi_base.ScrapiBase):
             self.flow_id = flow_id
 
         self.agent_id = agent_id
+
+
+        self.intents = intents.Intents(creds=self.creds)
+        self.pages = pages.Pages(creds=self.creds)
+        self.webhooks = webhooks.Webhooks(creds=self.creds)
+        # self.route_groups = transition_route_groups.TransitionRouteGroups(creds=self.creds)
+
 
     # TODO: Migrate to Flow Builder class when ready
     @staticmethod
@@ -445,3 +461,62 @@ class Flows(scrapi_base.ScrapiBase):
         )
 
         client.delete_flow(request)
+
+
+    def flows_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        flow_subset: List[str] = None,
+        rate_limit: float = 0.5) -> pd.DataFrame:
+        """Extracts all Flows and put it into a Pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of intents
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          flow_subset (List[str]):
+            A subset of intents to extract the intents from.
+
+        Returns:
+          A pandas Dataframe
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        if mode not in ["basic", "advanced"]:
+            raise ValueError("Mode types: [basic, advanced]")
+
+        flows_list = self.list_flows(agent_id)
+
+        main_df = pd.DataFrame()
+        for obj in flows_list:
+            if (flow_subset) and (obj.display_name not in flows_list):
+                continue
+            fb = FlowBuilder(obj)
+            flow_df = fb.to_dataframe(mode=mode)
+            main_df = pd.concat([main_df, flow_df], ignore_index=True)
+
+        if main_df.empty:
+            return main_df
+
+        # Get the maps
+        intents_map = self.intents.get_intents_map(agent_id)
+        all_pages_map = self._AllPagesCustomDict()
+        for flow in flows_list:
+            all_pages_map.update(self.pages.get_pages_map(flow.name))
+            time.sleep(rate_limit)
+            # all_rgs_map.update(self.route_groups.get_route_groups_map(flow.name))
+            # time.sleep(rate_limit)
+        all_pages_map.update({f.name: f.display_name for f in flows_list})
+
+
+        main_df["intent"] = main_df["intent"].map(intents_map)
+        main_df["transition_to"] = main_df["transition_to"].map(all_pages_map)
+        if mode == "advanced":
+            webhooks_map = self.webhooks.get_webhooks_map(agent_id)
+            main_df["webhook"] = main_df["webhook"].map(webhooks_map)
+
+        return main_df
