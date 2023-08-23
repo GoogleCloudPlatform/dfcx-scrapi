@@ -665,13 +665,11 @@ class BuildersCommon:
               A pandas DataFrame
             """
             if mode == "basic":
-                intent_df = self._process_proto_to_df_basic(obj)
+                return self._process_proto_to_df_basic(obj)
             elif mode == "advanced":
-                intent_df = self._process_proto_to_df_advanced(obj)
+                return self._process_proto_to_df_advanced(obj)
             else:
                 raise ValueError("`mode` types: ['basic', 'advanced'].")
-
-            return intent_df
 
 
     class _Dataframe(_DataframeCommon):

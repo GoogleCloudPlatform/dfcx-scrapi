@@ -96,8 +96,8 @@ class IntentBuilder(BuildersCommon):
           value (str):
             Label's value.
         """
+        # TODO(miladt): Add International characteres to allowed_chars
         allowed_chars = ascii_lowercase + digits + "-_"
-        # TODO Add International characteres to allowed_chars
         allowed_char_error_msg = (
             "Key and Value can only contain lowercase letters,"
             " numeric characters, underscores and dashes."
@@ -692,8 +692,9 @@ class IntentBuilder(BuildersCommon):
             else:
                 for tp_count, phrase in enumerate(obj.training_phrases):
                     whole_phrase = "".join([part.text for part in phrase.parts])
+                    phrase_id = str(phrase.id) if str(phrase.id) else np.nan
                     intent_dict.update({
-                        "id": str(phrase.id),
+                        "id": phrase_id,
                         "repeat_count": int(phrase.repeat_count),
                         "training_phrase": whole_phrase,
                         "training_phrase_idx": tp_count,
@@ -702,7 +703,6 @@ class IntentBuilder(BuildersCommon):
                         intent_dict = self._parse_phrase_for_parameter_info(
                             intent_dict, params_dict, part, part_count
                         )
-
                         intent_df = self._concat_dict_to_df(
                             intent_df, intent_dict
                         )
@@ -760,7 +760,7 @@ class IntentBuilder(BuildersCommon):
             )
 
             for phrase, annotations in zip(phrase_series, annotation_series):
-                # TODO: repeat_count
+                # TODO(miladt): Add repeat_count
                 self._outer_self.add_training_phrase(
                     phrase=phrase, annotations=annotations, include_spaces=False
                 )
@@ -781,7 +781,7 @@ class IntentBuilder(BuildersCommon):
                 display_name=disp_name, priority=priority,
                 is_fallback=is_fallback, description=description
             )
-            # TODO: Add Labels
+            # TODO(miladt): Add Labels
             self._add_parameter_from_df_advanced(df, overwrite=True)
             self._add_training_phrase_from_df_advanced(df)
 
@@ -805,7 +805,8 @@ class IntentBuilder(BuildersCommon):
             if mode == "basic":
                 self._outer_self.create_new_proto_obj(display_name=disp_name)
                 for phrase in df["training_phrase"]:
-                    self._outer_self.add_training_phrase(phrase)
+                    if isinstance(phrase, str):
+                        self._outer_self.add_training_phrase(phrase)
 
             elif mode == "advanced":
                 self._process_from_df_create_advanced(df)
@@ -832,7 +833,8 @@ class IntentBuilder(BuildersCommon):
 
             if mode == "basic":
                 for phrase in df["training_phrase"]:
-                    self._outer_self.add_training_phrase(phrase)
+                    if isinstance(phrase, str):
+                        self._outer_self.add_training_phrase(phrase)
 
             elif mode == "advanced":
                 self._add_parameter_from_df_advanced(df, overwrite=False)
