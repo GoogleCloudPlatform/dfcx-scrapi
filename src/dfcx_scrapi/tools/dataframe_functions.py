@@ -1218,8 +1218,7 @@ class DataframeFunctions(ScrapiBase):
         self,
         agent_id: str = None,
         mode: str = "basic",
-        rate_limit: float = 0.5
-    ) -> pd.DataFrame:
+        rate_limit: float = 0.5) -> pd.DataFrame:
         """Extracts the Transition Route Groups from a given Agent and
          returns key information about the Route Groups in a Pandas Dataframe
 
@@ -1247,6 +1246,31 @@ class DataframeFunctions(ScrapiBase):
             agent_id=agent_id, mode=mode, rate_limit=rate_limit
         )
 
+    def flows_to_dataframe(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        flow_subset: List[str] = None,
+        rate_limit: float = 0.5) -> pd.DataFrame:
+        """Extracts all Flows and put it into a Pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of intents
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          flow_subset (List[str]):
+            A subset of intents to extract the intents from.
+
+        Returns:
+          A pandas Dataframe
+        """
+        return self.flows.flows_to_df(
+            agent_id=agent_id, mode=mode,
+            flow_subset=flow_subset, rate_limit=rate_limit
+        )
+
     def agent_to_sheets(
         self,
         agent_id: str = None,
@@ -1272,14 +1296,15 @@ class DataframeFunctions(ScrapiBase):
             the spreadsheet with it.
         """
         # Get the dataframes
-        intents_df = self.intents_to_dataframe(agent_id=agent_id, mode=mode)
-        webhooks_df = self.webhooks_to_dataframe(agent_id=agent_id, mode=mode)
-        entity_types_df = self.entity_types_to_dataframe(
-            agent_id=agent_id, mode=mode
-        )
-        route_groups_df = self.route_groups_to_dataframe(
-            agent_id=agent_id, mode=mode
-        )
+        input_kwargs = {"agent_id": agent_id, "mode": mode}
+        df_dict = {
+            "Intents": self.intents_to_dataframe(**input_kwargs),
+            "Webhooks": self.webhooks_to_dataframe(**input_kwargs),
+            "EntityTypes": self.entity_types_to_dataframe(**input_kwargs),
+            "TransitionRouteGroups": self.route_groups_to_dataframe(**input_kwargs),
+            "Flows": self.flows_to_dataframe(**input_kwargs),
+        }
+
         # Get the agent name
         the_agent = self.agents.get_agent(agent_id=agent_id)
         agent_name = the_agent.display_name
@@ -1295,19 +1320,13 @@ class DataframeFunctions(ScrapiBase):
             tmp_g_sheets.share(
                 email_address, perm_type="user", role="writer"
             )
-        self.dataframe_to_sheets(
-            sheet_name, "Intents", intents_df, create_worksheet=True
-        )
-        self.dataframe_to_sheets(
-            sheet_name, "Webhooks", webhooks_df, create_worksheet=True
-        )
-        self.dataframe_to_sheets(
-            sheet_name, "EntityTypes", entity_types_df, create_worksheet=True
-        )
-        self.dataframe_to_sheets(
-            sheet_name, "TransitionRouteGroups",
-            route_groups_df, create_worksheet=True
-        )
+        for worksheet_name, dataframe in df_dict.items():
+            self.dataframe_to_sheets(
+                sheet_name=sheet_name, worksheet_name=worksheet_name,
+                dataframe=dataframe, create_worksheet=True
+            )
+
+        # Delete the Sheet1 worksheet
         tmp_g_sheets.del_worksheet(tmp_g_sheets.worksheet("Sheet1"))
 
         logging.info("Agent's resources spreadsheet: %s", tmp_g_sheets.url)
