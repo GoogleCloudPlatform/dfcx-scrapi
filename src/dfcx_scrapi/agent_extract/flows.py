@@ -267,6 +267,7 @@ class Flows:
         flow = self.find_dangling_pages(flow)
         flow = self.find_unreachable_pages(flow)
 
+        stats.active_pages[flow.display_name] = flow.active_pages
         stats.unused_pages[flow.display_name] = flow.unused_pages
         stats.unreachable_pages[flow.display_name] = flow.unreachable_pages
 

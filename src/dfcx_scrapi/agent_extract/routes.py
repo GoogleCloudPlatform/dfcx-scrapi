@@ -69,8 +69,7 @@ class Fulfillments:
         if len(trigger) > 0:
             trigger = "+".join(trigger)
 
-        else:
-            return trigger
+        return trigger
 
     def get_trigger_info(self, route):
         """Extract trigger info from route based on primary key."""

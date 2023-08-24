@@ -159,7 +159,7 @@ class Flows(scrapi_base.ScrapiBase):
         for flow in flows_map:
             pages_map = self.pages.get_pages_map(
                 flows_map[flow], reverse=True)
-            flow_page_map[flow] = {'id': flows_map[flow], 'pages': pages_map}
+            flow_page_map[flow] = {"id": flows_map[flow], "pages": pages_map}
             time.sleep(rate_limit)
 
         return flow_page_map

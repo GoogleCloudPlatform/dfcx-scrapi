@@ -368,7 +368,7 @@ class Agents(scrapi_base.ScrapiBase):
         data_format: str = "BLOB",
         git_branch: str = None,
         git_commit_message: str = None,
-        include_bigquery_export_settings: bool = False
+        include_bq_export_settings: bool = False
     ) -> str:
         """Exports the specified CX agent to Google Cloud Storage bucket.
 
@@ -399,9 +399,9 @@ class Agents(scrapi_base.ScrapiBase):
         request = types.agent.ExportAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
-        request.include_bigquery_export_settings = include_bigquery_export_settings
+        request.include_bigquery_export_settings = include_bq_export_settings
 
-        if data_format == "JSON" or "ZIP" or "JSON_PACKAGE":
+        if data_format in ["JSON", "ZIP", "JSON_PACKAGE"]:
             request.data_format = json_format
         else:
             request.data_format = blob_format

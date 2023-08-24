@@ -16,17 +16,14 @@
 
 from __future__ import annotations
 
-import time
 import logging
 from typing import Dict, List, Optional, Union
 import pandas as pd
 from collections import defaultdict
 
 from google.cloud.dialogflowcx_v3beta1 import types
-
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.agent_extract import agents
-from dfcx_scrapi.agent_extract import types as etypes
 
 # Type aliases
 DFCXFlow = types.flow.Flow
@@ -649,7 +646,8 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
 
     # TODO: Break this into 2 methods
     # get_unused_intents() // i.e. intents not in use in the agent
-    # get_unreachable_intents // i.e. intents that overlap with unreachable pages
+    # get_unreachable_intents // i.e. intents that overlap with unreachable
+    # pages
     def find_all_unreachable_intents(self) -> List[str]:
         """Finds all unreachable intents, either because they are on
         unreachable pages or they are unused in the agent. Note that
