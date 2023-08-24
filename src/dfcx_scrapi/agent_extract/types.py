@@ -181,20 +181,25 @@ class Webhook:
 @dataclass
 class AgentData:
     """Used to track agent data for each section processed."""
+    active_intents: Dict[str, set] = field(default_factory=dict)
+    active_pages: Dict[str, set] = field(default_factory=dict)
     agent_id: str = None
-    graph: graph_class.Graph = None
-    flows: List[Dict[str, Any]] = field(default_factory=list)
-    pages: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
-    intents: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     entity_types: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
-    route_groups: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
-    test_cases: List[Dict[str, Any]] = field(default_factory=list)
-    webhooks: List[Dict[str, Any]] = field(default_factory=list)
-    flows_map: Dict[str, Any] = field(default_factory=dict)
-    flow_page_map: Dict[str, Any] = field(default_factory=dict)
-    intents_map: Dict[str, Any] = field(default_factory=dict)
     entity_types_map: Dict[str, Any] = field(default_factory=dict)
+    flow_page_map: Dict[str, Any] = field(default_factory=dict)
+    flows: List[Dict[str, Any]] = field(default_factory=list)
+    flows_map: Dict[str, Any] = field(default_factory=dict)
+    graph: graph_class.Graph = None
+    intents: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    intents_map: Dict[str, Any] = field(default_factory=dict)
+    pages: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    route_groups: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     route_groups_map: Dict[str, Any] = field(default_factory=dict)
+    test_cases: List[Dict[str, Any]] = field(default_factory=list)
+    unreachable_intents: set = field(default_factory=set)
+    unreachable_pages: Dict[str, set] = field(default_factory=dict)
+    unused_pages: Dict[str, set] = field(default_factory=dict)
+    webhooks: List[Dict[str, Any]] = field(default_factory=list)
     webhooks_map: Dict[str, Any] = field(default_factory=dict)
 
     total_flows: int = 0
