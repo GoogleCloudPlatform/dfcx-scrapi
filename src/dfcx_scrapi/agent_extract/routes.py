@@ -93,6 +93,9 @@ class Fulfillments:
         current_page = page.display_name
 
         for route_group in page.route_groups:
+            page.flow.graph.add_edge(current_page, route_group)
+            page.flow.graph.add_used_node(route_group)
+
             stats.graph.add_edge(current_page, route_group)
             stats.graph.add_used_node(route_group)
 
@@ -113,10 +116,17 @@ class Fulfillments:
         route.target_page = route.data.get("targetPage", None)
 
         if route.target_page:
+            route.page.flow.graph.add_edge(current_page, route.target_page)
+            route.page.flow.graph.add_used_node(route.target_page)
+
             stats.graph.add_edge(current_page, route.target_page)
             stats.graph.add_used_node(route.target_page)
 
         if route.target_flow:
+            route.page.flow.graph.add_edge(
+                current_page, f"FLOW: {route.target_flow}")
+            route.page.flow.graph.add_used_node(f"FLOW: {route.target_flow}")
+
             stats.graph.add_edge(
                 current_page, f"FLOW: {route.target_flow}"
             )

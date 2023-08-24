@@ -19,6 +19,7 @@ import os
 
 from typing import List
 
+from dfcx_scrapi.agent_extract import graph
 from dfcx_scrapi.agent_extract import common
 from dfcx_scrapi.agent_extract import types
 from dfcx_scrapi.agent_extract import pages
@@ -82,142 +83,151 @@ class Flows:
 
         return filtered_set
 
-    # def find_unreachable_pages(self, flow: types.Flow):
-    #     """Find Unreachable Pages in the graph.
+    def find_unreachable_pages(self, flow: types.Flow):
+        """Find Unreachable Pages in the graph.
 
-    #     An Unreachable Page is defined as:
-    #       - A Page which has no incoming edge when traversed from Start Page.
-    #         That is, it is unreachable in the graph by any practical means.
-    #       - A Page which is connected to a root unreachable page. That is, a
-    #         page that could have both incoming or outgoing routes, but due to
-    #         its connectedness to the root orphan page, is unreachable in the
-    #         graph.
+        An Unreachable Page is defined as:
+          - A Page which has no incoming edge when traversed from Start Page.
+            That is, it is unreachable in the graph by any practical means.
+          - A Page which is connected to a root unreachable page. That is, a
+            page that could have both incoming or outgoing routes, but due to
+            its connectedness to the root orphan page, is unreachable in the
+            graph.
 
-    #     Here we will compute the symmetric difference of 2 sets:
-    #       - Active Pages (i.e. Pages that were reachable in the graph)
-    #       - Used Pages (i.e. Pages that were used by some Route)
+        Here we will compute the symmetric difference of 2 sets:
+          - Active Pages (i.e. Pages that were reachable in the graph)
+          - Used Pages (i.e. Pages that were used by some Route)
 
-    #     If an Unreachable Page has children that it routes to, those children
-    #     will appear in Used Pages, although they will ultimately be
-    #     unreachable. It's possible for an Unreachable Page to route back to an
-    #     Active Page in the graph. For these instances, we don't want to count
-    #     those pages as unreachable, because they are reachable via other
-    #     sections of the graph.
-    #     """
-    #     filtered_set = flow.active_pages.symmetric_difference(
-    #         flow.graph.used_nodes
-    #     )
-    #     filtered_set = self.remove_flow_pages_from_set(filtered_set)
-    #     flow.unreachable_pages.update(filtered_set)
+        If an Unreachable Page has children that it routes to, those children
+        will appear in Used Pages, although they will ultimately be
+        unreachable. It's possible for an Unreachable Page to route back to an
+        Active Page in the graph. For these instances, we don't want to count
+        those pages as unreachable, because they are reachable via other
+        sections of the graph.
+        """
+        filtered_set = flow.active_pages.symmetric_difference(
+            flow.graph.used_nodes
+        )
+        filtered_set = self.remove_flow_pages_from_set(filtered_set)
+        flow.unreachable_pages.update(filtered_set)
 
-    #     return flow
+        return flow
 
-    # def find_unused_pages(self, flow: types.Flow):
-    #     """Find Unused Pages in the graph.
+    def find_unused_pages(self, flow: types.Flow):
+        """Find Unused Pages in the graph.
 
-    #     An Unused Page is defined as:
-    #       - A Page which has no incoming or outgoing edge AND
-    #       - A Page which exists in the Agent design time, but which is not
-    #         present anywhere in the graph, either visible or non-visible.
+        An Unused Page is defined as:
+          - A Page which has no incoming or outgoing edge AND
+          - A Page which exists in the Agent design time, but which is not
+            present anywhere in the graph, either visible or non-visible.
 
-    #     Here we will compute the difference of 2 sets:
-    #       - All Pages (i.e. Pages that exist in the Agent Design Time)
-    #       - Used Pages (i.e. Pages that were used by some Route)
+        Here we will compute the difference of 2 sets:
+          - All Pages (i.e. Pages that exist in the Agent Design Time)
+          - Used Pages (i.e. Pages that were used by some Route)
 
-    #     The resulting set will consist of 2 types of Pages:
-    #       - Truly Unused Pages
-    #       - Unreachable Root Pages
+        The resulting set will consist of 2 types of Pages:
+          - Truly Unused Pages
+          - Unreachable Root Pages
 
-    #     Unreachable Root Pages end up in the results due to the fact that no
-    #     other Active Page is pointing to them. We remove these from the
-    #     resulting set before presenting the Truly Unused Pages.
-    #     """
+        Unreachable Root Pages end up in the results due to the fact that no
+        other Active Page is pointing to them. We remove these from the
+        resulting set before presenting the Truly Unused Pages.
+        """
 
-    #     # Discard special pages as they are non-relevant for final outcome
-    #     for page in self.special_pages:
-    #         flow.all_pages.discard(page)
+        # Discard special pages as they are non-relevant for final outcome
+        for page in self.special_pages:
+            flow.all_pages.discard(page)
 
-    #     prelim_unused = flow.all_pages.difference(flow.graph.used_nodes)
+        prelim_unused = flow.all_pages.difference(flow.graph.used_nodes)
 
-    #     # Filter out Unreachable Root Pages
-    #     filtered_set = set()
+        # Filter out Unreachable Root Pages
+        filtered_set = set()
 
-    #     for page in prelim_unused:
-    #         if page not in flow.graph.edges:
-    #             filtered_set.add(page)
-    #         else:
-    #             flow.unreachable_pages.add(page)
+        for page in prelim_unused:
+            if page not in flow.graph.edges:
+                filtered_set.add(page)
+            else:
+                flow.unreachable_pages.add(page)
 
-    #     flow.unused_pages = filtered_set
+        flow.unused_pages = filtered_set
 
-    #     return flow
+        return flow
 
-    # def recurse_edges(
-    #     self, edges: List, page: types.Page, dangling: set, visited: set
-    # ):
-    #     """Recursive method searching graph edges for Active / Dangling Pages.
+    def recurse_edges(
+        self, edges: List, page: types.Page, dangling: set, visited: set
+    ):
+        """Recursive method searching graph edges for Active / Dangling Pages.
 
-    #     A byproduct of searching for Dangling Pages in the graph is that we can
-    #     produce a set of Active Pages in the graph. These are pages that are
-    #     reachable when traversing from the Start Page. These can then be used
-    #     to determine Unreachable Pages in another method.
-    #     """
-    #     if page in edges:
-    #         for inner_page in edges[page]:
-    #             if inner_page not in visited:
-    #                 visited.add(inner_page)
-    #                 dangling, visited = self.recurse_edges(
-    #                     edges, inner_page, dangling, visited
-    #                 )
+        A byproduct of searching for Dangling Pages in the graph is that we can
+        produce a set of Active Pages in the graph. These are pages that are
+        reachable when traversing from the Start Page. These can then be used
+        to determine Unreachable Pages in another method.
+        """
+        # For Flow Start Pages, we prepend the Flow name for later
+        # identification. For this section, we'll need to strip it off to
+        # compare with the other sets.
+        if page in edges:
+            for inner_page in edges[page]:
+                if inner_page not in visited:
+                    visited.add(inner_page)
+                    dangling, visited = self.recurse_edges(
+                        edges, inner_page, dangling, visited
+                    )
 
-    #     else:
-    #         dangling.add(page)
+        else:
+            dangling.add(page)
 
-    #     return dangling, visited
+        return dangling, visited
 
-    # def find_dangling_pages(self, flow: types.Flow):
-    #     """Find Dangling Pages in the graph.
+    def find_dangling_pages(self, flow: types.Flow):
+        """Find Dangling Pages in the graph.
 
-    #     Dangling Page is defined as:
-    #       - Any page that exists in the graph that has no outgoing edge
-    #     Active Page is defined as:
-    #       - Any page that is reachable via an active route in the graph and can
-    #         be traced back to the Start Page.
+        Dangling Page is defined as:
+          - Any page that exists in the graph that has no outgoing edge
+        Active Page is defined as:
+          - Any page that is reachable via an active route in the graph and can
+            be traced back to the Start Page.
 
-    #     These pages can result in a conversational "dead end" which is
-    #     potentially unrecoverable.
-    #     A byproduct of searching for the dangling pages is locating all of the
-    #     "active" pages. These are the pages that are "visited" as we traverse
-    #     the graph. We'll also return Active Pages in this method since they
-    #     will be used for downstream tasks.
-    #     """
+        These pages can result in a conversational "dead end" which is
+        potentially unrecoverable.
+        A byproduct of searching for the dangling pages is locating all of the
+        "active" pages. These are the pages that are "visited" as we traverse
+        the graph. We'll also return Active Pages in this method since they
+        will be used for downstream tasks.
+        """
 
-    #     flow.dangling_pages, flow.active_pages = self.recurse_edges(
-    #         flow.graph.edges,
-    #         "Start Page",
-    #         flow.dangling_pages,
-    #         flow.active_pages,
-    #     )
+        flow.dangling_pages, flow.active_pages = self.recurse_edges(
+            flow.graph.edges,
+            f"{flow.display_name}: Start Page",
+            flow.dangling_pages,
+            flow.active_pages,
+        )
 
-    #     # Clean up Special Pages
-    #     for page in self.special_pages:
-    #         flow.dangling_pages.discard(page)
+        # Clean up Special Pages
+        for page in self.special_pages:
+            flow.dangling_pages.discard(page)
 
-    #     flow.dangling_pages = self.remove_flow_pages_from_set(
-    #         flow.dangling_pages
-    #     )
+        flow.dangling_pages = self.remove_flow_pages_from_set(
+            flow.dangling_pages
+        )
 
-    #     return flow
+        return flow
 
     def process_start_page(self, flow: types.Flow, stats: types.AgentData):
         """Process a single Flow Path file."""
         with open(flow.start_page_file, "r", encoding="UTF-8") as flow_file:
             page = types.Page(flow=flow)
-            page.display_name = "Start Page"
+            page.display_name = f"{flow.display_name}: Start Page"
 
+            # We keep track of an instance specific Flow graph for the current
+            # Flow, and then a main Graph for the entire agent.
+            flow.graph.add_node(page.display_name)
             stats.graph.add_node(page.display_name)
 
             page.data = json.load(flow_file)
+            page.events = page.data.get("eventHandlers", None)
+            page.routes = page.data.get("transitionRoutes", None)
+            page.route_groups = page.data.get("transitionRouteGroups", None)
             stats.flows.append(page.data)
 
             flow.resource_id = page.data.get("name", None)
@@ -227,7 +237,7 @@ class Flows:
             stats = self.routes.process_events(page, stats)
 
             if page.route_groups:
-                page = self.routes.set_route_group_targets(page)
+                page, stats = self.routes.set_route_group_targets(page, stats)
 
             flow_file.close()
 
@@ -253,9 +263,12 @@ class Flows:
         stats = self.rgs.process_route_groups_directory(flow, stats)
 
         # Order of Find Operations is important here!
-        # flow = self.find_unused_pages(flow)
-        # flow = self.find_dangling_pages(flow)
-        # flow = self.find_unreachable_pages(flow)
+        flow = self.find_unused_pages(flow)
+        flow = self.find_dangling_pages(flow)
+        flow = self.find_unreachable_pages(flow)
+
+        stats.unused_pages[flow.display_name] = flow.unused_pages
+        stats.unreachable_pages[flow.display_name] = flow.unreachable_pages
 
         return stats
 
@@ -279,6 +292,7 @@ class Flows:
 
         for flow_path in flow_paths:
             flow = types.Flow()
+            flow.graph = graph.Graph()
             flow.dir_path = flow_path
             stats = self.process_flow(flow, stats)
 

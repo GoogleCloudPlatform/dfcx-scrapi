@@ -22,20 +22,16 @@ from typing import Dict, List, Optional, Union
 import pandas as pd
 from collections import defaultdict
 
-import google.cloud.dialogflowcx_v3beta1.types as dfcx_types
+from google.cloud.dialogflowcx_v3beta1 import types
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
-from dfcx_scrapi.core.intents import Intents
-from dfcx_scrapi.core.entity_types import EntityTypes
-from dfcx_scrapi.core.flows import Flows
-from dfcx_scrapi.core.pages import Pages
-from dfcx_scrapi.core.webhooks import Webhooks
-from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
+from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.agent_extract import agents
+from dfcx_scrapi.agent_extract import types as etypes
 
 # Type aliases
-DFCXFlow = dfcx_types.flow.Flow
-DFCXPage = dfcx_types.page.Page
-DFCXRoute = dfcx_types.page.TransitionRoute
+DFCXFlow = types.flow.Flow
+DFCXPage = types.page.Page
+DFCXRoute = types.page.TransitionRoute
 
 # logging config
 logging.basicConfig(
@@ -44,51 +40,18 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-# TODO: Methods to implement:
-#     - Run test cases and store results, and give a report
-#         - Need to include a reference agent for this to give useful info
-#           about new failing test cases
-#     - Get condensed changelog compared to a reference
-#         - Ideally include test case changes, to include info that the CX UI
-#           can't provide
-#     - Find unreachable/unused pages, intents, route groups, and maybe routes
-#         - Finding unreachable routes is hard, but the other problems have
-#           already been figured out
-#     - Find invalid test cases
-#         - Test cases referencing pages or intents that don't exist,
-#           for example
-#     - Check true routes
-#         - Pages with only conditional routes, and no intents or parameter
-#           filling, should have the last route be "true" to prevent getting
-#           stuck on the page
-#     - Check events
-#         - Pages with user input should have a no-input-default and
-#           no-match-default event handler.
-#         - Not sure if this applies to all agents in the same way
-#     - Check infinite loops
-#         - Not possible to solve in general because of webhooks,
-#           but can find likely candidates
-#     - Probably other things
-
-class AgentCheckerUtil(ScrapiBase):
+class AgentCheckerUtil(scrapi_base.ScrapiBase):
     """Utility class for checking DFCX Agents."""
 
     def __init__(
         self,
         agent_id: str,
+        gcs_bucket_uri: str,
         creds_path: str = None,
         creds_dict: Dict = None,
         creds=None,
         scope=False,
-        delay: float = 1.0
     ):
-        """
-        Args:
-          agent_id (required): The agent ID
-          delay (optional): The time in seconds to wait between CX API calls,
-            if you need to limit the rate. The number of API calls used in this
-            initialization is 2*(number of flows) + 2.
-        """
         super().__init__(
             creds_path=creds_path,
             creds_dict=creds_dict,
@@ -97,80 +60,15 @@ class AgentCheckerUtil(ScrapiBase):
         )
 
         self.agent_id = agent_id
-
-        self._intents = Intents(creds=self.creds, agent_id=self.agent_id)
-        self._entities = EntityTypes(creds=self.creds, agent_id=self.agent_id)
-        self._flows = Flows(creds=self.creds, agent_id=self.agent_id)
-        self._pages = Pages(creds=self.creds)
-        self._webhooks = Webhooks(creds=self.creds, agent_id=self.agent_id)
-        self._route_groups = TransitionRouteGroups(
-            creds=self.creds, agent_id=self.agent_id
-        )
-
-        # Intent data (1 API call)
-        self._intent_data = self._intents.list_intents(agent_id=self.agent_id)
-        # Intents map (0 API calls)
-        self._intents_map = {
-            intent.name: intent.display_name for intent in self._intent_data
-        }
-
-        # Flow data (1 API call)
-        self._flow_data = self._get_all_flow_data(delay)
-        # Flows maps (0 API calls)
-        self._flows_map = {
-            flow.name: flow.display_name for flow in self._flow_data.values()
-        }
-        self._flows_map_rev = {
-            flow.display_name: flow.name for flow in self._flow_data.values()
-        }
-
-        # Page data (len(flows) API calls)
-        self._page_data = self._get_all_page_data(delay)
-
-        # Route group data (len(flows) API calls)
-        self._route_group_data = self._get_all_route_group_data(delay)
-
-        # Pages and route groups maps (0 API calls)
-        self._pages_map = {}
-        self._pages_map_rev = {}
-        self._route_groups_map = {}
-        for fid in self._flows_map.keys():
-            self._pages_map[fid] = {
-                page.name: page.display_name
-                for page in self._page_data[fid].values()
-            }
-            self._pages_map_rev[fid] = {
-                page.display_name: page.name
-                for page in self._page_data[fid].values()
-            }
-            self._route_groups_map[fid] = {
-                rg.name: rg.display_name
-                for rg in self._route_group_data[fid].values()
-            }
-        # Total API calls: 2*len(flows) + 2
-
-    def _get_all_flow_data(self, delay):
-        flow_list = self._flows.list_flows(self.agent_id)
-        time.sleep(delay)
-        return {flow.name: flow for flow in flow_list}
-
-    def _get_all_page_data(self, delay):
-        page_data = {}
-        for flow_id in self._flows_map.keys():
-            page_list = self._pages.list_pages(flow_id=flow_id)
-            page_data[flow_id] = {page.name: page for page in page_list}
-            time.sleep(delay)
-        return page_data
-
-    def _get_all_route_group_data(self, delay):
-        route_group_data = {}
-        for flow_id in self._flows_map.keys():
-            group_list = self._route_groups.list_transition_route_groups(
-                flow_id=flow_id
-            )
-            route_group_data[flow_id] = {rg.name: rg for rg in group_list}
-            time.sleep(delay)
-        return route_group_data
+        self.extract = agents.Agents(agent_id)
+        self.data = self.extract.process_agent(agent_id, gcs_bucket_uri)
+        self.special_pages = [
+            "End Session",
+            "End Flow",
+            "Start Page",
+            "Current Page",
+            "Previous Page",
+        ]
 
     def _get_intent_parameters(self, intent_name):
         """Gets the parameters for a particular intent, by display name"""
@@ -213,9 +111,6 @@ class AgentCheckerUtil(ScrapiBase):
             raise KeyError(f"Page not found: {page_name}")
         return self._page_data[flow_id][page_id]
 
-    # Changelogs
-
-    # Reachable and unreachable pages
 
     def _continue_page_recursion(
         self,
@@ -591,37 +486,6 @@ class AgentCheckerUtil(ScrapiBase):
         self._find_reachable_pages_rec(page_data, params, is_initial=True)
         return reachable
 
-    def find_unreachable_pages(
-        self,
-        flow_name: str,
-        include_groups: bool = True,
-        verbose: bool = False,
-    ) -> List[str]:
-        """Finds all pages which are unreachable by transition routes,
-        starting from the start page of a given flow. Either flow_id or
-        flow_name must be used.
-
-        Args:
-          flow_id: The ID of the flow to find unreachable pages for
-          flow_name: The display name of the flow to find unreachable pages for
-          include_groups: (Optional) If true, intents from transition route
-            groups will be included, but only if they are actually referenced
-            on some page
-          verbose: (Optional) If true, print debug information about
-            route traversal
-
-        Returns:
-          The list of unreachable pages in this flow
-        """
-        flow_id = self._flows_map_rev.get(flow_name, None)
-        if not flow_id:
-            raise KeyError(f"Flow not found: {flow_name}")
-
-        reachable = self.find_reachable_pages(
-            flow_name, include_groups=include_groups, verbose=verbose
-        )
-        return list(set(self._pages_map[flow_id].values()) - set(reachable))
-
     def find_all_reachable_pages(
         self,
         include_groups: bool = True,
@@ -648,34 +512,6 @@ class AgentCheckerUtil(ScrapiBase):
             )
             flow_names.extend([flow_name for _ in reachable])
             page_names.extend(reachable)
-        return pd.DataFrame({"flow_name": flow_names, "page_name": page_names})
-
-    def find_all_unreachable_pages(
-        self,
-        include_groups: bool = True,
-        verbose: bool = False,
-    ):
-        """Gets a dataframe of all unreachable pages in this agent
-
-        Args:
-          include_groups: whether or not to consider route group routes
-            as being reachable. Defaults to True.
-          verbose: whether to display debug info in the agent structure
-            traversal. Defaults to False.
-
-        Returns:
-          A dataframe with columns flow_name and page_name
-        """
-        flow_names = []
-        page_names = []
-        for flow_name in self._flows_map_rev:
-            unreachable = self.find_unreachable_pages(
-                flow_name=flow_name,
-                include_groups=include_groups,
-                verbose=verbose
-            )
-            flow_names.extend([flow_name for _ in unreachable])
-            page_names.extend(unreachable)
         return pd.DataFrame({"flow_name": flow_names, "page_name": page_names})
 
     def _get_intents_from_routes(
@@ -811,6 +647,9 @@ class AgentCheckerUtil(ScrapiBase):
             "flows": intents.values()
         })
 
+    # TODO: Break this into 2 methods
+    # get_unused_intents() // i.e. intents not in use in the agent
+    # get_unreachable_intents // i.e. intents that overlap with unreachable pages
     def find_all_unreachable_intents(self) -> List[str]:
         """Finds all unreachable intents, either because they are on
         unreachable pages or they are unused in the agent. Note that

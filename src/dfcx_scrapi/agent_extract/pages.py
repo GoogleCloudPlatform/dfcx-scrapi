@@ -87,6 +87,7 @@ class Pages:
         page.display_name = self.common.clean_display_name(page.display_name)
 
         stats.graph.add_node(page.display_name)
+        page.flow.graph.add_node(page.display_name)
 
         page.flow.all_pages.add(page.display_name)
 
