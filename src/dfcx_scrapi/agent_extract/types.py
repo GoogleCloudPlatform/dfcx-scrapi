@@ -32,7 +32,6 @@ class AgentMetadata:
 @dataclass
 class Flow:
     """Used to track current Flow Attributes."""
-
     agent_id: str = None
     all_pages: set = field(default_factory=set)
     active_pages: set = field(default_factory=set)
