@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import time
 import os
 from typing import Dict
 
 from dfcx_scrapi.core import agents
+from dfcx_scrapi.core import operations
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.agent_extract import graph
 from dfcx_scrapi.agent_extract import flows
@@ -29,11 +31,19 @@ from dfcx_scrapi.agent_extract import webhooks
 from dfcx_scrapi.agent_extract import gcs_utils
 from dfcx_scrapi.agent_extract import types
 
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
 class Agents(scrapi_base.ScrapiBase):
     """Agent Metadata methods and functions."""
     def __init__(
         self,
         agent_id: str,
+        lang_code: str = "en",
         creds_path: str = None,
         creds_dict: Dict = None,
         creds=None,
@@ -46,6 +56,7 @@ class Agents(scrapi_base.ScrapiBase):
             scope=scope,
         )
         self.agent_id = agent_id
+        self.lang_code = lang_code
         self._core_agents = agents.Agents(creds=creds)
         self.gcs = gcs_utils.GcsUtils()
         self.flows = flows.Flows()
@@ -53,26 +64,59 @@ class Agents(scrapi_base.ScrapiBase):
         self.etypes = entity_types.EntityTypes()
         self.webhooks = webhooks.Webhooks()
         self.tcs = test_cases.TestCases()
+        self.ops = operations.Operations()
+
+    def await_lro(self, lro: str):
+        """Wait for long running operation to complete."""
+        try:
+            i = 0
+            while not self.ops.get_lro(lro).done:
+                time.sleep(1)
+                i += 1
+                if i == 20:
+                    break
+
+        except UserWarning as uw:
+            uw("LRO Failed.")
+
+        return True
+
+    def export_agent(self, agent_id: str, gcs_bucket_uri: str,
+                      environment_display_name: str = None):
+        """Handle the agent export, LRO and logging."""
+        logging.info("Exporting agent...")
+        lro = self._core_agents.export_agent(
+            agent_id=agent_id,gcs_bucket_uri=gcs_bucket_uri, data_format="JSON",
+            environment_display_name=environment_display_name)
+
+
+        self.await_lro(lro)
+        logging.info("Export Complete.")
+
+    def download_and_extract(self, agent_local_path: str, gcs_bucket_uri: str):
+        """Handle download from GCS and extracting ZIP file."""
+        if not os.path.exists(agent_local_path):
+            os.makedirs(agent_local_path)
+
+        logging.info("Downloading agent file from GCS Bucket...")
+        agent_file = self.gcs.download_gcs(
+            gcs_path=gcs_bucket_uri, local_path=agent_local_path)
+        logging.info("Download complete.")
+
+        self.gcs.unzip(agent_file, agent_local_path)
+
 
     def process_agent(self, agent_id: str, gcs_bucket_uri: str,
                       environment_display_name: str = None):
         """Process the specified Agent for offline data gathering."""
         agent_local_path = "tmp/agent"
-        _ = self._core_agents.export_agent(
-            agent_id=agent_id,gcs_bucket_uri=gcs_bucket_uri, data_format="JSON",
-            environment_display_name=environment_display_name)
+        self.export_agent(agent_id, gcs_bucket_uri, environment_display_name)
+        self.download_and_extract(agent_local_path, gcs_bucket_uri)
 
-        if not os.path.exists(agent_local_path):
-            os.makedirs(agent_local_path)
-
-        time.sleep(2)
-        agent_file = self.gcs.download_gcs(
-            gcs_path=gcs_bucket_uri, local_path=agent_local_path)
-
-        self.gcs.unzip(agent_file, agent_local_path)
-
+        logging.info("Processing Agent...")
         data = types.AgentData()
         data.graph = graph.Graph()
+        data.lang_code = self.lang_code
         data.agent_id = agent_id
         data = self.flows.process_flows_directory(agent_local_path, data)
         data = self.intents.process_intents_directory(agent_local_path, data)
@@ -80,5 +124,6 @@ class Agents(scrapi_base.ScrapiBase):
             agent_local_path, data)
         data = self.webhooks.process_webhooks_directory(agent_local_path, data)
         data = self.tcs.process_test_cases_directory(agent_local_path, data)
+        logging.info("Processing Complete.")
 
         return data
