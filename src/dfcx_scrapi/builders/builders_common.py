@@ -408,7 +408,7 @@ class BuildersCommon:
             "EntityType": {
                 "basic": ["display_name", "entity_value", "synonyms"],
                 "advanced": [
-                    "entity_type_id", "display_name", "kind",
+                    "name", "display_name", "kind",
                     "auto_expansion_mode", "fuzzy_extraction", "redact",
                     "entity_value", "synonyms", "excluded_phrases",
                 ],
@@ -416,16 +416,16 @@ class BuildersCommon:
             "TransitionRouteGroup": {
                 "basic": [
                     "name", "display_name", "flow_id",
-                    "intent", "condition", "target_type", "target_id",
+                    "intent", "condition", "transition_type", "transition_to",
                     "has_fulfillment", "has_fulfillment_webhook",
-                    "target_name", "flow_name", # "intent_name",
+                    "target_name", "flow_name",
                 ],
                 "advanced": [
                     "name", "display_name", "flow_id",
-                    "intent", "condition", "target_type", "target_id",
+                    "intent", "condition", "transition_type", "transition_to",
                     "messages", "preset_parameters", "conditional_cases",
                     "webhook", "webhook_tag", "return_partial_responses",
-                    "target_name", "flow_name", # "intent_name",
+                    "target_name", "flow_name",
                 ],
             },
             "Webhook": {
@@ -436,6 +436,62 @@ class BuildersCommon:
                     "username", "password", "request_headers",
                 ]
             },
+            "Flow": {
+                "basic": [
+                    "name", "display_name", "description",
+                    "nlu_settings", "intent", "condition", "event",
+                    "transition_type", "transition_to", "route_groups",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "name", "display_name", "description",
+                    "nlu_settings", "intent", "condition", "event",
+                    "transition_type", "transition_to", "route_groups",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
+            "Page": {
+                "basic": [
+                    "name", "display_name", "flow_id",
+                    "parameter_display_name", "parameter_entity_type",
+                    "intent", "condition", "event",
+                    "transition_type", "transition_to", "route_groups",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "name", "display_name", "flow_id",
+                    "parameter_display_name", "parameter_entity_type",
+                    "parameter_is_required", "parameter_is_list",
+                    "parameter_is_redact", "parameter_default_value",
+                    "intent", "condition", "event",
+                    "transition_type", "transition_to", "route_groups",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
+            "TransitionRoute": {
+                "basic": [
+                    "intent", "condition", "transition_type", "transition_to",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "intent", "condition", "transition_type", "transition_to",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
+            "EventHandler": {
+                "basic": [
+                    "event", "transition_type", "transition_to",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "event", "transition_type", "transition_to",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
             "Fulfillment": {
                 "basic": ["has_fulfillment", "has_fulfillment_webhook"],
                 "advanced": [
@@ -443,17 +499,6 @@ class BuildersCommon:
                     "webhook", "webhook_tag", "return_partial_responses",
                 ]
             },
-            "TransitionRoute": {
-                "basic": [
-                    "intent", "condition", "target_type", "target_id",
-                    "has_fulfillment", "has_fulfillment_webhook",
-                ],
-                "advanced": [
-                    "intent", "condition", "target_type", "target_id",
-                    "messages", "preset_parameters", "conditional_cases",
-                    "webhook", "webhook_tag", "return_partial_responses",
-                ],
-            }
         }
 
 
@@ -556,27 +601,95 @@ class BuildersCommon:
               ValueError: If the 'display_name' of df does not match
               with the proto_obj.
             """
-            proto_disp_name = self._outer_self.proto_obj.display_name
-            disp_name = self._is_df_has_single_display_name(df)
+            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
 
-            if disp_name != proto_disp_name:
+            proto_disp_name = self._outer_self.proto_obj.display_name
+            df_disp_name = self._is_df_has_single_display_name(df)
+            if df_disp_name != proto_disp_name:
                 raise ValueError(
                     "The input DataFrame `df` refers to a proto with a"
                     " different display_name from the one stored in proto_obj."
                 )
 
 
-        def _process_from_df_create(self, df: pd.DataFrame, mode: str):
-            """Prototype method to perform `create` action on proto_obj."""
+        def _process_from_df_create_basic(self, df: pd.DataFrame):
+            """Prototype method to perform basic `create` action on proto_obj."""
             raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_create_advanced(self, df: pd.DataFrame):
+            """Prototype method to perform advanced `create` action on proto_obj."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_append_basic(self, df: pd.DataFrame):
+            """Prototype method to perform basic `append` action on proto_obj."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_append_advanced(self, df: pd.DataFrame):
+            """Prototype method to perform advanced `append` action on proto_obj."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_delete_basic(self, df: pd.DataFrame):
+            """Prototype method to perform basic `delete` action on proto_obj."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_delete_advanced(self, df: pd.DataFrame):
+            """Prototype method to perform advanced `delete` action on proto_obj."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+
+        def _process_from_df_create(self, df: pd.DataFrame, mode: str):
+            """Perform the create action on proto_obj using `df`.
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              mode (str):
+                Whether the dataframe is using 'basic' or 'advance' schema.
+
+            Returns:
+              A protobuf object stored in the proto_obj.
+            """
+            if mode == "basic":
+                return self._process_from_df_create_basic(df)
+            elif mode == "advanced":
+                return self._process_from_df_create_advanced(df)
+            else:
+                raise ValueError("`mode` types: ['basic', 'advanced'].")
 
         def _process_from_df_append(self, df: pd.DataFrame, mode: str):
-            """Prototype method to perform `append` action on proto_obj."""
-            raise NotImplementedError("Subclass should implement this method!")
+            """Perform the append action on proto_obj using `df`.
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              mode (str):
+                Whether the dataframe is using 'basic' or 'advance' schema.
+
+            Returns:
+              A protobuf object stored in the proto_obj.
+            """
+            if mode == "basic":
+                return self._process_from_df_append_basic(df)
+            elif mode == "advanced":
+                return self._process_from_df_append_advanced(df)
+            else:
+                raise ValueError("`mode` types: ['basic', 'advanced'].")
 
         def _process_from_df_delete(self, df: pd.DataFrame, mode: str):
-            """Prototype method to perform `delete` action on proto_obj."""
-            raise NotImplementedError("Subclass should implement this method!")
+            """Perform the delete action on proto_obj using `df`.
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              mode (str):
+                Whether the dataframe is using 'basic' or 'advance' schema.
+
+            Returns:
+              A protobuf object stored in the proto_obj.
+            """
+            if mode == "basic":
+                return self._process_from_df_delete_basic(df)
+            elif mode == "advanced":
+                return self._process_from_df_delete_advanced(df)
+            else:
+                raise ValueError("`mode` types: ['basic', 'advanced'].")
 
         def dataframe_to_proto(
             self, df: pd.DataFrame, action: str
@@ -584,18 +697,18 @@ class BuildersCommon:
             """Perform an `action` from the DataFrame `df` on proto_obj.
 
             Args:
-                df (pd.DataFrame):
-                    The input DataFrame to read the data from.
-                action (str):
-                    'create', 'delete', 'append'
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              action (str):
+                'create', 'delete', 'append'
 
             Returns:
-                A protobuf object stored in the proto_obj.
+              A protobuf object stored in the proto_obj.
             """
             # Find the `mode` value based on passed df
             mode = self._find_mode(df)
 
-            # TODO: Input df check: schema, values
+            # TODO(miladt): Input df check: schema, values
             if action == "create":
                 return self._process_from_df_create(df=df, mode=mode)
             elif action == "append":
@@ -616,13 +729,13 @@ class BuildersCommon:
             concatenate with the existing DataFrame.
 
             Args:
-                df (pd.DataFrame):
-                    The DataFrame to append the row to.
-                dict_ (Dict[str, Any]):
-                    The dictionary representing a row.
+              df (pd.DataFrame):
+                The DataFrame to append the row to.
+              dict_ (Dict[str, Any]):
+                The dictionary representing a row.
 
             Returns:
-                A DataFrame with a new row.
+              A DataFrame with a new row.
             """
             # Error checking: `dict_` keys against `df` columns
             extra_keys = [k for k in dict_ if k not in df.columns]
