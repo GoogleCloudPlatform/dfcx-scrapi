@@ -63,13 +63,13 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
             "Previous Page",
         ]
 
-        STARTUP_TIME = time.time()
+        startup_time = time.time()
         self.extract = agents.Agents(agent_id)
-        PROCESSING_TIME = time.time()
-        logging.debug(f"STARTUP: {PROCESSING_TIME - STARTUP_TIME}")
+        processing_time = time.time()
+        logging.debug(f"STARTUP: {processing_time - startup_time}")
 
         self.data = self.extract.process_agent(agent_id, gcs_bucket_uri)
-        logging.debug(f"TOTAL PROCESSING: {time.time() - PROCESSING_TIME}")
+        logging.debug(f"TOTAL PROCESSING: {time.time() - processing_time}")
 
     def filter_special_pages(self, page: str, filter_special_pages: bool):
         """Recursion helper to check for special page match."""

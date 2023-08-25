@@ -88,15 +88,15 @@ class Agents(scrapi_base.ScrapiBase):
                 if i == 20:
                     break
 
-        except UserWarning as uw:
-            uw("LRO Failed.")
+        except UserWarning:
+            print("LRO Failed.")
 
         return True
 
     def export_agent(self, agent_id: str, gcs_bucket_uri: str,
                       environment_display_name: str = None):
         """Handle the agent export, LRO and logging."""
-        EXPORT_START = time.time()
+        export_start = time.time()
         logging.info("Exporting agent...")
         lro = self._core_agents.export_agent(
             agent_id=agent_id,gcs_bucket_uri=gcs_bucket_uri, data_format="JSON",
@@ -105,19 +105,19 @@ class Agents(scrapi_base.ScrapiBase):
 
         self.await_lro(lro)
         logging.info("Export Complete.")
-        logging.debug(f"EXPORT: {time.time() - EXPORT_START}")
+        logging.debug(f"EXPORT: {time.time() - export_start}")
 
     def download_and_extract(self, agent_local_path: str, gcs_bucket_uri: str):
         """Handle download from GCS and extracting ZIP file."""
         if not os.path.exists(agent_local_path):
             os.makedirs(agent_local_path)
 
-        DOWNLOAD_START = time.time()
+        download_start = time.time()
         logging.info("Downloading agent file from GCS Bucket...")
         agent_file = self.gcs.download_gcs(
             gcs_path=gcs_bucket_uri, local_path=agent_local_path)
         logging.info("Download complete.")
-        logging.debug(f"DOWNLOAD: {time.time() - DOWNLOAD_START}")
+        logging.debug(f"DOWNLOAD: {time.time() - download_start}")
 
         self.gcs.unzip(agent_file, agent_local_path)
 
