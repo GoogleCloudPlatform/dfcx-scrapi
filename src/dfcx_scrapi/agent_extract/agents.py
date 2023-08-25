@@ -17,6 +17,7 @@
 import logging
 import time
 import os
+import shutil
 from typing import Dict
 
 from dfcx_scrapi.core import agents
@@ -66,6 +67,17 @@ class Agents(scrapi_base.ScrapiBase):
         self.tcs = test_cases.TestCases()
         self.ops = operations.Operations()
 
+    @staticmethod
+    def prep_local_dir(agent_local_path: str):
+        """Prepare the local directory for agent zip file."""
+        if os.path.isdir(agent_local_path):
+            logging.info("Cleaning up old directory...")
+            shutil.rmtree(agent_local_path)
+            logging.info(f"Making temp directory: {agent_local_path}")
+            os.mkdir(agent_local_path)
+        else:
+            os.mkdir(agent_local_path)
+
     def await_lro(self, lro: str):
         """Wait for long running operation to complete."""
         try:
@@ -84,6 +96,7 @@ class Agents(scrapi_base.ScrapiBase):
     def export_agent(self, agent_id: str, gcs_bucket_uri: str,
                       environment_display_name: str = None):
         """Handle the agent export, LRO and logging."""
+        EXPORT_START = time.time()
         logging.info("Exporting agent...")
         lro = self._core_agents.export_agent(
             agent_id=agent_id,gcs_bucket_uri=gcs_bucket_uri, data_format="JSON",
@@ -92,16 +105,19 @@ class Agents(scrapi_base.ScrapiBase):
 
         self.await_lro(lro)
         logging.info("Export Complete.")
+        logging.debug(f"EXPORT: {time.time() - EXPORT_START}")
 
     def download_and_extract(self, agent_local_path: str, gcs_bucket_uri: str):
         """Handle download from GCS and extracting ZIP file."""
         if not os.path.exists(agent_local_path):
             os.makedirs(agent_local_path)
 
+        DOWNLOAD_START = time.time()
         logging.info("Downloading agent file from GCS Bucket...")
         agent_file = self.gcs.download_gcs(
             gcs_path=gcs_bucket_uri, local_path=agent_local_path)
         logging.info("Download complete.")
+        logging.debug(f"DOWNLOAD: {time.time() - DOWNLOAD_START}")
 
         self.gcs.unzip(agent_file, agent_local_path)
 
@@ -110,6 +126,7 @@ class Agents(scrapi_base.ScrapiBase):
                       environment_display_name: str = None):
         """Process the specified Agent for offline data gathering."""
         agent_local_path = "tmp/agent"
+        self.prep_local_dir(agent_local_path)
         self.export_agent(agent_id, gcs_bucket_uri, environment_display_name)
         self.download_and_extract(agent_local_path, gcs_bucket_uri)
 
