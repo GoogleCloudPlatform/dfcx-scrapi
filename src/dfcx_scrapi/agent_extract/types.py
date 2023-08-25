@@ -183,15 +183,16 @@ class AgentData:
     active_intents: Dict[str, set] = field(default_factory=dict)
     active_pages: Dict[str, set] = field(default_factory=dict)
     agent_id: str = None
-    entity_types: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    entity_types: List[Dict[str, Any]] = field(default_factory=list)
     entity_types_map: Dict[str, Any] = field(default_factory=dict)
     flow_page_map: Dict[str, Any] = field(default_factory=dict)
     flows: List[Dict[str, Any]] = field(default_factory=list)
     flows_map: Dict[str, Any] = field(default_factory=dict)
     graph: graph_class.Graph = None
-    intents: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    intents: List[Dict[str, Any]] = field(default_factory=list)
     intents_map: Dict[str, Any] = field(default_factory=dict)
     intents_page_map: Dict[str, set] = field(default_factory=dict)
+    lang_code: str = "en"
     pages: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     route_groups: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     route_groups_map: Dict[str, Any] = field(default_factory=dict)

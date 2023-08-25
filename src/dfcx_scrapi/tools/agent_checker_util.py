@@ -14,9 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
 import logging
+import time
 from typing import Dict, List
 import pandas as pd
 
@@ -55,9 +54,13 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
             scope=scope,
         )
 
+        STARTUP_TIME = time.time()
         self.agent_id = agent_id
         self.extract = agents.Agents(agent_id)
+        PROCESSING_TIME = time.time()
+        logging.debug(f"STARTUP: {PROCESSING_TIME - STARTUP_TIME}")
         self.data = self.extract.process_agent(agent_id, gcs_bucket_uri)
+        logging.debug(f"TOTAL PROCESSING: {time.time() - PROCESSING_TIME}")
         self.special_pages = [
             "End Session",
             "End Flow",
