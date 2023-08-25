@@ -113,8 +113,8 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
         """Mark dataframe rows True if the page is unreachable in graph."""
         for idx, row in df.iterrows():
             for page in self.data.unreachable_pages[row["flow"]]:
-                if row['page'] == page:
-                    df.loc[idx, 'unreachable'] = True
+                if row["page"] == page:
+                    df.loc[idx, "unreachable"] = True
 
         return df
 
@@ -162,10 +162,10 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
               unreachable in the graph.
         """
         df = pd.DataFrame({
-            "intent": pd.Series(dtype='str'),
-            "flow": pd.Series(dtype='str'),
-            "page": pd.Series(dtype='str'),
-            "unreachable": pd.Series(dtype='bool')
+            "intent": pd.Series(dtype="str"),
+            "flow": pd.Series(dtype="str"),
+            "page": pd.Series(dtype="str"),
+            "unreachable": pd.Series(dtype="bool")
             })
 
         # Loop over active_intents, create temp dataframe, then concat with the
