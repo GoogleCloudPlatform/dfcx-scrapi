@@ -54,7 +54,6 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
             scope=scope,
         )
         self.agent_id = agent_id
-        self.active_intents_df = pd.DataFrame()
         self.special_pages = [
             "End Session",
             "End Flow",
@@ -71,14 +70,16 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
         self.data = self.extract.process_agent(agent_id, gcs_bucket_uri)
         logging.debug(f"TOTAL PROCESSING: {time.time() - processing_time}")
 
-    def filter_special_pages(self, page: str, filter_special_pages: bool):
+        self.active_intents_df = self.active_intents_to_dataframe()
+
+    def _filter_special_pages(self, page: str, filter_special_pages: bool):
         """Recursion helper to check for special page match."""
         if filter_special_pages and page in self.special_pages:
             return True
 
         return False
 
-    def recurse_edges(self, edges: Dict[str, List[str]], page: str,
+    def _recurse_edges(self, edges: Dict[str, List[str]], page: str,
                       visited: set, depth: int, max_depth: int,
                       filter_special_pages: bool):
         """Recursion method used to traverse the agent graph for page data.
@@ -97,16 +98,25 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
 
         if page in edges:
             for inner_page in edges[page]:
-                if self.filter_special_pages(inner_page, filter_special_pages):
+                if self._filter_special_pages(inner_page, filter_special_pages):
                     return visited
 
                 if inner_page not in visited:
                     visited.add(inner_page)
-                    visited = self.recurse_edges(
+                    visited = self._recurse_edges(
                         edges, inner_page, visited, depth+1, max_depth,
                         filter_special_pages)
 
         return visited
+
+    def _mark_unreachable_pages(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Mark dataframe rows True if the page is unreachable in graph."""
+        for idx, row in df.iterrows():
+            for page in self.data.unreachable_pages[row["flow"]]:
+                if row['page'] == page:
+                    df.loc[idx, 'unreachable'] = True
+
+        return df
 
     def get_reachable_pages(
             self,
@@ -132,28 +142,49 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
             page_display_name = "Start Page"
             page_display_name = f"{flow_display_name}: {page_display_name}"
 
-        visited = self.recurse_edges(
+        visited = self._recurse_edges(
             self.data.graph.edges, page_display_name, set(), 0, max_depth,
             filter_special_pages)
 
         return list(visited)
 
     def active_intents_to_dataframe(self) -> pd.DataFrame:
-        """Gets all intents referenced in the agent, across all flows,
-        and produces a dataframe listing which flows reference each intent.
+        """Gets all intents referenced in the agent, across all flows and pages,
+        and produces a dataframe listing which flows/pages reference each
+        intent.
 
         Returns:
             A dataframe with columns
             intent - the intent display name
-            flows - a list of flow display names that use this intent
+            flow - the Flow Display Name where the intent resides
+            page - the Page Display Name where the intent resides
+            unreachable - Denotes whether the Flow/Page/Intent combination is
+              unreachable in the graph.
         """
-        df = pd.DataFrame({"intent": [], "flow": []})
+        df = pd.DataFrame({
+            "intent": pd.Series(dtype='str'),
+            "flow": pd.Series(dtype='str'),
+            "page": pd.Series(dtype='str'),
+            "unreachable": pd.Series(dtype='bool')
+            })
+
+        # Loop over active_intents, create temp dataframe, then concat with the
+        # main dataframe to build out the complete Flow/Page/Intent dataset.
         for flow in self.data.active_intents:
-            for intent in self.data.active_intents[flow]:
-                temp = pd.DataFrame({"intent": [intent], "flow": [flow]})
+            for pair in self.data.active_intents[flow]:
+                intent = pair[0]
+                page = pair[1]
+                temp = pd.DataFrame({
+                    "intent": [intent],
+                    "flow": [flow],
+                    "page": [page],
+                    "unreachable": [False]})
                 df = pd.concat([df, temp])
 
-        self.active_intents_df = df.reset_index(drop=True)
+        df = df.reset_index(drop=True)
+
+        # Finally, determine what rows are unreachable.
+        self.active_intents_df = self._mark_unreachable_pages(df)
 
         return self.active_intents_df
 
@@ -166,12 +197,13 @@ class AgentCheckerUtil(scrapi_base.ScrapiBase):
 
         return list(all_intents_set.difference(active_intents_set))
 
-    def get_unreachable_intents(self) -> List:
+    def get_unreachable_intents(self) -> pd.DataFrame:
         """Get all unreachable Intents across the agent.
 
         An Intent is unreachable if it resides on a page that is also
         unreachable.
         """
-        # Get Page / Intent mapping
-        # Find all unreachable pages
-        #
+        if self.active_intents_df.empty:
+            self.active_intents_df = self.active_intents_to_dataframe()
+
+        return self.active_intents_df[self.active_intents_df["unreachable"]]
