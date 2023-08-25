@@ -55,6 +55,34 @@ class Fulfillments:
         ):
             route.page.has_webhook_event_handler = True
 
+    @staticmethod
+    def check_for_intent(route: types.Fulfillment):
+        """Check route data to see if Intent is present."""
+        intent = None
+        if "intent" in route.data:
+            intent = route.data["intent"]
+
+        return intent
+
+    @staticmethod
+    def check_intent_map(intent: str, stats: types.AgentData):
+        """Check to see if intent is currently in map."""
+        res = stats.intents_page_map.get(intent)
+        if not res:
+            stats.intents_page_map[intent] = set()
+
+    def process_intents_in_routes(
+            self, route: types.Fulfillment, stats: types.AgentData):
+        intent = self.check_for_intent(route)
+        if intent:
+            stats.active_intents[
+                route.page.flow.display_name].add(intent)
+
+            self.check_intent_map(intent, stats)
+            stats.intents_page_map[intent].add(route.page.display_name)
+
+        return stats
+
     def collect_transition_route_trigger(self, route):
         """Inspect route and return all Intent/Condition info."""
 
@@ -201,6 +229,8 @@ class Fulfillments:
             path = route.data.get("triggerFulfillment", None)
             event = route.data.get("event", None)
 
+            stats = self.process_intents_in_routes(route, stats)
+
             if not path and not event:
                 continue
 
@@ -227,6 +257,8 @@ class Fulfillments:
             path = route.data.get("triggerFulfillment", None)
             event = route.data.get("event", None)
 
+            stats = self.process_intents_in_routes(route, stats)
+
             if not path and not event:
                 continue
 
@@ -252,6 +284,8 @@ class Fulfillments:
             route.fulfillment_type = "transition_route"
             route.trigger = self.get_trigger_info(route)
             route, stats = self.set_route_targets(route, stats)
+
+            stats = self.process_intents_in_routes(route, stats)
 
             path = route.data.get(tf_key, None)
 

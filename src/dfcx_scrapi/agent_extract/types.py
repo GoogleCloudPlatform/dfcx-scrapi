@@ -191,6 +191,7 @@ class AgentData:
     graph: graph_class.Graph = None
     intents: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     intents_map: Dict[str, Any] = field(default_factory=dict)
+    intents_page_map: Dict[str, set] = field(default_factory=dict)
     pages: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     route_groups: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     route_groups_map: Dict[str, Any] = field(default_factory=dict)
