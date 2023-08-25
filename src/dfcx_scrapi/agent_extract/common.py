@@ -16,6 +16,7 @@
 
 import logging
 import re
+from dfcx_scrapi.agent_extract import types
 
 # logging config
 logging.basicConfig(
@@ -53,6 +54,7 @@ class Common:
             "%27": "'",
             "%28": "(",
             "%29": ")",
+            "%2b": "+",
             "%2c": ",",
             "%2f": "/",
             "%3a": ":",
@@ -71,3 +73,8 @@ class Common:
                 display_name = display_name.replace(key, value)
 
         return display_name
+
+    @staticmethod
+    def check_lang_code(lang_code: str, stats: types.AgentData):
+        """Check to see if file lang_code matches user input lang_code."""
+        return stats.lang_code == lang_code

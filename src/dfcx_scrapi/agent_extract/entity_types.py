@@ -87,15 +87,6 @@ class EntityTypes:
 
             etype_file.close()
 
-    @staticmethod
-    def check_lang_code(lang_code: str, stats: types.AgentData):
-        """Check to see if lang_code already exists in dict, or create it."""
-        res = stats.entity_types.get(lang_code, None)
-        if not res:
-            stats.entity_types[lang_code] = []
-
-        return stats
-
     def process_excluded_phrases_language_codes(
             self, data: Dict[str, str], lang_code_path: str):
         """Process all ecluded phrases lang_code files."""
@@ -120,7 +111,9 @@ class EntityTypes:
         """Process all Entity Type lang_code files."""
         for lang_code in etype.entities:
             ent_file_path = etype.entities[lang_code]["file_path"]
-            stats = self.check_lang_code(lang_code, stats)
+
+            if not self.common.check_lang_code(lang_code, stats):
+                continue
 
             with open(ent_file_path, "r", encoding="UTF-8") as ent_file:
                 data = json.load(ent_file)
@@ -130,7 +123,7 @@ class EntityTypes:
                 data["kind"] = etype.kind
                 data["entities"] = data.get("entities", None)
                 data = self.process_excluded_phrases(etype, lang_code, data)
-                stats.entity_types[lang_code].append(data)
+                stats.entity_types.append(data)
 
                 ent_file.close()
 
@@ -150,6 +143,7 @@ class EntityTypes:
 
         etype.display_name = self.common.parse_filepath(
             etype.dir_path, "entity_type")
+        etype.display_name = self.common.clean_display_name(etype.display_name)
 
         self.process_entity_type_metadata(etype)
         stats = self.process_entities(etype, stats)

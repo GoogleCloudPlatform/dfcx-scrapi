@@ -72,15 +72,6 @@ class Intents:
 
         return intent_paths
 
-    @staticmethod
-    def check_lang_code(lang_code: str, stats: types.AgentData):
-        """Check to see if lang_code already exists in dict, or create it."""
-        res = stats.intents.get(lang_code, None)
-        if not res:
-            stats.intents[lang_code] = []
-
-        return stats
-
     def process_intent_metadata(
             self, intent: types.Intent):
         """Process the metadata file for a single Intent."""
@@ -106,7 +97,8 @@ class Intents:
         for lang_code in intent.training_phrases:
             tp_file = intent.training_phrases[lang_code]["file_path"]
 
-            stats = self.check_lang_code(lang_code, stats)
+            if not self.common.check_lang_code(lang_code, stats):
+                continue
 
             with open(tp_file, "r", encoding="UTF-8") as tps:
                 data = json.load(tps)
@@ -115,7 +107,7 @@ class Intents:
                 data["labels"] = intent.labels
                 data["description"] = intent.description
                 data["parameters"] = intent.parameters
-                stats.intents[lang_code].append(data)
+                stats.intents.append(data)
                 stats.total_training_phrases += len(data["trainingPhrases"])
 
                 tps.close()
@@ -135,6 +127,8 @@ class Intents:
         """Process a single Intent directory and associated files."""
         intent.display_name = self.common.parse_filepath(
             intent.dir_path, "intent")
+        intent.display_name = self.common.clean_display_name(
+            intent.display_name)
 
         self.process_intent_metadata(intent)
         stats = self.process_training_phrases(intent, stats)
@@ -159,6 +153,7 @@ class Intents:
         """
         # Create a list of all Intent paths to iter through
         intent_paths = self.build_intent_path_list(agent_local_path)
+        stats.intents = []
 
         for intent_path in intent_paths:
             intent = types.Intent()
