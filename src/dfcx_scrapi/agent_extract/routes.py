@@ -64,22 +64,13 @@ class Fulfillments:
 
         return intent
 
-    @staticmethod
-    def check_intent_map(intent: str, stats: types.AgentData):
-        """Check to see if intent is currently in map."""
-        res = stats.intents_page_map.get(intent)
-        if not res:
-            stats.intents_page_map[intent] = set()
-
     def process_intents_in_routes(
             self, route: types.Fulfillment, stats: types.AgentData):
         intent = self.check_for_intent(route)
         if intent:
+            pair = (intent, route.page.display_name)
             stats.active_intents[
-                route.page.flow.display_name].add(intent)
-
-            self.check_intent_map(intent, stats)
-            stats.intents_page_map[intent].add(route.page.display_name)
+                route.page.flow.display_name].append(pair)
 
         return stats
 

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 from dataclasses import dataclass, field
 
 from dfcx_scrapi.agent_extract import graph as graph_class
@@ -180,7 +180,8 @@ class Webhook:
 @dataclass
 class AgentData:
     """Used to track agent data for each section processed."""
-    active_intents: Dict[str, set] = field(default_factory=dict)
+    active_intents: Dict[str, List[Tuple[str, str]]] = field(
+        default_factory=dict)
     active_pages: Dict[str, set] = field(default_factory=dict)
     agent_id: str = None
     entity_types: List[Dict[str, Any]] = field(default_factory=list)
@@ -191,13 +192,11 @@ class AgentData:
     graph: graph_class.Graph = None
     intents: List[Dict[str, Any]] = field(default_factory=list)
     intents_map: Dict[str, Any] = field(default_factory=dict)
-    intents_page_map: Dict[str, set] = field(default_factory=dict)
     lang_code: str = "en"
     pages: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     route_groups: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     route_groups_map: Dict[str, Any] = field(default_factory=dict)
     test_cases: List[Dict[str, Any]] = field(default_factory=list)
-    unreachable_intents: set = field(default_factory=set)
     unreachable_pages: Dict[str, set] = field(default_factory=dict)
     unused_pages: Dict[str, set] = field(default_factory=dict)
     webhooks: List[Dict[str, Any]] = field(default_factory=list)

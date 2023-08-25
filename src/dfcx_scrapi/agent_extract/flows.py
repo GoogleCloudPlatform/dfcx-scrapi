@@ -258,7 +258,7 @@ class Flows:
         flow.start_page_file = f"{flow.dir_path}/{flow.file_name}.json"
 
         stats.pages[flow.display_name] = []
-        stats.active_intents[flow.display_name] = set()
+        stats.active_intents[flow.display_name] = []
         stats = self.process_start_page(flow, stats)
         stats = self.pages.process_pages_directory(flow, stats)
         stats = self.rgs.process_route_groups_directory(flow, stats)
