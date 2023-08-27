@@ -188,7 +188,6 @@ class Fulfillments:
                 # This is where each message type will exist
                 # text, custom payload, etc.
 
-                # TODO pmarlow: create sub-method parsers per type
                 if "text" in item:
                     for text in item["text"]["text"]:
                         route.text = text

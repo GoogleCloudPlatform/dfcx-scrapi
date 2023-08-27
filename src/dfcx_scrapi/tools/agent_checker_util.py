@@ -23,11 +23,6 @@ from google.cloud.dialogflowcx_v3beta1 import types
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.agent_extract import agents
 
-# Type aliases
-DFCXFlow = types.flow.Flow
-DFCXPage = types.page.Page
-DFCXRoute = types.page.TransitionRoute
-
 # logging config
 logging.basicConfig(
     level=logging.INFO,

@@ -20,8 +20,8 @@ import os
 from typing import Dict, Any
 
 from dfcx_scrapi.agent_extract import common
-from dfcx_scrapi.agent_extract import types #import Flow, Page, AgentData, FormParameter
-from dfcx_scrapi.agent_extract import routes #import Fulfillments
+from dfcx_scrapi.agent_extract import types
+from dfcx_scrapi.agent_extract import routes
 
 
 class Pages:

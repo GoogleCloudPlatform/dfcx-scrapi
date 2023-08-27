@@ -65,7 +65,7 @@ class RouteGroups:
             rg.display_name = rg.data.get("displayName", None)
             rg.routes = rg.data.get("transitionRoutes", None)
 
-            # stats = self.routes.process_routes(rg, stats)
+            stats = self.routes.process_routes(rg, stats)
 
             route_group_file.close()
 

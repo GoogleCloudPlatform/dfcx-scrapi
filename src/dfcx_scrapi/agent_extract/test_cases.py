@@ -71,7 +71,6 @@ class TestCases:
                 phrase = user.get("input", None)
 
                 text = phrase.get("text", None)
-                # TODO pmarlow: Add DTMF user inputs
 
                 if text:
                     text = text["text"]
@@ -91,8 +90,6 @@ class TestCases:
     @staticmethod
     def get_test_case_intent_data(agent_local_path: str):
         """Collect all Intent Files and Training Phrases for Test Case."""
-        # TODO (pmarlow) consolidate into build_intent_paths
-
         intents_path = agent_local_path + "/intents"
 
         intent_paths = []
@@ -117,7 +114,6 @@ class TestCases:
         return cleaned_tps
 
     def gather_intent_tps(self, tc: types.TestCase):
-        # TODO Refactor
         """Collect all TPs associated with Intent data in Test Case."""
         tc.associated_intent_data = {}
 
@@ -140,9 +136,6 @@ class TestCases:
 
                             tp_file.close()
 
-                        # TODO pmarlow: refactor to use tc.intent_data instead
-                        # Need to create another level inside the Intent Dict
-                        # that contains the language files as well.
                         tc.intent_data[i]["training_phrases"].extend(
                             cleaned_tps
                         )
