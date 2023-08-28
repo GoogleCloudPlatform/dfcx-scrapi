@@ -294,19 +294,6 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             flow_mapped["page_id"] = flow_mapped.index
 
             flow_mapped = flow_mapped.rename(columns={0: "page_display_name"})
-
-            # add start page
-            start_page_id = flow_id + "/pages/START_PAGE"
-            flow_mapped = pd.concat(
-                [
-                    flow_mapped,
-                    pd.DataFrame(
-                        columns=["page_display_name", "page_id"],
-                        data=[["START_PAGE", start_page_id]],
-                    ),
-                ]
-            )
-
             flow_mapped.insert(0, "flow_display_name", flow_map[flow_id])
             agent_pages_map = pd.concat([agent_pages_map, flow_mapped])
 
