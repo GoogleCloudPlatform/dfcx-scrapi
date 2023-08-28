@@ -364,7 +364,11 @@ class Agents(scrapi_base.ScrapiBase):
         self,
         agent_id: str,
         gcs_bucket_uri: str,
-        environment_display_name: str = None
+        environment_display_name: str = None,
+        data_format: str = "BLOB",
+        git_branch: str = None,
+        git_commit_message: str = None,
+        include_bq_export_settings: bool = False
     ) -> str:
         """Exports the specified CX agent to Google Cloud Storage bucket.
 
@@ -374,17 +378,39 @@ class Agents(scrapi_base.ScrapiBase):
           gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
             agent to in the following format:
               `gs://<bucket-name>/<object-name>`
-          environment_display_name: (Optional) CX Agent environment display name
+          environment_display_name: CX Agent environment display name
             as string. If not set, DRAFT environment is assumed.
+          data_format: Optional. The data format of the exported agent. If not
+            specified, ``BLOB`` is assumed.
+          git_branch: Optional. The Git branch to commit the exported agent to.
+          git_commit_message: Optional. The Git Commit message to send. Only
+            applicable if using `git_branch` arg.
+          include_bigquery_export_settings: Will exclude or included the BQ
+            settings on export.
 
         Returns:
           A Long Running Operation (LRO) ID that can be used to
             check the status of the export using
               dfcx_scrapi.core.operations->get_lro()
         """
+        blob_format = types.agent.ExportAgentRequest.DataFormat(1)
+        json_format = types.agent.ExportAgentRequest.DataFormat(4)
+
         request = types.agent.ExportAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
+        request.include_bigquery_export_settings = include_bq_export_settings
+
+        if data_format in ["JSON", "ZIP", "JSON_PACKAGE"]:
+            request.data_format = json_format
+        else:
+            request.data_format = blob_format
+
+        if git_branch:
+            git_settings = types.agent.ExportAgentRequest.GitDestination()
+            git_settings.tracking_branch = git_branch
+            git_settings.commit_message = git_commit_message
+            request.git_destination = git_settings
 
         if environment_display_name:
             self._environments = environments.Environments(creds=self.creds)

@@ -15,11 +15,13 @@
 # limitations under the License.
 
 import logging
+import time
 from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import pages
 
 # logging config
 logging.basicConfig(
@@ -54,6 +56,7 @@ class Flows(scrapi_base.ScrapiBase):
             self.flow_id = flow_id
 
         self.agent_id = agent_id
+        self.pages = pages.Pages(creds=self.creds)
 
     # TODO: Migrate to Flow Builder class when ready
     @staticmethod
@@ -128,6 +131,38 @@ class Flows(scrapi_base.ScrapiBase):
             }
 
         return flows_dict
+
+    def get_flow_page_map(
+            self, agent_id: str, rate_limit: float = 1.0
+            ) -> Dict[str, Dict[str, str]]:
+        """Exports a user friendly dict containing Flows, Pages, and IDs
+        This method builds on top of `get_flows_map` and builds out a nested
+        dictionary containing all of the Page Display Names and UUIDs contained
+        within each Flow. Output Format:
+          {
+            <FLOW_DISPLAY_NAME>: {
+                'id': <FLOW_UUID>
+                'pages': { <PAGE_DISPLAY_NAME> : <PAGE_UUID> }
+            }
+          }
+
+        Args:
+          agent_id: the formatted CX Agent ID to use
+
+        Returns:
+          Dictionary containing Flow Names/UUIDs and Page Names/UUIDs
+        """
+        flow_page_map = {}
+
+        flows_map = self.get_flows_map(agent_id, reverse=True)
+
+        for flow in flows_map:
+            pages_map = self.pages.get_pages_map(
+                flows_map[flow], reverse=True)
+            flow_page_map[flow] = {"id": flows_map[flow], "pages": pages_map}
+            time.sleep(rate_limit)
+
+        return flow_page_map
 
     @scrapi_base.api_call_counter_decorator
     def train_flow(self, flow_id: str) -> str:
