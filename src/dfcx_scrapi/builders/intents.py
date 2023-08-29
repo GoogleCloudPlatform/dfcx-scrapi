@@ -765,12 +765,36 @@ class IntentBuilder(BuildersCommon):
                     phrase=phrase, annotations=annotations, include_spaces=False
                 )
 
-        def _process_from_df_create_advanced(self, df: pd.DataFrame) -> Intent:
-            """Helper method to create an Intent from df in advanced mode.
+        def _process_from_df_create_basic(self, df: pd.DataFrame) -> Intent:
+            """Create a new intent from `df` and store it in the proto_obj
+            in "basic" mode.
 
             Args:
               df (pd.DataFrame):
                 The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
+            disp_name = self._is_df_has_single_display_name(df)
+
+            self._outer_self.create_new_proto_obj(display_name=disp_name)
+            for phrase in df["training_phrase"]:
+                if isinstance(phrase, str):
+                    self._outer_self.add_training_phrase(phrase)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_create_advanced(self, df: pd.DataFrame) -> Intent:
+            """Create a new intent from `df` and store it in the proto_obj
+            in "advanced" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
             """
             disp_name = self._is_df_has_single_display_name(df)
             priority = self._get_unique_value_of_a_column(df, "priority")
@@ -785,90 +809,80 @@ class IntentBuilder(BuildersCommon):
             self._add_parameter_from_df_advanced(df, overwrite=True)
             self._add_training_phrase_from_df_advanced(df)
 
-        def _process_from_df_create(
-            self, df: pd.DataFrame, mode: str
-        ) -> Intent:
-            """Create a new intent from `df` and store it in the proto_obj.
-
-            Args:
-              df (pd.DataFrame):
-                The input DataFrame to read the data from.
-              mode (str):
-                Whether to use 'basic' DataFrame or 'advanced' one for
-                performing the action.
-
-            Returns:
-              An Intent object stored in proto_obj
-            """
-            disp_name = self._is_df_has_single_display_name(df)
-
-            if mode == "basic":
-                self._outer_self.create_new_proto_obj(display_name=disp_name)
-                for phrase in df["training_phrase"]:
-                    if isinstance(phrase, str):
-                        self._outer_self.add_training_phrase(phrase)
-
-            elif mode == "advanced":
-                self._process_from_df_create_advanced(df)
-
             return self._outer_self.proto_obj
 
-        def _process_from_df_append(
-            self, df: pd.DataFrame, mode: str
-        ) -> Intent:
+        def _process_from_df_append_basic(self, df: pd.DataFrame) -> Intent:
             """Append training phrases that are present in `df`
-            to the proto_obj.
+            to the proto_obj in "basic" mode.
 
             Args:
               df (pd.DataFrame):
                 The input DataFrame to read the data from.
-              mode (str):
-                Whether to use 'basic' DataFrame or 'advanced' one for
-                performing the action.
 
             Returns:
               An Intent object stored in proto_obj
             """
             self._is_df_display_name_match_with_proto(df)
 
-            if mode == "basic":
-                for phrase in df["training_phrase"]:
-                    if isinstance(phrase, str):
-                        self._outer_self.add_training_phrase(phrase)
-
-            elif mode == "advanced":
-                self._add_parameter_from_df_advanced(df, overwrite=False)
-                self._add_training_phrase_from_df_advanced(df)
+            for phrase in df["training_phrase"]:
+                if isinstance(phrase, str):
+                    self._outer_self.add_training_phrase(phrase)
 
             return self._outer_self.proto_obj
 
-        def _process_from_df_delete(
-            self, df: pd.DataFrame, mode: str
-        ) -> Intent:
+        def _process_from_df_append_advanced(self, df: pd.DataFrame) -> Intent:
+            """Append training phrases that are present in `df`
+            to the proto_obj in "advanced" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
+            self._is_df_display_name_match_with_proto(df)
+
+            self._add_parameter_from_df_advanced(df, overwrite=False)
+            self._add_training_phrase_from_df_advanced(df)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_delete_basic(self, df: pd.DataFrame) -> Intent:
             """Delete training phrases that are present in `df`
-            from the proto_obj.
+            from the proto_obj in "basic" mode.
             
             Args:
               df (pd.DataFrame):
                 The input DataFrame to read the data from.
-              mode (str):
-                Whether to use 'basic' DataFrame or 'advanced' one for
-                performing the action.
 
             Returns:
               An Intent object stored in proto_obj
             """
             self._is_df_display_name_match_with_proto(df)
 
-            if mode == "basic":
-                for phrase in df["training_phrase"]:
-                    self._outer_self.remove_training_phrase(phrase)
+            for phrase in df["training_phrase"]:
+                self._outer_self.remove_training_phrase(phrase)
 
-            elif mode == "advanced":
-                group_by_df = df.groupby(by=["training_phrase_idx"])
-                phrase_series = group_by_df["text"].apply("".join)
-                for phrase in phrase_series:
-                    self._outer_self.remove_training_phrase(phrase)
+            return self._outer_self.proto_obj
+
+        def _process_from_df_delete_advanced(self, df: pd.DataFrame) -> Intent:
+            """Delete training phrases that are present in `df`
+            from the proto_obj in "advanced" mode.
+            
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
+            self._is_df_display_name_match_with_proto(df)
+
+            group_by_df = df.groupby(by=["training_phrase_idx"])
+            phrase_series = group_by_df["text"].apply("".join)
+            for phrase in phrase_series:
+                self._outer_self.remove_training_phrase(phrase)
 
             return self._outer_self.proto_obj
 

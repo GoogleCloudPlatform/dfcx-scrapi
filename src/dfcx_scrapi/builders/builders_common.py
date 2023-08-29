@@ -637,7 +637,7 @@ class BuildersCommon:
             raise NotImplementedError("Subclass should implement this method!")
 
 
-        def _process_from_df_create(self, df: pd.DataFrame, mode: str):
+        def _helper_from_df_create(self, df: pd.DataFrame, mode: str):
             """Perform the create action on proto_obj using `df`.
             Args:
               df (pd.DataFrame):
@@ -655,7 +655,7 @@ class BuildersCommon:
             else:
                 raise ValueError("`mode` types: ['basic', 'advanced'].")
 
-        def _process_from_df_append(self, df: pd.DataFrame, mode: str):
+        def _helper_from_df_append(self, df: pd.DataFrame, mode: str):
             """Perform the append action on proto_obj using `df`.
             Args:
               df (pd.DataFrame):
@@ -673,7 +673,7 @@ class BuildersCommon:
             else:
                 raise ValueError("`mode` types: ['basic', 'advanced'].")
 
-        def _process_from_df_delete(self, df: pd.DataFrame, mode: str):
+        def _helper_from_df_delete(self, df: pd.DataFrame, mode: str):
             """Perform the delete action on proto_obj using `df`.
             Args:
               df (pd.DataFrame):
@@ -710,11 +710,11 @@ class BuildersCommon:
 
             # TODO(miladt): Input df check: schema, values
             if action == "create":
-                return self._process_from_df_create(df=df, mode=mode)
+                return self._helper_from_df_create(df=df, mode=mode)
             elif action == "append":
-                return self._process_from_df_append(df=df, mode=mode)
+                return self._helper_from_df_append(df=df, mode=mode)
             elif action == "delete":
-                return self._process_from_df_delete(df=df, mode=mode)
+                return self._helper_from_df_delete(df=df, mode=mode)
             else:
                 raise ValueError(
                     "`action` types: ['create', 'delete', 'append']."
