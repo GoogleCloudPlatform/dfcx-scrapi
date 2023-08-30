@@ -370,7 +370,7 @@ class EntityTypeBuilder(BuildersCommon):
             self, obj: EntityType
         ) -> pd.DataFrame:
             """Process EntityType Proto to DataFrame in basic mode."""
-            cols = ["display_name", "entity_value", "synonyms"]
+            cols = self._dataframes_map["EntityType"]["basic"]
             df = pd.DataFrame(columns=cols)
 
             entity_type_dict = {"display_name": str(obj.display_name)}
@@ -386,15 +386,12 @@ class EntityTypeBuilder(BuildersCommon):
             self, obj: EntityType
         ) -> pd.DataFrame:
             """Process EntityType Proto to DataFrame in advanced mode."""
-            cols = [
-                "entity_type_id", "display_name", "kind",
-                "auto_expansion_mode", "fuzzy_extraction", "redact",
-                "entity_value", "synonyms", "excluded_phrases",
-            ]
+
+            cols = self._dataframes_map["EntityType"]["advanced"]
             df = pd.DataFrame(columns=cols)
 
             entity_type_dict = {
-                "entity_type_id": str(obj.name),
+                "name": str(obj.name),
                 "display_name": str(obj.display_name),
                 "kind": str(obj.kind.name),
                 "auto_expansion_mode": bool(obj.auto_expansion_mode),
@@ -417,3 +414,130 @@ class EntityTypeBuilder(BuildersCommon):
                 df = self._concat_dict_to_df(df, entity_type_dict)
 
             return df
+
+
+        def _find_kind(self, df: pd.DataFrame) -> int:
+            if not all(df["entity_value"] == df["synonyms"]):
+                # 1 = KIND_MAP
+                return 1
+            elif all(df["entity_value"].map(pd.api.types.is_re_compilable)):
+                # 3 = KIND_REGEXP
+                return 3
+            else:
+                # 2 = KIND_LIST
+                return 2
+
+        def _process_from_df_create_basic(self, df: pd.DataFrame) -> EntityType:
+            """Create a new EntityType using `df` and store it in the proto_obj
+            in "basic" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An EntityType object stored in proto_obj
+            """
+            disp_name = self._is_df_has_single_display_name(df)
+
+            kind = self._find_kind(df)
+            self._outer_self.create_new_proto_obj(
+                display_name=disp_name, kind=kind
+            )
+            for entity in df["entity_value"]:
+                if kind == 1: # 1 = KIND_MAP
+                    synonyms = df[df["entity_value"] == entity]["synonyms"]
+                    self._outer_self.add_entity(entity, list(synonyms))
+                else: # 2 = KIND_LIST, 3 = KIND_REGEXP
+                    self._outer_self.add_entity(entity)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_create_advanced(
+            self, df: pd.DataFrame
+        ) -> EntityType:
+            """Create a new EntityType using `df` and store it in the proto_obj
+            in "advanced" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An EntityType object stored in proto_obj
+            """
+            kind_map = {"KIND_MAP": 1, "KIND_LIST": 2, "KING_REGEXP": 3}
+
+            disp_name = self._is_df_has_single_display_name(df)
+            kind = self._get_unique_value_of_a_column(df, "kind")
+            auto_expansion_mode = self._get_unique_value_of_a_column(
+                df, "auto_expansion_mode")
+            fuzzy_extraction = self._get_unique_value_of_a_column(
+                df, "fuzzy_extraction")
+            redact = self._get_unique_value_of_a_column(df, "redact")
+
+            self._outer_self.create_new_proto_obj(
+                display_name=disp_name, kind=kind_map.get(kind),
+                auto_expansion_mode=auto_expansion_mode,
+                enable_fuzzy_extraction=fuzzy_extraction, redact=redact,
+            )
+
+            for entity in df["entity_value"]:
+                if kind == "KIND_MAP":
+                    synonyms = df[df["entity_value"] == entity]["synonyms"]
+                    self._outer_self.add_entity(entity, list(synonyms))
+                else: # 2 = KIND_LIST, 3 = KIND_REGEXP
+                    self._outer_self.add_entity(entity)
+
+            excluded_phrases = list(df["excluded_phrases"].dropna().values)
+            self._outer_self.add_excluded_phrase(excluded_phrases)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_delete_basic(self, df: pd.DataFrame) -> EntityType:
+            """Delete an entity from an EntityType using `df` and store it
+            in the proto_obj in "basic" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An EntityType object stored in proto_obj
+            """
+            self._is_df_display_name_match_with_proto(df)
+
+            kind = self._find_kind(df)
+            for entity in df["entity_value"].unique():
+                if kind == 1: # 1 = KIND_MAP
+                    synonyms = df[df["entity_value"] == entity]["synonyms"]
+                    self._outer_self.remove_entity(entity, list(synonyms))
+                else: # 2 = KIND_LIST, 3 = KIND_REGEXP
+                    self._outer_self.remove_entity(entity)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_delete_advanced(
+                self, df: pd.DataFrame
+        ) -> EntityType:
+            """Delete an entity from an EntityType using `df` and store it
+            in the proto_obj in "advanced" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An EntityType object stored in proto_obj
+            """
+            self._is_df_display_name_match_with_proto(df)
+
+            kind = self._get_unique_value_of_a_column(df, "kind")
+            for entity in df["entity_value"].unique():
+                if kind == "KIND_MAP":
+                    synonyms = df[df["entity_value"] == entity]["synonyms"]
+                    self._outer_self.remove_entity(entity, list(synonyms))
+                else: # 2 = KIND_LIST, 3 = KIND_REGEXP
+                    self._outer_self.remove_entity(entity)
+
+            return self._outer_self.proto_obj
