@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from typing import Dict
+from dataclasses import dataclass
 
 import logging
 import datetime
@@ -60,12 +61,36 @@ OUTPUT_SCHEMA_COLUMNS = [
     "input_source"
     ]
 
+SUMMARY_SCHEMA_COLUMNS = [
+    "test_run_timestamp",
+    "total_tests",
+    "pass_count",
+    "pass_rate",
+    "no_match_count",
+    "no_match_rate",
+    "test_agent",
+    "flow_display_name",
+    "data_source"
+    ]
+
 # logging config
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)-8s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+
+@dataclass
+class Stats:
+    """Dataclass for the summary stats."""
+    no_match_count: int = 0
+    no_match_rate: float = 0.0
+    pass_count: int = 0
+    pass_rate: float = 0.0
+    test_agent: str = None
+    flow_display_name: str = None
+    data_source: str = None
 
 
 class NluEvals(scrapi_base.ScrapiBase):
@@ -86,6 +111,7 @@ class NluEvals(scrapi_base.ScrapiBase):
         )
 
         self.agent_id = agent_id
+        self._sheets_client = self._build_sheets_client()
 
         self._a = agents.Agents(creds=self.creds)
         self._i = intents.Intents(creds=self.creds)
@@ -96,6 +122,74 @@ class NluEvals(scrapi_base.ScrapiBase):
         )
         self._dffx = dataframe_functions.DataframeFunctions(creds=self.creds)
 
+    def _build_sheets_client(self):
+        client = gspread.authorize(self.creds)
+
+        return client
+
+    def _calculate_stats(self, df: pd.DataFrame):
+        """Calculate all the stats needed for the summary report."""
+        stats = Stats()
+        stats.no_match_count = (
+            df[df.detected_intent == "NO_MATCH"]
+            .groupby("detected_intent")
+            .size()
+            .sum()
+        )
+        stats.no_match_rate = stats.no_match_count / df.shape[0]
+        stats.pass_count = (
+            df[df.detected_intent == df.expected_intent]
+            .groupby("detected_intent")
+            .size()
+            .sum()
+        )
+        stats.pass_rate = stats.pass_count / df.shape[0]
+        stats.test_agent = df.agent_display_name.unique()[0]
+        stats.flow_display_name = df.flow_display_name.unique()[0]
+        stats.data_source = df.input_source.unique()[0]
+
+        return stats
+
+    def _write_report_summary_to_sheets(
+        self, df: pd.DataFrame, sheet_name: str, sheet_tab: str
+    ):
+        """Writes the output report summary to Google Sheets."""
+
+        gsheet = self._sheets_client.open(sheet_name)
+        sheet = gsheet.worksheet(sheet_tab)
+
+        df["test_run_timestamp"] = df.test_run_timestamp.astype("str")
+
+        sheet.append_row(
+            df.values.flatten().tolist(), value_input_option="USER_ENTERED"
+        )
+
+    def _append_test_results_to_sheets(
+        self, results: pd.DataFrame, sheet_name: str, sheet_tab: str
+    ):
+        """Adds results to an existing Google Sheet collection."""
+
+        gsheet = self._sheets_client.open(sheet_name)
+        sheet = gsheet.worksheet(sheet_tab)
+
+        # Fixes an error that sometimes happens when trying to write parameters
+        # to the sheet because they are formatted as objects
+        result_list = results.values.tolist()
+        result_list = [list(map(str, row)) for row in result_list]
+
+        sheet.append_rows(result_list, value_input_option="USER_ENTERED")
+
+    def _write_test_results_to_sheets(
+        self, results: pd.DataFrame, sheet_name: str, sheet_tab: str
+    ):
+        """Writes the output result details to Google Sheets."""
+
+        gsheet = self._sheets_client.open(sheet_name)
+        sheet = gsheet.worksheet(sheet_tab)
+
+        sheet.clear()
+
+        self._dffx.dataframe_to_sheets(sheet_name, sheet_tab, results)
 
     def _clean_dataframe(self, df):
         """Various Dataframe cleaning functions."""
@@ -119,11 +213,6 @@ class NluEvals(scrapi_base.ScrapiBase):
 
         return df
 
-    def _build_sheets_client(self):
-        client = gspread.authorize(self.creds)
-
-        return client
-
     def process_input_csv(self, input_file_path: str):
         """Process the input data in CSV format."""
         df = pd.read_csv(input_file_path)
@@ -140,163 +229,6 @@ class NluEvals(scrapi_base.ScrapiBase):
         df["input_source"] = gsheet_tab
 
         return df
-
-    def generate_report(
-        self,
-        results: pd.DataFrame,
-        report_timestamp: datetime.datetime,
-    ):
-        """Generates a printable report and dataframe.
-
-        Args:
-            results: Input dataframe of testing results from run_tests method.
-
-        Returns:
-            A dataframe with report summary stats.
-        """
-        # Calc fields
-        failed_df = results[results.detected_intent != results.expected_intent]
-        no_match_count = (
-            results[results.detected_intent == "NO_MATCH"]
-            .groupby("detected_intent")
-            .size()
-            .sum()
-        )
-        no_match_df = results[results.detected_intent == "NO_MATCH"]
-        no_match_rate = no_match_count / results.shape[0]
-        pass_count = (
-            results[results.detected_intent == results.expected_intent]
-            .groupby("detected_intent")
-            .size()
-            .sum()
-        )
-        pass_rate = pass_count / results.shape[0]
-        timestamp = report_timestamp
-        test_agent = results.agent_display_name.unique()[0]
-        flow_display_name = results.flow_display_name.unique()[0]
-        data_source = results.input_source.unique()[0]
-
-        # Get Failure list of Utterance / Page pairs
-        failure_list = []
-        for _, row in failed_df.iterrows():
-            failure_list.append(
-                [
-                    row["utterance"],
-                    row["flow_display_name"],
-                    row["page_display_name"],
-                    row["expected_intent"],
-                    row["detected_intent"],
-                    row["expected_parameters"],
-                    row["parameters_set"],
-                ]
-            )
-
-        # Generate Dataframe format
-        df_report = pd.DataFrame(
-            columns=[
-                "test_run_timestamp",
-                "total_tests",
-                "pass_count",
-                "pass_rate",
-                "no_match_count",
-                "no_match_rate",
-                "test_agent",
-                "flow_display_name",
-                "data_source",
-            ],
-            data=[
-                [
-                    timestamp,
-                    results.shape[0],
-                    pass_count,
-                    pass_rate,
-                    no_match_count,
-                    no_match_rate,
-                    test_agent,
-                    flow_display_name,
-                    data_source,
-                ]
-            ],
-        )
-
-        # Printable Report Format
-        print("---------- RESULTS ----------")
-        print(f"Test Agent: {test_agent}")
-        print(f"Total Tests: {results.shape[0]}")
-        print(f"Pass Count: {pass_count}")
-        print(f"Pass Rate: {pass_rate:.2%}")
-        print(f"No Match Count: {no_match_count}")
-        print(f"No Match Rate: {no_match_rate:.2%}")
-        print(f"Test Run Timestamp: {timestamp}")
-        print(f"Test Set Data Source: {data_source}")
-        print("\n")
-
-        return df_report
-
-    def write_report_summary_to_log(
-        self, df: pd.DataFrame, sheet_name: str, sheet_tab: str
-    ):
-        """Writes the output report summary to Google Sheets."""
-
-        client = self._build_sheets_client()
-        gsheet = client.open(sheet_name)
-        sheet = gsheet.worksheet(sheet_tab)
-
-        df["test_run_timestamp"] = df.test_run_timestamp.astype("str")
-
-        sheet.append_row(
-            df.values.flatten().tolist(), value_input_option="USER_ENTERED"
-        )
-
-    def write_test_results_to_sheets(
-        self, results: pd.DataFrame, sheet_name: str, sheet_tab: str
-    ):
-        """Writes the output result details to Google Sheets."""
-
-        client = self._build_sheets_client()
-        gsheet = client.open(sheet_name)
-        sheet = gsheet.worksheet(sheet_tab)
-
-        sheet.clear()
-
-        self._dffx.dataframe_to_sheets(sheet_name, sheet_tab, results)
-
-    def append_test_results_to_sheets(
-        self, results: pd.DataFrame, sheet_name: str, sheet_tab: str
-    ):
-        """Adds results to an existing Google Sheet collection."""
-
-        client = self._build_sheets_client()
-        gsheet = client.open(sheet_name)
-        sheet = gsheet.worksheet(sheet_tab)
-
-        # Fixes an error that sometimes happens when trying to write parameters
-        # to the sheet because they are formatted as objects
-        result_list = results.values.tolist()
-        result_list = [list(map(str, row)) for row in result_list]
-
-        sheet.append_rows(result_list, value_input_option="USER_ENTERED")
-
-    def generate_report(google_sheet_name: str, google_sheet_tab: str,
-                  google_sheet_output_tab: str, google_sheet_summary_tab: str,
-                  eval_run_display_name: str = "Evals", append=False):
-        """"""
-        report_timestamp = datetime.datetime.now()
-        df_report = self.generate_report(df_results, report_timestamp)
-
-        self.write_report_summary_to_log(
-            df_report, google_sheet_name, google_sheet_summary_tab
-        )
-
-        if append:
-            self.append_test_results_to_sheets(
-                df_results, google_sheet_name, google_sheet_output_tab
-            )
-
-        else:
-            self.write_test_results_to_sheets(
-                df_results, google_sheet_name, google_sheet_output_tab
-            )
 
     def run_evals(self, df: pd.DataFrame, chunk_size: int = 300,
                   rate_limit: float = 10.0,
@@ -321,3 +253,60 @@ class NluEvals(scrapi_base.ScrapiBase):
 
         return results
 
+    def generate_report(self, df: pd.DataFrame,
+                        report_timestamp: datetime.datetime
+                        ):
+        """Generates a summary stats report for most recent NLU Eval tests."""
+        # Calc fields
+        stats = self._calculate_stats(df)
+
+        # Generate Dataframe format
+        df_report = pd.DataFrame(
+            columns=SUMMARY_SCHEMA_COLUMNS,
+            data=[
+                [
+                    report_timestamp,
+                    df.shape[0],
+                    stats.pass_count,
+                    stats.pass_rate,
+                    stats.no_match_count,
+                    stats.no_match_rate,
+                    stats.test_agent,
+                    stats.flow_display_name,
+                    stats.data_source,
+                ]
+            ],
+        )
+
+        return df_report
+
+    def write_summary_to_file(self, df: pd.DataFrame, output_file: str):
+        """Write summary output to a local CSV file."""
+        report_timestamp = datetime.datetime.now()
+        df_report = self.generate_report(df, report_timestamp)
+        df_report.to_csv(output_file, index=False)
+
+    def write_results_to_file(self, df: pd.DataFrame, output_file: str):
+        df.to_csv(output_file, index=False)
+
+    def write_results_to_sheets(self, df: pd.DataFrame, google_sheet_name: str,
+                                full_output_tab: str,
+                                summary_tab: str,
+                                append=False):
+        """Write summary and detailed output to Google Sheets."""
+        report_timestamp = datetime.datetime.now()
+        df_report = self.generate_report(df, report_timestamp)
+
+        self._write_report_summary_to_sheets(
+            df_report, google_sheet_name, summary_tab
+        )
+
+        if append:
+            self._append_test_results_to_sheets(
+                df, google_sheet_name, full_output_tab
+            )
+
+        else:
+            self._write_test_results_to_sheets(
+                df, google_sheet_name, full_output_tab
+            )
