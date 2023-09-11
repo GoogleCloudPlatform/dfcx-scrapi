@@ -205,9 +205,9 @@ class NluEvals(scrapi_base.ScrapiBase):
         # Validate input schema
         try:
             df = df[INPUT_SCHEMA_COLUMNS]
-        except KeyError:
+        except KeyError as err:
             raise UserWarning("Ensure your input data contains the following "\
-                              f"columns: {INPUT_SCHEMA_COLUMNS}")
+                              f"columns: {INPUT_SCHEMA_COLUMNS}") from err
 
         df["agent_display_name"] = self._a.get_agent(self.agent_id).display_name
 
@@ -216,7 +216,7 @@ class NluEvals(scrapi_base.ScrapiBase):
     def process_input_csv(self, input_file_path: str):
         """Process the input data in CSV format."""
         df = pd.read_csv(input_file_path)
-        df = df.fillna('')
+        df = df.fillna("")
         df = self._clean_dataframe(df)
         df["input_source"] = input_file_path
 
@@ -247,7 +247,7 @@ class NluEvals(scrapi_base.ScrapiBase):
         # When a NO_MATCH occurs, the detected_intent field will be blank
         # this replaces with NO_MATCH string, which will allow for easier stats
         # calculation downstream
-        results.detected_intent.replace({'': 'NO_MATCH'}, inplace=True)
+        results.detected_intent.replace({"": "NO_MATCH"}, inplace=True)
 
         logging.info(f"{logsx} {eval_run_display_name} COMPLETE {logsx}")
 
