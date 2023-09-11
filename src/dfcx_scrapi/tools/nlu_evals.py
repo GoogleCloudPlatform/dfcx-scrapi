@@ -141,48 +141,6 @@ class NluEvals(scrapi_base.ScrapiBase):
 
         return df
 
-    def get_flow_display_name_mapping(
-        self,
-        df: pd.DataFrame,
-        agent_id: str,
-        start_page_flow: str = "Default Start Flow",
-    ) -> pd.DataFrame:
-        """Retrieve Page/Flow Display Name Map.
-
-        If a Flow Display Name is not provided, this method will attempt to
-        infer the correct Flow Display Name basd on the provided Page Display
-        Name. If a Flow Display Name is already provided, the method will honor
-        this user input.
-        """
-
-        flows_map = self._f.get_flows_map(agent_id)
-
-        all_pages = {}
-        all_pages[
-            "START_PAGE"
-        ] = start_page_flow  # Case where source_page is the first turn
-        for flow in flows_map:
-            temp_pages = list(self._p.get_pages_map(flow, reverse=True).keys())
-            for page in temp_pages:
-                all_pages[page] = flows_map[flow]
-
-        # Fill blank flow names with the inferred one from the list of pages
-        # Otherwise use the user specified flow name
-        # NOTE: If multiple pages with the same name exist across different
-        # flows and Flow Display Name is not provided, the inferred Flow could
-        # be incorrect as the map will pick the first Flow encountered.
-        df["flow_display_name"] = df.apply(
-            lambda row: row["flow_display_name"]
-            if all([
-                row["flow_display_name"] != "",
-                row["flow_display_name"] is not None
-                ])
-            else all_pages[row["page_display_name"]],
-            axis=1,
-        )
-
-        return df
-
     def generate_report(
         self,
         results: pd.DataFrame,
