@@ -159,10 +159,9 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         percent = float(current) * 100 / total
         arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
         spaces = " " * (bar_length - len(arrow))
-        print(
-            f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent:.2f}%",
-            end="\r",
-        )
+        logging.info(
+            f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent:.2f}%"
+            )
 
     @staticmethod
     def _build_query_params_object(parameters, current_page, disable_webhook):
@@ -294,19 +293,6 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             flow_mapped["page_id"] = flow_mapped.index
 
             flow_mapped = flow_mapped.rename(columns={0: "page_display_name"})
-
-            # add start page
-            start_page_id = flow_id + "/pages/START_PAGE"
-            flow_mapped = pd.concat(
-                [
-                    flow_mapped,
-                    pd.DataFrame(
-                        columns=["page_display_name", "page_id"],
-                        data=[["START_PAGE", start_page_id]],
-                    ),
-                ]
-            )
-
             flow_mapped.insert(0, "flow_display_name", flow_map[flow_id])
             agent_pages_map = pd.concat([agent_pages_map, flow_mapped])
 
@@ -384,7 +370,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.agent_env[param] = value
 
     def checkpoint(self, msg=None, start=False):
-        """Print a checkpoint to time progress and debug bottleneck"""
+        """Log a checkpoint to time progress and debug bottleneck"""
         if start:
             start_time = time.perf_counter()
             self.start_time = start_time
@@ -393,7 +379,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         duration = round((time.perf_counter() - start_time), 2)
         if duration > 2:
             if msg:
-                print(f"{duration:0.2f}s {msg}")
+                logging.info(f"{duration:0.2f}s {msg}")
 
     @scrapi_base.api_call_counter_decorator
     def reply(

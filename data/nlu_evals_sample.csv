@@ -1,0 +1,19 @@
+flow_display_name,utterance,page_display_name,expected_intent,expected_parameters,description
+Default Start Flow,I need to get my order status,START_PAGE,head_intent.order_status,,Demo Tests
+Default Start Flow,Trying to check the status of my order,START_PAGE,head_intent.order_status,,Demo Tests
+Default Start Flow,I hate this order status agent!,START_PAGE,head_intent.order_status,,Demo Tests
+Default Start Flow,Wha'ts the point of ordering anything?,START_PAGE,NO_MATCH,,Demo Tests
+Default Start Flow,I was looking at the order of operations yesterday but couldn't figure it out,START_PAGE,NO_MATCH,,Demo Tests
+Default Start Flow,Thanks for getting my that status so quickly!,START_PAGE,head_intent.order_status,,Demo Tests
+Default Start Flow,I need to make a payment,START_PAGE,head_intent.pay_arrangement,,Demo Tests
+Default Start Flow,I'm trying to setup a new payment,START_PAGE,head_intent.pay_arrangement,,Demo Tests
+Default Start Flow,Did you get the pavement,START_PAGE,NO_MATCH,,Demo Tests
+Default Start Flow,I've been trying to pay my bill all day!,START_PAGE,head_intent.pay_arrangement,,Demo Tests
+Default Start Flow,Why can't I get my bill paid at all online?,START_PAGE,head_intent.pay_arrangement,,Demo Tests
+Default Start Flow,Why can't I get my bill paid at all online? Why can't I get my bill paid at all online?Why can't I get my bill paid at all online?Why can't I get my bill paid at all online?Why can't I get my bill paid at all online?Why can't I get my bill paid at all online?Why can't I get my bill paid at all online?Why can't I get my bill paid at all online?Why can't I get my bill paid at all online?,START_PAGE,head_intent.pay_arrangement,,Demo Tests
+Date Collection,12/13/2022,Collect Date,-,"{'collected_date':
+{ ""day"": 13, ""month"": 12, ""year"": 2022 }, 'formatted_date': '13/12/2022'}}",Demo Tests
+Proper Names Demo,Patrick Marlow,names,-,"{'people_names':
+{ ""original"": ""Patrick Marlow"", ""name"": ""Patrick Marlow"" }}",Demo Tests
+Proper Names Demo,Andrew Smith,names,,"{'people_names':
+{ ""original"": ""Andrew Smith"", ""name"": ""Andrew Smith"" }}",Demo Tests
