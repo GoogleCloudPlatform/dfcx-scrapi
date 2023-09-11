@@ -21,8 +21,6 @@ import datetime
 import pandas as pd
 import gspread
 
-from tabulate import tabulate
-
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import agents
 from dfcx_scrapi.core import flows
@@ -37,6 +35,32 @@ GLOBAL_SCOPE = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
 ]
+INPUT_SCHEMA_COLUMNS = [
+        "flow_display_name",
+        "page_display_name",
+        "utterance",
+        "expected_intent",
+        "expected_parameters",
+        "agent_display_name",
+        "data_source",
+        "input_source",
+    ]
+
+OUTPUT_SCHEMA_COLUMNS = [
+    "flow_display_name",
+    "page_display_name",
+    "utterance",
+    "expected_intent",
+    "expected_parameters",
+    "target_page",
+    "match_type",
+    "confidence",
+    "parameters_set",
+    "detected_intent",
+    "agent_display_name",
+    "data_source",
+    "input_source"
+    ]
 
 # logging config
 logging.basicConfig(
@@ -46,7 +70,7 @@ logging.basicConfig(
 )
 
 
-class EvalTesting(scrapi_base.ScrapiBase):
+class NluEvals(scrapi_base.ScrapiBase):
     """NLU Evaluation Class for Dialogflow CX Testing."""
     def __init__(
         self,
@@ -74,27 +98,9 @@ class EvalTesting(scrapi_base.ScrapiBase):
         )
         self._dffx = dataframe_functions.DataframeFunctions(creds=self.creds)
 
-    @staticmethod
-    def _create_schema(df):
-        """Reusable DataFrame schema method."""
-        df = df[
-            [
-                "flow_display_name",
-                "page_display_name",
-                "utterance",
-                "expected_intent",
-                "expected_parameters",
-                "agent_display_name",
-                "data_source",
-                "sheet_source",
-            ]
-        ]
-
-        return df
 
     def _clean_dataframe(self, df):
         """Various Dataframe cleaning functions."""
-
         df.columns = df.columns.str.lower()
         df = df.replace("Start Page", "START_PAGE")
         df.rename(
@@ -104,15 +110,10 @@ class EvalTesting(scrapi_base.ScrapiBase):
                 inplace=True,
             )
 
-        df = self._add_agent_display_name_column(df)
-        df = self._create_schema(df)
-
-        return df
-
-    def _add_agent_display_name_column(self, df):
-        """Add the Agent Display name to the output dataframe."""
-
         df["agent_display_name"] = self._a.get_agent(self.agent_id).display_name
+
+        # Validate input schema
+        df = df[INPUT_SCHEMA_COLUMNS]
 
         return df
 
@@ -121,70 +122,87 @@ class EvalTesting(scrapi_base.ScrapiBase):
 
         return client
 
-    def format_preprocessed_conversation_logs(
-        self,
-        input_format: str = "gsheet",
-        gsheet_name: str = None,
-        gsheet_tab: str = None,
-        file_path: str = None,
-    ) -> pd.DataFrame:
-        """Transforms preprocssed data to dataframe for eval testing.
-
-        The input for this method should be a Google Sheet that contains the
-        following columns:
-            flow_display_name: The name of the Dialogflow CX Flow
-            utterance: The user utterance to test
-            page_display_name: The display name of the Dialogflow CX page that
-              the eval test should start on. If not provided, START_PAGE is
-              assumed.
-            expected_intent: The Intent Display Name that is expected to trigger
-              for the given eval test.
-            expected_parameters: Optional parameters expected to be collected
-              for the given eval test.
-            source: Optional source of the eval dataa.
-
-        Args:
-            input_format: The input format of the file. ONEOF: `csv`, `gsheet`
-            gsheet_name: Title of the Google Sheet where the data lives
-            gsheet_tab: Title of the Tab on the Sheet where the data lives
-            file_path: Optional file path if `csv` format is used
-            start_page_flow: In the case of a special page like START_PAGE, when no
-              additional flow information is provided, the script will default to
-              this Flow Display Name. Default value is Default Start Flow.
-
-        Returns:
-            A formatted DataFrame ready to be used for multithreaded testing
-        """
-        if input_format == "csv":
-            if not file_path:
-                raise ValueError(
-                    "Must provide file_path with `csv` format."
-                )
-            df = pd.read_csv(
-                file_path,
-                usecols=[
-                    "flow_display_name",
-                    "utterance",
-                    "page_display_name",
-                    "expected_intent",
-                    "expected_parameters",
-                    "source"
-                ],
-            )
-
-        elif input_format == "gsheet":
-            if not gsheet_name and not gsheet_tab:
-                raise ValueError(
-                    "Must provide `gsheet_name` and `gsheet_tab` with `gsheet` "
-                        "format."
-                )
-
-            df = self._dffx.sheets_to_dataframe(gsheet_name, gsheet_tab)
-
-            df["sheet_source"] = gsheet_tab
-            df = self._clean_dataframe(df)
+    def process_input_csv(self, input_file_path: str):
+        """Process the input data in CSV format."""
+        df = pd.read_csv(input_file_path)
+        df = df.fillna('')
+        df["input_source"] = input_file_path
+        df = self._clean_dataframe(df)
 
         return df
+
+    def process_input_google_sheet(self, gsheet_name: str, gsheet_tab: str):
+        """Process the input data in Google Sheets format."""
+        df = self._dffx.sheets_to_dataframe(gsheet_name, gsheet_tab)
+        df["input_source"] = gsheet_tab
+        df = self._clean_dataframe(df)
+
+        return df
+
+    # def format_preprocessed_conversation_logs(
+    #     self,
+    #     input_format: str = "gsheet",
+    #     gsheet_name: str = None,
+    #     gsheet_tab: str = None,
+    #     file_path: str = None,
+    # ) -> pd.DataFrame:
+    #     """Transforms preprocssed data to dataframe for eval testing.
+
+    #     The input for this method should be a Google Sheet that contains the
+    #     following columns:
+    #         flow_display_name: The name of the Dialogflow CX Flow
+    #         utterance: The user utterance to test
+    #         page_display_name: The display name of the Dialogflow CX page that
+    #           the eval test should start on. If not provided, START_PAGE is
+    #           assumed.
+    #         expected_intent: The Intent Display Name that is expected to trigger
+    #           for the given eval test.
+    #         expected_parameters: Optional parameters expected to be collected
+    #           for the given eval test.
+    #         source: Optional source of the eval dataa.
+
+    #     Args:
+    #         input_format: The input format of the file. ONEOF: `csv`, `gsheet`
+    #         gsheet_name: Title of the Google Sheet where the data lives
+    #         gsheet_tab: Title of the Tab on the Sheet where the data lives
+    #         file_path: Optional file path if `csv` format is used
+    #         start_page_flow: In the case of a special page like START_PAGE, when no
+    #           additional flow information is provided, the script will default to
+    #           this Flow Display Name. Default value is Default Start Flow.
+
+    #     Returns:
+    #         A formatted DataFrame ready to be used for multithreaded testing
+    #     """
+    #     if input_format == "csv":
+    #         if not file_path:
+    #             raise ValueError(
+    #                 "Must provide file_path with `csv` format."
+    #             )
+    #         df = pd.read_csv(
+    #             file_path,
+    #             usecols=[
+    #                 "flow_display_name",
+    #                 "utterance",
+    #                 "page_display_name",
+    #                 "expected_intent",
+    #                 "expected_parameters",
+    #                 "source"
+    #             ],
+    #         )
+
+    #     elif input_format == "gsheet":
+    #         if not gsheet_name and not gsheet_tab:
+    #             raise ValueError(
+    #                 "Must provide `gsheet_name` and `gsheet_tab` with `gsheet` "
+    #                     "format."
+    #             )
+
+    #         df = self._dffx.sheets_to_dataframe(gsheet_name, gsheet_tab)
+
+    #         df["input_source"] = gsheet_tab
+    #         df = self._clean_dataframe(df)
+
+    #     return df
 
     def get_flow_display_name_mapping(
         self,
@@ -228,40 +246,6 @@ class EvalTesting(scrapi_base.ScrapiBase):
 
         return df
 
-    def run_tests(
-        self, df: pd.DataFrame, chunk_size: int = 300, rate_limit: float = 20
-    ) -> pd.DataFrame:
-        """Tests a set of utterances for intent detection against a CX Agent.
-
-        This function uses Python Threading to run tests in parallel to
-        expedite intent detection testing for Dialogflow CX agents. The default
-        quota for Text requests/min is 1200. Ref:
-          https://cloud.google.com/dialogflow/quotas#table
-        """
-
-        results = self._dc.run_intent_detection(
-            test_set=df, chunk_size=chunk_size, rate_limit=rate_limit
-        )
-
-        if "agent_display_name" in df.columns:
-            temp_column = results.pop("agent_display_name")
-            results.insert(len(results.columns), "agent_display_name", temp_column)
-
-        if "data_source" in df.columns:
-            temp_column = results.pop("data_source")
-            results.insert(len(results.columns), "data_source", temp_column)
-
-        if "sheet_source" in df.columns:
-            temp_column = results.pop("sheet_source")
-            results.insert(len(results.columns), "sheet_source", temp_column)
-
-        # When a NO_MATCH occurs, the detected_intent field will be blank
-        # this replaces with NO_MATCH string, which will allow for easier stats
-        # calculation downstream
-        results.detected_intent.replace({'': 'NO_MATCH'}, inplace=True)
-
-        return results
-
     def generate_report(
         self,
         results: pd.DataFrame,
@@ -295,7 +279,7 @@ class EvalTesting(scrapi_base.ScrapiBase):
         timestamp = report_timestamp
         test_agent = results.agent_display_name.unique()[0]
         flow_display_name = results.flow_display_name.unique()[0]
-        data_source = results.sheet_source.unique()[0]
+        data_source = results.input_source.unique()[0]
 
         # Get Failure list of Utterance / Page pairs
         failure_list = []
@@ -398,21 +382,11 @@ class EvalTesting(scrapi_base.ScrapiBase):
 
         sheet.append_rows(result_list, value_input_option="USER_ENTERED")
 
-    def run_evals(self, google_sheet_name: str, google_sheet_tab: str,
+    def generate_report(google_sheet_name: str, google_sheet_tab: str,
                   google_sheet_output_tab: str, google_sheet_summary_tab: str,
                   eval_run_display_name: str = "Evals", append=False):
-        """Run the full Eval dataset."""
-        logsx = "-" * 10
-
-        logging.info(f"{logsx} STARTING {eval_run_display_name} {logsx}")
-
+        """"""
         report_timestamp = datetime.datetime.now()
-
-        df = self.format_preprocessed_conversation_logs(
-            "gsheet", google_sheet_name, google_sheet_tab
-        )
-        df = self.get_flow_display_name_mapping(df, self.agent_id)
-        df_results = self.run_tests(df)
         df_report = self.generate_report(df_results, report_timestamp)
 
         self.write_report_summary_to_log(
@@ -428,6 +402,27 @@ class EvalTesting(scrapi_base.ScrapiBase):
             self.write_test_results_to_sheets(
                 df_results, google_sheet_name, google_sheet_output_tab
             )
+
+    def run_evals(self, df: pd.DataFrame, chunk_size: int = 300,
+                  rate_limit: float = 10.0,
+                  eval_run_display_name: str = "Evals"):
+        """Run the full Eval dataset."""
+        logsx = "-" * 10
+
+        logging.info(f"{logsx} STARTING {eval_run_display_name} {logsx}")
+        results = self._dc.run_intent_detection(
+            test_set=df, chunk_size=chunk_size, rate_limit=rate_limit
+        )
+
+        # Reorder Columns
+        results = results.reindex(columns=OUTPUT_SCHEMA_COLUMNS)
+
+        # When a NO_MATCH occurs, the detected_intent field will be blank
+        # this replaces with NO_MATCH string, which will allow for easier stats
+        # calculation downstream
+        results.detected_intent.replace({'': 'NO_MATCH'}, inplace=True)
+
         logging.info(f"{logsx} {eval_run_display_name} COMPLETE {logsx}")
 
-        return df_results
+        return results
+
