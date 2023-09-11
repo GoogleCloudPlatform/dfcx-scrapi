@@ -125,7 +125,7 @@ class Agents(scrapi_base.ScrapiBase):
     def process_agent(self, agent_id: str, gcs_bucket_uri: str,
                       environment_display_name: str = None):
         """Process the specified Agent for offline data gathering."""
-        agent_local_path = "tmp/agent"
+        agent_local_path = "/tmp/agent"
         self.prep_local_dir(agent_local_path)
         self.export_agent(agent_id, gcs_bucket_uri, environment_display_name)
         self.download_and_extract(agent_local_path, gcs_bucket_uri)
