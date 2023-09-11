@@ -1,4 +1,4 @@
-flow_display_name,utterance,page_display_name,expected_intent,expected_parameters,source
+flow_display_name,utterance,page_display_name,expected_intent,expected_parameters,description
 Default Start Flow,I need to get my order status,START_PAGE,head_intent.order_status,,Demo Tests
 Default Start Flow,Trying to check the status of my order,START_PAGE,head_intent.order_status,,Demo Tests
 Default Start Flow,I hate this order status agent!,START_PAGE,head_intent.order_status,,Demo Tests
