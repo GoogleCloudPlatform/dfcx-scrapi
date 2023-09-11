@@ -41,9 +41,7 @@ INPUT_SCHEMA_COLUMNS = [
         "utterance",
         "expected_intent",
         "expected_parameters",
-        "agent_display_name",
-        "data_source",
-        "input_source",
+        "description",
     ]
 
 OUTPUT_SCHEMA_COLUMNS = [
@@ -58,7 +56,7 @@ OUTPUT_SCHEMA_COLUMNS = [
     "parameters_set",
     "detected_intent",
     "agent_display_name",
-    "data_source",
+    "description",
     "input_source"
     ]
 
@@ -105,15 +103,19 @@ class NluEvals(scrapi_base.ScrapiBase):
         df = df.replace("Start Page", "START_PAGE")
         df.rename(
                 columns={
-                    "source": "data_source",
+                    "source": "description",
                 },
                 inplace=True,
             )
 
-        df["agent_display_name"] = self._a.get_agent(self.agent_id).display_name
-
         # Validate input schema
-        df = df[INPUT_SCHEMA_COLUMNS]
+        try:
+            df = df[INPUT_SCHEMA_COLUMNS]
+        except KeyError:
+            raise UserWarning("Ensure your input data contains the following "\
+                              f"columns: {INPUT_SCHEMA_COLUMNS}")
+
+        df["agent_display_name"] = self._a.get_agent(self.agent_id).display_name
 
         return df
 
@@ -126,83 +128,18 @@ class NluEvals(scrapi_base.ScrapiBase):
         """Process the input data in CSV format."""
         df = pd.read_csv(input_file_path)
         df = df.fillna('')
-        df["input_source"] = input_file_path
         df = self._clean_dataframe(df)
+        df["input_source"] = input_file_path
 
         return df
 
     def process_input_google_sheet(self, gsheet_name: str, gsheet_tab: str):
         """Process the input data in Google Sheets format."""
         df = self._dffx.sheets_to_dataframe(gsheet_name, gsheet_tab)
-        df["input_source"] = gsheet_tab
         df = self._clean_dataframe(df)
+        df["input_source"] = gsheet_tab
 
         return df
-
-    # def format_preprocessed_conversation_logs(
-    #     self,
-    #     input_format: str = "gsheet",
-    #     gsheet_name: str = None,
-    #     gsheet_tab: str = None,
-    #     file_path: str = None,
-    # ) -> pd.DataFrame:
-    #     """Transforms preprocssed data to dataframe for eval testing.
-
-    #     The input for this method should be a Google Sheet that contains the
-    #     following columns:
-    #         flow_display_name: The name of the Dialogflow CX Flow
-    #         utterance: The user utterance to test
-    #         page_display_name: The display name of the Dialogflow CX page that
-    #           the eval test should start on. If not provided, START_PAGE is
-    #           assumed.
-    #         expected_intent: The Intent Display Name that is expected to trigger
-    #           for the given eval test.
-    #         expected_parameters: Optional parameters expected to be collected
-    #           for the given eval test.
-    #         source: Optional source of the eval dataa.
-
-    #     Args:
-    #         input_format: The input format of the file. ONEOF: `csv`, `gsheet`
-    #         gsheet_name: Title of the Google Sheet where the data lives
-    #         gsheet_tab: Title of the Tab on the Sheet where the data lives
-    #         file_path: Optional file path if `csv` format is used
-    #         start_page_flow: In the case of a special page like START_PAGE, when no
-    #           additional flow information is provided, the script will default to
-    #           this Flow Display Name. Default value is Default Start Flow.
-
-    #     Returns:
-    #         A formatted DataFrame ready to be used for multithreaded testing
-    #     """
-    #     if input_format == "csv":
-    #         if not file_path:
-    #             raise ValueError(
-    #                 "Must provide file_path with `csv` format."
-    #             )
-    #         df = pd.read_csv(
-    #             file_path,
-    #             usecols=[
-    #                 "flow_display_name",
-    #                 "utterance",
-    #                 "page_display_name",
-    #                 "expected_intent",
-    #                 "expected_parameters",
-    #                 "source"
-    #             ],
-    #         )
-
-    #     elif input_format == "gsheet":
-    #         if not gsheet_name and not gsheet_tab:
-    #             raise ValueError(
-    #                 "Must provide `gsheet_name` and `gsheet_tab` with `gsheet` "
-    #                     "format."
-    #             )
-
-    #         df = self._dffx.sheets_to_dataframe(gsheet_name, gsheet_tab)
-
-    #         df["input_source"] = gsheet_tab
-    #         df = self._clean_dataframe(df)
-
-    #     return df
 
     def get_flow_display_name_mapping(
         self,
