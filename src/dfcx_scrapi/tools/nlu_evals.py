@@ -69,7 +69,6 @@ SUMMARY_SCHEMA_COLUMNS = [
     "no_match_count",
     "no_match_rate",
     "test_agent",
-    "flow_display_name",
     "data_source"
     ]
 
@@ -89,7 +88,6 @@ class Stats:
     pass_count: int = 0
     pass_rate: float = 0.0
     test_agent: str = None
-    flow_display_name: str = None
     data_source: str = None
 
 
@@ -145,7 +143,6 @@ class NluEvals(scrapi_base.ScrapiBase):
         )
         stats.pass_rate = stats.pass_count / df.shape[0]
         stats.test_agent = df.agent_display_name.unique()[0]
-        stats.flow_display_name = df.flow_display_name.unique()[0]
         stats.data_source = df.input_source.unique()[0]
 
         return stats
@@ -272,7 +269,6 @@ class NluEvals(scrapi_base.ScrapiBase):
                     stats.no_match_count,
                     stats.no_match_rate,
                     stats.test_agent,
-                    stats.flow_display_name,
                     stats.data_source,
                 ]
             ],
