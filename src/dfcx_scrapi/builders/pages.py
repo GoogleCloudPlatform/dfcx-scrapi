@@ -18,11 +18,14 @@ import logging
 from dataclasses import dataclass
 from typing import List, Union
 
+import numpy as np
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Page
 from google.cloud.dialogflowcx_v3beta1.types import Form
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.routes import TransitionRouteBuilder
 from dfcx_scrapi.builders.routes import EventHandlerBuilder
@@ -567,6 +570,142 @@ class PageBuilder(BuildersCommon):
 
         return self.proto_obj
 
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _create_form_params_df(
+            self,
+            form_parameter_list: List[Form.Parameter],
+            mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Create a DataFrame from the form parameters of a page.
+
+            Args:
+              params (List[Form.Parameter]):
+                A list of page's form parameters.
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+
+            Returns:
+                A pandas DataFrame
+            """
+            cols_map = {
+                "basic": [
+                    "parameter_display_name", "parameter_entity_type",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "parameter_display_name", "parameter_entity_type",
+                    "parameter_is_required", "parameter_is_list",
+                    "parameter_is_redact", "parameter_default_value",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ]
+            }
+            cols = cols_map[mode]
+            if not form_parameter_list:
+                return pd.DataFrame(columns=cols)
+
+            out_df = pd.DataFrame(columns=cols)
+            for param in form_parameter_list:
+
+                if mode == "basic":
+                    param_df = pd.DataFrame({
+                        "parameter_display_name": [str(param.display_name)],
+                        "parameter_entity_type": [str(param.entity_type)],
+                    })
+                elif mode == "advanced":
+                    required = bool(param.required)
+                    tmp_val = str(param.default_value)
+                    default_val = np.nan if required else tmp_val
+                    param_df = pd.DataFrame({
+                        "parameter_display_name": [str(param.display_name)],
+                        "parameter_entity_type": [str(param.entity_type)],
+                        "parameter_is_required": [required],
+                        "parameter_is_list": [bool(param.is_list)],
+                        "parameter_is_redact": [bool(param.redact)],
+                        "parameter_default_value": [default_val],
+                    })
+
+                # Initial Prompt Fulfillment
+                prompt_ff = param.fill_behavior.initial_prompt_fulfillment
+                prompt_ff_builder = FulfillmentBuilder(prompt_ff)
+                prompt_ff_df = prompt_ff_builder.to_dataframe(mode)
+                tmp_df = pd.concat([param_df, prompt_ff_df], axis=1)
+
+                out_df = pd.concat([out_df, tmp_df], ignore_index=True)
+
+                # Reprompt Event Handlers
+                ehs_df = pd.DataFrame()
+                for eh in param.fill_behavior.reprompt_event_handlers:
+                    ehb = EventHandlerBuilder(eh)
+                    ehb_df = ehb.to_dataframe(mode)
+                    ehs_df = pd.concat([ehs_df, ehb_df], ignore_index=True)
+
+                tmp_param_df = pd.concat(
+                    [param_df] * len(ehs_df), ignore_index=True)
+                param_eh_df = pd.concat([tmp_param_df, ehs_df], axis=1)
+                out_df = pd.concat([out_df, param_eh_df], ignore_index=True)
+
+            return out_df
+
+
+        def proto_to_dataframe(
+            self, obj: Page, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a Page protobuf object to pandas Dataframe.
+
+            Args:
+              obj (Page):
+                Page protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode not in ["basic", "advanced"]:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+            routes_df = pd.DataFrame(
+                columns=self._dataframes_map["TransitionRoute"][mode]
+            )
+            for route in obj.transition_routes:
+                trb = TransitionRouteBuilder(route)
+                trb_df = trb.to_dataframe(mode)
+                routes_df = pd.concat([routes_df, trb_df], ignore_index=True)
+
+            ehs_df = pd.DataFrame(
+                columns=self._dataframes_map["EventHandler"][mode]
+            )
+            for eh in obj.event_handlers:
+                ehb = EventHandlerBuilder(eh)
+                ehb_df = ehb.to_dataframe(mode)
+                ehs_df = pd.concat([ehs_df, ehb_df], ignore_index=True)
+
+            trgs_df = pd.DataFrame({
+                "route_groups": list(obj.transition_route_groups)
+            })
+
+            entry_fb = FulfillmentBuilder(obj.entry_fulfillment)
+            entry_fb_df = entry_fb.to_dataframe(mode)
+            parameters_df = self._create_form_params_df(
+                form_parameter_list=obj.form.parameters, mode=mode
+            )
+
+            # Concatenate `routes_df` and `ehs_df` and add the rest of the info
+            page_df = pd.concat(
+                [entry_fb_df, parameters_df, routes_df, ehs_df, trgs_df],
+                axis=0, ignore_index=True
+            )
+            page_df["name"] = str(obj.name)
+            page_df["display_name"] = str(obj.display_name)
+            page_df["flow_id"] = str(obj.name).split("/pages", maxsplit=1)[0]
+
+            return page_df[self._dataframes_map["Page"][mode]]
 
 
 @dataclass
