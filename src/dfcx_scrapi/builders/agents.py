@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import logging
-from typing import List
+from typing import List, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import Agent
 from google.cloud.dialogflowcx_v3beta1.types import SpeechToTextSettings
@@ -34,7 +34,6 @@ class AgentBuilder(BuildersCommon):
 
     _proto_type = Agent
     _proto_type_str = "Agent"
-
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
@@ -60,13 +59,60 @@ class AgentBuilder(BuildersCommon):
             f" {logs.enable_interaction_logging}"
             f"\nsecurity_settings: {self.proto_obj.security_settings}")
 
-
     def show_agent_info(self):
         """Show the proto_obj information."""
         self._check_proto_obj_attr_exist()
 
         print(self)
 
+    def create_new_agent(
+        self,
+        display_name: str,
+        time_zone: str,
+        default_language_code: str = "en",
+        description: str = None,
+        avatar_uri: str = None,
+        overwrite: bool = False) -> Agent:
+        """Creates a new Agent.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the
+            agent, unique within the location.
+          time_zone (str):
+            Required. The time zone of the agent from the
+            `time zone database <https://www.iana.org/time-zones>`.
+            e.g., America/New_York, Europe/Paris.
+          default_language_code (str):
+            Required. Immutable. The default language of the agent as a
+            language tag. See `Language Support
+              <https://cloud.google.com/dialogflow/cx/docs/reference/language>`
+            for a list of the currently supported language codes. This
+            field cannot be updated.
+          description (str):
+            The description of the agent. The maximum
+            length is 500 characters. If exceeded, the
+            request is rejected.
+          avatar_uri (str):
+            The URI of the agent's avatar. Avatars are used throughout
+            the Dialogflow console and in the self-hosted `Web Demo
+              <https://cloud.google.com/dialogflow/docs/integrations/web-demo>`
+            integration.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains an Agent.
+
+        Returns:
+          An Agent object stored in proto_obj
+        """
+        return self.create_new_proto_obj(
+            display_name=display_name,
+            time_zone=time_zone,
+            default_language_code=default_language_code,
+            description=description,
+            avatar_uri=avatar_uri,
+            overwrite=overwrite,
+        )
 
     def create_new_proto_obj(
         self,
@@ -75,9 +121,8 @@ class AgentBuilder(BuildersCommon):
         default_language_code: str = "en",
         description: str = None,
         avatar_uri: str = None,
-        overwrite: bool = False
-    ) -> Agent:
-        """Create a new Agent.
+        overwrite: bool = False) -> Agent:
+        """Creates a new Agent.
 
         Args:
           display_name (str):
@@ -131,13 +176,11 @@ class AgentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def language_and_speech_settings(
         self,
         enable_speech_adaptation: bool = False,
         enable_spell_correction: bool = False,
-        supported_language_codes: List[str] = None,
-    ) -> Agent:
+        supported_language_codes: Union[str, List[str]] = None,) -> Agent:
         """Change the language and speech settings.
 
         Args:
@@ -147,8 +190,8 @@ class AgentBuilder(BuildersCommon):
           enable_spell_correction (bool):
             Indicates if automatic spell correction is
             enabled in detect intent requests.
-          supported_language_codes (List[str]):
-            The list of all languages supported by the agent
+          supported_language_codes (str | List[str]):
+            A single language or a list of all languages supported by the agent
             (except for the ``default_language_code``).
 
         Returns:
@@ -163,40 +206,32 @@ class AgentBuilder(BuildersCommon):
         if isinstance(enable_spell_correction, bool):
             self.proto_obj.enable_spell_correction = enable_spell_correction
         if supported_language_codes:
-            if (isinstance(supported_language_codes, list) and
-                all(
-                    (isinstance(lang, str) for lang in supported_language_codes)
-                )):
-                the_obj = self.proto_obj
-                the_obj.supported_language_codes = supported_language_codes
-            else:
-                raise ValueError(
-                    "supported_language_codes should be a list of strings."
-                )
+            self._is_type_or_list_of_types(
+                supported_language_codes, str, "supported_language_codes")
+            if not isinstance(supported_language_codes, list):
+                supported_language_codes = [supported_language_codes]
+
+            self.proto_obj.supported_language_codes = supported_language_codes
 
         return self.proto_obj
-
 
     def security_and_logging_settings(
         self,
         enable_stackdriver_logging: bool = False,
         enable_interaction_logging: bool = False,
-        security_settings: str = None,
-    ) -> Agent:
-        """ Change the security and logging settings.
+        security_settings: str = None,) -> Agent:
+        """Change the security and logging settings.
 
         Args:
           enable_stackdriver_logging (bool):
-            If true, StackDriver logging is currently
-            enabled.
+            If true, StackDriver logging will be enabled.
           enable_interaction_logging (bool):
-            If true, DF Interaction logging is currently
-            enabled.
+            If true, DF Interaction logging will be enabled.
           security_settings (str):
             Name of the
             ``[SecuritySettings]
               [google.cloud.dialogflow.cx.v3beta1.SecuritySettings]``
-            reference for the agent.Format:
+            reference for the agent. Format:
             ``projects/<Project ID>/locations/<Location ID>/
               securitySettings/<Security Settings ID>``.
 
@@ -214,5 +249,3 @@ class AgentBuilder(BuildersCommon):
             self.proto_obj.security_settings = security_settings
 
         return self.proto_obj
-
-
