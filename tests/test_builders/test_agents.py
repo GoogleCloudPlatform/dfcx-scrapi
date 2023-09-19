@@ -14,16 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import pytest
 
 from dfcx_scrapi.builders.agents import Agent
 from dfcx_scrapi.builders.agents import AgentBuilder
 
 
-def test_create_new_agent():
+def test_create_new_proto():
     ab = AgentBuilder()
     ab.create_new_proto_obj(
+        display_name="MyAgent", time_zone="America/New_York")
+
+    assert isinstance(ab.proto_obj, Agent)
+    assert ab.proto_obj.display_name == "MyAgent"
+    assert ab.proto_obj.time_zone == "America/New_York"
+    assert ab.proto_obj.default_language_code == "en"
+
+def test_create_new_agent():
+    ab = AgentBuilder()
+    ab.create_new_agent(
         display_name="MyAgent", time_zone="America/New_York")
 
     assert isinstance(ab.proto_obj, Agent)
@@ -72,3 +81,33 @@ def test_set_lang_and_speech_settings(default_agent_creator_fixture):
     for lang in supported_lang_codes:
         assert lang in ab.proto_obj.supported_language_codes
 
+def test_security_and_logging_settings(default_agent_creator_fixture):
+    security_settings_id = (
+        "projects/sample_project_id/locations/sample_location_id"
+        "/securitySettings/sample_security_settings_id")
+    ab = AgentBuilder(default_agent_creator_fixture)
+    ab.security_and_logging_settings(
+        enable_interaction_logging=True,
+        enable_stackdriver_logging=True,
+        security_settings=security_settings_id)
+    # assert ab.proto_obj.enable_stackdriver_logging is True
+
+    agent_log_settings = ab.proto_obj.advanced_settings.logging_settings
+    assert agent_log_settings.enable_stackdriver_logging is True
+    assert agent_log_settings.enable_interaction_logging is True
+    assert ab.proto_obj.security_settings == security_settings_id
+
+@pytest.mark.xfail(
+    reason=("`types.AdvancedSettings.LoggingSettings`"
+            "has been used instead according to the documentaion.")
+)
+def test_security_and_logging_settings_should_fail(
+    default_agent_creator_fixture
+):
+    ab = AgentBuilder(default_agent_creator_fixture)
+    ab.security_and_logging_settings(enable_stackdriver_logging=True)
+    assert ab.proto_obj.enable_stackdriver_logging is True
+
+def test_agent_str(default_agent_creator_fixture):
+    ab = AgentBuilder(default_agent_creator_fixture)
+    assert str(ab).startswith("display_name: MyAgent")
