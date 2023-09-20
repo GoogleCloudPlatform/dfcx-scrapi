@@ -20,13 +20,48 @@ from google.cloud.dialogflowcx_v3beta1 import types
 
 
 @pytest.fixture
-def default_agent_creator_fixture():
+def default_agent_fixture():
     return types.Agent(
         display_name="MyAgent", time_zone="America/New_York",
         default_language_code="en",)
 
 @pytest.fixture
-def customized_agent_creator_fixture():
+def customized_agent_fixture():
     return types.Agent(
         display_name="CustomizedAgent", time_zone="Europe/Paris", locked=False,
         default_language_code="es", description="This is the description",)
+
+
+@pytest.fixture
+def create_intent_fixture():
+    intent = types.Intent(
+        display_name="MyIntent", priority=30000, is_fallback=False,
+        description="The descriptoin of the intent",
+        labels={"label1": "label1", "sys-head": "sys-head", "label2": "l2"})
+
+    # Add Parameters
+    sys_ent = "projects/-/locations/-/agents/-/entityTypes/sys.date"
+    custom_ent = (
+        "projects/sample_project_id/locations/sample_location_id"
+        "/agents/sample_agent_id/entityTypes/sample_entity_type_id")
+    intent.parameters = [
+        types.Intent.Parameter(
+            id="date_id", entity_type=sys_ent, is_list=False, redact=True),
+        types.Intent.Parameter(
+            id="some_id", entity_type=custom_ent, is_list=False, redact=True),
+    ]
+    # Add training phrases
+    tp_cls = types.Intent.TrainingPhrase
+    intent.training_phrases = [
+        tp_cls(parts=[tp_cls.Part(text="first training phrase")]),
+        tp_cls(parts=[tp_cls.Part(text="second training phrase")]),
+        tp_cls(parts=[tp_cls.Part(text="third training phrase")]),
+        tp_cls(parts=[
+            tp_cls.Part(text="training phrase with date "),
+            tp_cls.Part(text="Jan 1 2023", parameter_id="date_id")]),
+        tp_cls(parts=[
+            tp_cls.Part(text="training phrase with custom entity "),
+            tp_cls.Part(text="Some Entity", parameter_id="some_id")]),
+    ]
+
+    return intent

@@ -40,17 +40,20 @@ def test_create_new_agent():
     assert ab.proto_obj.time_zone == "America/New_York"
     assert ab.proto_obj.default_language_code == "en"
 
-def test_load_agent(default_agent_creator_fixture):
-    # a = Agent(display_name="MyAgent", time_zone="America/New_York")
-    ab = AgentBuilder(default_agent_creator_fixture)
+def test_load_agent(default_agent_fixture):
+    ab = AgentBuilder(default_agent_fixture)
 
     assert isinstance(ab.proto_obj, Agent)
-    assert ab.proto_obj.display_name == "MyAgent"
-    assert ab.proto_obj.time_zone == "America/New_York"
-    assert ab.proto_obj.default_language_code == "en"
+    assert ab.proto_obj == default_agent_fixture
 
-def test_overwrite(default_agent_creator_fixture):
-    ab = AgentBuilder(default_agent_creator_fixture)
+    ab2 = AgentBuilder()
+    ab2.load_proto_obj(default_agent_fixture)
+    assert isinstance(ab2.proto_obj, Agent)
+    assert ab2.proto_obj == default_agent_fixture
+
+
+def test_overwrite(default_agent_fixture):
+    ab = AgentBuilder(default_agent_fixture)
     with pytest.raises(UserWarning):
         ab.create_new_proto_obj(
             display_name="test_name", time_zone="Europe/Paris")
@@ -59,10 +62,10 @@ def test_overwrite(default_agent_creator_fixture):
     ab2.create_new_proto_obj(
         display_name="MyAgent", time_zone="America/New_York")
     with pytest.raises(UserWarning):
-        ab2.load_proto_obj(default_agent_creator_fixture)
+        ab2.load_proto_obj(default_agent_fixture)
 
-def test_set_lang_and_speech_settings(default_agent_creator_fixture):
-    ab = AgentBuilder(default_agent_creator_fixture)
+def test_set_lang_and_speech_settings(default_agent_fixture):
+    ab = AgentBuilder(default_agent_fixture)
     assert ab.proto_obj.enable_spell_correction is False
     spch_adapt = ab.proto_obj.speech_to_text_settings.enable_speech_adaptation
     assert spch_adapt is False
@@ -81,11 +84,11 @@ def test_set_lang_and_speech_settings(default_agent_creator_fixture):
     for lang in supported_lang_codes:
         assert lang in ab.proto_obj.supported_language_codes
 
-def test_security_and_logging_settings(default_agent_creator_fixture):
+def test_security_and_logging_settings(default_agent_fixture):
     security_settings_id = (
         "projects/sample_project_id/locations/sample_location_id"
         "/securitySettings/sample_security_settings_id")
-    ab = AgentBuilder(default_agent_creator_fixture)
+    ab = AgentBuilder(default_agent_fixture)
     ab.security_and_logging_settings(
         enable_interaction_logging=True,
         enable_stackdriver_logging=True,
@@ -102,12 +105,12 @@ def test_security_and_logging_settings(default_agent_creator_fixture):
             "has been used instead according to the documentaion.")
 )
 def test_security_and_logging_settings_should_fail(
-    default_agent_creator_fixture
+    default_agent_fixture
 ):
-    ab = AgentBuilder(default_agent_creator_fixture)
+    ab = AgentBuilder(default_agent_fixture)
     ab.security_and_logging_settings(enable_stackdriver_logging=True)
     assert ab.proto_obj.enable_stackdriver_logging is True
 
-def test_agent_str(default_agent_creator_fixture):
-    ab = AgentBuilder(default_agent_creator_fixture)
+def test_agent_str(default_agent_fixture):
+    ab = AgentBuilder(default_agent_fixture)
     assert str(ab).startswith("display_name: MyAgent")
