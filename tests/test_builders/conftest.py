@@ -33,26 +33,39 @@ def customized_agent_fixture():
 
 
 @pytest.fixture
-def create_intent_fixture():
+def empty_intent():
     intent = types.Intent(
         display_name="MyIntent", priority=30000, is_fallback=False,
-        description="The descriptoin of the intent",
-        labels={"label1": "label1", "sys-head": "sys-head", "label2": "l2"})
+        description="The descriptoin of the intent")
 
-    # Add Parameters
+    return intent
+
+@pytest.fixture
+def intent_with_parameters(empty_intent):
     sys_ent = "projects/-/locations/-/agents/-/entityTypes/sys.date"
     custom_ent = (
         "projects/sample_project_id/locations/sample_location_id"
         "/agents/sample_agent_id/entityTypes/sample_entity_type_id")
-    intent.parameters = [
+    empty_intent.parameters = [
         types.Intent.Parameter(
             id="date_id", entity_type=sys_ent, is_list=False, redact=True),
         types.Intent.Parameter(
-            id="some_id", entity_type=custom_ent, is_list=False, redact=True),
+            id="some_id", entity_type=custom_ent, is_list=False, redact=False),
     ]
-    # Add training phrases
+    return empty_intent
+
+@pytest.fixture
+def intent_with_labels(empty_intent):
+    empty_intent.labels = {
+        "label1": "label1", "sys-head": "sys-head", "label2": "l2"
+    }
+
+    return empty_intent
+
+@pytest.fixture
+def full_intent(intent_with_parameters):
     tp_cls = types.Intent.TrainingPhrase
-    intent.training_phrases = [
+    intent_with_parameters.training_phrases = [
         tp_cls(parts=[tp_cls.Part(text="first training phrase")]),
         tp_cls(parts=[tp_cls.Part(text="second training phrase")]),
         tp_cls(parts=[tp_cls.Part(text="third training phrase")]),
@@ -63,5 +76,4 @@ def create_intent_fixture():
             tp_cls.Part(text="training phrase with custom entity "),
             tp_cls.Part(text="Some Entity", parameter_id="some_id")]),
     ]
-
-    return intent
+    return intent_with_parameters
