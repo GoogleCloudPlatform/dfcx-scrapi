@@ -40,7 +40,21 @@ def test_create_new_proto_obj2(empty_intent):
 
     assert ib.proto_obj == empty_intent
 
-def test_load_intent(empty_intent):
+    # Create a new proto when there is an existing one
+    ib2 = IntentBuilder(empty_intent)
+    with pytest.raises(UserWarning):
+        ib2.create_new_proto_obj(
+            display_name="MyIntent", priority=30000, is_fallback=False,
+            description="The descriptoin of the intent")
+
+    # Overwrite check
+    ib2 = IntentBuilder(empty_intent)
+    ib2.create_new_proto_obj(
+        display_name="MyIntent", priority=30000, is_fallback=False,
+        description="The descriptoin of the intent", overwrite=True)
+    assert ib2.proto_obj == empty_intent
+
+def test_load_intent(empty_intent, intent_with_labels, default_agent_fixture):
     ib = IntentBuilder(empty_intent)
     assert isinstance(ib.proto_obj, Intent)
     assert ib.proto_obj == empty_intent
@@ -49,6 +63,17 @@ def test_load_intent(empty_intent):
     ib2.load_proto_obj(empty_intent)
     assert isinstance(ib2.proto_obj, Intent)
     assert ib2.proto_obj == empty_intent
+
+    # Overwrite check
+    with pytest.raises(UserWarning):
+        ib.load_proto_obj(intent_with_labels)
+
+    ib.load_proto_obj(obj=intent_with_labels, overwrite=True)
+    assert ib.proto_obj == intent_with_labels
+
+    # Load wrong obj type
+    with pytest.raises(ValueError):
+        IntentBuilder(default_agent_fixture)
 
 def test_add_parameter(empty_intent, intent_with_parameters):
     ib = IntentBuilder(empty_intent)
@@ -66,6 +91,13 @@ def test_add_parameter(empty_intent, intent_with_parameters):
     assert ib.proto_obj.parameters == intent_with_parameters.parameters
     assert ib.proto_obj == intent_with_parameters
 
+    # Type checking test
+    with pytest.raises(ValueError):
+        ib.add_parameter(parameter_id=123, entity_type="some_ent")
+
+    with pytest.raises(ValueError):
+        ib.add_parameter(parameter_id="123", entity_type=123)
+
 def test_add_label(empty_intent, intent_with_labels):
     ib = IntentBuilder(empty_intent)
     ib.add_label("sys-head")
@@ -73,6 +105,21 @@ def test_add_label(empty_intent, intent_with_labels):
     ib.add_label({"label2": "l2"})
 
     assert ib.proto_obj.labels == intent_with_labels.labels
+
+    # Check constraints
+    with pytest.raises(ValueError):
+        ib.add_label("LABEL1")
+    with pytest.raises(ValueError):
+        ib.add_label("-label")
+    with pytest.raises(ValueError):
+        ib.add_label("label!")
+    with pytest.raises(ValueError):
+        ib.add_label("sys-label")
+    with pytest.raises(ValueError):
+        long_label = (
+            "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcd"
+            "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcd")
+        ib.add_label(long_label)
 
 def test_add_training_phrase(intent_with_parameters, full_intent):
     ib = IntentBuilder(intent_with_parameters)

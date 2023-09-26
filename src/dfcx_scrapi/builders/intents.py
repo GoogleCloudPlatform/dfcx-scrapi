@@ -466,7 +466,7 @@ class IntentBuilder(BuildersCommon):
         """
         self._check_proto_obj_attr_exist()
 
-        if not (isinstance(parameter_id, str) or isinstance(entity_type, str)):
+        if not (isinstance(parameter_id, str) and isinstance(entity_type, str)):
             raise ValueError(
                 "parameter_id and entity_type should be string."
             )
