@@ -50,7 +50,7 @@ class ParametersCheckerUtil(scrapi_base.ScrapiBase):
                 
         return entity_type
     
-    def _get_tags_in_intents(self) -> pd.DataFrame:
+    def get_tags_in_intents(self) -> pd.DataFrame:
         """Get all the tag_texts that are referenced to the specific parameter id & entity type id in the training phrases in the intents
 
         Returns:
@@ -102,7 +102,7 @@ class ParametersCheckerUtil(scrapi_base.ScrapiBase):
 
         return df
       
-    def _get_entity_types_df(self) -> pd.DataFrame:
+    def get_entity_types_df(self) -> pd.DataFrame:
         """Get all the entity types and store all the entity values and synonyms in one row
         
         Returns:
@@ -179,7 +179,6 @@ class ParametersCheckerUtil(scrapi_base.ScrapiBase):
                     else: 
                         is_nested_entity_type = False
                         break
-              
                 if new_entity_values and is_nested_entity_type: 
                     df.loc[idx, 'entity_values'] = new_entity_values
                     df.loc[idx, 'synonyms'] = new_synonyms
@@ -207,8 +206,8 @@ class ParametersCheckerUtil(scrapi_base.ScrapiBase):
             synonyms
             is_hidden
         """
-        tags_intents = self._get_tags_in_intents()
-        entity_types_mapper = self._get_entity_types_df()
+        tags_intents = self.get_tags_in_intents()
+        entity_types_mapper = self.get_entity_types_df()
         entity_types_mapper = self._unpack_nested_entity_types(entity_types_mapper, 'KIND_MAP')
         hidden_entities = pd.merge(tags_intents, entity_types_mapper, on = 'entity_type_id')
         hidden_entities = hidden_entities.drop(hidden_entities[~hidden_entities.kind.str.contains('KIND_MAP')].index)
@@ -218,13 +217,11 @@ class ParametersCheckerUtil(scrapi_base.ScrapiBase):
         for idx, row in hidden_entities.iterrows():
             synonyms = row['synonyms']
             tag_text = row['tag_text']
-    
             for synonym in synonyms: 
                 synonym = synonym.lower()
                 tag_text = tag_text.lower()
                 if [sub_synonym for sub_synonym in synonym if sub_synonym.isalnum()] == [sub_tag_text for sub_tag_text in tag_text if sub_tag_text.isalnum()]: 
                     hidden_entities.loc[idx, 'is_hidden'] = 'NO'
-
             if pd.isna(hidden_entities.loc[idx, 'is_hidden']): 
                 hidden_entities.loc[idx, 'is_hidden'] = 'YES'
 
@@ -248,7 +245,7 @@ class ParametersCheckerUtil(scrapi_base.ScrapiBase):
             is_hidden
         """
         tags_intents = self._get_tags_in_intents()
-        entity_types_mapper = self._get_entity_types_df()
+        entity_types_mapper = self.get_entity_types_df()
         entity_types_mapper = self._unpack_nested_entity_types(entity_types_mapper, 'KIND_REGEX')
         hidden_entities = pd.merge(tags_intents, entity_types_mapper, on = 'entity_type_id')
         hidden_entities = hidden_entities.drop(hidden_entities[~hidden_entities.kind.str.contains('KIND_REGEX')].index)
