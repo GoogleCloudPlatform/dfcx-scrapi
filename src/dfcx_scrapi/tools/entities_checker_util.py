@@ -178,11 +178,10 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             parameter_id - parameter id
             entity_type_id - entity id
         """
-
-      if self.intents_df.empty:
-        self._set_intents_df()
+        if self.intents_df.empty:
+            self._set_intents_df()
       
-      return self.intents_df
+        return self.intents_df
 
     def get_entity_types_df(self) -> pd.DataFrame:
         """Get all the entity types and store all the entity values and synonyms in one row
@@ -195,10 +194,10 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             entity_values - list of the [entity values]
             synonyms - list of the [synonyms]
         """
-      if self.entity_types_df.empty:
-        self._set_entity_types_df()
+        if self.entity_types_df.empty:
+            self._set_entity_types_df()
       
-      return self.entity_types_df
+        return self.entity_types_df
 
     def generate_hidden_synonym_tags(self) -> pd.DataFrame:
         """ Generate the overall stats that identify the incorrect tags in the training phrases by comparing with the entity type's synonyms
