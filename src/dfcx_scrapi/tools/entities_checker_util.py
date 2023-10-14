@@ -59,7 +59,9 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
 
     @staticmethod
     def _get_entity_type_by_parameter_id(parameters, parameter_id):
-        """static method that returns the entity type that is paired with the given parameter id"""
+        """ static method that returns the entity type that 
+            is paired with the given parameter id
+        """
 
         entity_type = None
         for parameter in parameters:
@@ -139,8 +141,10 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
 
     def _unpack_nested_entities(self, df, target_kind_type):
         """Unpacking the nested entity types to the comparable dataframe structure
-        e.g : Nested entity type ->  entity_type : @child_entity_type1 , @child_entity_type2
-              unpacked entity type -> entity_type: [child1.entity_values, child2.entity_values] : [child1.synonyms, chilld.synonyms]
+            e.g:Nested entity type-> 
+            entity_type:@child_entity_type1,@child_entity_type2  
+            unpacked entity type-> 
+            entity_type:[child1.entities,child2.entities]:[child1.synonyms,chilld.synonyms]
 
         Returns:
             A dataframe with columns
@@ -158,7 +162,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 new_synonyms = []
                 is_nested_entity_type = True
                 for entity_value in entity_values:
-                    if '@' == entity_value[0] and (df['entity_type'] == entity_value[1::]).any():     
+                    if '@' == entity_value[0] and (df['entity_type'] == entity_value[1::]).any():
                         entity_value = entity_value[1::]
                         child_entity_type_row = df.loc[df['entity_type'] == entity_value]
                         child_index = child_entity_type_row.index[0]
@@ -199,7 +203,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         return self.intents_df
 
     def get_entity_types_df(self) -> pd.DataFrame:
-        """Get all the entity types and store all the entity values and synonyms in one row
+        """Get the entity types and store all the entities/synonyms in one row
 
         Returns:
             A dataframe with columns
@@ -215,8 +219,9 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         return self.entity_types_df
 
     def generate_hidden_synonym_tags(self) -> pd.DataFrame:
-        """ Generate the overall stats that identify the incorrect tags in the training phrases by comparing with the entity type's synonyms
-            Merges the intents and the entity types dataframes to create the comparable dataframe
+        """ Generate the overall stats that identify the incorrect tags in the tps 
+            by comparing with the entity type's synonyms
+            Merges the intents and the entity types dfs to create the comparable df
             Check if the tag_text is relevent in the entity type's synonyms
             if a tag_text in synonyms then is_hidden = YES else is_hidden = NO
 
@@ -261,9 +266,10 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         return hidden_ents
 
     def generate_hidden_regex_tags(self) -> pd.DataFrame:
-        """ Generate the overall stats that identify the incorrect tags in the training phrases
+        """ Generate the overall stats that identify the incorrect tags in the tps
             by comparing with the entity type's regex
-            if the tag text in Intent is not matched with the regex then is_hidden = YES
+            if the tag text in Intent is not matched with the regex 
+            then is_hidden = YES
 
         Returns:
             A dataframe with columns
@@ -304,7 +310,8 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         return hidden_ents
 
     def space_in_entity_values(self) -> pd.DataFrame:
-        """ Validating if there is any unnecessary space in front/end of the entities   
+        """ Validating if there is any leading/trailing 
+            space in the entity values   
             e.g: Phone: "iphone " => should be Phone: "iphone"
             
             Returns:
@@ -331,5 +338,5 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                     ent_mapper.loc[idx, 'has_space'] = 'YES'
                     tmp_ents.append(entity)
                     ent_mapper.loc[idx,'entities_w_space'] = tmp_ents
- 
+
         return ent_mapper
