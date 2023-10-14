@@ -31,7 +31,6 @@ logging.basicConfig(
 
 class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
     """Utility class for checking DFCX Agent's parameters."""
-    
     def __init__(
         self,
         agent_id: str,
@@ -47,10 +46,10 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             scope=scope,
         )
         self.agent_id = agent_id
-        
+
         if creds_path:
             self.creds_path = creds_path
-            
+
         self._intents = Intents(agent_id=self.agent_id, creds_path=self.creds_path)
         self._entity_types = EntityTypes(agent_id=self.agent_id, creds_path=self.creds_path)
         self.intents_df = pd.DataFrame()
@@ -61,15 +60,15 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
     @staticmethod
     def _get_entity_type_by_parameter_id(parameters, parameter_id):
         """static method that returns the entity type that is paired with the given parameter id"""
-        
+
         entity_type = None
         for parameter in parameters:
             if parameter.id == parameter_id:
                 entity_type = parameter.entity_type
                 break
-                
+
         return entity_type
-    
+
     def _set_intents_df(self) -> pd.DataFrame:
         self.intents_df = pd.DataFrame({
                 'intent': pd.Series(dtype='str'),
@@ -79,7 +78,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 'parameter_id': pd.Series(dtype='str'),
                 'entity_type_id': pd.Series(dtype='str'),
                 })
-        
+
         if not self._intents_list:
             self._intents_list = self._intents.list_intents(agent_id=self.agent_id)
 
@@ -109,7 +108,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         self.intents_df = self.intents_df.reset_index(drop=True)
 
     def _set_entity_types_df(self):
-        
+
         self.entity_types_df = pd.DataFrame({
             'entity_type_id': pd.Series(dtype='str'),
             'entity_type': pd.Series(dtype='str'),
@@ -117,17 +116,17 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             'entity_values': pd.Series(dtype='str'),
             'synonyms': pd.Series(dtype='str')
             })
-        
+
         if not self._entity_types_list:
             self._entity_types_list = self._entity_types.list_entity_types(agent_id = self.agent_id)
-            
+
         for entity_type in self._entity_types_list:
             entity_values = []
             synonyms = []
             for entity in entity_type.entities:
                 entity_values.append(entity.value)
                 synonyms += list(entity.synonyms)
-                
+
             temp = pd.DataFrame({
                 'entity_type_id': [entity_type.name],
                 'entity_type': [entity_type.display_name],
@@ -135,14 +134,14 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 'entity_values': [entity_values],
                 'synonyms': [synonyms]})
             self.entity_types_df = pd.concat([self.entity_types_df, temp])
-            
+
         self.entity_types_df = self.entity_types_df.reset_index(drop=True)
-        
-    def _unpack_nested_entity_types(self, df, target_kind_type):
+
+    def _unpack_nested_entities(self, df, target_kind_type):
         """Unpacking the nested entity types to the comparable dataframe structure
         e.g : Nested entity type ->  entity_type : @child_entity_type1 , @child_entity_type2
               unpacked entity type -> entity_type: [child1.entity_values, child2.entity_values] : [child1.synonyms, chilld.synonyms]
-              
+
         Returns:
             A dataframe with columns
             entity_type_id
@@ -159,7 +158,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 new_synonyms = []
                 is_nested_entity_type = True
                 for entity_value in entity_values:
-                    if '@' == entity_value[0] and (df['entity_type'] == entity_value[1::]).any():        
+                    if '@' == entity_value[0] and (df['entity_type'] == entity_value[1::]).any():     
                         entity_value = entity_value[1::]
                         child_entity_type_row = df.loc[df['entity_type'] == entity_value]
                         child_index = child_entity_type_row.index[0]
@@ -181,7 +180,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                     df.loc[idx, 'kind'] = target_kind_type
 
         return df
-    
+
     def get_tag_texts_in_intents(self) -> pd.DataFrame:
         """Get all the tag_texts that are referenced to the specific parameter id & entity type id in the training phrases in the intents
 
@@ -196,12 +195,12 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         """
         if self.intents_df.empty:
             self._set_intents_df()
-      
+
         return self.intents_df
 
     def get_entity_types_df(self) -> pd.DataFrame:
         """Get all the entity types and store all the entity values and synonyms in one row
-        
+
         Returns:
             A dataframe with columns
             entity_type_id
@@ -212,7 +211,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         """
         if self.entity_types_df.empty:
             self._set_entity_types_df()
-      
+
         return self.entity_types_df
 
     def generate_hidden_synonym_tags(self) -> pd.DataFrame:
@@ -220,7 +219,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             Merges the intents and the entity types dataframes to create the comparable dataframe
             Check if the tag_text is relevent in the entity type's synonyms
             if a tag_text in synonyms then is_hidden = YES else is_hidden = NO
-            
+
         Returns:
             A dataframe with columns
             intent
@@ -237,21 +236,22 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         """
         if self.intents_df.empty:
             self._set_intents_df()
-        
+
         if self.entity_types_df.empty:
             self._set_entity_types_df()
 
-        unpacked_ents_df = self._unpack_nested_entity_types(self.entity_types_df, 'KIND_MAP')
-        hidden_ents = pd.merge(self.intents_df, unpacked_ents_df, on = 'entity_type_id')
-        hidden_ents = hidden_ents.drop(hidden_ents[~hidden_ents.kind.str.contains('KIND_MAP')].index)
+        unpacked_ents_df = self._unpack_nested_entities(self.entity_types_df,'KIND_MAP')
+        hidden_ents = pd.merge(self.intents_df,unpacked_ents_df,on='entity_type_id')
+        drop_indexes = hidden_ents[~hidden_ents.kind.str.contains('KIND_MAP')].index
+        hidden_ents = hidden_ents.drop(drop_indexes)
         hidden_ents = hidden_ents.reset_index(drop=True)
-        hidden_ents['is_hidden'] = pd.Series(None, index=hidden_ents.index)
+        hidden_ents['is_hidden'] = pd.Series(None,index=hidden_ents.index)
 
         for idx, row in hidden_ents.iterrows():
             synonyms = row['synonyms']
             tag_text = row['tag_text']
             for synonym in synonyms:
-                synonym = [char.lower() for char in synonym if char.isalnum()] 
+                synonym = [char.lower() for char in synonym if char.isalnum()]
                 tag_text = [char.lower() for char in tag_text if char.isalnum()]
                 if synonym == tag_text:
                     hidden_ents.loc[idx, 'is_hidden'] = 'NO'
@@ -285,9 +285,10 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         if self.entity_types_df.empty:
             self._set_entity_types_df()
 
-        unpacked_ents_df = self._unpack_nested_entity_types(self.entity_types_df, 'KIND_REGEX')
+        unpacked_ents_df = self._unpack_nested_entities(self.entity_types_df, 'KIND_REGEX')
         hidden_ents = pd.merge(self.intents_df, unpacked_ents_df, on = 'entity_type_id')
-        hidden_ents = hidden_ents.drop(hidden_ents[~hidden_ents.kind.str.contains('KIND_REGEX')].index)
+        drop_indexes = hidden_ents[~hidden_ents.kind.str.contains('KIND_REGEX')].index
+        hidden_ents = hidden_ents.drop(drop_indexes)
         hidden_ents = hidden_ents.reset_index(drop=True)
         hidden_ents['is_hidden'] = pd.Series(None, index=hidden_ents.index)
 
@@ -301,9 +302,9 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 hidden_ents.loc[idx, 'is_hidden'] = 'YES'
 
         return hidden_ents
-    
+
     def space_in_entity_values(self) -> pd.DataFrame:
-        """ Validating if there is any unnecessary space(s) in the front or/and in the end of the entities   
+        """ Validating if there is any unnecessary space in front/end of the entities   
             e.g: Phone: "iphone " => should be Phone: "iphone"
             
             Returns:
@@ -313,14 +314,14 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             kind
             entity_values 
             synonyms
-            has_space: if the entity value have the space(s) then YES else NO 
-            entities_with_space: list of the entity values that have the space(s)
+            has_space:if the entity value have the space(s) then YES else NO 
+            entities_w_space:list of the entity values that have a space
         """
         ent_mapper = self.get_entity_types_df()
         ent_mapper = self._unpack_nested_entity_types(ent_mapper, 'KIND_MAP')
         ent_mapper['has_space'] = pd.Series('NO', index=ent_mapper.index)
-        ent_mapper['entities_with_space'] = pd.Series('NA', index=ent_mapper.index)
-    
+        ent_mapper['entities_w_space'] = pd.Series('NA', index=ent_mapper.index)
+
         for idx, row in ent_mapper.iterrows():
             entity_values = row['entity_values']
             tmp_ents = []
@@ -329,6 +330,6 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 if not entity == striped_entity:
                     ent_mapper.loc[idx, 'has_space'] = 'YES'
                     tmp_ents.append(entity)
-                    ent_mapper.loc[idx,'entities_with_space'] = tmp_ents
-    
+                    ent_mapper.loc[idx,'entities_w_space'] = tmp_ents
+ 
         return ent_mapper
