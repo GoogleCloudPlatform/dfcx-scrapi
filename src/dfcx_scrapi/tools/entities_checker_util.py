@@ -58,7 +58,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         self._entity_types_list = []
 
     @staticmethod
-    def _get_entity_type_by_parameter_id(parameters, parameter_id):
+    def _get_entity_by_param_id(parameters, parameter_id):
         """ static method that returns the entity type that 
             is paired with the given parameter id
         """
@@ -92,8 +92,11 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                     for part in training_phrase.parts:
                         concat_training_phrase += part.text
                         if 'parameter_id' in part:
-                            entity_type = self._get_entity_type_by_parameter_id(intent.parameters, part.parameter_id)
-                            tag_texts_set = (part.text, part.parameter_id, entity_type)
+                            text=part.text
+                            params = intent.parameters
+                            param_id = part.parameter_id
+                            entity_type = self._get_entity_by_param_id(params,param_id)
+                            tag_texts_set = (text, param_id, entity_type)
                             tag_texts.append(tag_texts_set)
                     if tag_texts:
                         for pair in tag_texts:
@@ -186,14 +189,15 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         return df
 
     def get_tag_texts_in_intents(self) -> pd.DataFrame:
-        """Get all the tag_texts that are referenced to the specific parameter id & entity type id in the training phrases in the intents
+        """ Get all the tag_texts that are referenced to the specific parameter id 
+            & entity type id in the training phrases in the intents
 
         Returns:
             A dataframe with columns
             intent_id - the intent name
             intent - the intent display name
             training_phrase - the training phrase in the intent
-            tag_text - the subset of the training phrase that is tagged with the specific entity type id
+            tag_text - the subset of the tp that is tagged with the specific entity id
             parameter_id - parameter id
             entity_type_id - entity id
         """
