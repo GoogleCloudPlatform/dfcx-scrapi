@@ -241,29 +241,30 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         if self.entity_types_df.empty:
             self._set_entity_types_df()
 
-        unpacked_entity_types_df = self._unpack_nested_entity_types(self.entity_types_df, 'KIND_MAP')
-        hidden_entities = pd.merge(self.intents_df, unpacked_entity_types_df, on = 'entity_type_id')
-        hidden_entities = hidden_entities.drop(hidden_entities[~hidden_entities.kind.str.contains('KIND_MAP')].index)
-        hidden_entities = hidden_entities.reset_index(drop=True)
-        hidden_entities['is_hidden'] = pd.Series(None, index=hidden_entities.index)
+        unpacked_ents_df = self._unpack_nested_entity_types(self.entity_types_df, 'KIND_MAP')
+        hidden_ents = pd.merge(self.intents_df, unpacked_ents_df, on = 'entity_type_id')
+        hidden_ents = hidden_ents.drop(hidden_ents[~hidden_ents.kind.str.contains('KIND_MAP')].index)
+        hidden_ents = hidden_ents.reset_index(drop=True)
+        hidden_ents['is_hidden'] = pd.Series(None, index=hidden_ents.index)
 
-        for idx, row in hidden_entities.iterrows():
+        for idx, row in hidden_ents.iterrows():
             synonyms = row['synonyms']
             tag_text = row['tag_text']
             for synonym in synonyms:
-                synonym = synonym.lower()
-                tag_text = tag_text.lower()
-                if [sub_synonym for sub_synonym in synonym if sub_synonym.isalnum()] == [sub_tag_text for sub_tag_text in tag_text if sub_tag_text.isalnum()]:
-                    hidden_entities.loc[idx, 'is_hidden'] = 'NO'
-            if pd.isna(hidden_entities.loc[idx, 'is_hidden']): 
-                hidden_entities.loc[idx, 'is_hidden'] = 'YES'
+                synonym = [char.lower() for char in synonym if char.isalnum()] 
+                tag_text = [char.lower() for char in tag_text if char.isalnum()]
+                if synonym == tag_text:
+                    hidden_ents.loc[idx, 'is_hidden'] = 'NO'
+            if pd.isna(hidden_ents.loc[idx, 'is_hidden']):
+                hidden_ents.loc[idx, 'is_hidden'] = 'YES'
 
-        return hidden_entities
-    
+        return hidden_ents
+
     def generate_hidden_regex_tags(self) -> pd.DataFrame:
-        """ Generate the overall stats that identify the incorrect tags in the training phrases by comparing with the entity type's regex
+        """ Generate the overall stats that identify the incorrect tags in the training phrases
+            by comparing with the entity type's regex
             if the tag text in Intent is not matched with the regex then is_hidden = YES
-        
+
         Returns:
             A dataframe with columns
             intent
@@ -280,26 +281,26 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         """
         if self.intents_df.empty:
             self._set_intents_df()
-            
+
         if self.entity_types_df.empty:
             self._set_entity_types_df()
 
-        unpacked_entity_types_df = self._unpack_nested_entity_types(self.entity_types_df, 'KIND_REGEX')
-        hidden_entities = pd.merge(self.intents_df, unpacked_entity_types_df, on = 'entity_type_id')
-        hidden_entities = hidden_entities.drop(hidden_entities[~hidden_entities.kind.str.contains('KIND_REGEX')].index)
-        hidden_entities = hidden_entities.reset_index(drop=True)
-        hidden_entities['is_hidden'] = pd.Series(None, index=hidden_entities.index)
-        
-        for idx,row in hidden_entities.iterrows():
+        unpacked_ents_df = self._unpack_nested_entity_types(self.entity_types_df, 'KIND_REGEX')
+        hidden_ents = pd.merge(self.intents_df, unpacked_ents_df, on = 'entity_type_id')
+        hidden_ents = hidden_ents.drop(hidden_ents[~hidden_ents.kind.str.contains('KIND_REGEX')].index)
+        hidden_ents = hidden_ents.reset_index(drop=True)
+        hidden_ents['is_hidden'] = pd.Series(None, index=hidden_ents.index)
+
+        for idx,row in hidden_ents.iterrows():
             regexs=row['synonyms']
             tag_text=row['tag_text']
             for regex in regexs:
                 if re.match(regex,tag_text):
-                    hidden_entities.loc[idx, 'is_hidden'] = 'NO'
-            if pd.isna(hidden_entities.loc[idx,'is_hidden']): 
-                hidden_entities.loc[idx, 'is_hidden'] = 'YES'
-                
-        return hidden_entities
+                    hidden_ents.loc[idx, 'is_hidden'] = 'NO'
+            if pd.isna(hidden_ents.loc[idx,'is_hidden']):
+                hidden_ents.loc[idx, 'is_hidden'] = 'YES'
+
+        return hidden_ents
     
     def space_in_entity_values(self) -> pd.DataFrame:
         """ Validating if there is any unnecessary space(s) in the front or/and in the end of the entities   
@@ -315,19 +316,19 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             has_space: if the entity value have the space(s) then YES else NO 
             entities_with_space: list of the entity values that have the space(s)
         """
-        entity_types_mapper = self.get_entity_types_df()
-        entity_types_mapper = self._unpack_nested_entity_types(entity_types_mapper, 'KIND_MAP')
-        entity_types_mapper['has_space'] = pd.Series('NO', index=entity_types_mapper.index)
-        entity_types_mapper['entities_with_space'] = pd.Series('NA', index=entity_types_mapper.index)
-        
-        for idx, row in entity_types_mapper.iterrows(): 
+        ent_mapper = self.get_entity_types_df()
+        ent_mapper = self._unpack_nested_entity_types(ent_mapper, 'KIND_MAP')
+        ent_mapper['has_space'] = pd.Series('NO', index=ent_mapper.index)
+        ent_mapper['entities_with_space'] = pd.Series('NA', index=ent_mapper.index)
+    
+        for idx, row in ent_mapper.iterrows():
             entity_values = row['entity_values']
-            tmp_entity_values = []
+            tmp_ents = []
             for entity in entity_values:
                 striped_entity = entity.strip()
                 if not entity == striped_entity:
-                    entity_types_mapper.loc[idx, 'has_space'] = 'YES'
-                    tmp_entity_values.append(entity)
-                    entity_types_mapper.loc[idx,'entities_with_space'] = tmp_entity_values
-                    
-        return entity_types_mapper
+                    ent_mapper.loc[idx, 'has_space'] = 'YES'
+                    tmp_ents.append(entity)
+                    ent_mapper.loc[idx,'entities_with_space'] = tmp_ents
+    
+        return ent_mapper
