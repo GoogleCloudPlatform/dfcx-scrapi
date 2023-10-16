@@ -46,12 +46,17 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             scope=scope,
         )
         self.agent_id = agent_id
-
         if creds_path:
             self.creds_path = creds_path
 
-        self._intents = Intents(agent_id=self.agent_id, creds_path=self.creds_path)
-        self._entity_types = EntityTypes(agent_id=self.agent_id, creds_path=self.creds_path)
+        self._intents = Intents(
+            agent_id=self.agent_id, 
+            creds_path=self.creds_path
+        )
+        self._entity_types = EntityTypes(
+            agent_id=self.agent_id, 
+            creds_path=self.creds_path
+        )
         self.intents_df = pd.DataFrame()
         self.entity_types_df = pd.DataFrame()
         self._intents_list = []
@@ -82,7 +87,9 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 })
 
         if not self._intents_list:
-            self._intents_list = self._intents.list_intents(agent_id=self.agent_id)
+            self._intents_list = self._intents.list_intents(
+                agent_id=self.agent_id
+            )
 
         for intent in self._intents_list:
             if 'parameters' in intent:
@@ -95,7 +102,9 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                             text=part.text
                             params = intent.parameters
                             param_id = part.parameter_id
-                            entity_type = self._get_entity_by_param_id(params,param_id)
+                            entity_type = self._get_entity_by_param_id(
+                                params, param_id
+                            )
                             tag_texts_set = (text, param_id, entity_type)
                             tag_texts.append(tag_texts_set)
                     if tag_texts:
