@@ -155,12 +155,11 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
 
     def _unpack_nested_entities(self, df, target_kind_type):
         """Unpacking the nested entity types to the comparable df structure
-            e.g:Nested entity type-> 
+            e.g:Nested entity type->
             before: entity_type:@child_entity_1,@child_entity_2
-            after: entity_type:{
-                [child1.entities]:[child1.synonyms],
-                [child2.entities]:[child2.synonyms]..
-            }
+            after: entity_type:
+                entities_values:[child1.entities, child2.entities,..]
+                synonyms: [child1.synonyms, child2.synonyms,..],
 
         Returns:
             A dataframe with columns
