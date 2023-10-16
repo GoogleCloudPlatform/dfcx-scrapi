@@ -50,11 +50,11 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             self.creds_path = creds_path
 
         self._intents = Intents(
-            agent_id=self.agent_id, 
+            agent_id=self.agent_id,
             creds_path=self.creds_path
         )
         self._entity_types = EntityTypes(
-            agent_id=self.agent_id, 
+            agent_id=self.agent_id,
             creds_path=self.creds_path
         )
         self.intents_df = pd.DataFrame()
@@ -132,7 +132,9 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             })
 
         if not self._entity_types_list:
-            self._entity_types_list = self._entity_types.list_entity_types(agent_id = self.agent_id)
+            self._entity_types_list = self._entity_types.list_entity_types(
+                agent_id = self.agent_id
+            )
 
         for entity_type in self._entity_types_list:
             entity_values = []
@@ -152,11 +154,13 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         self.entity_types_df = self.entity_types_df.reset_index(drop=True)
 
     def _unpack_nested_entities(self, df, target_kind_type):
-        """Unpacking the nested entity types to the comparable dataframe structure
+        """Unpacking the nested entity types to the comparable df structure
             e.g:Nested entity type-> 
-            entity_type:@child_entity_type1,@child_entity_type2  
-            unpacked entity type-> 
-            entity_type:[child1.entities,child2.entities]:[child1.synonyms,chilld.synonyms]
+            before: entity_type:@child_entity_1,@child_entity_2
+            after: entity_type:{
+                [child1.entities]:[child1.synonyms],
+                [child2.entities]:[child2.synonyms]..
+            }
 
         Returns:
             A dataframe with columns
@@ -174,14 +178,23 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 new_synonyms = []
                 is_nested_entity_type = True
                 for entity_value in entity_values:
-                    if '@' == entity_value[0] and (df['entity_type'] == entity_value[1::]).any():
+                    if ('@' == entity_value[0] and 
+                        (df['entity_type'] == entity_value[1::]).any()):
                         entity_value = entity_value[1::]
-                        child_entity_type_row = df.loc[df['entity_type'] == entity_value]
+                        child_entity_type_row = (
+                            df.loc[df['entity_type'] == entity_value]
+                        )
                         child_index = child_entity_type_row.index[0]
-                        child_entity_type_kind = child_entity_type_row['kind'][child_index]
+                        child_entity_type_kind = (
+                            child_entity_type_row['kind'][child_index]
+                        )
                         if child_entity_type_kind == target_kind_type:
-                            child_entity_values = child_entity_type_row['entity_values'][child_index]
-                            child_entity_synonyms = child_entity_type_row['synonyms'][child_index]
+                            child_entity_values = (
+                                child_entity_type_row['entity_values'][child_index]
+                            )
+                            child_entity_synonyms = (
+                                child_entity_type_row['synonyms'][child_index]
+                            )
                             new_entity_values += child_entity_values
                             new_synonyms += child_entity_synonyms
                         else:
@@ -198,7 +211,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         return df
 
     def get_tag_texts_in_intents(self) -> pd.DataFrame:
-        """ Get all the tag_texts that are referenced to the specific parameter id 
+        """ Get all the tag_texts that tagged to the specific parameter id
             & entity type id in the training phrases in the intents
 
         Returns:
@@ -206,7 +219,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             intent_id - the intent name
             intent - the intent display name
             training_phrase - the training phrase in the intent
-            tag_text - the subset of the tp that is tagged with the specific entity id
+            tag_text - the subset of the tp that tagged to the entity id
             parameter_id - parameter id
             entity_type_id - entity id
         """
@@ -232,9 +245,9 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         return self.entity_types_df
 
     def generate_hidden_synonym_tags(self) -> pd.DataFrame:
-        """ Generate the overall stats that identify the incorrect tags in the tps 
+        """ Generate the stats that identify the incorrect tags in the tps
             by comparing with the entity type's synonyms
-            Merges the intents and the entity types dfs to create the comparable df
+            Merges the intents and the entity types dfs
             Check if the tag_text is relevent in the entity type's synonyms
             if a tag_text in synonyms then is_hidden = YES else is_hidden = NO
 
@@ -258,9 +271,15 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         if self.entity_types_df.empty:
             self._set_entity_types_df()
 
-        unpacked_ents_df = self._unpack_nested_entities(self.entity_types_df,'KIND_MAP')
-        hidden_ents = pd.merge(self.intents_df,unpacked_ents_df,on='entity_type_id')
-        drop_indexes = hidden_ents[~hidden_ents.kind.str.contains('KIND_MAP')].index
+        unpacked_ents_df = (
+            self._unpack_nested_entities(self.entity_types_df,'KIND_MAP')
+        )
+        hidden_ents = (
+            pd.merge(self.intents_df,unpacked_ents_df,on='entity_type_id')
+        )
+        drop_indexes = (
+            hidden_ents[~hidden_ents.kind.str.contains('KIND_MAP')].index
+        )
         hidden_ents = hidden_ents.drop(drop_indexes)
         hidden_ents = hidden_ents.reset_index(drop=True)
         hidden_ents['is_hidden'] = pd.Series(None,index=hidden_ents.index)
@@ -279,9 +298,9 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         return hidden_ents
 
     def generate_hidden_regex_tags(self) -> pd.DataFrame:
-        """ Generate the overall stats that identify the incorrect tags in the tps
+        """ Generate the stats that identify the incorrect tags
             by comparing with the entity type's regex
-            if the tag text in Intent is not matched with the regex 
+            if the tag text in Intent is not matched with the regex
             then is_hidden = YES
 
         Returns:
@@ -304,9 +323,15 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
         if self.entity_types_df.empty:
             self._set_entity_types_df()
 
-        unpacked_ents_df = self._unpack_nested_entities(self.entity_types_df, 'KIND_REGEX')
-        hidden_ents = pd.merge(self.intents_df, unpacked_ents_df, on = 'entity_type_id')
-        drop_indexes = hidden_ents[~hidden_ents.kind.str.contains('KIND_REGEX')].index
+        unpacked_ents_df = (
+            self._unpack_nested_entities(self.entity_types_df, 'KIND_REGEX')
+        )
+        hidden_ents = (
+            pd.merge(self.intents_df, unpacked_ents_df, on = 'entity_type_id')
+        )
+        drop_indexes = (
+            hidden_ents[~hidden_ents.kind.str.contains('KIND_REGEX')].index
+        )
         hidden_ents = hidden_ents.drop(drop_indexes)
         hidden_ents = hidden_ents.reset_index(drop=True)
         hidden_ents['is_hidden'] = pd.Series(None, index=hidden_ents.index)
