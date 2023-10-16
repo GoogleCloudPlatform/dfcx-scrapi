@@ -363,7 +363,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             entities_w_space:list of the entity values that have a space
         """
         ent_mapper = self.get_entity_types_df()
-        ent_mapper = self._unpack_nested_entity_types(ent_mapper, 'KIND_MAP')
+        ent_mapper = self._unpack_nested_entities(ent_mapper, 'KIND_MAP')
         ent_mapper['has_space'] = pd.Series('NO', index=ent_mapper.index)
         ent_mapper['entities_w_space'] = pd.Series('NA', index=ent_mapper.index)
 
