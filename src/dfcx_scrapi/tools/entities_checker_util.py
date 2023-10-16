@@ -178,22 +178,22 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 new_synonyms = []
                 is_nested_entity_type = True
                 for entity_value in entity_values:
-                    if ('@' == entity_value[0] and 
+                    if ('@' == entity_value[0] and
                         (df['entity_type'] == entity_value[1::]).any()):
                         entity_value = entity_value[1::]
-                        child_entity_type_row = (
+                        child_entity_row = (
                             df.loc[df['entity_type'] == entity_value]
                         )
-                        child_index = child_entity_type_row.index[0]
+                        child_index = child_entity_row.index[0]
                         child_entity_type_kind = (
-                            child_entity_type_row['kind'][child_index]
+                            child_entity_row['kind'][child_index]
                         )
                         if child_entity_type_kind == target_kind_type:
                             child_entity_values = (
-                                child_entity_type_row['entity_values'][child_index]
+                                child_entity_row['entity_values'][child_index]
                             )
                             child_entity_synonyms = (
-                                child_entity_type_row['synonyms'][child_index]
+                                child_entity_row['synonyms'][child_index]
                             )
                             new_entity_values += child_entity_values
                             new_synonyms += child_entity_synonyms
