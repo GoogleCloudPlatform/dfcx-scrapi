@@ -132,7 +132,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             4: "NO_MATCH",
             5: "NO_INPUT",
             6: "EVENT",
-            8: "KNOWLEDGE_CONNECTOR"
+            8: "KNOWLEDGE_CONNECTOR",
+            9: "LLM"
         }
 
         return match_type_map[match_type]
