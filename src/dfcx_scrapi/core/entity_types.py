@@ -23,8 +23,6 @@ from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
-from dfcx_scrapi.builders.entity_types import EntityTypeBuilder
-
 
 # logging config
 logging.basicConfig(
@@ -56,47 +54,166 @@ class EntityTypes(ScrapiBase):
         self.entity_id = entity_id
         self.agent_id = agent_id
 
+
+    @staticmethod
+    def entity_type_proto_to_dataframe(
+        obj: types.EntityType, mode: str = "basic"
+    ):
+        """Converts an EntityType protobuf object to a Pandas Dataframe.
+
+        Args:
+          obj: EntityType protobuf object
+          mode: (Optional) "basic" returns display_name, value of entity type
+            and its synonyms.
+            "advanced" returns entity types and excluded phrases in a
+            comprehensive format.
+
+        Returns:
+          In basic mode, a Pandas Dataframe for the entity type object with
+          schema:
+            display_name: str
+            entity_value: str
+            synonyms: str
+          In advanced mode, a dictionary with keys entity_types and
+          excluded_phrases.
+            The value of entity_types is a Pandas Dataframe with columns:
+              entity_type_id, display_name, kind, auto_expansion_mode,
+              fuzzy_extraction, redact, entity_value, synonyms
+            The value of excluded_phrases is a Dataframe with columns:
+              entity_type_id, display_name, excluded_phrase
+        """
+        if mode == "basic":
+            main_df = pd.DataFrame()
+
+            entity_type_dict = {}
+            entity_type_dict["display_name"] = obj.display_name
+            for entity in obj.entities:
+                entity_type_dict["entity_value"] = entity.value
+                for synonym in entity.synonyms:
+                    entity_type_dict["synonyms"] = synonym
+                    entity_type_df = pd.DataFrame(entity_type_dict, index=[0])
+                    main_df = pd.concat([main_df, entity_type_df],
+                                        ignore_index=True)
+
+            return main_df
+
+        elif mode == "advanced":
+
+            main_df = pd.DataFrame()
+            excl_phrases_df = pd.DataFrame()
+
+            excl_phrases_dict = {
+                "entity_type_id": obj.name,
+                "display_name": obj.display_name,
+            }
+            entity_type_dict = {
+                "entity_type_id": obj.name,
+                "display_name": obj.display_name,
+                "kind": obj.kind.name,
+                "auto_expansion_mode": obj.auto_expansion_mode,
+                "fuzzy_extraction": obj.enable_fuzzy_extraction,
+                "redact": obj.redact,
+            }
+            for entity in obj.entities:
+                entity_type_dict["entity_value"] = entity.value
+                for synonym in entity.synonyms:
+                    entity_type_dict["synonyms"] = synonym
+                    entity_type_df = pd.DataFrame(entity_type_dict, index=[0])
+                    main_df = pd.concat([main_df, entity_type_df],
+                                        ignore_index=True)
+
+            for excluded_phrase in obj.excluded_phrases:
+                excl_phrases_dict["excluded_phrase"] = excluded_phrase.value
+                excl_phrases_dict2df = pd.DataFrame(
+                                          excl_phrases_dict, index=[0])
+                excl_phrases_df = pd.concat([excl_phrases_df,
+                                     excl_phrases_dict2df], ignore_index=True)
+
+            return {
+                "entity_types": main_df, "excluded_phrases": excl_phrases_df
+            }
+
+        else:
+            raise ValueError("Mode types: [basic, advanced]")
+
     def entity_types_to_df(
         self,
         agent_id: str = None,
         mode: str = "basic",
         entity_type_subset: List[str] = None) -> pd.DataFrame:
-        """Extracts all EntityTypes into a pandas DataFrame.
+        """Extracts all Entity Types into a Pandas DataFrame.
 
         Args:
-          agent_id (str):
-            agent to pull list of entity_types
-          mode (str):
-            Whether to return 'basic' DataFrame or 'advanced' one.
-            Refer to `data.dataframe_schemas.json` for schemas.
-          entity_type_subset (List[str]):
-            A subset of entity_types to extract the entity_types from.
+          agent_id, agent to pull list of entity types
+          mode: (Optional) "basic" returns display_name, value of entity type
+            and its synonyms.
+            "advanced" returns entity types and excluded phrases in a
+            comprehensive format.
+          entity_type_subset: (Optional) A list of entities to pull
+            If it's None, grab all the entity_types
 
         Returns:
-          A pandas Dataframe
+          In basic mode, a Pandas Dataframe for all entity types in the agent
+          with schema:
+            display_name: str
+            entity_value: str
+            synonyms: str
+          In advanced mode, a dictionary with keys entity_types and
+          excluded_phrases.
+            The value of entity_types is a Pandas Dataframe with columns:
+              entity_type_id, display_name, kind, auto_expansion_mode,
+              fuzzy_extraction, redact, entity_value, synonyms
+            The value of excluded_phrases is a Dataframe with columns:
+              entity_type_id, display_name, excluded_phrase
         """
 
         if not agent_id:
             agent_id = self.agent_id
 
-        # Error checking for `mode`
-        if mode not in ["basic", "advanced"]:
+        entity_types = self.list_entity_types(agent_id)
+        if mode == "basic":
+            main_df = pd.DataFrame()
+            for obj in entity_types:
+                if (entity_type_subset and
+                        obj.display_name not in entity_type_subset):
+                    continue
+
+                single_entity_df = self.entity_type_proto_to_dataframe(
+                    obj, mode=mode
+                )
+                main_df = pd.concat([main_df, single_entity_df])
+            main_df = main_df.sort_values(
+                ["display_name", "entity_value"])
+            return main_df
+
+        elif mode == "advanced":
+            main_df = pd.DataFrame()
+            excl_phrases_df = pd.DataFrame()
+            for obj in entity_types:
+                if (entity_type_subset and
+                        obj.display_name not in entity_type_subset):
+                    continue
+                single_entity_dict = self.entity_type_proto_to_dataframe(
+                    obj, mode=mode
+                )
+                main_df = pd.concat(
+                    [main_df, single_entity_dict["entity_types"]])
+                excl_phrases_df = pd.concat(
+                    [excl_phrases_df, single_entity_dict["excluded_phrases"]])
+            type_map = {
+                "auto_expansion_mode": bool,
+                "fuzzy_extraction": bool,
+                "redact": bool
+            }
+            main_df = main_df.astype(type_map)
+
+            return {
+                "entity_types": main_df, "excluded_phrases": excl_phrases_df
+            }
+
+        else:
             raise ValueError("Mode types: [basic, advanced]")
 
-        main_df = pd.DataFrame()
-        entity_types = self.list_entity_types(agent_id)
-
-        for obj in entity_types:
-            if (
-                (entity_type_subset)
-                and (obj.display_name not in entity_type_subset)
-            ):
-                continue
-            etb = EntityTypeBuilder(obj)
-            entity_df = etb.to_dataframe(mode=mode)
-            main_df = pd.concat([main_df, entity_df], ignore_index=True)
-
-        return main_df
 
     def get_entities_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Entity Type Names and UUIDs into a user friendly dict.
