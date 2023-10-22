@@ -394,6 +394,7 @@ class BuildersCommon:
     class _DataframeCommon():
         """An internal base class to store DataFrame related methods."""
 
+        # pylint: disable=line-too-long
         _dataframes_map = {
             "Intent": {
                 "basic": ["display_name", "training_phrase"],
@@ -411,21 +412,6 @@ class BuildersCommon:
                     "name", "display_name", "kind",
                     "auto_expansion_mode", "fuzzy_extraction", "redact",
                     "entity_value", "synonyms", "excluded_phrases",
-                ],
-            },
-            "TransitionRouteGroup": {
-                "basic": [
-                    "name", "display_name", "flow_id",
-                    "intent", "condition", "transition_type", "transition_to",
-                    "has_fulfillment", "has_fulfillment_webhook",
-                    "target_name", "flow_name",
-                ],
-                "advanced": [
-                    "name", "display_name", "flow_id",
-                    "intent", "condition", "transition_type", "transition_to",
-                    "messages", "preset_parameters", "conditional_cases",
-                    "webhook", "webhook_tag", "return_partial_responses",
-                    "target_name", "flow_name",
                 ],
             },
             "Webhook": {
@@ -453,14 +439,14 @@ class BuildersCommon:
             },
             "Page": {
                 "basic": [
-                    "name", "display_name", "flow_id",
+                    "name", "display_name", "flow",
                     "parameter_display_name", "parameter_entity_type",
                     "intent", "condition", "event",
                     "transition_type", "transition_to", "route_groups",
                     "has_fulfillment", "has_fulfillment_webhook",
                 ],
                 "advanced": [
-                    "name", "display_name", "flow_id",
+                    "name", "display_name", "flow",
                     "parameter_display_name", "parameter_entity_type",
                     "parameter_is_required", "parameter_is_list",
                     "parameter_is_redact", "parameter_default_value",
@@ -468,6 +454,21 @@ class BuildersCommon:
                     "transition_type", "transition_to", "route_groups",
                     "messages", "preset_parameters", "conditional_cases",
                     "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
+            "TransitionRouteGroup": {
+                "basic": [
+                    "name", "display_name", "flow",
+                    "intent", "condition", "transition_type", "transition_to",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                    "target_name", "flow_name",
+                ],
+                "advanced": [
+                    "name", "display_name", "flow",
+                    "intent", "condition", "transition_type", "transition_to",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                    "target_name", "flow_name",
                 ],
             },
             "TransitionRoute": {
@@ -500,6 +501,7 @@ class BuildersCommon:
                 ]
             },
         }
+        # pylint: disable=line-too-long
 
 
         def __init__(self, outer_self):
@@ -613,27 +615,27 @@ class BuildersCommon:
 
 
         def _process_from_df_create_basic(self, df: pd.DataFrame):
-            """Prototype method to perform basic `create` action on proto_obj."""
+            """Prototype method to perform basic `create` action."""
             raise NotImplementedError("Subclass should implement this method!")
 
         def _process_from_df_create_advanced(self, df: pd.DataFrame):
-            """Prototype method to perform advanced `create` action on proto_obj."""
+            """Prototype method to perform advanced `create` action."""
             raise NotImplementedError("Subclass should implement this method!")
 
         def _process_from_df_append_basic(self, df: pd.DataFrame):
-            """Prototype method to perform basic `append` action on proto_obj."""
+            """Prototype method to perform basic `append` action."""
             raise NotImplementedError("Subclass should implement this method!")
 
         def _process_from_df_append_advanced(self, df: pd.DataFrame):
-            """Prototype method to perform advanced `append` action on proto_obj."""
+            """Prototype method to perform advanced `append` action."""
             raise NotImplementedError("Subclass should implement this method!")
 
         def _process_from_df_delete_basic(self, df: pd.DataFrame):
-            """Prototype method to perform basic `delete` action on proto_obj."""
+            """Prototype method to perform basic `delete` action."""
             raise NotImplementedError("Subclass should implement this method!")
 
         def _process_from_df_delete_advanced(self, df: pd.DataFrame):
-            """Prototype method to perform advanced `delete` action on proto_obj."""
+            """Prototype method to perform advanced `delete` action."""
             raise NotImplementedError("Subclass should implement this method!")
 
 

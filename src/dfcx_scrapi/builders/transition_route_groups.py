@@ -215,6 +215,6 @@ class TransitionRouteGroupBuilder(BuildersCommon):
             )[0]
             routes_df["name"] = str(obj.name)
             routes_df["display_name"] = str(obj.display_name)
-            routes_df["flow_id"] = flow_id
+            routes_df["flow"] = flow_id
 
-            return routes_df
+            return routes_df[self._dataframes_map["TransitionRouteGroup"][mode]]

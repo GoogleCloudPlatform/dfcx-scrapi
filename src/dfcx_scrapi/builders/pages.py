@@ -644,6 +644,7 @@ class PageBuilder(BuildersCommon):
                     ehb_df = ehb.to_dataframe(mode)
                     ehs_df = pd.concat([ehs_df, ehb_df], ignore_index=True)
 
+                # Prone to bug
                 tmp_param_df = pd.concat(
                     [param_df] * len(ehs_df), ignore_index=True)
                 param_eh_df = pd.concat([tmp_param_df, ehs_df], axis=1)
@@ -703,7 +704,7 @@ class PageBuilder(BuildersCommon):
             )
             page_df["name"] = str(obj.name)
             page_df["display_name"] = str(obj.display_name)
-            page_df["flow_id"] = str(obj.name).split("/pages", maxsplit=1)[0]
+            page_df["flow"] = str(obj.name).split("/pages", maxsplit=1)[0]
 
             return page_df[self._dataframes_map["Page"][mode]]
 
