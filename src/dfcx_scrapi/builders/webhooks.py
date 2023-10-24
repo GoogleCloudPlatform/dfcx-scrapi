@@ -261,3 +261,50 @@ class WebhookBuilder(BuildersCommon):
                 "username": [usrname], "password": [psswrd],
                 "request_headers": [req_headers],
             })
+
+
+        def _process_from_df_create_basic(self, df: pd.DataFrame):
+            """Prototype method to perform basic `create` action."""
+            disp_name = self._is_df_has_single_display_name(df)
+            uri = self._get_unique_value_of_a_column(df, "uri")
+
+            self._outer_self.create_new_proto_obj(
+                display_name=disp_name)
+            self._outer_self.add_web_service(uri=uri)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_create_advanced(self, df: pd.DataFrame):
+            """Prototype method to perform advanced `create` action."""
+            disp_name = self._is_df_has_single_display_name(df)
+            timeout = int(self._get_unique_value_of_a_column(df, "timeout"))
+            disabled = bool(self._get_unique_value_of_a_column(df, "disabled"))
+            service_type = self._get_unique_value_of_a_column(
+                df, "service_type")
+            uri = self._get_unique_value_of_a_column(df, "uri")
+            username = self._get_unique_value_of_a_column(df, "username")
+            password = self._get_unique_value_of_a_column(df, "password")
+            request_headers = self._get_unique_value_of_a_column(
+                df, "request_headers")
+
+            if service_type == "Generic Web Service":
+                service_type = None
+
+            else:
+                req_header_list = [
+                    req_header_str.split(": ")
+                    for req_header_str in request_headers.split("\n")
+                ]
+                request_headers = {
+                    item[0]: item[1]
+                    for item in req_header_list
+                }
+
+            self._outer_self.create_new_proto_obj(
+                display_name=disp_name, timeout=timeout, disabled=disabled)
+            self._outer_self.add_web_service(
+                uri=uri, service=service_type,
+                username=username, password=password,
+                request_headers=request_headers)
+
+            return self._outer_self.proto_obj
