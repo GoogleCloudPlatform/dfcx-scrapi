@@ -644,7 +644,9 @@ class PageBuilder(BuildersCommon):
                     ehb_df = ehb.to_dataframe(mode)
                     ehs_df = pd.concat([ehs_df, ehb_df], ignore_index=True)
 
-                # Prone to bug
+                if ehs_df.empty:
+                    return out_df
+
                 tmp_param_df = pd.concat(
                     [param_df] * len(ehs_df), ignore_index=True)
                 param_eh_df = pd.concat([tmp_param_df, ehs_df], axis=1)

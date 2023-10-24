@@ -485,8 +485,13 @@ class FlowBuilder(BuildersCommon):
               NLU settings as a string
             """
             nlu = obj.nlu_settings
+            if nlu.model_type == 2:
+                model_type = "MODEL_TYPE_CUSTOM"
+            else:
+                model_type = nlu.model_type.name
+
             return (
-                f"Type: {nlu.model_type.name}"
+                f"Type: {model_type}"
                 f"\nTraining: {nlu.model_training_mode.name}"
                 f"\nThreshold: {nlu.classification_threshold}"
             )
