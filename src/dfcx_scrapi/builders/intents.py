@@ -797,8 +797,9 @@ class IntentBuilder(BuildersCommon):
               An Intent object stored in proto_obj
             """
             disp_name = self._is_df_has_single_display_name(df)
-            priority = self._get_unique_value_of_a_column(df, "priority")
-            is_fallback = self._get_unique_value_of_a_column(df, "is_fallback")
+            priority = int(self._get_unique_value_of_a_column(df, "priority"))
+            is_fallback = bool(self._get_unique_value_of_a_column(
+                df, "is_fallback"))
             description = self._get_unique_value_of_a_column(df, "description")
 
             self._outer_self.create_new_proto_obj(

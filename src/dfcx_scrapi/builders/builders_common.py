@@ -461,14 +461,12 @@ class BuildersCommon:
                     "name", "display_name", "flow",
                     "intent", "condition", "transition_type", "transition_to",
                     "has_fulfillment", "has_fulfillment_webhook",
-                    "target_name", "flow_name",
                 ],
                 "advanced": [
                     "name", "display_name", "flow",
                     "intent", "condition", "transition_type", "transition_to",
                     "messages", "preset_parameters", "conditional_cases",
                     "webhook", "webhook_tag", "return_partial_responses",
-                    "target_name", "flow_name",
                 ],
             },
             "TransitionRoute": {
@@ -575,7 +573,10 @@ class BuildersCommon:
                     " more than one unique value."
                 )
 
-            return list(df[column].unique())[0]
+            val = list(df[column].unique())[0]
+            if pd.isna(val):
+                return None
+            return val
 
         @staticmethod
         def _is_df_has_single_display_name(df: pd.DataFrame) -> str:

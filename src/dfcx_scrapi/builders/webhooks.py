@@ -184,11 +184,12 @@ class WebhookBuilder(BuildersCommon):
         req_head_err_msg = (
             "`request_headers` should be a dict with string keys and values."
         )
-        if not isinstance(request_headers, dict):
-            raise ValueError(req_head_err_msg)
-        for k, v in request_headers.items():
-            if not(isinstance(k, str) and isinstance(v, str)):
+        if request_headers is not None:
+            if not isinstance(request_headers, dict):
                 raise ValueError(req_head_err_msg)
+            for k, v in request_headers.items():
+                if not(isinstance(k, str) and isinstance(v, str)):
+                    raise ValueError(req_head_err_msg)
 
         # Create a generic web service
         gws = Webhook.GenericWebService(
