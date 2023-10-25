@@ -105,11 +105,11 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return temp_dict
 
-    def get_route_groups_map(self, flow_id: str = None, reverse=False):
+    def get_route_groups_map(self, resource_id: str = None, reverse=False):
         """Exports Agent Route Group UUIDs and Names into a user friendly dict.
 
         Args:
-          flow_id: the formatted CX Agent Flow ID to use
+          resource_id: the formatted CX Agent Flow ID or Agent ID to use
           reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
@@ -117,42 +117,42 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
           as values. If Optional reverse=True, the output will return
           route group name:ID mapping instead of ID:route group name
         """
-        if not flow_id:
-            flow_id = self.flow_id
+        if not resource_id:
+            resource_id = self.flow_id
 
         if reverse:
             pages_dict = {
                 page.display_name: page.name
-                for page in self.list_transition_route_groups(flow_id)
+                for page in self.list_transition_route_groups(resource_id)
             }
 
         else:
             pages_dict = {
                 page.name: page.display_name
-                for page in self.list_transition_route_groups(flow_id)
+                for page in self.list_transition_route_groups(resource_id)
             }
 
         return pages_dict
 
     @scrapi_base.api_call_counter_decorator
-    def list_transition_route_groups(self, flow_id: str = None):
+    def list_transition_route_groups(self, resource_id: str = None):
         """Exports List of all Route Groups in the specified CX Flow ID.
 
         Args:
-          flow_id: The formatted CX Flow ID to list the route groups from
+          resource_id: The formatted CX Flow ID or Agent ID to list the route groups from
 
         Returns:
           List of Route Group objects
         """
-        if not flow_id:
-            flow_id = self.flow_id
+        if not resource_id:
+            resource_id = self.flow_id
 
         request = (
             types.transition_route_group.ListTransitionRouteGroupsRequest()
         )
-        request.parent = flow_id
+        request.parent = resource_id
 
-        client_options = self._set_region(flow_id)
+        client_options = self._set_region(resource_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
             credentials=self.creds, client_options=client_options
         )
@@ -188,14 +188,14 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
     @scrapi_base.api_call_counter_decorator
     def create_transition_route_group(
         self,
-        flow_id: str = None,
+        resource_id: str = None,
         obj: types.TransitionRouteGroup = None,
         **kwargs,
     ):
         """Create a single Transition Route Group resource.
 
         Args:
-          flow_id: the formatted CX Flow ID to create the route group in
+          resource_id: the formatted CX Flow ID or Agent ID to create the route group in
           obj: (Optional) the Transition Route Group object of type
             types.TransitionRouteGroup that you want the new route group
             to be built from.
@@ -203,8 +203,8 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         Returns:
           A copy of the successfully created Route Group object
         """
-        if not flow_id:
-            flow_id = self.flow_id
+        if not resource_id:
+            resource_id = self.flow_id
 
         if obj:
             trg = obj
@@ -215,12 +215,12 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         for key, value in kwargs.items():
             setattr(trg, key, value)
 
-        client_options = self._set_region(flow_id)
+        client_options = self._set_region(resource_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
             credentials=self.creds, client_options=client_options
         )
         response = client.create_transition_route_group(
-            parent=flow_id, transition_route_group=trg
+            parent=resource_id, transition_route_group=trg
         )
 
         return response
@@ -275,6 +275,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return response
 
+    # TODO: needs to include agent flows
     def route_groups_to_dataframe(
         self, agent_id: str = None, rate_limit: float = 0.5
     ):
@@ -316,6 +317,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         rows_list = []
         for route_group in all_rgs:
+            # TODO: agent level route groups won't have this component
             flow = "/".join(route_group.name.split("/")[0:8])
             for route in route_group.transition_routes:
                 temp_dict = {}
