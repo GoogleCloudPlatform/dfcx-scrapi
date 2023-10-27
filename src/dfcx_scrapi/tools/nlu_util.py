@@ -134,10 +134,12 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
             creds=self.creds
         )
         agent_trgs = trg_loader.list_transition_route_groups(agent_id)
-        self.trgs = agent_trgs + trg_loader.list_transition_route_groups(self.flow.name)
-        self.name_to_trg = {i.name: i for i in self.trgs + agent_trgs}
+        self.trgs = (
+            agent_trgs + trg_loader.list_transition_route_groups(self.flow.name)
+        )
+        self.name_to_trg = {i.name: i for i in self.trgs}
 
-        if page_display_name != 'Start Page':
+        if page_display_name != "Start Page":
             page_loader = pages.Pages(creds=self.creds)
             page_map = page_loader.get_pages_map(self.flow.name, reverse=True)
             page_id = page_map.get(page_display_name, None)
@@ -163,7 +165,7 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
         for tr in self.flow.transition_routes:
             if tr.intent:
                 relevant_intents.add(tr.intent)
-        if hasattr(self, 'page'):
+        if hasattr(self, "page"):
             relevant_trgs |= set(self.page.transition_route_groups)
             for tr in self.page.transition_routes:
                 if tr.intent:
