@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import logging
-from typing import Dict
+from typing import List, Dict, Union, Any
 
 import numpy as np
 import pandas as pd
@@ -57,7 +57,6 @@ class FulfillmentBuilder(BuildersCommon):
             f"\n\n\nFulfillment Parameters:\n{'-'*20}\n{params_str}"
         )
 
-
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -69,7 +68,6 @@ class FulfillmentBuilder(BuildersCommon):
             f"\nreturn_partial_responses: {partial_resp}"
         )
 
-
     def _show_parameters(self) -> str:
         """String representation for the parameters presets of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -79,7 +77,6 @@ class FulfillmentBuilder(BuildersCommon):
             for param in self.proto_obj.set_parameter_actions
         ])
 
-
     def _show_response_messages(self) -> str:
         """String representation of response messages in proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -88,7 +85,6 @@ class FulfillmentBuilder(BuildersCommon):
             f"ResponseMessage {i+1}:\n{str(ResponseMessageBuilder(msg))}"
             for i, msg in enumerate(self.proto_obj.messages)
         ])
-
 
     def show_fulfillment(self, mode: str = "whole"):
         """Show the proto_obj information.
@@ -180,23 +176,65 @@ class FulfillmentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def add_response_message(
         self,
-        response_message: ResponseMessage
+        response_message: ResponseMessage = None,
+        message: Union[str, List[str], Dict[str, Any]] = None,
+        response_type: str = "text",
+        mode: str = None,
     ) -> Fulfillment:
         """Add a rich message response to present to the user.
+        You can use either ResponseMessage object directly or pass
+        `message`, `response_type`, `mode` to build one on the fly.
+        Note that `response_message` has more priority and is being used
+        if other parameters have been passed.
 
         Args:
           response_message (ResponseMessage):
             The ResponseMessage to add to the Fulfillment.
             Refer to `builders.response_message.ResponseMessageBuilder`
               to build one.
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
 
         Returns:
           A Fulfillment object stored in proto_obj
         """
         self._check_proto_obj_attr_exist()
+
+        if response_message is None:
+            rmb = ResponseMessageBuilder()
+            rmb.create_new_proto_obj(
+                message=message, response_type=response_type, mode=mode)
+            response_message = rmb.proto_obj
 
         if not isinstance(response_message, ResponseMessage):
             raise ValueError(
@@ -206,7 +244,6 @@ class FulfillmentBuilder(BuildersCommon):
         self.proto_obj.messages.append(response_message)
 
         return self.proto_obj
-
 
     def add_parameter_presets(
         self,
@@ -245,7 +282,6 @@ class FulfillmentBuilder(BuildersCommon):
             raise ValueError(
                 "parameter_map should be a dictionary."
             )
-
 
     def remove_parameter_presets(
         self,
@@ -291,7 +327,6 @@ class FulfillmentBuilder(BuildersCommon):
             raise ValueError(
                 "parameter_map should be a dictionary."
             )
-
 
     def has_webhook(self) -> bool:
         """Check whether the Fulfillment in proto_obj uses a Webhook.

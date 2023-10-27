@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import logging
+from typing import List, Dict, Union, Any
 
 import numpy as np
 import pandas as pd
@@ -54,7 +55,6 @@ class TransitionRouteBuilder(BuildersCommon):
             f"\nFulfillment:\n\n{fulfillment_str}"
         )
 
-
     def _show_transition_criteria(self) -> str:
         """String representation for the transition criteria of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -69,7 +69,6 @@ class TransitionRouteBuilder(BuildersCommon):
             f"\n\tIntent: {intent_str}"
             f"\n\tCondition: {cond_str}"
         )
-
 
     def _show_target(self) -> str:
         """String representation for the target of proto_obj."""
@@ -86,7 +85,6 @@ class TransitionRouteBuilder(BuildersCommon):
             target_id = "None"
         return f"Target: {target_type}\nTarget ID: {target_id}"
 
-
     def _show_fulfillment(self) -> str:
         """String representation for the fulfillment of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -98,7 +96,6 @@ class TransitionRouteBuilder(BuildersCommon):
             )
 
         return fulfillment_str
-
 
     def show_transition_route(self, mode: str = "whole"):
         """Show the proto_obj information.
@@ -226,6 +223,87 @@ class TransitionRouteBuilder(BuildersCommon):
 
         return self.proto_obj
 
+    def set_fulfillment(
+        self,
+        message: Union[str, List[str], Dict[str, Any]] = None,
+        response_type: str = "text",
+        mode: str = None,
+        webhook: str = None,
+        tag: str = None,
+        return_partial_responses: bool = False,
+        parameter_map: Dict[str, str] = None,
+    ):
+        """Set the Fulfillment for the proto_obj.
+        This mehotd overwrites the existing Fulfillment.
+
+        Args:
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
+          webhook (str):
+            The webhook to call. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents
+              /<Agent ID>/webhooks/<Webhook ID>``.
+          tag (str):
+            The tag is typically used by
+            the webhook service to identify which fulfillment is being
+            called, but it could be used for other purposes. This field
+            is required if ``webhook`` is specified.
+          return_partial_responses (bool):
+            Whether Dialogflow should return currently
+            queued fulfillment response messages in
+            streaming APIs. If a webhook is specified, it
+            happens before Dialogflow invokes webhook.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
+
+        Returns:
+          A TransitionRoute object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        fb = FulfillmentBuilder()
+        fb.create_new_proto_obj(
+            webhook=webhook, tag=tag,
+            return_partial_responses=return_partial_responses)
+        fb.add_response_message(
+            message=message, response_type=response_type, mode=mode)
+        if not parameter_map is None:
+            fb.add_parameter_presets(parameter_map)
+
+        self.proto_obj.trigger_fulfillment = fb.proto_obj
+
+        return self.proto_obj
+
 
     class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
         """An internal class to store DataFrame related methods."""
@@ -289,7 +367,6 @@ class EventHandlerBuilder(BuildersCommon):
             f"\nFulfillment:\n\n{fulfillment_str}"
         )
 
-
     def _show_event_and_target(self) -> str:
         """String representation for the target of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -312,7 +389,6 @@ class EventHandlerBuilder(BuildersCommon):
             f"\nTarget ID: {target_id}"
         )
 
-
     def _show_fulfillment(self) -> str:
         """String representation for the fulfillment of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -324,7 +400,6 @@ class EventHandlerBuilder(BuildersCommon):
             )
 
         return fulfillment_str
-
 
     def show_event_handler(self, mode: str = "whole"):
         """Show the proto_obj information.
@@ -418,6 +493,87 @@ class EventHandlerBuilder(BuildersCommon):
                 target_page=target_page,
                 target_flow=target_flow
             )
+
+        return self.proto_obj
+
+    def set_fulfillment(
+        self,
+        message: Union[str, List[str], Dict[str, Any]] = None,
+        response_type: str = "text",
+        mode: str = None,
+        webhook: str = None,
+        tag: str = None,
+        return_partial_responses: bool = False,
+        parameter_map: Dict[str, str] = None,
+    ):
+        """Set the Fulfillment for the proto_obj.
+        This mehotd overwrites the existing Fulfillment.
+
+        Args:
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
+          webhook (str):
+            The webhook to call. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents
+              /<Agent ID>/webhooks/<Webhook ID>``.
+          tag (str):
+            The tag is typically used by
+            the webhook service to identify which fulfillment is being
+            called, but it could be used for other purposes. This field
+            is required if ``webhook`` is specified.
+          return_partial_responses (bool):
+            Whether Dialogflow should return currently
+            queued fulfillment response messages in
+            streaming APIs. If a webhook is specified, it
+            happens before Dialogflow invokes webhook.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
+
+        Returns:
+          A TransitionRoute object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        fb = FulfillmentBuilder()
+        fb.create_new_proto_obj(
+            webhook=webhook, tag=tag,
+            return_partial_responses=return_partial_responses)
+        fb.add_response_message(
+            message=message, response_type=response_type, mode=mode)
+        if not parameter_map is None:
+            fb.add_parameter_presets(parameter_map)
+
+        self.proto_obj.trigger_fulfillment = fb.proto_obj
 
         return self.proto_obj
 

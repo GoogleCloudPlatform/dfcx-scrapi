@@ -16,7 +16,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Dict, Union, Any
 
 import numpy as np
 import pandas as pd
@@ -59,7 +59,6 @@ class PageBuilder(BuildersCommon):
             f"\n\n\nTransitoinRouteGroups:\n{'='*25}"
             f"\n{self._show_transition_route_groups()}")
 
-
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -71,7 +70,6 @@ class PageBuilder(BuildersCommon):
             f"display_name: {self.proto_obj.display_name}"
             f"\nentry_fulfillment:\n\n{entry_fulfillment_str}"
         )
-
 
     def _show_parameters(self) -> str:
         """String representation for the parameters of proto_obj."""
@@ -89,7 +87,6 @@ class PageBuilder(BuildersCommon):
             for param in self.proto_obj.form.parameters
         ])
 
-
     def _show_transition_routes(self) -> str:
         """String representation for the transition routes of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -100,7 +97,6 @@ class PageBuilder(BuildersCommon):
             for i, tr in enumerate(self.proto_obj.transition_routes)
         ])
 
-
     def _show_event_handlers(self) -> str:
         """String representation for the event handlers of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -110,7 +106,6 @@ class PageBuilder(BuildersCommon):
             for i, eh in enumerate(self.proto_obj.event_handlers)
         ])
 
-
     def _show_transition_route_groups(self) -> str:
         """String representation for the transition route groups of proto_obj"""
         self._check_proto_obj_attr_exist()
@@ -119,7 +114,6 @@ class PageBuilder(BuildersCommon):
             f"TransitionRouteGroup {i+1}: {trg_id}"
             for i, trg_id in enumerate(self.proto_obj.transition_route_groups)
         ])
-
 
     def show_page_info(
         self, mode: str = "whole"
@@ -214,6 +208,87 @@ class PageBuilder(BuildersCommon):
 
         return self.proto_obj
 
+
+    def set_fulfillment(
+        self,
+        message: Union[str, List[str], Dict[str, Any]] = None,
+        response_type: str = "text",
+        mode: str = None,
+        webhook: str = None,
+        tag: str = None,
+        return_partial_responses: bool = False,
+        parameter_map: Dict[str, str] = None,
+    ):
+        """Set the EntryFulfillment of the Page.
+        This mehotd overwrites the existing Fulfillment.
+
+        Args:
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
+          webhook (str):
+            The webhook to call. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents
+              /<Agent ID>/webhooks/<Webhook ID>``.
+          tag (str):
+            The tag is typically used by
+            the webhook service to identify which fulfillment is being
+            called, but it could be used for other purposes. This field
+            is required if ``webhook`` is specified.
+          return_partial_responses (bool):
+            Whether Dialogflow should return currently
+            queued fulfillment response messages in
+            streaming APIs. If a webhook is specified, it
+            happens before Dialogflow invokes webhook.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
+
+        Returns:
+          A TransitionRoute object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        fb = FulfillmentBuilder()
+        fb.create_new_proto_obj(
+            webhook=webhook, tag=tag,
+            return_partial_responses=return_partial_responses)
+        fb.add_response_message(
+            message=message, response_type=response_type, mode=mode)
+        if not parameter_map is None:
+            fb.add_parameter_presets(parameter_map)
+
+        self.proto_obj.entry_fulfillment = fb.proto_obj
+
+        return self.proto_obj
 
     def add_parameter(
         self,
@@ -336,7 +411,6 @@ class PageBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def add_transition_route(
         self,
         transition_routes: Union[TransitionRoute, List[TransitionRoute]]
@@ -363,7 +437,6 @@ class PageBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def add_event_handler(
         self,
         event_handlers: Union[EventHandler, List[EventHandler]]
@@ -389,7 +462,6 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.event_handlers.extend(event_handlers)
 
         return self.proto_obj
-
 
     def add_transition_route_group(
         self,
@@ -418,7 +490,6 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.transition_route_groups.extend(transition_route_groups)
 
         return self.proto_obj
-
 
     def remove_parameter(
         self,
@@ -452,7 +523,6 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.form.parameters = new_params
 
         return self.proto_obj
-
 
     def remove_transition_route(
         self,
@@ -489,7 +559,6 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.transition_routes = new_routes
 
         return self.proto_obj
-
 
     def remove_event_handler(
         self,
@@ -533,7 +602,6 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.event_handlers = new_ehs
 
         return self.proto_obj
-
 
     def remove_transition_route_group(
         self,
