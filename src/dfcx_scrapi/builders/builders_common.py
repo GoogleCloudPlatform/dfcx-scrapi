@@ -57,7 +57,6 @@ class BuildersCommon:
                 "\nPlease create or load the correct type to continue."
             )
 
-
     def load_proto_obj(self, obj, overwrite: bool = False):
         """Load an existing object to proto_obj for further uses.
 
@@ -185,7 +184,6 @@ class BuildersCommon:
 
         return is_match
 
-
     def _check_transition_route_with_target_route(
         self,
         transition_route: TransitionRoute,
@@ -213,7 +211,6 @@ class BuildersCommon:
         ):
             return True
         return False
-
 
     def _check_transition_route_with_intent_and_condition(
         self,
@@ -246,7 +243,6 @@ class BuildersCommon:
             return True
         return False
 
-
     def _check_transition_route_with_intent(
         self,
         transition_route: TransitionRoute,
@@ -270,7 +266,6 @@ class BuildersCommon:
         if transition_route.intent == intent:
             return True
         return False
-
 
     def _check_transition_route_with_condition(
         self,
@@ -325,7 +320,6 @@ class BuildersCommon:
             if eh not in event_handlers
         ]
 
-
     def _find_unmatched_event_handlers_by_name(
         self, event_names: Union[str, List[str]]
     ) -> List[EventHandler]:
@@ -369,7 +363,6 @@ class BuildersCommon:
 
         return self._dataframe_instance.proto_to_dataframe(
             obj=self.proto_obj, mode=mode)
-
 
     def from_dataframe(self, df: pd.DataFrame, action: str):
         """Perform an `action` from the DataFrame `df` on proto_obj.
