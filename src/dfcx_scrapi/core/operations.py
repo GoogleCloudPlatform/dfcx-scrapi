@@ -16,8 +16,10 @@
 
 import logging
 from typing import Dict
+
 from google.api_core import operations_v1, grpc_helpers
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -26,7 +28,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-class Operations(ScrapiBase):
+class Operations(scrapi_base.ScrapiBase):
     """Core class for Operations functions, primarily used to
     extract LRO information on long running jobs for CX.
     """
@@ -45,6 +47,7 @@ class Operations(ScrapiBase):
             scope=scope
         )
 
+    @scrapi_base.api_call_counter_decorator
     def get_lro(self, lro: str):
         """Used to retrieve the status of LROs for Dialogflow CX.
 

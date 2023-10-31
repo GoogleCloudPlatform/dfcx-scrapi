@@ -22,7 +22,7 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -32,7 +32,7 @@ logging.basicConfig(
 )
 
 
-class EntityTypes(ScrapiBase):
+class EntityTypes(scrapi_base.ScrapiBase):
     """Core Class for CX Entity Type Resource functions."""
 
     def __init__(
@@ -43,6 +43,7 @@ class EntityTypes(ScrapiBase):
         scope=False,
         entity_id: str = None,
         agent_id: str = None,
+        language_code: str = "en"
     ):
         super().__init__(
             creds_path=creds_path,
@@ -53,6 +54,7 @@ class EntityTypes(ScrapiBase):
 
         self.entity_id = entity_id
         self.agent_id = agent_id
+        self.language_code = language_code
 
 
     @staticmethod
@@ -243,11 +245,13 @@ class EntityTypes(ScrapiBase):
 
         return entities_dict
 
-    def list_entity_types(self, agent_id: str = None):
+    @scrapi_base.api_call_counter_decorator
+    def list_entity_types(self, agent_id: str, language_code: str = "en"):
         """Returns a list of Entity Type objects.
 
         Args:
           agent_id: the formatted CX Agent ID to use
+          language_code: Specifies the language of the Entity Types listed
 
         Returns:
           List of Entity Type objects
@@ -257,6 +261,7 @@ class EntityTypes(ScrapiBase):
 
         request = types.entity_type.ListEntityTypesRequest()
         request.parent = agent_id
+        request.language_code = language_code
 
         client_options = self._set_region(agent_id)
         client = services.entity_types.EntityTypesClient(
@@ -272,11 +277,13 @@ class EntityTypes(ScrapiBase):
 
         return entities
 
-    def get_entity_type(self, entity_id: str = None):
+    @scrapi_base.api_call_counter_decorator
+    def get_entity_type(self, entity_id: str = None, language_code: str = "en"):
         """Returns a single Entity Type object.
 
         Args:
           entity_id: the formatted CX Entity ID to get
+          language_code: Specifies the language of the Entity Types listed
 
         Returns:
           The single Entity Type object
@@ -288,10 +295,15 @@ class EntityTypes(ScrapiBase):
         client = services.entity_types.EntityTypesClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.get_entity_type(name=entity_id)
+        request = types.entity_type.GetEntityTypeRequest()
+        request.name = entity_id
+        request.language_code = language_code
+
+        response = client.get_entity_type(request=request)
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_entity_type(
         self,
         agent_id: str = None,
@@ -353,6 +365,7 @@ class EntityTypes(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_entity_type(
         self,
         entity_type_id: str = None,
@@ -407,8 +420,9 @@ class EntityTypes(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_entity_type(self, entity_id: str = None, obj=None) -> None:
-        """Deletes a single Entity Type resouce object.
+        """Deletes a single Entity Type resource object.
 
         Args:
           entity_id: the formatted CX Entity ID to delete

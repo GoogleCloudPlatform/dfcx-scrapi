@@ -19,7 +19,7 @@ import logging
 from typing import Dict
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -34,7 +34,7 @@ SCOPES = [
 ]
 
 
-class ScrapiExperiments(ScrapiBase):
+class ScrapiExperiments(scrapi_base.ScrapiBase):
     """Wrapper for working with Experiments"""
 
     def __init__(
@@ -55,7 +55,8 @@ class ScrapiExperiments(ScrapiBase):
 
         logging.info("created %s", self.agent_id)
 
-    def list_experiments(self, environment_id=None):
+    @scrapi_base.api_call_counter_decorator
+    def list_experiments(self, environment_id: str = None):
         """List out experiments.
 
         Args:
@@ -75,7 +76,7 @@ class ScrapiExperiments(ScrapiBase):
             client_options=client_options, credentials=self.creds
         )
         response = client.list_experiments(request)
-        blob = ScrapiBase.cx_object_to_json(response)
+        blob = scrapi_base.ScrapiBase.cx_object_to_json(response)
 
         if len(blob) < 1:
             logging.warning(

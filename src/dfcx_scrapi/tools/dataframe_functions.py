@@ -80,7 +80,10 @@ class DataframeFunctions(ScrapiBase):
         if scope:
             scopes += scope
 
-        if creds_path:
+        if creds:
+            self.sheets_client = gspread.authorize(creds)
+
+        elif creds_path:
             creds = ServiceAccountCredentials.from_json_keyfile_name(
                 filename=creds_path, scopes=scopes
             )

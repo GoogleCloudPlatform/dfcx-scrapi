@@ -19,8 +19,9 @@ import uuid
 from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
+from google.protobuf.json_format import MessageToDict
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -29,7 +30,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-class Sessions(ScrapiBase):
+class Sessions(scrapi_base.ScrapiBase):
     """Core Class for CX Session Resource functions."""
 
     def __init__(
@@ -285,3 +286,17 @@ class Sessions(ScrapiBase):
         response = session_client.detect_intent(request=request)
 
         return response
+
+    def get_agent_answer(self, user_query: str) -> str:
+        """Extract the answer/citation from a Vertex Conversation response."""
+
+        session_id = self.build_session_id(self.agent_id)
+        res = MessageToDict(self.detect_intent( # pylint: disable=W0212
+            self.agent_id, session_id, user_query)._pb)
+
+        answer_text = res["responseMessages"][0]["text"]["text"][0]
+        answer_link = res["responseMessages"][1]["payload"][
+            "richContent"][0][0]["actionLink"] if len(
+                res["responseMessages"]) > 1 else ""
+
+        return f"{answer_text} ({answer_link})"

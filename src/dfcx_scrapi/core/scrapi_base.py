@@ -17,6 +17,8 @@
 import logging
 import json
 import re
+import functools
+from collections import defaultdict
 from typing import Dict
 
 import numpy as np
@@ -72,8 +74,10 @@ class ScrapiBase:
         if agent_id:
             self.agent_id = agent_id
 
+        self.api_calls_dict = defaultdict(int)
+
     @staticmethod
-    def _set_region(item_id):
+    def _set_region(resource_id: str):
         """Different regions have different API endpoints
 
         Args:
@@ -86,18 +90,27 @@ class ScrapiBase:
           if the location is "global"
         """
         try:
-            location = item_id.split("/")[3]
+            location = resource_id.split("/")[3]
         except IndexError as err:
-            logging.error("IndexError - path too short? %s", item_id)
+            logging.error("IndexError - path too short? %s", resource_id)
             raise err
+
+        project_id = resource_id.split("/")[1]
 
         if location != "global":
             api_endpoint = f"{location}-dialogflow.googleapis.com:443"
-            client_options = {"api_endpoint": api_endpoint}
+            client_options = {
+                "api_endpoint": api_endpoint,
+                "quota_project_id": project_id}
             return client_options
 
         else:
-            return None  # explicit None return when not required
+            api_endpoint = "dialogflow.googleapis.com:443"
+            client_options = {
+                "api_endpoint": api_endpoint,
+                "quota_project_id": project_id}
+
+            return client_options
 
     @staticmethod
     def pbuf_to_dict(pbuf):
@@ -267,6 +280,51 @@ class ScrapiBase:
             new_dict[k] = v
 
         return new_dict
+
+    def get_api_calls_details(self) -> Dict[str, int]:
+        """The number of API calls corresponding to each method.
+
+        Returns:
+          A dictionary with keys as the method names
+          and values as the number of calls.
+        """
+        this_class_methods, sub_class_apis_dict = {}, {}
+
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            if callable(attr) and hasattr(attr, "calls_api"):
+                this_class_methods[attr_name] = 0
+            if any(
+                isinstance(attr, sub_class)
+                for sub_class in ScrapiBase.__subclasses__()
+            ):
+                sub_class_apis_dict.update(attr.get_api_calls_details())
+
+        if hasattr(self, "api_calls_dict"):
+            this_class_methods.update(getattr(self, "api_calls_dict"))
+
+        return {**this_class_methods, **sub_class_apis_dict}
+
+    def get_api_calls_count(self) -> int:
+        """Show the total number of API calls for this resource.
+
+        Returns:
+          Total calls to the API so far as an int.
+        """
+        return sum(self.get_api_calls_details().values())
+
+
+def api_call_counter_decorator(func):
+    """Counts the number of API calls for the function `func`."""
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        self.api_calls_dict[func.__name__] += 1
+        return func(self, *args, **kwargs)
+
+    wrapper.calls_api = True
+
+    return wrapper
 
 
     class _AllPagesCustomDict(dict):

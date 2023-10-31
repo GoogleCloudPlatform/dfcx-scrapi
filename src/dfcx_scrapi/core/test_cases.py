@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import pandas as pd
 import logging
 from typing import Dict, List
 
@@ -22,7 +22,9 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import flows
+from dfcx_scrapi.core import pages
 
 # logging config
 logging.basicConfig(
@@ -32,7 +34,7 @@ logging.basicConfig(
 )
 
 
-class TestCases(ScrapiBase):
+class TestCases(scrapi_base.ScrapiBase):
     """Core Class for CX Test Cases."""
 
     def __init__(
@@ -59,12 +61,132 @@ class TestCases(ScrapiBase):
             self.test_case_id = test_case_id
             self.client_options = self._set_region(self.test_case_id)
 
-    def list_test_cases(self, agent_id: str = None):
+    def _convert_test_result_to_string(self, test_case: types.TestCase) -> str:
+        """Converts the Enum result to a string."""
+        if test_case.last_test_result.test_result == 0:
+            return "TEST_RESULT_UNSPECIFIED"
+        elif test_case.last_test_result.test_result == 1:
+            return "PASSED"
+        elif test_case.last_test_result.test_result == 2:
+            return "FAILED"
+        else:
+            return ""
+
+    def _convert_test_result_to_bool(self, test_case: types.TestCase) -> bool:
+        """Converts the String result to a boolean."""
+        test_result = self._convert_test_result_to_string(test_case)
+
+        if test_result == "PASSED":
+            return True
+        elif test_result == "FAILED":
+            return False
+        else:
+            return None
+
+    def _get_flow_id_from_test_config(
+            self, test_case: types.TestCase) -> str:
+        """Attempt to get the Flow ID from the Test Case Test Config."""
+        if "flow" in test_case.test_config:
+            return test_case.test_config.flow
+        elif "page" in test_case.test_config:
+            return "/".join(test_case.test_config.page.split("/")[:8])
+        else:
+            agent_id = "/".join(test_case.name.split("/")[:6])
+            return f"{agent_id}/flows/00000000-0000-0000-0000-000000000000"
+
+    def _get_page_id_from_test_config(
+            self, test_case: types.TestCase, flow_id: str) -> str:
+        """Attempt to get the Page ID from the Test Case Test Config."""
+        if "page" in test_case.test_config:
+            return test_case.test_config.page
+        else:
+            return f"{flow_id}/pages/START_PAGE"
+
+    def _get_page_display_name(
+            self, flow_id: str, page_id: str,
+            pages_map: Dict[str, Dict[str, str]]) -> str:
+        """Get the Page Display Name from the Pages Map based on the Page ID."""
+        page_map = pages_map.get(flow_id, None)
+        page = "START_PAGE"
+        if page_map:
+            page = page_map.get(page_id, None)
+
+        return page
+
+    def _process_test_case(self, test_case, flows_map, pages_map):
+        """Takes a response from list_test_cases and returns a single row
+        dataframe of the test case result.
+
+        Args:
+          test_case: The test case response
+          flows_map: A dictionary mapping flow IDs to flow display names
+          pages_map: A dictionary with keys as flow IDs and values as
+            dictionaries mapping page IDs to page display names for that flow
+
+        Returns: A dataframe with columns:
+          display_name, id, short_id, tags, creation_time, start_flow,
+          start_page, test_result, passed, test_time
+        """
+        flow_id = self._get_flow_id_from_test_config(test_case)
+        page_id = self._get_page_id_from_test_config(test_case, flow_id)
+        page = self._get_page_display_name(flow_id, page_id, pages_map)
+        test_result = self._convert_test_result_to_bool(test_case)
+
+        return pd.DataFrame(
+            {
+                "display_name": [test_case.display_name],
+                "id": [test_case.name],
+                "short_id": [test_case.name.split("/")[-1]],
+                "tags": [",".join(test_case.tags)],
+                "creation_time": [test_case.creation_time],
+                "start_flow": [flows_map.get(flow_id, None)],
+                "start_page": [page],
+                # "test_result": [test_result],
+                "passed": [test_result],
+                "test_time": [test_case.last_test_result.test_time]
+            }
+        )
+
+    def _retest_cases(
+            self, test_case_df: pd.DataFrame, retest_ids: List[str]
+            ) -> pd.DataFrame:
+        print("To retest:", len(retest_ids))
+        response = self.batch_run_test_cases(retest_ids, self.agent_id)
+        for result in response.results:
+            # Results may not be in the same order as they went in
+            # Process the name a bit to remove the /results/id part
+            tc_id_full = "/".join(result.name.split("/")[:-2])
+            tc_id = tc_id_full.rsplit("/", maxsplit=1)[-1]
+
+            # Update dataframe where id = tc_id_full
+            # row = test_case_df.loc[test_case_df['id']==tc_id_full]
+            test_case_df.loc[
+                test_case_df["id"] == tc_id_full, "short_id"
+            ] = tc_id
+            # test_case_df.loc[
+            #     test_case_df["id"] == tc_id_full, "test_result"
+            # ] = str(result.test_result)
+            test_case_df.loc[
+                test_case_df["id"] == tc_id_full, "test_time"
+            ] = result.test_time
+            test_case_df.loc[test_case_df["id"] == tc_id_full,"passed"] = (
+                str(result.test_result) == "TestResult.PASSED"
+            )
+
+        return test_case_df
+
+    @scrapi_base.api_call_counter_decorator
+    def list_test_cases(
+        self, agent_id: str = None, include_conversation_turns: bool = False
+    ):
         """List test cases from an agent.
 
         Args:
-          agent_id: The agent to list all pages for.
+          agent_id: The agent to list all test cases for.
             `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
+          include_conversation_turns: Either to include the conversation turns
+            in the test cases or not. Default is False
+            which shows only the basic metadata about the test cases.
 
         Returns:
           List of test cases from an agent.
@@ -73,8 +195,14 @@ class TestCases(ScrapiBase):
         if not agent_id:
             agent_id = self.agent_id
 
-        request = types.test_case.ListTestCasesRequest()
-        request.parent = agent_id
+        if include_conversation_turns:
+            test_case_view = types.ListTestCasesRequest.TestCaseView.FULL
+        else:
+            test_case_view = types.ListTestCasesRequest.TestCaseView.BASIC
+
+        request = types.test_case.ListTestCasesRequest(
+            parent=agent_id, view=test_case_view
+        )
 
         client_options = self._set_region(agent_id)
 
@@ -91,6 +219,7 @@ class TestCases(ScrapiBase):
 
         return test_cases
 
+    @scrapi_base.api_call_counter_decorator
     def export_test_cases(
         self,
         gcs_uri: str,
@@ -137,6 +266,7 @@ class TestCases(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_test_case(self, test_case: types.TestCase, agent_id: str = None):
         """Create a new Test Case in the specified CX Agent.
 
@@ -162,6 +292,7 @@ class TestCases(ScrapiBase):
         response = client.create_test_case(request)
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def get_test_case(self, test_case_id: str):
         """Get test case object from CX Agent.
 
@@ -184,6 +315,7 @@ class TestCases(ScrapiBase):
         response = client.get_test_case(request)
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def import_test_cases(self, gcs_uri: str, agent_id: str = None):
         """Import test cases from cloud storage.
 
@@ -212,6 +344,7 @@ class TestCases(ScrapiBase):
         result = response.result()
         return result
 
+    @scrapi_base.api_call_counter_decorator
     def batch_delete_test_cases(
         self,
         test_case_ids: List[str],
@@ -242,6 +375,7 @@ class TestCases(ScrapiBase):
         )
         client.batch_delete_test_cases(request)
 
+    @scrapi_base.api_call_counter_decorator
     def list_test_case_results(self, test_case_id: str):
         """List the results from a specific Test Case.
 
@@ -272,6 +406,7 @@ class TestCases(ScrapiBase):
 
         return test_case_results
 
+    @scrapi_base.api_call_counter_decorator
     def batch_run_test_cases(
         self,
         test_cases: List[str],
@@ -309,6 +444,7 @@ class TestCases(ScrapiBase):
         results = response.result()
         return results
 
+    @scrapi_base.api_call_counter_decorator
     def update_test_case(
         self,
         test_case_id: str = None,
@@ -348,6 +484,7 @@ class TestCases(ScrapiBase):
         response = client.update_test_case(request)
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def run_test_case(self, test_case_id: str, environment: str = None):
         """Run test case and get result for a specified test case.
 
@@ -375,6 +512,7 @@ class TestCases(ScrapiBase):
         results = response.result()
         return results
 
+    @scrapi_base.api_call_counter_decorator
     def get_test_case_result(self, test_case_result_id: str):
         """Get test case result for a specified run on a specified test case.
 
@@ -396,6 +534,7 @@ class TestCases(ScrapiBase):
         response = client.get_test_case_result(request)
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def calculate_coverage(self, coverage_type: int, agent_id: str = None):
         """Calculate coverage of different resources in the test case set.
 
@@ -430,3 +569,50 @@ class TestCases(ScrapiBase):
         )
         response = client.calculate_coverage(request)
         return response
+
+    def get_test_case_results_df(self, agent_id=None, retest_all=False):
+        """Convert Test Cases to Dataframe.
+
+        Gets the test case results for this agent, and generates a dataframe
+        with their details. Any tests without a result will be run in a batch.
+
+        Args:
+          agent_id: The agent to create the test case for. Format:
+              `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
+          retest_all: if true, all test cases are re-run,
+            regardless of whether or not they had a result
+
+        Returns:
+          DataFrame of test case results for this agent, with columns:
+            display_name, id, short_id, tags, creation_time, start_flow,
+            start_page, passed, test_time
+        """
+        if agent_id:
+            self.agent_id = agent_id
+
+        dfcx_flows = flows.Flows(creds=self.creds, agent_id=self.agent_id)
+        dfcx_pages = pages.Pages(creds=self.creds)
+        flows_map = dfcx_flows.get_flows_map(agent_id=self.agent_id)
+        pages_map = {}
+        for flow_id in flows_map.keys():
+            pages_map[flow_id] = dfcx_pages.get_pages_map(flow_id=flow_id)
+
+        test_case_results = self.list_test_cases(self.agent_id)
+        retest_ids = []
+        test_case_rows = []
+
+        for test_case in test_case_results:
+            row = self._process_test_case(test_case, flows_map, pages_map)
+            test_case_rows.append(row)
+            test_result = self._convert_test_result_to_string(test_case)
+            if retest_all or test_result == "TEST_RESULT_UNSPECIFIED":
+                retest_ids.append(test_case.name)
+
+        # Create dataframe
+        test_case_df = pd.concat(test_case_rows)
+
+        # Retest any that haven't been run yet
+        if len(retest_ids) > 0:
+            test_case_df = self._retest_cases(test_case_df,retest_ids)
+
+        return test_case_df

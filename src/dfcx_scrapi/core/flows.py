@@ -15,11 +15,13 @@
 # limitations under the License.
 
 import logging
+import time
 from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import pages
 
 # logging config
 logging.basicConfig(
@@ -54,6 +56,7 @@ class Flows(scrapi_base.ScrapiBase):
             self.flow_id = flow_id
 
         self.agent_id = agent_id
+        self.pages = pages.Pages(creds=self.creds)
 
     # TODO: Migrate to Flow Builder class when ready
     @staticmethod
@@ -129,6 +132,39 @@ class Flows(scrapi_base.ScrapiBase):
 
         return flows_dict
 
+    def get_flow_page_map(
+            self, agent_id: str, rate_limit: float = 1.0
+            ) -> Dict[str, Dict[str, str]]:
+        """Exports a user friendly dict containing Flows, Pages, and IDs
+        This method builds on top of `get_flows_map` and builds out a nested
+        dictionary containing all of the Page Display Names and UUIDs contained
+        within each Flow. Output Format:
+          {
+            <FLOW_DISPLAY_NAME>: {
+                'id': <FLOW_UUID>
+                'pages': { <PAGE_DISPLAY_NAME> : <PAGE_UUID> }
+            }
+          }
+
+        Args:
+          agent_id: the formatted CX Agent ID to use
+
+        Returns:
+          Dictionary containing Flow Names/UUIDs and Page Names/UUIDs
+        """
+        flow_page_map = {}
+
+        flows_map = self.get_flows_map(agent_id, reverse=True)
+
+        for flow in flows_map:
+            pages_map = self.pages.get_pages_map(
+                flows_map[flow], reverse=True)
+            flow_page_map[flow] = {"id": flows_map[flow], "pages": pages_map}
+            time.sleep(rate_limit)
+
+        return flow_page_map
+
+    @scrapi_base.api_call_counter_decorator
     def train_flow(self, flow_id: str) -> str:
         """Trains the specified flow.
 
@@ -155,6 +191,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def list_flows(self, agent_id: str) -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
@@ -208,6 +245,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return flow
 
+    @scrapi_base.api_call_counter_decorator
     def get_flow(self, flow_id: str) -> types.Flow:
         """Get a single CX Flow object.
 
@@ -226,6 +264,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_flow(
         self,
         agent_id: str,
@@ -274,6 +313,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_flow(
         self, flow_id: str, obj: types.Flow = None, **kwargs
     ) -> types.Flow:
@@ -325,6 +365,7 @@ class Flows(scrapi_base.ScrapiBase):
             setattr(current_settings, key, value)
         self.update_flow(flow_id=flow_id, nlu_settings=current_settings)
 
+    @scrapi_base.api_call_counter_decorator
     def export_flow(
         self, flow_id: str, gcs_path: str, ref_flows: bool = True
     ) -> Dict[str, str]:
@@ -355,6 +396,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response.result()
 
+    @scrapi_base.api_call_counter_decorator
     def export_flow_inline(self, flow_id: str, ref_flows: bool = True) -> bytes:
         """Export a Flow, returning uncompressed raw byte content for flow.
 
@@ -377,6 +419,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return (response.result()).flow_content
 
+    @scrapi_base.api_call_counter_decorator
     def import_flow(
         self,
         agent_id: str,
@@ -425,6 +468,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_flow(self, flow_id: str, force: bool = False):
         """Deletes a single CX Flow Object resource.
 

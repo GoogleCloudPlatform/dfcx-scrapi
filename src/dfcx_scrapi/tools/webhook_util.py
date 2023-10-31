@@ -74,7 +74,9 @@ class WebhookUtil():
         return session_info
 
     @staticmethod
-    def build_response(response_text=None, page_info=None, session_info=None):
+    def build_response(
+        response_text=None, page_info=None, session_info=None, append=False
+    ):
         """Builds a Response object for Dialogflow CX.
 
         Provides the JSON object structure expected by DFCX for the Response
@@ -85,12 +87,16 @@ class WebhookUtil():
           response_text: The text response to be displayed to the user. Can
             also be empty string if no response to the user is required.
           page_info: (Optional) The JSON object returned by build_page_info()
-          session_info: (Optiona) The JSON object returned by
+          session_info: (Optional) The JSON object returned by
             build_session_info()
+          append: (Optional) Whether messages will append or replace to
+            the list of messages waiting to be sent to the user. If append
+            set to False it will replace the messages.
         """
+        action = 'APPEND' if append else 'REPLACE'
         if response_text:
             response_object = {
-                'mergeBehavior': 'REPLACE',
+                'mergeBehavior': action,
                 'messages': [
                     {
                         'text': {
