@@ -1,6 +1,6 @@
 """Webhook Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -88,6 +88,7 @@ class Webhooks(scrapi_base.ScrapiBase):
         return webhooks_dict
 
 
+    @scrapi_base.api_call_counter_decorator
     def list_webhooks(self, agent_id: str = None):
         """List all Webhooks in the specified CX Agent.
 
@@ -116,6 +117,7 @@ class Webhooks(scrapi_base.ScrapiBase):
 
         return cx_webhooks
 
+    @scrapi_base.api_call_counter_decorator
     def create_webhook(
         self,
         agent_id: str,
@@ -149,6 +151,7 @@ class Webhooks(scrapi_base.ScrapiBase):
         return response
 
 
+    @scrapi_base.api_call_counter_decorator
     def get_webhook(self, webhook_id:str):
         """Retrieves the specified webhook.
 
@@ -202,6 +205,7 @@ class Webhooks(scrapi_base.ScrapiBase):
         return webhook_obj
 
 
+    @scrapi_base.api_call_counter_decorator
     def update_webhook(
         self,
         webhook_id:str,

@@ -1,6 +1,6 @@
 """Intent Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-import json
 import logging
 from typing import Dict, List, Tuple
 import pandas as pd
@@ -24,7 +23,7 @@ from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
@@ -34,7 +33,7 @@ logging.basicConfig(
 )
 
 
-class Intents(ScrapiBase):
+class Intents(scrapi_base.ScrapiBase):
     """Core Class for CX Intent Resource functions."""
 
     def __init__(
@@ -60,122 +59,112 @@ class Intents(ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
 
+    @staticmethod
+    def concat_dict_and_df(
+        intent_df: pd.DataFrame,
+        intent_dict: Dict[str,str]) -> pd.DataFrame:
+        """Transform Dict to DF then Concat with existing DF."""
+        row = pd.DataFrame.from_dict(intent_dict, orient="index").transpose()
+        intent_df = pd.concat([intent_df, row], ignore_index=True)
+
+        return intent_df
 
     @staticmethod
-    def intent_proto_to_dataframe(
-        obj: types.Intent, mode: str = "basic"
-    ) -> pd.DataFrame:
-        """Converts an intent protobuf object to a Pandas DataFrame.
+    def parse_phrase_for_parameter_info(
+        intent_dict: Dict[str,str],
+        params_dict: Dict[str,str],
+        part: types.Intent.TrainingPhrase.Part,
+        part_count: int):
+        """Parse through Phrase part and update Dict with Parameter info."""
+        intent_dict.update({
+            "text": part.text,
+            "text_idx": part_count
+            })
 
-        Args:
-          obj (types.Intent): the intent protobuf object
-          mode (str):
-            "basic" returns display name and training phrase as plain text.
-            "advanced" returns training phrases broken out by parts
-            with their parameters included.
+        if part.parameter_id:
+            intent_dict.update(params_dict[part.parameter_id])
+        elif intent_dict.get("entity_type"):
 
-        Returns:
-          In basic mode, a Pandas DataFrame with columns:
-            display_name, training phrase
-          In advanced mode, a Pandas DataFrame with columns:
-            name, display_name, description, priority,
-            is_fallback, labels, id, repeat_count,
-            training_phrase_idx, text, text_idx,
-            parameter_id, entity_type, is_list, redact
-        """
-        if not isinstance(obj, types.Intent):
-            raise ValueError("obj should be Intent.")
+            # Remove existing parameter_id if exist
+            key_to_remove = [
+                "parameter_id", "entity_type",
+                "is_list", "redact",
+                ]
 
-        if mode == "basic":
-            df = pd.DataFrame(columns=["display_name", "training_phrase"])
+            for key in key_to_remove:
+                intent_dict.pop(key)
 
-            intent_dict = {"display_name": str(obj.display_name)}
+        return intent_dict
 
-            if not obj.training_phrases:
-                row = pd.DataFrame.from_dict(
-                    intent_dict, orient="index"
-                ).transpose()
-                df = pd.concat([df, row], ignore_index=True)
-            else:
-                for tp in obj.training_phrases:
-                    parts_list = [part.text for part in tp.parts]
-                    intent_dict.update({"training_phrase": "".join(parts_list)})
+    def process_basic_mode_proto(self, obj: types.Intent):
+        """Process Intent Proto in basic mode."""
+        intent_df = pd.DataFrame(columns=["display_name", "training_phrase"])
 
-                    row = pd.DataFrame.from_dict(
-                        intent_dict, orient="index"
-                    ).transpose()
-                    df = pd.concat([df, row], ignore_index=True)
+        intent_dict = {"display_name": str(obj.display_name)}
 
-            return df
+        if not obj.training_phrases:
+            intent_df = self.concat_dict_and_df(intent_df, intent_dict)
 
-        elif mode == "advanced":
-            df = pd.DataFrame(columns=[
-                "name", "display_name", "description", "priority",
-                "is_fallback", "labels", "id", "repeat_count",
-                "training_phrase_idx", "text", "text_idx",
-                "parameter_id", "entity_type", "is_list", "redact",
-            ])
-
-            intent_dict = {
-                "name": str(obj.name),
-                "display_name": str(obj.display_name),
-                "description": str(obj.description),
-                "priority": int(obj.priority),
-                "is_fallback": bool(obj.is_fallback),
-            }
-
-            # labels
-            intent_dict["labels"] = ",".join([
-                key if key == val else f"{key}:{val}"
-                for key, val in obj.labels.items()
-            ])
-            # parameters
-            params_dict = {
-                str(param.id): {
-                    "parameter_id": str(param.id),
-                    "entity_type": str(param.entity_type),
-                    "is_list": bool(param.is_list),
-                    "redact": bool(param.redact),
-                }
-                for param in obj.parameters
-            }
-            # training phrases
-            if not obj.training_phrases:
-                row = pd.DataFrame.from_dict(
-                    intent_dict, orient="index"
-                ).transpose()
-                df = pd.concat([df, row], ignore_index=True)
-            else:
-                for tp_count, tp in enumerate(obj.training_phrases):
-                    intent_dict.update({
-                        "id": str(tp.id),
-                        "repeat_count": int(tp.repeat_count),
-                        "training_phrase_idx": tp_count,
-                    })
-                    for part_count, part in enumerate(tp.parts):
-                        intent_dict.update({
-                            "text": part.text,
-                            "text_idx": part_count
-                        })
-                        if part.parameter_id:
-                            intent_dict.update(params_dict[part.parameter_id])
-                        elif intent_dict.get("entity_type"):
-                            # Remove existing parameter_id if exist
-                            key_to_remove = [
-                                "parameter_id", "entity_type",
-                                "is_list", "redact",
-                            ]
-                            for key in key_to_remove:
-                                intent_dict.pop(key)
-                        # Add to Dataframe
-                        row = pd.DataFrame.from_dict(
-                            intent_dict, orient="index"
-                        ).transpose()
-                        df = pd.concat([df, row], ignore_index=True)
-            return df
         else:
-            raise ValueError("Mode types: [basic, advanced]")
+            for phrase in obj.training_phrases:
+                parts_list = [part.text for part in phrase.parts]
+                intent_dict.update({"training_phrase": "".join(parts_list)})
 
+                intent_df = self.concat_dict_and_df(intent_df, intent_dict)
+
+        return intent_df
+
+    def process_advanced_mode_proto(self, obj: types.Intent):
+        """Process Intent Proto in advanced mode."""
+
+        intent_df = pd.DataFrame(columns=[
+            "name", "display_name", "description", "priority",
+            "is_fallback", "labels", "id", "repeat_count",
+            "training_phrase_idx", "text", "text_idx",
+            "parameter_id", "entity_type", "is_list", "redact",
+            ])
+
+        intent_dict = {
+            "name": str(obj.name),
+            "display_name": str(obj.display_name),
+            "description": str(obj.description),
+            "priority": int(obj.priority),
+            "is_fallback": bool(obj.is_fallback),
+        }
+
+        # labels
+        intent_dict["labels"] = ",".join([
+            key if key == val else f"{key}:{val}"
+            for key, val in obj.labels.items()
+        ])
+        # parameters
+        params_dict = {
+            str(param.id): {
+                "parameter_id": str(param.id),
+                "entity_type": str(param.entity_type),
+                "is_list": bool(param.is_list),
+                "redact": bool(param.redact),
+            }
+            for param in obj.parameters
+        }
+        # training phrases
+        if not obj.training_phrases:
+            intent_df = self.concat_dict_and_df(intent_df, intent_dict)
+
+        else:
+            for tp_count, phrase in enumerate(obj.training_phrases):
+                intent_dict.update({
+                    "id": str(phrase.id),
+                    "repeat_count": int(phrase.repeat_count),
+                    "training_phrase_idx": tp_count,
+                })
+                for part_count, part in enumerate(phrase.parts):
+                    intent_dict = self.parse_phrase_for_parameter_info(
+                        intent_dict, params_dict, part, part_count)
+
+                    intent_df = self.concat_dict_and_df(intent_df, intent_dict)
+
+        return intent_df
 
     @staticmethod
     def modify_training_phrase_df(
@@ -356,6 +345,43 @@ class Intents(ScrapiBase):
 
         return return_data
 
+
+    def intent_proto_to_dataframe(
+        self,
+        obj: types.Intent,
+        mode: str = "basic") -> pd.DataFrame:
+        """Converts an intent protobuf object to a Pandas DataFrame.
+
+        Args:
+          obj (types.Intent): the intent protobuf object
+          mode (str):
+            "basic" returns display name and training phrase as plain text.
+            "advanced" returns training phrases broken out by parts
+            with their parameters included.
+
+        Returns:
+          In basic mode, a Pandas DataFrame with columns:
+            display_name, training phrase
+          In advanced mode, a Pandas DataFrame with columns:
+            name, display_name, description, priority,
+            is_fallback, labels, id, repeat_count,
+            training_phrase_idx, text, text_idx,
+            parameter_id, entity_type, is_list, redact
+        """
+        if not isinstance(obj, types.Intent):
+            raise ValueError("obj should be Intent.")
+
+        if mode == "basic":
+            intent_df = self.process_basic_mode_proto(obj)
+
+        elif mode == "advanced":
+            intent_df = self.process_advanced_mode_proto(obj)
+
+        else:
+            raise ValueError("Mode types: [basic, advanced]")
+
+        return intent_df
+
     def get_intents_map(self, agent_id: str = None, reverse: bool = False):
         """Exports Agent Intent Names and UUIDs into a user friendly dict.
 
@@ -383,6 +409,7 @@ class Intents(ScrapiBase):
 
         return intents_dict
 
+    @scrapi_base.api_call_counter_decorator
     def list_intents(
         self,
         agent_id: str = None,
@@ -419,6 +446,7 @@ class Intents(ScrapiBase):
 
         return intents
 
+    @scrapi_base.api_call_counter_decorator
     def get_intent(
         self,
         intent_id: str = None,
@@ -451,67 +479,43 @@ class Intents(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_intent(
         self,
         agent_id: str,
         obj: types.Intent = None,
-        intent_dictionary: dict = None,
-        language_code: str = None) -> types.Intent:
+        display_name: str = None,
+        language_code: str = None,
+        **kwargs) -> types.Intent:
         """Creates an Intent from a protobuf or dictionary.
 
         Args:
           agent_id: the formatted CX Agent ID to use
-          obj: (Optional) Intent protobuf of types.Intent
-          intent_dictionary: (optional) dictionary of the intent to pass in
-            with structure
-
-        example intent dictionary:
-           test_intent = {
-            "description": "",
-            "display_name": "my_intent",
-            "is_fallback": False,
-            "labels": {},
-            "priority": 500000,
-            "training_phrases": [
-                {
-                    "id": "",
-                    "parts": [
-                        {
-                            "text": "hello"
-                        },
-                        {
-                            "text": "all"
-                        }
-                    ],
-                    "repeat_count": 1
-                },
-                {
-                    "id": "",
-                    "parts": [
-                        {
-                            "text": "hi"
-                        }
-                    ],
-                    "repeat_count": 1
-                }
-            ]
-        }
+          obj: Intent object to create new intent from.
+            Refer to `builders.intents.IntentBuilder` to build one.
+          display_name: Human readable display name for the Intent
+          language_code (Optional): The language of the training phrases in
+            the intent. If not specified, the agent's default language is used
 
         Returns:
           Intent protobuf object
         """
 
-        if obj and intent_dictionary:
-            raise ValueError("cannot provide both obj and intent_dictionary")
-        elif obj:
-            intent = obj
-            intent.name = ""
-        elif intent_dictionary:
-            intent = types.intent.Intent.from_json(
-                json.dumps(intent_dictionary)
-            )
+        if obj:
+            intent_obj = obj
+            intent_obj.name = ""
         else:
-            raise ValueError("must provide either obj or intent_dictionary")
+            if not display_name:
+                raise ValueError(
+                    "At least display_name or obj should be specified."
+                )
+            intent_obj = types.Intent(
+                display_name=display_name
+            )
+
+            # set optional arguments to entity type attributes
+            for key, value in kwargs.items():
+                setattr(intent_obj, key, value)
 
         request = types.intent.CreateIntentRequest()
 
@@ -519,7 +523,7 @@ class Intents(ScrapiBase):
             request.language_code = language_code
 
         request.parent = agent_id
-        request.intent = intent
+        request.intent = intent_obj
 
         client_options = self._set_region(agent_id)
         client = services.intents.IntentsClient(
@@ -530,6 +534,7 @@ class Intents(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_intent(
         self,
         intent_id: str = None,
@@ -581,6 +586,7 @@ class Intents(ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_intent(self, intent_id: str, obj: types.Intent = None) -> None:
         """Deletes an intent by Intent ID.
 

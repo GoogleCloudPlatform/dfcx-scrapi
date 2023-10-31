@@ -1,6 +1,6 @@
 """Page Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -112,17 +112,26 @@ class Pages(scrapi_base.ScrapiBase):
 
         return pages_dict
 
-    def list_pages(self, flow_id: str = None) -> List[gcdc_page.Page]:
+    @scrapi_base.api_call_counter_decorator
+    def list_pages(
+        self,
+        flow_id: str = None,
+        language_code: str = "en") -> List[gcdc_page.Page]:
         """Get a List of all pages for the specified Flow ID.
 
         Args:
           flow_id: the properly formatted Flow ID string
+          language_code: Specifies the language of the Pages listed. While the
+            majority of contents of a Page is language agnostic, the contents
+            in the "Agent Says" and similar parts of a Page are affected by
+            language code.
 
         Returns:
           A List of CX Page objects for the specific Flow ID
         """
         request = gcdc_page.ListPagesRequest()
         request.parent = flow_id
+        request.language_code = language_code
 
         client_options = self._set_region(flow_id)
         client = pages.PagesClient(
@@ -137,6 +146,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return cx_pages
 
+    @scrapi_base.api_call_counter_decorator
     def get_page(self, page_id: str = None) -> gcdc_page.Page:
         """Get a single CX Page object based on the provided Page ID.
 
@@ -158,6 +168,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_page(
         self, flow_id: str = None, obj: gcdc_page.Page = None, **kwargs
     ) -> gcdc_page.Page:
@@ -191,6 +202,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_page(
         self, page_id: str = None, obj: gcdc_page.Page = None, **kwargs
     ) -> gcdc_page.Page:
@@ -225,13 +237,17 @@ class Pages(scrapi_base.ScrapiBase):
 
         return response
 
-    def delete_page(self, page_id: str = None) -> str:
+    @scrapi_base.api_call_counter_decorator
+    def delete_page(self, page_id: str = None, force: bool = False) -> str:
         """Deletes the specified Page.
 
         Args:
           page_id: CX Page ID string in the following Format:
             ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
               flows/<Flow ID>/pages/<Page ID>``
+          force: (Optional) This field has no effect for pages with no incoming
+            transitions. If set to True, Dialogflow will remove the page,
+            as well as any transitions to the page.
 
         Returns:
           String "Page `{page_id}` successfully deleted."
@@ -240,6 +256,7 @@ class Pages(scrapi_base.ScrapiBase):
         client = pages.PagesClient(
             credentials=self.creds, client_options=client_options
         )
-        client.delete_page(name=page_id)
+        req = gcdc_page.DeletePageRequest(name=page_id, force=force)
+        client.delete_page(request=req)
 
         return f"Page `{page_id}` successfully deleted."

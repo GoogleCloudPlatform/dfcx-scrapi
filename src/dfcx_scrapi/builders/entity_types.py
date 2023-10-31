@@ -1,6 +1,6 @@
 """A set of builder methods to create CX proto resource objects"""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,23 +14,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import List, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import EntityType
+from dfcx_scrapi.builders.builders_common import BuildersCommon
+
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
-class EntityTypeBuilder:
+class EntityTypeBuilder(BuildersCommon):
     """Base Class for CX EntityType builder."""
 
-    def __init__(self, obj: EntityType = None):
-        self.proto_obj = None
-        if obj:
-            self.load_entity_type(obj)
+    _proto_type = EntityType
+    _proto_type_str = "EntityType"
 
 
     def __str__(self) -> str:
         """String representation of the proto_obj."""
-        self._check_entity_type_exist()
+        self._check_proto_obj_attr_exist()
 
         return (
             f"{self._show_entity_type_basic_info()}"
@@ -38,23 +45,9 @@ class EntityTypeBuilder:
             f"\n{self._show_entities()}")
 
 
-    def _check_entity_type_exist(self):
-        """Check if the proto_obj exists otherwise raise an error."""
-        if not self.proto_obj:
-            raise ValueError(
-                "There is no proto_obj!\nUse create_new_entity_type"
-                " or load_entity_type to continue."
-            )
-        elif not isinstance(self.proto_obj, EntityType):
-            raise ValueError(
-                "proto_obj is not an EntityType."
-                "\nPlease create or load the correct type to continue."
-            )
-
-
     def _show_entity_type_basic_info(self) -> str:
         """Shows the information of proto_obj."""
-        self._check_entity_type_exist()
+        self._check_proto_obj_attr_exist()
 
         return (
             f"display_name: {self.proto_obj.display_name}"
@@ -64,10 +57,9 @@ class EntityTypeBuilder:
             f" {self.proto_obj.enable_fuzzy_extraction}"
             f"\nredact: {self.proto_obj.redact}")
 
-
     def _show_excluded_phrases(self) -> str:
         """Shows the excluded phrases of proto_obj."""
-        self._check_entity_type_exist()
+        self._check_proto_obj_attr_exist()
 
         excluded_phrases = "\n\t".join([
             phrase.value
@@ -76,10 +68,9 @@ class EntityTypeBuilder:
 
         return f"excluded phrases:\n\t{excluded_phrases}"
 
-
     def _show_entities(self) -> str:
         """Shows the entities of proto_obj."""
-        self._check_entity_type_exist()
+        self._check_proto_obj_attr_exist()
 
         entities =  "\n".join([
             f"  {entity.value}:\n\t{', '.join(entity.synonyms)}"
@@ -98,7 +89,7 @@ class EntityTypeBuilder:
             Options:
               ['basic', 'entities', 'excluded' or 'excluded phrases', 'whole']
         """
-        self._check_entity_type_exist()
+        self._check_proto_obj_attr_exist()
 
         if mode == "basic":
             print(self._show_entity_type_basic_info())
@@ -107,7 +98,7 @@ class EntityTypeBuilder:
         elif mode in ["excluded", "excluded phrases"]:
             print(self._show_excluded_phrases())
         elif mode == "whole":
-            print(self.__str__())
+            print(self)
         else:
             raise ValueError(
                 "mode should be in"
@@ -116,38 +107,7 @@ class EntityTypeBuilder:
             )
 
 
-    def load_entity_type(
-        self, obj: EntityType, overwrite: bool = False
-    ) -> EntityType:
-        """Load an existing EntityType to proto_obj for further uses.
-
-        Args:
-          obj (EntityType):
-            An existing EntityType obj.
-          overwrite (bool)
-            Overwrite the new proto_obj if proto_obj already
-            contains an EntityType.
-
-        Returns:
-          An EntityType object stored in proto_obj
-        """
-        if not isinstance(obj, EntityType):
-            raise ValueError(
-                "The object you're trying to load is not an EntityType!"
-            )
-        if self.proto_obj and not overwrite:
-            raise Exception(
-                "proto_obj already contains an EntityType."
-                " If you wish to overwrite it, pass overwrite as True."
-            )
-
-        if overwrite or not self.proto_obj:
-            self.proto_obj = obj
-
-        return self.proto_obj
-
-
-    def create_new_entity_type(
+    def create_new_proto_obj(
         self,
         display_name: str,
         kind: int,
@@ -197,7 +157,7 @@ class EntityTypeBuilder:
                 "kind should be an int between 0 and 3."
             )
         if self.proto_obj and not overwrite:
-            raise Exception(
+            raise UserWarning(
                 "proto_obj already contains an EntityType."
                 " If you wish to overwrite it, pass overwrite as True."
             )
@@ -226,7 +186,7 @@ class EntityTypeBuilder:
         Returns:
           An EntityType object stored in proto_obj
         """
-        self._check_entity_type_exist()
+        self._check_proto_obj_attr_exist()
 
         if isinstance(phrase, str):
             self.proto_obj.excluded_phrases.append(
@@ -263,7 +223,7 @@ class EntityTypeBuilder:
         Returns:
           An EntityType object stored in proto_obj
         """
-        self._check_entity_type_exist()
+        self._check_proto_obj_attr_exist()
 
         excl_phrases = {
             excl_phrase.value
@@ -312,7 +272,7 @@ class EntityTypeBuilder:
         Returns:
           An EntityType object stored in proto_obj
         """
-        self._check_entity_type_exist()
+        self._check_proto_obj_attr_exist()
 
         if not isinstance(value, str):
             raise ValueError(
@@ -340,7 +300,7 @@ class EntityTypeBuilder:
                 )
             )
         else:
-            raise Exception(
+            raise ValueError(
                 "Entity type's kind is not correct and should be specified."
             )
 
@@ -371,7 +331,7 @@ class EntityTypeBuilder:
         Returns:
           An EntityType object stored in proto_obj
         """
-        self._check_entity_type_exist()
+        self._check_proto_obj_attr_exist()
 
         if not isinstance(value, str):
             raise ValueError(

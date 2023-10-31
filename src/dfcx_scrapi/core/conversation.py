@@ -1,6 +1,6 @@
 """DFCX End to End Conversation Functions"""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import time
 import traceback
 import uuid
 
-from typing import Dict
+from typing import Dict, Any
 from operator import attrgetter
 from threading import Thread
 
@@ -64,16 +64,12 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             agent_id=agent_id,
         )
 
-        logging.info(
-            f"create conversation with creds_path: \
-                {creds_path} | agent_id: {agent_id}",
-        )
+        logging.debug(
+            "create conversation with creds_path: %s | agent_id: %s",
+            creds_path, agent_id)
 
-        if agent_id or config["agent_path"]:
-            self.agent_id = agent_id or config["agent_path"]
-
-        self.language_code = language_code or config["language_code"]
-
+        self.agent_id = self._set_agent_id(agent_id, config)
+        self.language_code = self._set_language_code(language_code, config)
         self.start_time = None
         self.query_result = None
         self.session_id = None
@@ -82,6 +78,46 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.restart()
         self.flows = flows.Flows(creds=self.creds)
         self.pages = pages.Pages(creds=self.creds)
+
+    @staticmethod
+    def _set_language_code(language_code: str, config: Dict[str, Any]) -> str:
+        """Determines how to set the language_code based on user inputs.
+
+        We implement this for backwards compatability.
+        """
+        # Config will take precedence if provided
+        if config:
+            config_lang_code = config.get("language_code", None)
+
+            # We'll only return if it exist in the config on the off chance that
+            # some users have provided the langauge_code as a top level arg in
+            # addition to providing the config
+            if config_lang_code:
+                return config_lang_code
+
+        return language_code
+
+    @staticmethod
+    def _set_agent_id(input_agent_id: str, config: Dict[str, Any]) -> str:
+        """Determines how to set the agent_id based on user inputs.
+
+        We implement this for backwards compatability.
+        """
+
+        # Config will take precedence if provided
+        if config:
+            config_agent_path = config.get("agent_path", None)
+
+            # We'll only return if it exist in the config on the off chance that
+            # some users have provided the agent_id as a top level arg in
+            # addition to providing the config
+            if config_agent_path:
+                return config_agent_path
+
+        elif input_agent_id:
+            return input_agent_id
+
+        return None
 
     @staticmethod
     def _get_match_type_from_map(match_type: int):
@@ -96,6 +132,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             4: "NO_MATCH",
             5: "NO_INPUT",
             6: "EVENT",
+            8: "KNOWLEDGE_CONNECTOR",
+            9: "LLM"
         }
 
         return match_type_map[match_type]
@@ -109,7 +147,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         invalid_pages = set(test_set.page_display_name[mask].to_list())
 
         if invalid_pages:
-            raise Exception(
+            raise UserWarning(
                 "The following Pages are invalid and missing Page "
                 f"IDs: \n{invalid_pages}\n\nPlease ensure that your Page "
                 "Display Names do not contain typos.\nFor Default Start Page "
@@ -122,10 +160,9 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         percent = float(current) * 100 / total
         arrow = "-" * int(percent / 100 * bar_length - 1) + ">"
         spaces = " " * (bar_length - len(arrow))
-        print(
-            f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent:.2f}%",
-            end="\r",
-        )
+        logging.info(
+            f"{type_}({current}/{total})" + f"[{arrow}{spaces}] {percent:.2f}%"
+            )
 
     @staticmethod
     def _build_query_params_object(parameters, current_page, disable_webhook):
@@ -257,19 +294,6 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             flow_mapped["page_id"] = flow_mapped.index
 
             flow_mapped = flow_mapped.rename(columns={0: "page_display_name"})
-
-            # add start page
-            start_page_id = flow_id + "/pages/START_PAGE"
-            flow_mapped = pd.concat(
-                [
-                    flow_mapped,
-                    pd.DataFrame(
-                        columns=["page_display_name", "page_id"],
-                        data=[["START_PAGE", start_page_id]],
-                    ),
-                ]
-            )
-
             flow_mapped.insert(0, "flow_display_name", flow_map[flow_id])
             agent_pages_map = pd.concat([agent_pages_map, flow_mapped])
 
@@ -325,8 +349,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             )
             threads[i].start()
 
-        for idx, _ in enumerate(threads):
-            threads[idx].join()
+        for _, thread in enumerate(threads):
+            thread.join()
 
         test_set_mapped["target_page"] = results["target_page"]
         test_set_mapped["match"] = results["match"]
@@ -347,7 +371,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.agent_env[param] = value
 
     def checkpoint(self, msg=None, start=False):
-        """Print a checkpoint to time progress and debug bottleneck"""
+        """Log a checkpoint to time progress and debug bottleneck"""
         if start:
             start_time = time.perf_counter()
             self.start_time = start_time
@@ -356,8 +380,9 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         duration = round((time.perf_counter() - start_time), 2)
         if duration > 2:
             if msg:
-                print(f"{duration:0.2f}s {msg}")
+                logging.info(f"{duration:0.2f}s {msg}")
 
+    @scrapi_base.api_call_counter_decorator
     def reply(
         self,
         send_obj: Dict[str, str],
@@ -385,7 +410,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         Returns:
           A dictionary for the agent reply to to the submitted text.
             Includes keys response_messages, confidence, page_name,
-            intent_name, match_type, match, other_intents, and params.
+            intent_name, match_type, match, and params.
         """
         text = send_obj.get("text")
         send_params = send_obj.get("params")
@@ -505,34 +530,11 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             query_result.match.match_type
         )
         reply["match"] = query_result.match
-        reply["other_intents"] = self.format_other_intents(query_result)
         reply["params"] = params
 
         logging.debug("reply %s", reply)
 
         return reply
-
-    def format_other_intents(self, query_result):
-        """Unwind protobufs into more friendly dict"""
-        other_intents = query_result.diagnostic_info.get(
-            "Alternative Matched Intents"
-        )
-        items = []
-        rank = 0
-        for alt in other_intents:
-            items.append(
-                {
-                    "name": alt.get("DisplayName"),
-                    "score": alt.get("Score"),
-                    "rank": rank,
-                }
-            )
-            rank += 1
-
-        if self:
-            return items
-
-        return None
 
     def getpath(self, obj, xpath, default=None):
         """Get data at a pathed location out of object internals"""

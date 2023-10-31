@@ -1,6 +1,6 @@
 """Setuptools for SCRAPI package."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 setup(
     name='dfcx-scrapi',
-    version='1.5.1',
+    version='1.9.0',
     description='A high level scripting API for bot builders, developers, and\
       maintainers.',
     long_description=long_description,

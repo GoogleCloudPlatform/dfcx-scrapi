@@ -1,6 +1,6 @@
 """CX Transition Route Group Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -134,6 +134,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return pages_dict
 
+    @scrapi_base.api_call_counter_decorator
     def list_transition_route_groups(self, flow_id: str = None):
         """Exports List of all Route Groups in the specified CX Flow ID.
 
@@ -164,6 +165,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return cx_route_groups
 
+    @scrapi_base.api_call_counter_decorator
     def get_transition_route_group(self, route_group_id):
         """Get a single Transition Route Group object.
 
@@ -183,6 +185,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_transition_route_group(
         self,
         flow_id: str = None,
@@ -222,6 +225,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def update_transition_route_group(
         self,
         route_group_id: str = None,
@@ -320,9 +324,11 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
                 temp_dict.update({"route_group_name": route_group.display_name})
 
                 if route.target_page:
-                    temp_dict.update(
-                        {"target_page": all_pages_map[route.target_page]}
-                    )
+                    t_p = all_pages_map.get(route.target_page)
+                    if not t_p:
+                        t_p = str(route.target_page).rsplit("/", maxsplit=1)[-1]
+
+                    temp_dict.update({"target_page": t_p})
 
                 if route.intent:
                     temp_dict.update({"intent": intents_map[route.intent]})

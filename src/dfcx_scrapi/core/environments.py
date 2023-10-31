@@ -1,6 +1,6 @@
 """CX Environments Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class Environments(scrapi_base.ScrapiBase):
     def __init__(
         self,
         creds_path: str = None,
-        creds_dict: Dict[str,str] = None,
+        creds_dict: Dict[str, str] = None,
         creds: service_account.Credentials = None,
         agent_id: str = None,
     ):
@@ -129,7 +129,8 @@ class Environments(scrapi_base.ScrapiBase):
 
         return environments_dict
 
-    def list_environments(self, agent_id:str=None):
+    @scrapi_base.api_call_counter_decorator
+    def list_environments(self, agent_id: str = None):
         """List all Versions for a given Flow"""
 
         if not agent_id:
@@ -152,9 +153,10 @@ class Environments(scrapi_base.ScrapiBase):
 
         return environments
 
+    @scrapi_base.api_call_counter_decorator
     def get_environment(
         self,
-        environment_id:str) -> types.environment.Environment:
+        environment_id: str) -> types.environment.Environment:
         """Get Environment object for specified environment ID.
 
         Args:
@@ -178,8 +180,8 @@ class Environments(scrapi_base.ScrapiBase):
 
     def get_environment_by_display_name(
         self,
-        display_name:str,
-        agent_id:str) -> types.environment.Environment:
+        display_name: str,
+        agent_id: str) -> types.environment.Environment:
         """Get Environment object for specific environment by its display name.
 
         Args:
@@ -201,10 +203,11 @@ class Environments(scrapi_base.ScrapiBase):
 
         return result
 
+    @scrapi_base.api_call_counter_decorator
     def create_environment(
         self,
-        environment:types.environment.Environment,
-        agent_id:str=None):
+        environment: types.environment.Environment,
+        agent_id: str = None):
         """Create a new environment for a specified agent.
         Args:
           environment: The environment to create.
@@ -235,10 +238,10 @@ class Environments(scrapi_base.ScrapiBase):
 
     def create_environment_by_display_name(
         self,
-        display_name:str,
-        version_configs:List[Tuple[str,str]],
-        description:str=None,
-        agent_id:str=None):
+        display_name: str,
+        version_configs: List[Tuple[str, str]],
+        description: str = None,
+        agent_id: str = None):
         """Create a new environment for a specified agent.
         Args:
           display_name: The display name of the Environment to create
@@ -286,10 +289,11 @@ class Environments(scrapi_base.ScrapiBase):
         return response
 
 
+    @scrapi_base.api_call_counter_decorator
     def update_environment(
         self,
         environment_id: str,
-        environment_obj:types.Environment = None,
+        environment_obj: types.Environment = None,
         **kwargs):
         """Update an existing environment for a specified agent.
 
@@ -330,7 +334,8 @@ class Environments(scrapi_base.ScrapiBase):
         return response
 
 
-    def delete_environment(self, environment_id:str):
+    @scrapi_base.api_call_counter_decorator
+    def delete_environment(self, environment_id: str):
         """Delete a specified environment.
 
         Args:
@@ -350,10 +355,11 @@ class Environments(scrapi_base.ScrapiBase):
         client.delete_environment(request)
 
 
+    @scrapi_base.api_call_counter_decorator
     def deploy_flow_to_environment(
         self,
-        environment_id:str,
-        flow_version:str):
+        environment_id: str,
+        flow_version: str):
         """Deploys a flow to the specified environment.
 
          Args:
@@ -382,9 +388,10 @@ class Environments(scrapi_base.ScrapiBase):
         return response
 
 
+    @scrapi_base.api_call_counter_decorator
     def lookup_environment_history(
         self,
-        environment_id:str) -> List[types.Environment]:
+        environment_id: str) -> List[types.Environment]:
         """Looks up the history of the specified environment.
 
         Args:
@@ -413,7 +420,8 @@ class Environments(scrapi_base.ScrapiBase):
 
         return history
 
-    def list_continuous_test_results(self, environment_id:str):
+    @scrapi_base.api_call_counter_decorator
+    def list_continuous_test_results(self, environment_id: str):
         """Fetches a list of continuous test results for a given environment.
 
         Args:

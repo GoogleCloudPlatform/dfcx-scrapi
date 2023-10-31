@@ -1,6 +1,6 @@
 """Agent Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,8 +53,18 @@ class Agents(scrapi_base.ScrapiBase):
             self.agent_id = agent_id
             self.client_options = self._set_region(agent_id)
 
-    def _build_list_agents_client_request(self, location_id):
-        """Builds the List Agents Request object."""
+    @scrapi_base.api_call_counter_decorator
+    def _list_agents_client_request(self, location_id) -> List[
+        types.agent.Agent
+    ]:
+        """Builds the List Agents Request object.
+
+        Args:
+          location_id: The GCP Location ID in the following format:
+            `projects/<project_id>/locations/<location>`
+
+        Returns:
+          List of types.agent.Agent"""
 
         request = types.agent.ListAgentsRequest()
         request.parent = location_id
@@ -64,31 +74,34 @@ class Agents(scrapi_base.ScrapiBase):
             credentials=self.creds, client_options=client_options
         )
 
-        return client, request
+        response = client.list_agents(request)
+
+        agents = []
+        for page in response.pages:
+            for agent in page.agents:
+                agents.append(agent)
+
+        return agents
 
     def list_agents(
         self,
-        location_id: str = None,
-        project_id: str = None) -> List[types.Agent]:
+        project_id: str,
+        location_id: str = None) -> List[types.Agent]:
         """Get list of all CX agents in a given GCP Region or Project.
 
-        This method allows you to provide a specific Location ID consisting of
-        a GCP Project ID and Location ID (i.e. GCP Region Name) to retrieve all
-        of the CX agents associated with that Project/Region. Optionally, you
-        can provide just the Project ID and the funciton will traverse ALL
-        available GCP regions to list ALL agents across the regions.
+        This method allows you to provide a GCP Project ID to retrieve all of
+        the CX agents across ALL available GCP region. If the optional location
+        ID is provided, the method will only pull the agents for that region.
 
         Args:
-          location_id: The GCP Project/Location ID in the following format
-              `projects/<GCP PROJECT ID>/locations/<LOCATION ID>`
-              `projects/my-gcp-project/locations/us-central1`
-          project_id: The GCP Project ID as a string
+          project_id: The GCP Project ID. Ex: `my-cool-gcp-project`
+          location_id: The GCP Location ID. Ex: `global`, `us-central1`, etc.
 
         Returns:
           List of Agent objects
         """
 
-        if project_id:
+        if not location_id:
             region_list = [
                 "global",
                 "us-central1",
@@ -105,26 +118,15 @@ class Agents(scrapi_base.ScrapiBase):
             agents = []
             for region in region_list:
                 location_path = f"projects/{project_id}/locations/{region}"
-                client, request = self._build_list_agents_client_request(
-                    location_path
-                )
-
-                agents += self.list_agents(location_id=location_path)
+                agents += self._list_agents_client_request(location_path)
 
         else:
-            client, request = self._build_list_agents_client_request(
-                location_id
-            )
-
-            response = client.list_agents(request)
-
-            agents = []
-            for page in response.pages:
-                for agent in page.agents:
-                    agents.append(agent)
+            location_path = f"projects/{project_id}/locations/{location_id}"
+            agents = self._list_agents_client_request(location_path)
 
         return agents
 
+    @scrapi_base.api_call_counter_decorator
     def get_agent(self, agent_id: str) -> types.Agent:
         """Retrieves a single CX Agent resource object.
 
@@ -178,14 +180,12 @@ class Agents(scrapi_base.ScrapiBase):
         """
 
         if location_id:
-            agent_list = self.list_agents(
-                location_id=location_id
-                )
+            agent_list = self._list_agents_client_request(location_id)
 
         elif region:
-            agent_list = self.list_agents(
-                location_id=f"projects/{project_id}/locations/{region}"
-            )
+            agent_list = self._list_agents_client_request(
+                f"projects/{project_id}/locations/{region}"
+                )
         else:
             agent_list = self.list_agents(project_id=project_id)
 
@@ -216,6 +216,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         return matched_agent
 
+    @scrapi_base.api_call_counter_decorator
     def create_agent(
         self,
         project_id: str,
@@ -237,38 +238,47 @@ class Agents(scrapi_base.ScrapiBase):
           display_name: Human readable display name for the CX agent
           gcp_region: GCP region to create CX agent. Defaults to 'global'
           obj: (Optional) Agent object to create new agent from
+            Refer to `builders.agents.AgentBuilder` to build one.
 
         Returns:
           The newly created CX Agent resource object.
         """
 
+        parent = f"projects/{project_id}/locations/{gcp_region}"
+
         if obj:
-            agent = obj
-            parent = f"projects/{project_id}/locations/{gcp_region}"
+            agent_obj = obj
+            agent_obj.name = ""
 
         else:
-            agent = types.agent.Agent()
-            parent = f"projects/{project_id}/locations/{gcp_region}"
-            agent.display_name = display_name
-            agent.default_language_code = "en"
-            agent.time_zone = "America/Chicago"
+            if not display_name:
+                raise ValueError(
+                    "At least display_name or obj should be specified."
+                )
+            agent_obj = types.Agent(
+                display_name=display_name,
+                default_language_code="en",
+                time_zone="America/Chicago"
+            )
 
             # set optional args as agent attributes
             for key, value in kwargs.items():
-                setattr(agent, key, value)
+                setattr(agent_obj, key, value)
 
         client_options = self._set_region(parent)
         client = services.agents.AgentsClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.create_agent(parent=parent, agent=agent)
+        response = client.create_agent(parent=parent, agent=agent_obj)
 
         return response
 
 
+    @scrapi_base.api_call_counter_decorator
     def validate_agent(
         self,
-        agent_id: str = None,
+        agent_id: str,
+        language_code: str = "en",
         timeout: float = None) -> Dict:
         """Initiates the Validation of the CX Agent or Flow.
 
@@ -289,6 +299,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         request = types.agent.ValidateAgentRequest()
         request.name = agent_id
+        request.language_code = language_code
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
@@ -302,6 +313,7 @@ class Agents(scrapi_base.ScrapiBase):
         return val_dict
 
 
+    @scrapi_base.api_call_counter_decorator
     def get_validation_result(
         self,
         agent_id: str = None,
@@ -347,11 +359,16 @@ class Agents(scrapi_base.ScrapiBase):
         return val_results_dict
 
 
+    @scrapi_base.api_call_counter_decorator
     def export_agent(
         self,
         agent_id: str,
         gcs_bucket_uri: str,
-        environment_display_name: str = None
+        environment_display_name: str = None,
+        data_format: str = "BLOB",
+        git_branch: str = None,
+        git_commit_message: str = None,
+        include_bq_export_settings: bool = False
     ) -> str:
         """Exports the specified CX agent to Google Cloud Storage bucket.
 
@@ -361,17 +378,39 @@ class Agents(scrapi_base.ScrapiBase):
           gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
             agent to in the following format:
               `gs://<bucket-name>/<object-name>`
-          environment_display_name: (Optional) CX Agent environment display name
+          environment_display_name: CX Agent environment display name
             as string. If not set, DRAFT environment is assumed.
+          data_format: Optional. The data format of the exported agent. If not
+            specified, ``BLOB`` is assumed.
+          git_branch: Optional. The Git branch to commit the exported agent to.
+          git_commit_message: Optional. The Git Commit message to send. Only
+            applicable if using `git_branch` arg.
+          include_bigquery_export_settings: Will exclude or included the BQ
+            settings on export.
 
         Returns:
           A Long Running Operation (LRO) ID that can be used to
             check the status of the export using
               dfcx_scrapi.core.operations->get_lro()
         """
+        blob_format = types.agent.ExportAgentRequest.DataFormat(1)
+        json_format = types.agent.ExportAgentRequest.DataFormat(4)
+
         request = types.agent.ExportAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
+        request.include_bigquery_export_settings = include_bq_export_settings
+
+        if data_format in ["JSON", "ZIP", "JSON_PACKAGE"]:
+            request.data_format = json_format
+        else:
+            request.data_format = blob_format
+
+        if git_branch:
+            git_settings = types.agent.ExportAgentRequest.GitDestination()
+            git_settings.tracking_branch = git_branch
+            git_settings.commit_message = git_commit_message
+            request.git_destination = git_settings
 
         if environment_display_name:
             self._environments = environments.Environments(creds=self.creds)
@@ -395,6 +434,7 @@ class Agents(scrapi_base.ScrapiBase):
         return response.operation.name
 
 
+    @scrapi_base.api_call_counter_decorator
     def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
         """Restores a CX agent from a gcs_bucket location.
 
@@ -404,8 +444,8 @@ class Agents(scrapi_base.ScrapiBase):
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-          gcs_bucket_uri: The Google Cloud Storage bucket/filepath to export the
-            agent to in the following format:
+          gcs_bucket_uri: The Google Cloud Storage bucket/filepath to restore
+            the agent from in the following format:
               `gs://<bucket-name>/<object-name>`
 
         Returns:
@@ -426,6 +466,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         return response.operation.name
 
+    @scrapi_base.api_call_counter_decorator
     def update_agent(
         self, agent_id: str, obj: types.Agent = None, **kwargs
     ) -> types.Agent:
@@ -463,6 +504,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_agent(self, agent_id: str) -> str:
         """Deletes the specified Dialogflow CX Agent.
 

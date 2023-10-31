@@ -1,6 +1,6 @@
 """Working with built in CX Validation featrure."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ class ValidationUtil(ScrapiBase):
                 temp_df = pd.DataFrame(val_msg)
                 temp_df.insert(0, "flow", flows_map[temp])
 
-                max_cols_new = max([len(x) for x in temp_df.resourceNames])
+                max_cols_new = max(len(x) for x in temp_df.resourceNames)
 
                 if max_cols_new > max_cols_old:
                     for i in range(1, max_cols_new + 1):

@@ -1,6 +1,6 @@
 """Project level cross-region functions for CX."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import logging
 import time
 from typing import Dict
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core.agents import Agents
 
 # logging config
@@ -29,7 +29,7 @@ logging.basicConfig(
 )
 
 
-class Project(ScrapiBase):
+class Project(scrapi_base.ScrapiBase):
     """Top Level class representing the Project level resources
     when working on a Dialogflow CX project. This Class will allow you to
     extract information about your GCP project as a whole in relation to

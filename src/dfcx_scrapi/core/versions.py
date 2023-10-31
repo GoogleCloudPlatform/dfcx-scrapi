@@ -1,6 +1,6 @@
 """CX Versions Resource functions."""
 
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ class Versions(scrapi_base.ScrapiBase):
         if flow_id:
             self.flow_id = flow_id
 
+    @scrapi_base.api_call_counter_decorator
     def list_versions(self, flow_id:str):
         """List all Versions for a given Flow.
 
@@ -79,6 +80,7 @@ class Versions(scrapi_base.ScrapiBase):
 
         return versions
 
+    @scrapi_base.api_call_counter_decorator
     def get_version(
         self,
         version_id:str=None,
@@ -140,6 +142,7 @@ class Versions(scrapi_base.ScrapiBase):
 
         return None
 
+    @scrapi_base.api_call_counter_decorator
     def load_version(
         self,
         version:types.version.Version,
@@ -176,6 +179,7 @@ class Versions(scrapi_base.ScrapiBase):
         response = client.load_version(request)
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def create_version(
         self,
         flow_id:str,
@@ -212,6 +216,7 @@ class Versions(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
     def delete_version(self, version_id:str):
         """Delete a specified Version.
 
@@ -229,6 +234,7 @@ class Versions(scrapi_base.ScrapiBase):
 
         return client.delete_version(request)
 
+    @scrapi_base.api_call_counter_decorator
     def compare_versions(
         self,
         base_version_id:str,
