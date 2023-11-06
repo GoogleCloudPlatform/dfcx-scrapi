@@ -313,6 +313,14 @@ class ScrapiBase:
         """
         return sum(self.get_api_calls_details().values())
 
+    class _AllPagesCustomDict(dict):
+
+        def __missing__(self, key):
+            if isinstance(key, str) and key.endswith("PAGE"):
+                return str(key).rsplit("/", maxsplit=1)[-1]
+
+            return np.nan
+
 
 def api_call_counter_decorator(func):
     """Counts the number of API calls for the function `func`."""
@@ -325,12 +333,3 @@ def api_call_counter_decorator(func):
     wrapper.calls_api = True
 
     return wrapper
-
-
-    class _AllPagesCustomDict(dict):
-
-        def __missing__(self, key):
-            if isinstance(key, str) and key.endswith("PAGE"):
-                return str(key).rsplit("/", maxsplit=1)[-1]
-
-            return np.nan
