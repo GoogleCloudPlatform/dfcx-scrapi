@@ -505,20 +505,21 @@ class Agents(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def delete_agent(self, agent_id: str) -> str:
+    def delete_agent(self, agent_id: str = None, obj: types.Agent = None):
         """Deletes the specified Dialogflow CX Agent.
 
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
-
-        Returns:
-          String "Agent '(agent_id)' successfully deleted."
+          obj: (Optional) a CX Agent object of types.Agent
         """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        if obj:
+            agent_id = obj.name
+
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials=self.creds, client_options=client_options
-        )
+            credentials=self.creds, client_options=client_options)
         client.delete_agent(name=agent_id)
-
-        return "Agent '{agent_id}' successfully deleted."
