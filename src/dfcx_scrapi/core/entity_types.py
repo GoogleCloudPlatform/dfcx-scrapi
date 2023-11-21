@@ -432,8 +432,9 @@ class EntityTypes(scrapi_base.ScrapiBase):
           obj: (Optional) a CX EntityType object of types.EntityType
           force: (Optional) If ``force`` is set to true, Dialogflow will remove
             the entity type, as well as any references to the entity type.
-            (i.e. Page's form Parameter of the entity type will be changed to '@sys.any' and
-            intent's Parameter of the entity type will be removed).
+            (i.e. Page's form Parameter of the entity type will be changed to
+            '@sys.any' and intent's Parameter of the entity type
+            will be removed).
         """
         if not entity_id:
             entity_id = self.entity_id
