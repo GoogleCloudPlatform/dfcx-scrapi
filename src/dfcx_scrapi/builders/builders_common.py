@@ -30,10 +30,11 @@ logging.basicConfig(
 
 
 class BuildersCommon:
-    """Base class for other Builder classes"""
+    """Base class for other Builder classes."""
 
     _proto_type = None
     _proto_type_str = "None"
+    _proto_attrs = []
 
 
     def __init__(self, obj=None):
@@ -43,13 +44,17 @@ class BuildersCommon:
 
         self._dataframe_instance = self._Dataframe(self)
 
+    def _add_proto_attrs_to_builder_obj(self):
+        for attr_name in self._proto_attrs:
+            attr = getattr(self.proto_obj, attr_name)
+            setattr(self, f"d_{attr_name}", attr)
 
     def _check_proto_obj_attr_exist(self):
         """Check if the proto_obj exists otherwise raise an error."""
         if self.proto_obj is None:
             raise ValueError(
-                "There is no proto_obj!"
-                "\nUse `create_new_proto_obj` or `load_proto_obj` to continue."
+                f"\nUse `create_new_{self._proto_type_str.lower()}`"
+                " or `load_proto_obj` to continue."
             )
         elif not isinstance(self.proto_obj, self._proto_type):  # pylint: disable=W1116
             raise ValueError(
@@ -83,8 +88,13 @@ class BuildersCommon:
 
         if overwrite or not self.proto_obj:
             self.proto_obj = obj
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
+
+    def _create_new_proto_obj(self):
+        """Prototype method to create a new proto obj."""
+        raise NotImplementedError("Subclass should implement this method!")
 
 
     def _is_type_or_list_of_types(self, obj, type_, var_name: str = None):
@@ -142,7 +152,7 @@ class BuildersCommon:
         Args:
             transition_route (TransitionRoute):
               The TransitionRoute that input should match with.
-            taget_route (TransitionRoute):
+            target_route (TransitionRoute):
               The target TransitionRoute that we want to match.
             intent (str):
               TransitionRoute's intent that we want to match.
@@ -169,6 +179,7 @@ class BuildersCommon:
             is_match = self._check_transition_route_with_target_route(
                 transition_route, target_route
             )
+
         if intent and condition:
             is_match = self._check_transition_route_with_intent_and_condition(
                 transition_route, intent, condition
@@ -381,7 +392,6 @@ class BuildersCommon:
 
         return self._dataframe_instance.dataframe_to_proto(
             df=df, action=action)
-
 
 
     class _DataframeCommon():

@@ -44,6 +44,17 @@ class PageBuilder(BuildersCommon):
 
     _proto_type = Page
     _proto_type_str = "Page"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "entry_fulfillment",
+        "form",
+        "transition_route_groups",
+        "transition_routes",
+        "event_handlers",
+        "advanced_settings",
+        "knowledge_connector_settings",
+    ]
 
 
     def __str__(self) -> str:
@@ -115,6 +126,54 @@ class PageBuilder(BuildersCommon):
             for i, trg_id in enumerate(self.proto_obj.transition_route_groups)
         ])
 
+    def _create_new_proto_obj(
+        self,
+        display_name: str,
+        entry_fulfillment: Fulfillment = None,
+        overwrite: bool = False
+    ) -> Page:
+        """Create a new Page.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the
+            page, unique within the flow.
+          entry_fulfillment (Fulfillment):
+            The fulfillment to call when the session is entering the page.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already contains a Page.
+
+        Returns:
+          A Page object stored in proto_obj.
+        """
+        # Types error checking
+        if not (display_name and isinstance(display_name, str)):
+            raise ValueError("`display_name` should be a nonempty string.")
+        if (entry_fulfillment and
+            not isinstance(entry_fulfillment, Fulfillment)):
+            raise ValueError(
+                "The type of `entry_fulfillment` should be a Fulfillment."
+            )
+        # `overwrite` parameter error checking
+        if self.proto_obj and not overwrite:
+            raise UserWarning(
+                "proto_obj already contains a Page."
+                " If you wish to overwrite it, pass `overwrite` as True."
+            )
+        # Create the Page
+        if overwrite or not self.proto_obj:
+            if not entry_fulfillment:
+                entry_fulfillment = Fulfillment()
+
+            self.proto_obj = Page(
+                display_name=display_name,
+                entry_fulfillment=entry_fulfillment
+            )
+        self._add_proto_attrs_to_builder_obj()
+
+        return self.proto_obj
+
+
     def show_page_info(
         self, mode: str = "whole"
     ) -> None:
@@ -160,8 +219,7 @@ class PageBuilder(BuildersCommon):
         stats_instance = PageStats(self.proto_obj)
         stats_instance.generate_stats()
 
-
-    def create_new_proto_obj(
+    def create_new_page(
         self,
         display_name: str,
         entry_fulfillment: Fulfillment = None,
@@ -181,34 +239,11 @@ class PageBuilder(BuildersCommon):
         Returns:
           A Page object stored in proto_obj.
         """
-        # Types error checking
-        if not (display_name and isinstance(display_name, str)):
-            raise ValueError("`display_name` should be a nonempty string.")
-        if (entry_fulfillment and
-            not isinstance(entry_fulfillment, Fulfillment)):
-            raise ValueError(
-                "The type of `entry_fulfillment` should be a Fulfillment."
-            )
-        # `overwrite` parameter error checking
-        if self.proto_obj and not overwrite:
-            raise UserWarning(
-                "proto_obj already contains a Page."
-                " If you wish to overwrite it, pass `overwrite` as True."
-            )
-        # Create the Page
-        if overwrite or not self.proto_obj:
-            if not entry_fulfillment:
-                entry_fulfillment = Fulfillment()
+        return self._create_new_proto_obj(
+            display_name=display_name, entry_fulfillment=entry_fulfillment,
+            overwrite=overwrite)
 
-            self.proto_obj = Page(
-                display_name=display_name,
-                entry_fulfillment=entry_fulfillment
-            )
-
-        return self.proto_obj
-
-
-    def set_fulfillment(
+    def set_entry_fulfillment(
         self,
         message: Union[str, List[str], Dict[str, Any]] = None,
         response_type: str = "text",
@@ -737,7 +772,6 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.transition_route_groups = new_trgs
 
         return self.proto_obj
-
 
 
     class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212

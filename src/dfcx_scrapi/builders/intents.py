@@ -40,6 +40,16 @@ class IntentBuilder(BuildersCommon):
 
     _proto_type = Intent
     _proto_type_str = "Intent"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "training_phrases",
+        "parameters",
+        "priority",
+        "is_fallback",
+        "labels",
+        "description",
+    ]
 
 
     def __str__(self) -> str:
@@ -49,7 +59,6 @@ class IntentBuilder(BuildersCommon):
         return (f"{self._show_basic_info()}"
             f"\n\n{self._show_parameters()}"
             f"\n\n{self._show_training_phrases()}")
-
 
     def _include_spaces_to_phrase(self, phrase: List[str], annots: List[str]):
         """Internal method to add spaces to the training phrase list and
@@ -92,7 +101,6 @@ class IntentBuilder(BuildersCommon):
                 del phrase[i+1]
                 del annots[i+1]
 
-
     def _label_constraints_check(self, key: str, value: str):
         """Check constraints for the label's key and value
         and raise an error if needed.
@@ -130,7 +138,6 @@ class IntentBuilder(BuildersCommon):
             if s not in allowed_chars:
                 raise ValueError(allowed_char_error_msg)
 
-
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -145,7 +152,6 @@ class IntentBuilder(BuildersCommon):
             f"\nis_fallback: {self.proto_obj.is_fallback}"
             f"\nlabels: {labels}")
 
-
     def _show_parameters(self) -> str:
         """String representation for the parameters of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -157,7 +163,6 @@ class IntentBuilder(BuildersCommon):
             f"\n\tredact: {bool(param.redact)}")
             for param in self.proto_obj.parameters
         ])
-
 
     def _show_training_phrases(self, repeat_count: int = None) -> str:
         """String representation for the training phrases of proto_obj."""
@@ -181,93 +186,7 @@ class IntentBuilder(BuildersCommon):
 
         return "\n".join(phrases)
 
-
-    def show_intent(
-        self, mode: str = "whole", repeat_count: int = None
-    ) -> None:
-        """Show the proto_obj information.
-
-        Args:
-          mode (str):
-            Specifies what part of the intent to show.
-              Options:
-              ['basic', 'parameters', 'phrases' or 'training phrases', 'whole']
-          repeat_count (int):
-            Indicates how many times the training phrases
-            was added to the intent.
-        """
-        self._check_proto_obj_attr_exist()
-
-        self.parameter_checking()
-
-        if mode == "basic":
-            print(self._show_basic_info())
-        elif mode == "parameters":
-            print(self._show_parameters())
-        elif mode in ["phrases", "training phrases"]:
-            print(self._show_training_phrases(repeat_count=repeat_count))
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                " ['basic', 'parameters',"
-                " 'phrases', 'training phrases', 'whole']"
-            )
-
-
-    def show_stats(self):
-        """Provide some stats about the intent."""
-        self._check_proto_obj_attr_exist()
-
-        stats_instance = IntentStats(self.proto_obj)
-        stats_instance.generate_stats()
-
-
-    def parameter_checking(self, raise_error: bool = False) -> bool:
-        """Check if the annotated parameters exist
-        in the Parameter attribute of proto_obj.
-
-        Args:
-          raise_error (bool):
-            A flag to whether raise an error. If False, it will log a warning.
-
-        Returns:
-          True if annotated parameters are the same as parameters in proto_obj
-        """
-        self._check_proto_obj_attr_exist()
-
-        tp_params_set = set()
-        for tp in self.proto_obj.training_phrases:
-            for part in tp.parts:
-                tp_params_set.add(part.parameter_id)
-        # Remove the empty string for unannotated parts
-        try:
-            tp_params_set.remove("")
-        except KeyError:
-            pass
-
-        # Get the parameters from proto_obj
-        parameters_set = {param.id for param in self.proto_obj.parameters}
-
-        # Check for not existing annotated parameters
-        return_flag = True
-        for tp_param in tp_params_set:
-            if tp_param not in parameters_set:
-                return_flag = False
-                msg = (
-                    f"parameter_id `{tp_param}` does not exist in parameters."
-                    "\nPlease add it using add_parameter method to continue."
-                )
-                if raise_error:
-                    raise UserWarning(msg)
-                else:
-                    logging.warning(msg)
-
-        return bool(return_flag)
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         display_name: str,
         priority: int = 500000,
@@ -324,9 +243,141 @@ class IntentBuilder(BuildersCommon):
                 is_fallback=is_fallback,
                 description=description
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
+
+    def show_intent(
+        self, mode: str = "whole", repeat_count: int = None
+    ) -> None:
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the intent to show.
+              Options:
+              ['basic', 'parameters', 'phrases' or 'training phrases', 'whole']
+          repeat_count (int):
+            Indicates how many times the training phrases
+            was added to the intent.
+        """
+        self._check_proto_obj_attr_exist()
+
+        self.parameter_checking()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode == "parameters":
+            print(self._show_parameters())
+        elif mode in ["phrases", "training phrases"]:
+            print(self._show_training_phrases(repeat_count=repeat_count))
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                " ['basic', 'parameters',"
+                " 'phrases', 'training phrases', 'whole']"
+            )
+
+    def show_stats(self):
+        """Provide some stats about the intent."""
+        self._check_proto_obj_attr_exist()
+
+        stats_instance = IntentStats(self.proto_obj)
+        stats_instance.generate_stats()
+
+    def parameter_checking(self, raise_error: bool = False) -> bool:
+        """Check if the annotated parameters exist
+        in the Parameter attribute of proto_obj.
+
+        Args:
+          raise_error (bool):
+            A flag to whether raise an error. If False, it will log a warning.
+
+        Returns:
+          True if annotated parameters are the same as parameters in proto_obj
+        """
+        self._check_proto_obj_attr_exist()
+
+        tp_params_set = set()
+        for tp in self.proto_obj.training_phrases:
+            for part in tp.parts:
+                tp_params_set.add(part.parameter_id)
+        # Remove the empty string for unannotated parts
+        try:
+            tp_params_set.remove("")
+        except KeyError:
+            pass
+
+        # Get the parameters from proto_obj
+        parameters_set = {param.id for param in self.proto_obj.parameters}
+
+        # Check for not existing annotated parameters
+        return_flag = True
+        for tp_param in tp_params_set:
+            if tp_param not in parameters_set:
+                return_flag = False
+                msg = (
+                    f"parameter_id `{tp_param}` does not exist in parameters."
+                    "\nPlease add it using add_parameter method to continue."
+                )
+                if raise_error:
+                    raise UserWarning(msg)
+                else:
+                    logging.warning(msg)
+
+        return bool(return_flag)
+
+    def create_new_intent(
+        self,
+        display_name: str,
+        priority: int = 500000,
+        is_fallback: bool = False,
+        description: str = None,
+        overwrite: bool = False,
+    ) -> Intent:
+        """Create a new Intent.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the
+            intent, unique within the agent.
+          priority (int):
+            The priority of this intent. Higher numbers represent higher
+            priorities.
+            -  If the supplied value is unspecified or 0, the service
+            translates the value to 500,000, which corresponds to the
+            ``Normal`` priority in the console.
+            -  If the supplied value is negative, the intent is ignored
+            in runtime detect intent requests.
+          is_fallback (bool):
+            Indicates whether this is a fallback intent.
+            Currently only default fallback intent is
+            allowed in the agent, which is added upon agent
+            creation.
+            Adding training phrases to fallback intent is
+            useful in the case of requests that are
+            mistakenly matched, since training phrases
+            assigned to fallback intents act as negative
+            examples that triggers no-match event.
+          description (str):
+            Human readable description for better
+            understanding an intent like its scope, content,
+            result etc. Maximum character limit: 140
+            characters.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains an Intent.
+
+        Returns:
+          An Intent object stored in proto_obj
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, priority=priority,
+            is_fallback=is_fallback, description=description,
+            overwrite=overwrite)
 
     def add_training_phrase(
         self,
@@ -432,7 +483,6 @@ class IntentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def add_parameter(
         self,
         parameter_id: str,
@@ -484,7 +534,6 @@ class IntentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def add_label(
         self, label: Union[Dict[str, str], str]
     ) -> Intent:
@@ -525,7 +574,6 @@ class IntentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def remove_training_phrase(self, phrase: str) -> Intent:
         """Remove a training phrase from proto_obj.
 
@@ -550,7 +598,6 @@ class IntentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def remove_parameter(self, parameter_id: str) -> Intent:
         """Remove a parameter from proto_obj.
 
@@ -572,7 +619,6 @@ class IntentBuilder(BuildersCommon):
                 break
 
         return self.proto_obj
-
 
     def remove_label(self, label: Union[Dict[str, str], str]) -> Intent:
         """Remove a single or multiple labels from proto_obj.
@@ -785,7 +831,7 @@ class IntentBuilder(BuildersCommon):
             """
             disp_name = self._is_df_has_single_display_name(df)
 
-            self._outer_self.create_new_proto_obj(display_name=disp_name)
+            self._outer_self.create_new_intent(display_name=disp_name)
             for phrase in df["training_phrase"]:
                 if isinstance(phrase, str):
                     self._outer_self.add_training_phrase(phrase)
@@ -809,7 +855,7 @@ class IntentBuilder(BuildersCommon):
                 df, "is_fallback"))
             description = self._get_unique_value_of_a_column(df, "description")
 
-            self._outer_self.create_new_proto_obj(
+            self._outer_self.create_new_intent(
                 display_name=disp_name, priority=priority,
                 is_fallback=is_fallback, description=description
             )

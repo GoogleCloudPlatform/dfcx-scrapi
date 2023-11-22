@@ -34,6 +34,16 @@ class EntityTypeBuilder(BuildersCommon):
 
     _proto_type = EntityType
     _proto_type_str = "EntityType"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "kind",
+        "auto_expansion_mode",
+        "entities",
+        "excluded_phrases",
+        "enable_fuzzy_extraction",
+        "redact",
+    ]
 
 
     def __str__(self) -> str:
@@ -44,7 +54,6 @@ class EntityTypeBuilder(BuildersCommon):
             f"{self._show_entity_type_basic_info()}"
             f"\n{self._show_excluded_phrases()}"
             f"\n{self._show_entities()}")
-
 
     def _show_entity_type_basic_info(self) -> str:
         """Shows the information of proto_obj."""
@@ -80,35 +89,7 @@ class EntityTypeBuilder(BuildersCommon):
 
         return f"entities:\n{entities}"
 
-
-    def show_entity_type(self, mode: str = "whole"):
-        """Show the proto_obj information.
-
-        Args:
-          mode (str):
-            Specifies what part of the entity type to show.
-            Options:
-              ['basic', 'entities', 'excluded' or 'excluded phrases', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "basic":
-            print(self._show_entity_type_basic_info())
-        elif mode == "entities":
-            print(self._show_entities())
-        elif mode in ["excluded", "excluded phrases"]:
-            print(self._show_excluded_phrases())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                "['basic', 'entities',"
-                " 'excluded' or 'excluded phrases', 'whole']"
-            )
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         display_name: str,
         kind: int,
@@ -170,9 +151,83 @@ class EntityTypeBuilder(BuildersCommon):
                 enable_fuzzy_extraction=enable_fuzzy_extraction,
                 redact=redact
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
+
+    def show_entity_type(self, mode: str = "whole"):
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the entity type to show.
+            Options:
+              ['basic', 'entities', 'excluded' or 'excluded phrases', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "basic":
+            print(self._show_entity_type_basic_info())
+        elif mode == "entities":
+            print(self._show_entities())
+        elif mode in ["excluded", "excluded phrases"]:
+            print(self._show_excluded_phrases())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'entities',"
+                " 'excluded' or 'excluded phrases', 'whole']"
+            )
+
+    def c(
+        self,
+        display_name: str,
+        kind: int,
+        auto_expansion_mode: int = 0,
+        enable_fuzzy_extraction: bool = False,
+        redact: bool = False,
+        overwrite: bool = False
+    ) -> EntityType:
+        """Create a new EntityType.
+
+        Args:
+          display_name (str):
+            The human-readable name of the
+            entity type, unique within the agent.
+          kind (int):
+            Represents kinds of entities.
+              1 = KIND_MAP
+              2 = KIND_LIST
+              3 = KIND_REGEXP
+          auto_expansion_mode (int):
+            Indicates whether the entity type can be
+            automatically expanded.
+              AUTO_EXPANSION_MODE_UNSPECIFIED = 0
+              AUTO_EXPANSION_MODE_DEFAULT = 1
+          enable_fuzzy_extraction (bool):
+            Enables fuzzy entity extraction during
+            classification.
+          redact (bool):
+            Indicates whether parameters of the entity
+            type should be redacted in log. If redaction is
+            enabled, page parameters and intent parameters
+            referring to the entity type will be replaced by
+            parameter name during logging.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains an EntityType.
+
+        Returns:
+          An EntityType object stored in proto_obj
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, kind=kind,
+            auto_expansion_mode=auto_expansion_mode,
+            enable_fuzzy_extraction=enable_fuzzy_extraction,
+            redact=redact, overwrite=overwrite)
 
     def add_excluded_phrase(
         self, phrase: Union[str, List[str]]
@@ -209,7 +264,6 @@ class EntityTypeBuilder(BuildersCommon):
             )
 
         return self.proto_obj
-
 
     def remove_excluded_phrase(
         self, phrase: Union[str, List[str]]
@@ -250,7 +304,6 @@ class EntityTypeBuilder(BuildersCommon):
         ])
 
         return self.proto_obj
-
 
     def add_entity(
         self, value: str, synonyms: List[str] = None
@@ -306,7 +359,6 @@ class EntityTypeBuilder(BuildersCommon):
             )
 
         return self.proto_obj
-
 
     def remove_entity(
         self, value: str, synonyms: List[str] = None
@@ -441,7 +493,7 @@ class EntityTypeBuilder(BuildersCommon):
             disp_name = self._is_df_has_single_display_name(df)
 
             kind = self._find_kind(df)
-            self._outer_self.create_new_proto_obj(
+            self._outer_self.create_new_intent(
                 display_name=disp_name, kind=kind
             )
             for entity in df["entity_value"]:
@@ -476,7 +528,7 @@ class EntityTypeBuilder(BuildersCommon):
                 df, "fuzzy_extraction")
             redact = self._get_unique_value_of_a_column(df, "redact")
 
-            self._outer_self.create_new_proto_obj(
+            self._outer_self.create_new_intent(
                 display_name=disp_name, kind=kind_map.get(kind),
                 auto_expansion_mode=auto_expansion_mode,
                 enable_fuzzy_extraction=fuzzy_extraction, redact=redact,

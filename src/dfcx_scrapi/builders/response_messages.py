@@ -35,6 +35,19 @@ class ResponseMessageBuilder(BuildersCommon):
 
     _proto_type = ResponseMessage
     _proto_type_str = "ResponseMessage"
+    _proto_attrs = [
+        "text",
+        "payload",
+        "conversation_success",
+        "output_audio_text",
+        "live_agent_handoff",
+        "end_interaction",
+        "play_audio",
+        "mixed_audio",
+        "telephony_transfer_call",
+        "knowledge_info_card",
+        "channel",
+    ]
 
 
     def __str__(self) -> str:
@@ -79,13 +92,6 @@ class ResponseMessageBuilder(BuildersCommon):
         return (
             f"Response Type: {resp_type}\nMessage:\n\t{resp_msg}"
         )
-
-
-    def show_response_message(self):
-        """Show the proto_obj information."""
-        self._check_proto_obj_attr_exist()
-        print(self)
-
 
     def _create_text_response(
         self, message: Union[str, List[str]]
@@ -278,8 +284,7 @@ class ResponseMessageBuilder(BuildersCommon):
 
         return ResponseMessage(telephony_transfer_call=transfer_call_obj)
 
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         message: Union[str, List[str], Dict[str, Any]],
         response_type: str = "text",
@@ -345,6 +350,61 @@ class ResponseMessageBuilder(BuildersCommon):
                 " 'output_audio_text', 'live_agent_handoff', 'play_audio',"
                 " 'telephony_transfer_call']"
             )
+        self._add_proto_attrs_to_builder_obj()
 
         self.proto_obj = resp
         return self.proto_obj
+
+
+    def create_new_response_message(
+        self,
+        message: Union[str, List[str], Dict[str, Any]],
+        response_type: str = "text",
+        mode: str = None
+    ) -> ResponseMessage:
+        """Create a ResponseMessage that can be returned by a
+        conversational agent.
+        ResponseMessages are also used for output audio synthesis.
+
+        Args:
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
+
+        Returns:
+          A ResponseMessage object stored in proto_obj
+        """
+        return self._create_new_proto_obj(
+            message=message, response_type=response_type, mode=mode)
+
+    def show_response_message(self):
+        """Show the proto_obj information."""
+        self._check_proto_obj_attr_exist()
+        print(self)

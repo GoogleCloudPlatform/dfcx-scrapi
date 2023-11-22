@@ -35,6 +35,14 @@ class WebhookBuilder(BuildersCommon):
     """Base Class for CX Webhook builder."""
     _proto_type = Webhook
     _proto_type_str = "Webhook"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "generic_web_service",
+        "service_directory",
+        "timeout",
+        "disabled",
+    ]
 
 
     def __str__(self) -> str:
@@ -45,7 +53,6 @@ class WebhookBuilder(BuildersCommon):
         service_info = self._show_service_info()
 
         return f"{basic_info}\n{service_info}"
-
 
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
@@ -78,8 +85,7 @@ class WebhookBuilder(BuildersCommon):
             f"\n\thave_ca_certs: {have_ca_certs}"
         )
 
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         display_name: str,
         timeout: int = 5,
@@ -131,9 +137,42 @@ class WebhookBuilder(BuildersCommon):
                 timeout=timedelta(seconds=timeout),
                 disabled=disabled
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
+
+    def create_new_webhook(
+        self,
+        display_name: str,
+        timeout: int = 5,
+        disabled: bool = False,
+        overwrite: bool = False
+    ):
+        """Create a new Webhook.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the webhook.
+            It should be unique within the agent.
+          timeout (int):
+            Webhook execution timeout. Execution is
+            considered failed if Dialogflow doesn't receive
+            a response from webhook at the end of the
+            timeout period. Defaults to 5 seconds, maximum
+            allowed timeout is 30 seconds.
+          disabled (bool):
+            Indicates whether the webhook is disabled.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a Webhook.
+
+        Returns:
+          A Webhook object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, timeout=timeout, disabled=disabled,
+            overwrite=overwrite)
 
     def add_web_service(
         self,
@@ -207,7 +246,6 @@ class WebhookBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def show_webhook(self):
         """Show the proto_obj information."""
         self._check_proto_obj_attr_exist()
@@ -269,7 +307,7 @@ class WebhookBuilder(BuildersCommon):
             disp_name = self._is_df_has_single_display_name(df)
             uri = self._get_unique_value_of_a_column(df, "uri")
 
-            self._outer_self.create_new_proto_obj(
+            self._outer_self.create_new_webhook(
                 display_name=disp_name)
             self._outer_self.add_web_service(uri=uri)
 
@@ -301,7 +339,7 @@ class WebhookBuilder(BuildersCommon):
                     for item in req_header_list
                 }
 
-            self._outer_self.create_new_proto_obj(
+            self._outer_self.create_new_webhook(
                 display_name=disp_name, timeout=timeout, disabled=disabled)
             self._outer_self.add_web_service(
                 uri=uri, service=service_type,

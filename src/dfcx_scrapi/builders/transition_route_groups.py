@@ -38,6 +38,11 @@ class TransitionRouteGroupBuilder(BuildersCommon):
 
     _proto_type = TransitionRouteGroup
     _proto_type_str = "TransitionRouteGroup"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "transition_routes",
+    ]
 
 
     def __str__(self) -> str:
@@ -54,14 +59,7 @@ class TransitionRouteGroupBuilder(BuildersCommon):
             f"\nTransitionRoutes:\n{'-'*20}\n{transition_routes_str}"
         )
 
-    def show_transition_route_group(self):
-        """Show the proto_obj information."""
-        self._check_proto_obj_attr_exist()
-
-        print(self)
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         display_name: str,
         transition_routes: Union[TransitionRoute, List[TransitionRoute]] = None,
@@ -112,9 +110,43 @@ class TransitionRouteGroupBuilder(BuildersCommon):
                 display_name=display_name,
                 transition_routes=transition_routes
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
+
+    def show_transition_route_group(self):
+        """Show the proto_obj information."""
+        self._check_proto_obj_attr_exist()
+
+        print(self)
+
+    def create_new_transition_route_group(
+        self,
+        display_name: str,
+        transition_routes: Union[TransitionRoute, List[TransitionRoute]] = None,
+        overwrite: bool = False
+    ) -> TransitionRouteGroup:
+        """Create a new TransitionRouteGroup.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the
+            transition route group, unique within the flow.
+            The display name can be no longer than 30 characters.
+          transition_routes (TransitionRoute | List[TransitionRoute]):
+            Transition routes associated with this TransitionRouteGroup.
+            Refer to `builders.routes.TransitionRouteBuilder` to build one.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a TransitionRouteGroup.
+
+        Returns:
+          A TransitionRouteGroup object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, transition_routes=transition_routes,
+            overwrite=overwrite)
 
     def add_transition_route(
         self,

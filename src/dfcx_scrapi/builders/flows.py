@@ -45,6 +45,17 @@ class FlowBuilder(BuildersCommon):
 
     _proto_type = Flow
     _proto_type_str = "Flow"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "description",
+        "transition_routes",
+        "event_handlers",
+        "transition_route_groups",
+        "nlu_settings",
+        "advanced_settings",
+        "knowledge_connector_settings",
+    ]
 
 
     def __str__(self) -> str:
@@ -105,51 +116,7 @@ class FlowBuilder(BuildersCommon):
             for i, trg_id in enumerate(self.proto_obj.transition_route_groups)
         ])
 
-    def show_flow_info(
-        self, mode: str = "whole"
-    ) -> None:
-        """Show the proto_obj information.
-
-        Args:
-          mode (str):
-            Specifies what part of the page to show.
-              Options:
-              ['basic', 'whole',
-              'routes' or 'transition routes',
-              'route groups' or 'transition route groups',
-              'events' or 'event handlers'
-              ]
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "basic":
-            print(self._show_basic_info())
-        elif mode in ["routes", "transition routes"]:
-            print(self._show_transition_routes())
-        elif mode in ["route groups", "transition route groups"]:
-            print(self._show_transition_route_groups())
-        elif mode in ["events", "event handlers"]:
-            print(self._show_event_handlers())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                "['basic', 'whole',"
-                " 'routes', 'transition routes',"
-                " 'route groups', 'transition route groups',"
-                " 'events', 'event handlers']"
-            )
-
-    def show_stats(self) -> None:
-        """Provide some stats about the Page."""
-        self._check_proto_obj_attr_exist()
-
-        stats_instance = FlowStats(self.proto_obj)
-        stats_instance.generate_stats()
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         display_name: str,
         description: str = None,
@@ -195,9 +162,77 @@ class FlowBuilder(BuildersCommon):
             )
         # Set the NLU settings to default
         self.nlu_settings()
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
+
+    def show_flow_info(
+        self, mode: str = "whole"
+    ) -> None:
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the page to show.
+              Options:
+              ['basic', 'whole',
+              'routes' or 'transition routes',
+              'route groups' or 'transition route groups',
+              'events' or 'event handlers'
+              ]
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode in ["routes", "transition routes"]:
+            print(self._show_transition_routes())
+        elif mode in ["route groups", "transition route groups"]:
+            print(self._show_transition_route_groups())
+        elif mode in ["events", "event handlers"]:
+            print(self._show_event_handlers())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'whole',"
+                " 'routes', 'transition routes',"
+                " 'route groups', 'transition route groups',"
+                " 'events', 'event handlers']"
+            )
+
+    def show_stats(self) -> None:
+        """Provide some stats about the Page."""
+        self._check_proto_obj_attr_exist()
+
+        stats_instance = FlowStats(self.proto_obj)
+        stats_instance.generate_stats()
+
+    def create_new_flow(
+        self,
+        display_name: str,
+        description: str = None,
+        overwrite: bool = False
+    ) -> Flow:
+        """Create a new Flow.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the flow.
+          description (str):
+            The description of the flow. The maximum length is 500 characters.
+            If exceeded, the request is rejected.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already contains a Flow.
+
+        Returns:
+          A Flow object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, description=description,
+            overwrite=overwrite)
 
     def nlu_settings(
         self,

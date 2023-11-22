@@ -38,6 +38,16 @@ class FulfillmentBuilder(BuildersCommon):
 
     _proto_type = Fulfillment
     _proto_type_str = "Fulfillment"
+    _proto_attrs = [
+        "messages",
+        "webhook",
+        "return_partial_responses",
+        "tag",
+        "set_parameter_actions",
+        "conditional_cases",
+        "advanced_settings",
+        "enable_generative_fallback",
+    ]
 
 
     def __str__(self) -> str:
@@ -86,34 +96,7 @@ class FulfillmentBuilder(BuildersCommon):
             for i, msg in enumerate(self.proto_obj.messages)
         ])
 
-    def show_fulfillment(self, mode: str = "whole"):
-        """Show the proto_obj information.
-        Args:
-          mode (str):
-            Specifies what part of the fulfillment to show.
-            Options:
-              ['basic', 'parameters',
-                'messages' or 'response messages', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "basic":
-            print(self._show_basic_info())
-        elif mode == "parameters":
-            print(self._show_parameters())
-        elif mode in ["messages", "response messages"]:
-            print(self._show_response_messages())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                "['basic', 'parameters',"
-                " 'messages' or 'response messages', 'whole']"
-            )
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         webhook: str = None,
         tag: str = None,
@@ -169,12 +152,74 @@ class FulfillmentBuilder(BuildersCommon):
         # Create the fulfillment
         if overwrite or not self.proto_obj:
             self.proto_obj = Fulfillment(
-                webhook=webhook,
+                webhook=webhook, tag=tag,
                 return_partial_responses=return_partial_responses,
-                tag=tag
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
+
+
+    def show_fulfillment(self, mode: str = "whole"):
+        """Show the proto_obj information.
+        Args:
+          mode (str):
+            Specifies what part of the fulfillment to show.
+            Options:
+              ['basic', 'parameters',
+                'messages' or 'response messages', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode == "parameters":
+            print(self._show_parameters())
+        elif mode in ["messages", "response messages"]:
+            print(self._show_response_messages())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'parameters',"
+                " 'messages' or 'response messages', 'whole']"
+            )
+
+    def create_new_fulfillment(
+        self,
+        webhook: str = None,
+        tag: str = None,
+        return_partial_responses: bool = False,
+        overwrite: bool = False
+    ) -> Fulfillment:
+        """Create a new Fulfillment.
+
+        Args:
+          webhook (str):
+            The webhook to call. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents
+              /<Agent ID>/webhooks/<Webhook ID>``.
+          tag (str):
+            The tag is typically used by
+            the webhook service to identify which fulfillment is being
+            called, but it could be used for other purposes. This field
+            is required if ``webhook`` is specified.
+          return_partial_responses (bool):
+            Whether Dialogflow should return currently
+            queued fulfillment response messages in
+            streaming APIs. If a webhook is specified, it
+            happens before Dialogflow invokes webhook.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a Fulfillment.
+
+        Returns:
+            A Fulfillment object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            webhook=webhook, tag=tag, overwrite=overwrite,
+            return_partial_responses=return_partial_responses)
 
     def add_response_message(
         self,

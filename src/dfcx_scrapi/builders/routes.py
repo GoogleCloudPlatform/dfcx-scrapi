@@ -39,6 +39,15 @@ class TransitionRouteBuilder(BuildersCommon):
 
     _proto_type = TransitionRoute
     _proto_type_str = "TransitionRoute"
+    _proto_attrs = [
+        "name",
+        "description",
+        "intent",
+        "condition",
+        "trigger_fulfillment",
+        "target_page",
+        "target_flow",
+    ]
 
 
     def __str__(self) -> str:
@@ -97,34 +106,7 @@ class TransitionRouteBuilder(BuildersCommon):
 
         return fulfillment_str
 
-    def show_transition_route(self, mode: str = "whole"):
-        """Show the proto_obj information.
-        Args:
-          mode (str):
-            Specifies what part of the TransitionRoute to show.
-            Options:
-              ['target', 'fulfillment',
-               'transition criteria' or 'conditions', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "target":
-            print(self._show_target())
-        elif mode in ["transition criteria", "conditions"]:
-            print(self._show_transition_criteria())
-        elif mode == "fulfillment":
-            print(self._show_fulfillment())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                " ['target', 'fulfillment',"
-                " 'transition criteria' or 'conditions', 'whole']"
-            )
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         intent: str = None,
         condition: str = None,
@@ -220,8 +202,93 @@ class TransitionRouteBuilder(BuildersCommon):
                 target_page=target_page,
                 target_flow=target_flow
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
+
+
+    def create_new_transition_route(
+        self,
+        intent: str = None,
+        condition: str = None,
+        trigger_fulfillment: Fulfillment = None,
+        target_page: str = None,
+        target_flow: str = None,
+        overwrite: bool = False
+    ) -> TransitionRoute:
+        """Create a new TransitionRoute.
+
+        Args:
+          intent (str):
+            Indicates that the transition can only happen when the given
+            intent is matched.
+            Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/intents/<Intent ID>``.
+            At least one of ``intent`` or ``condition`` must be specified.
+            When both ``intent`` and ``condition`` are specified,
+            the transition can only happen when both are fulfilled.
+          condition (str):
+            The condition to evaluate.
+            See the conditions reference:
+            https://cloud.google.com/dialogflow/cx/docs/reference/condition
+            At least one of ``intent`` or ``condition`` must be specified.
+            When both ``intent`` and ``condition`` are specified,
+            the transition can only happen when both are fulfilled.
+          trigger_fulfillment (Fulfillment):
+            The fulfillment to call when the condition is satisfied.
+            When ``trigger_fulfillment`` and ``target`` are defined,
+            ``trigger_fulfillment`` is executed first.
+          target_page (str):
+            The target page to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          target_flow (str):
+            The target flow to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a TransitionRoute.
+
+        Returns:
+          A TransitionRoute object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            intent=intent, condition=condition,
+            trigger_fulfillment=trigger_fulfillment,
+            target_page=target_page, target_flow=target_flow,
+            overwrite=overwrite)
+
+    def show_transition_route(self, mode: str = "whole"):
+        """Show the proto_obj information.
+        Args:
+          mode (str):
+            Specifies what part of the TransitionRoute to show.
+            Options:
+              ['target', 'fulfillment',
+               'transition criteria' or 'conditions', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "target":
+            print(self._show_target())
+        elif mode in ["transition criteria", "conditions"]:
+            print(self._show_transition_criteria())
+        elif mode == "fulfillment":
+            print(self._show_fulfillment())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                " ['target', 'fulfillment',"
+                " 'transition criteria' or 'conditions', 'whole']"
+            )
 
     def set_fulfillment(
         self,
@@ -353,6 +420,13 @@ class EventHandlerBuilder(BuildersCommon):
 
     _proto_type = EventHandler
     _proto_type_str = "EventHandler"
+    _proto_attrs = [
+        "name",
+        "event",
+        "trigger_fulfillment",
+        "target_page",
+        "target_flow",
+    ]
 
 
     def __str__(self) -> str:
@@ -401,30 +475,7 @@ class EventHandlerBuilder(BuildersCommon):
 
         return fulfillment_str
 
-    def show_event_handler(self, mode: str = "whole"):
-        """Show the proto_obj information.
-        Args:
-          mode (str):
-            Specifies what part of the EventHandler to show.
-            Options:
-              ['basic' or 'target' or 'event', 'fulfillment', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode in ["basic", "target", "event"]:
-            print(self._show_event_and_target())
-        elif mode == "fulfillment":
-            print(self._show_fulfillment())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                " ['basic' or 'target' or 'event', 'fulfillment', 'whole']"
-            )
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         event: str,
         trigger_fulfillment: Fulfillment = None,
@@ -493,8 +544,74 @@ class EventHandlerBuilder(BuildersCommon):
                 target_page=target_page,
                 target_flow=target_flow
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
+
+
+    def create_new_event_handler(
+        self,
+        event: str,
+        trigger_fulfillment: Fulfillment = None,
+        target_page: str = None,
+        target_flow: str = None,
+        overwrite: bool = False
+    ) -> EventHandler:
+        """Create a new EventHandler.
+
+        Args:
+          event (str):
+            Required. The name of the event to handle.
+          trigger_fulfillment (Fulfillment):
+            The fulfillment to call when the event occurs.
+            Handling webhook errors with a fulfillment enabled with webhook
+            could cause infinite loop. It is invalid to specify
+            such fulfillment for a handler handling webhooks.
+          target_page (str):
+            The target page to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          target_flow (str):
+            The target flow to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a EventHandler.
+
+        Returns:
+          An EventHandler object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            event=event, trigger_fulfillment=trigger_fulfillment,
+            target_page=target_page, target_flow=target_flow,
+            overwrite=overwrite)
+
+    def show_event_handler(self, mode: str = "whole"):
+        """Show the proto_obj information.
+        Args:
+          mode (str):
+            Specifies what part of the EventHandler to show.
+            Options:
+              ['basic' or 'target' or 'event', 'fulfillment', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode in ["basic", "target", "event"]:
+            print(self._show_event_and_target())
+        elif mode == "fulfillment":
+            print(self._show_fulfillment())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                " ['basic' or 'target' or 'event', 'fulfillment', 'whole']"
+            )
 
     def set_fulfillment(
         self,
