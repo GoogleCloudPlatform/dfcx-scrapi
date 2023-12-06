@@ -436,8 +436,8 @@ class Agents(scrapi_base.ScrapiBase):
 
     @scrapi_base.api_call_counter_decorator
     def restore_agent(
-        self, 
-        agent_id: str, 
+        self,
+        agent_id: str,
         gcs_bucket_uri: str,
         restore_option: int = None
     ) -> str:
