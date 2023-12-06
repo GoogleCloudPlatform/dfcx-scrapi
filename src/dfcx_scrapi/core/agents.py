@@ -435,7 +435,12 @@ class Agents(scrapi_base.ScrapiBase):
 
 
     @scrapi_base.api_call_counter_decorator
-    def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
+    def restore_agent(
+        self, 
+        agent_id: str, 
+        gcs_bucket_uri: str,
+        restore_option: int = None
+    ) -> str:
         """Restores a CX agent from a gcs_bucket location.
 
         Currently there is no way to restore back to default
@@ -447,6 +452,11 @@ class Agents(scrapi_base.ScrapiBase):
           gcs_bucket_uri: The Google Cloud Storage bucket/filepath to restore
             the agent from in the following format:
               `gs://<bucket-name>/<object-name>`
+          restore_option: Optional. if not specified, then its equals to 0
+              Agent restore mode int in the following value
+              0:unspecificed
+              1:always respect the settings from the exported agent file
+              2:fallback to default settings if some settings are not supported
 
         Returns:
           A Long Running Operation (LRO) ID that can be used to
@@ -457,6 +467,11 @@ class Agents(scrapi_base.ScrapiBase):
         request = types.RestoreAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
+
+        if restore_option:
+            request.restore_option = types.RestoreAgentRequest.RestoreOption(
+                restore_option
+            )
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
