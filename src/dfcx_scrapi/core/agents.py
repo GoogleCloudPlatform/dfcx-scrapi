@@ -454,7 +454,7 @@ class Agents(scrapi_base.ScrapiBase):
               Below are the options for restoring an agent (int):
                   0:unspecified
                   1:always respect the settings from the exported agent file
-                  2:fallback to default settings if some settings are not supported
+                  2:fallback to default settings if not supported
 
         Returns:
           A Long Running Operation (LRO) ID that can be used to
