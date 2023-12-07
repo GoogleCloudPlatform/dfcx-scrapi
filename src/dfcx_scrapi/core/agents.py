@@ -443,9 +443,6 @@ class Agents(scrapi_base.ScrapiBase):
     ) -> str:
         """Restores a CX agent from a gcs_bucket location.
 
-        Currently there is no way to restore back to default
-        settings via the api. The feature request for this is logged.
-
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
