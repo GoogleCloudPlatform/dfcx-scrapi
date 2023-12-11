@@ -246,3 +246,35 @@ class Webhooks(scrapi_base.ScrapiBase):
         response = client.update_webhook(request)
 
         return response
+
+
+    @scrapi_base.api_call_counter_decorator
+    def delete_webhook(
+        self, webhook_id: str = None,
+        obj: types.Webhook = None, force: bool = False
+    ):
+        """Deletes a single Webhookd resource object.
+
+        Args:
+          webhook_id: intent to delete
+          obj: (Optional) a CX Webhook object of types.Webhook
+          force: (Optional) This field has no effect for webhook not being
+            used. For webhooks that are used by pages/flows/transition route
+            groups:
+            -  If ``force`` is set to false, an error will be returned
+               with message indicating the referenced resources.
+            -  If ``force`` is set to true, Dialogflow will remove the
+               webhook, as well as any references to the webhook and tags in
+               fulfillments that point to this webhook will be removed.
+        """
+        if not webhook_id:
+            webhook_id = self.webhook_id
+
+        if obj:
+            webhook_id = obj.name
+
+        client_options = self._set_region(webhook_id)
+        client = services.webhooks.WebhooksClient(
+            client_options=client_options, credentials=self.creds)
+        req = types.DeleteWebhookRequest(name=webhook_id, force=force)
+        client.delete_webhook(request=req)

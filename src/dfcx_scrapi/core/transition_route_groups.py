@@ -275,6 +275,33 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         return response
 
+    @scrapi_base.api_call_counter_decorator
+    def delete_transition_route_group(
+        self, route_group_id: str = None,
+        obj: types.TransitionRouteGroup = None, force: bool = False
+    ):
+        """Deletes the specified Route Group.
+
+        Args:
+          route_group_id: The formatted CX Route Group ID to delete.
+          obj: (Optional) a CX Webhook object of types.TransitionRouteGroup
+          force: (Optional) This field has no effect for transition route group
+            that no page is using. If set to True, Dialogflow will remove
+            the transition route group, as well as any transitions to the page.
+        """
+        if not route_group_id:
+            route_group_id = self.route_group_id
+        if obj:
+            route_group_id = obj.name
+
+        client_options = self._set_region(route_group_id)
+        client = services.transition_route_groups.TransitionRouteGroupsClient(
+            credentials=self.creds, client_options=client_options)
+        req = types.DeleteTransitionRouteGroupRequest(
+            name=route_group_id, force=force)
+        client.delete_transition_route_group(request=req)
+
+
     def route_groups_to_dataframe(
         self, agent_id: str = None, rate_limit: float = 0.5
     ):
