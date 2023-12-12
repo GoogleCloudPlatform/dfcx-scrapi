@@ -107,7 +107,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return nlu_settings
 
-    def get_flows_map(self, agent_id: str, reverse=False):
+    def get_flows_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
@@ -194,7 +194,7 @@ class Flows(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def list_flows(self, agent_id: str) -> List[types.Flow]:
+    def list_flows(self, agent_id: str = None) -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
         Args:
