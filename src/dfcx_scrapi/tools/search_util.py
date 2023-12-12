@@ -30,6 +30,15 @@ from dfcx_scrapi.core import transition_route_groups
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 
+from proto.marshal.collections.maps import MapComposite
+from proto.marshal.collections.repeated import RepeatedComposite
+
+# Type aliases
+DFCXFlow = types.flow.Flow
+DFCXPage = types.page.Page
+DFCXRoute = types.page.TransitionRoute
+DFCXEventHandler = types.page.EventHandler
+
 # logging config
 logging.basicConfig(
     level=logging.INFO,
@@ -72,11 +81,37 @@ class SearchUtil(scrapi_base.ScrapiBase):
         self.intents_map = None
         if agent_id:
             self.agent_id = agent_id
-            self.flow_map = self.flows.get_flows_map(
+            self.flows_map = self.flows.get_flows_map(
                 agent_id=agent_id, reverse=True
             )
             self.intents_map = self.intents.get_intents_map(agent_id)
             self.client_options = self._set_region(agent_id)
+            self.flow_data = self.get_all_flow_data()
+            self.page_data = self.get_all_page_data()
+            self.route_group_data = self.get_all_route_group_data()
+
+    def get_all_flow_data(self):
+        flow_data = {}
+        flow_list = self.flows.list_flows(self.agent_id)
+        for flow in flow_list:
+            flow_data[flow.name] = flow
+        return flow_data
+
+    def get_all_page_data(self):
+        page_data = {}
+        for flow_id in self.flows_map.values():
+            page_list = self.pages.list_pages(flow_id=flow_id)
+            page_data[flow_id] = {page.name: page for page in page_list}
+        return page_data
+
+    def get_all_route_group_data(self):
+        route_group_data = {}
+        for flow_id in self.flows_map.values():
+            group_list = self.route_groups.list_transition_route_groups(
+                flow_id=flow_id
+            )
+            route_group_data[flow_id] = {rg.name: rg for rg in group_list}
+        return route_group_data
 
     @staticmethod
     def get_route_df(page_df: pd.DataFrame, route_group_df: pd.DataFrame):
@@ -101,7 +136,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
         """
         routes_df = (
             pd.concat(
-                [page_df[["flow_name", "page_name", "routes"]], route_group_df],
+                [page_df[["flow_name", "page_name", "routes"]],
+                route_group_df],
                 ignore_index=True,
             )
             .explode("routes", ignore_index=True)
@@ -286,8 +322,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
             contents = message
         return contents
 
-    def _find_true_routes_flow_level(self, flow_display_name, flow_map):
-        flow_id = flow_map[flow_display_name]
+    def _find_true_routes_flow_level(self, flow_display_name, flows_map):
+        flow_id = flows_map[flow_display_name]
         start_page = self.flows.get_flow(flow_id)  # pylint: disable=W0612
         other_pages = self.pages.list_pages(flow_id)
 
@@ -380,8 +416,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
     # Pages - event handlers
     def _page_level_handlers(self):
         page_level_event_handlers_all_dataframe = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(self.agent_id)
-        for flow_ in flow_map.keys():
+        flows_map = self.flows.get_flows_map(self.agent_id)
+        for flow_ in flows_map.keys():
             pages_in_flow = self.pages.list_pages(flow_)
 
             for page in pages_in_flow:
@@ -402,7 +438,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                 ],
                                 data=[
                                     [
-                                        flow_map[flow_],
+                                        flows_map[flow_],
                                         page.display_name,
                                         handler.event,
                                         handler.trigger_fulfillment.messages,
@@ -423,8 +459,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
     # Parameters - event handlers
     def _parameter_level_handlers(self):
         parameter_level_event_handlers_all_dataframe = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(self.agent_id)
-        for flow_ in flow_map.keys():
+        flows_map = self.flows.get_flows_map(self.agent_id)
+        for flow_ in flows_map.keys():
             pages_in_flow = self.pages.list_pages(flow_)
             for page in pages_in_flow:
                 parameters = page.form.parameters
@@ -448,7 +484,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
                                 ],
                                 data=[
                                     [
-                                        flow_map[flow_],
+                                        flows_map[flow_],
                                         page.display_name,
                                         parameter.display_name,
                                         handler.event,
@@ -496,6 +532,360 @@ class SearchUtil(scrapi_base.ScrapiBase):
                         params_list.append(param.display_name)
 
         return params_list
+
+    def get_param_presets_df(self, flow_name_list=None):
+        """Gets a dataframe of parameter presets.
+
+        Args:
+          flow_name_list (optoinal): list of names of flows to search.
+          By default all flows will be searched.
+
+        Returns:
+          Dataframe of parameter presets with columns:
+            flow,
+            page,
+            intent,
+            event,
+            route_group,
+            condition,
+            form_filling,
+            location,
+            param_name,
+            param_value
+        """
+
+        flow_id_list = []
+        if flow_name_list is None:
+            flow_id_list = list(self.flows_map.values())
+        elif isinstance(flow_name_list, list):
+            for flow_name in flow_name_list:
+                flow_id_list.append(self.flows_map[flow_name])
+        elif isinstance(flow_name_list, str):
+            if flow_name_list in self.flows_map:
+                flow_id_list = list(self.flows_map[flow_name_list])
+            else:
+                raise TypeError("Flow not found")
+        else:
+            raise TypeError(
+                "flow_name_list parameter needs to be a list of flow names"
+            )
+
+        param_dfs = []
+        for flow_id in flow_id_list:
+            #Start Page
+            start_page = self.flow_data[flow_id]
+            flow_name = start_page.display_name
+            df = self.process_param_presets_in_page(flow_name, start_page)
+            param_dfs.append(df)
+            #All Other Pages
+            for page in self.page_data[flow_id].values():
+                #page_name = page.display_name
+                df = self.process_param_presets_in_page(flow_name, page)
+                param_dfs.append(df)
+        #Combine Lists to DataFrame
+        if len(param_dfs) > 0:
+            return pd.concat(param_dfs).reset_index(drop=True)
+        return None
+
+    def process_param_presets_in_page(self, flow_name, page):
+        """For a given page finds all parameter presets and
+        returns a dataframe.
+
+        Args:
+          flow_name: plain text (string) name of flow to be searched.
+          page: DFCX page object.
+
+        Returns:
+          Dataframe of parameter presets with columns:
+            flow,
+            page,
+            intent,
+            event,
+            route_group,
+            condition,
+            form_filling,
+            location,
+            param_name,
+            param_value
+        """
+
+        page_name = page.display_name
+        if page_name == flow_name:
+            page_name = "Start"
+        df_list = []
+        # Entry fulfillment
+        df = self.get_param_presets_helper(
+            flow_name,
+            page_name,
+            page,
+            "",
+            ""
+        )
+        df_list.append(df)
+        #Page Parameters
+        if hasattr(page, "form") and page.form:
+            if hasattr(page.form, "parameters") and page.form.parameters:
+                for page_param in page.form.parameters:
+                    df = self.process_param_presets_in_form(
+                        flow_name,
+                        page_name,
+                        page_param
+                    )
+                    df_list.append(df)
+        #Event Handlers
+        for event_handler in page.event_handlers:
+            df = self.get_param_presets_helper(
+                flow_name,
+                page_name,
+                event_handler,
+                "",
+                ""
+            )
+            df_list.append(df)
+        #Transition Routes
+        for route in page.transition_routes:
+            df = self.get_param_presets_helper(
+                flow_name,
+                page_name,
+                route,
+                "",
+                ""
+            )
+            df_list.append(df)
+        #Route Group Routes
+        for route_group_id in page.transition_route_groups:
+            flow_id = self.flows_map[flow_name]
+            frgd = self.route_group_data[flow_id]
+            if flow_id in self.route_group_data and route_group_id in frgd:
+                route_group = frgd[route_group_id]
+                df = self.process_param_presets_in_route_group(
+                    flow_name,
+                    page_name,
+                    route_group
+                )
+                df_list.append(df)
+        if len(df_list) > 0:
+            return pd.concat(df_list)
+        return None
+
+    def process_param_presets_in_form(self, flow_name, page_name, page_param):
+        """For a given form filling parameter finds all parameter
+        presets and returns a dataframe.
+
+
+        Args:
+          flow_name: plain text (string) name of flow reference.
+          page_name: plain text (string) name of page reference.
+          page_param: DFCX page_param object.
+
+        Returns:
+          Dataframe of parameter presets with columns:
+            flow,
+            page,
+            intent,
+            event,
+            route_group,
+            condition,
+            form_filling,
+            location,
+            param_name,
+            param_value
+        """
+
+        df_list = []
+        page_param_name = page_param.display_name
+        #Form Filling Parameter Presets
+        if hasattr(page_param, "fill_behavior") and page_param.fill_behavior:
+            fill_behavior = page_param.fill_behavior
+            df = self.get_param_presets_helper(
+                flow_name,
+                page_name,
+                fill_behavior,
+                page_param_name,
+                ""
+            )
+            df_list.append(df)
+            #Form Filling Event Handlers
+            if hasattr(fill_behavior, "reprompt_event_handlers"):
+                if fill_behavior.reprompt_event_handlers:
+                    for event_handler in fill_behavior.reprompt_event_handlers:
+                        df = self.get_param_presets_helper(
+                            flow_name,
+                            page_name,
+                            event_handler,
+                            page_param_name,
+                            ""
+                        )
+                        df_list.append(df)
+        if len(df_list) > 0:
+            return pd.concat(df_list)
+        return None
+
+    def process_param_presets_in_route_group(self,
+                                             flow_name,
+                                             page_name,
+                                             route_group):
+        """For a given route_group finds all parameter presets and
+        returns a dataframe.
+
+        Args:
+          flow_name: plain text (string) name of flow reference.
+          page_name: plain text (string) name of page reference.
+          route_group: DFCX route_group object.
+
+        Returns:
+          Dataframe of parameter presets with columns:
+            flow,
+            page,
+            intent,
+            event,
+            route_group,
+            condition,
+            form_filling,
+            location,
+            param_name,
+            param_value
+        """
+
+        df_list = []
+        route_group_name = route_group.display_name
+        for route in route_group.transition_routes:
+            df = self.get_param_presets_helper(
+                flow_name,
+                page_name,
+                route,
+                "",
+                route_group_name
+            )
+            df_list.append(df)
+        if len(df_list) > 0:
+            return pd.concat(df_list)
+        return None
+
+    def get_param_presets_helper(self,
+                                 flow_name,
+                                 page_name,
+                                 cxobj,
+                                 page_param,
+                                 route_group):
+        """Combines parameter presets into a dataframe for a given CX object
+
+        Args:
+          flow_name: plain text (string) name of flow reference.
+          page_name: plain text (string) name of page reference.
+          cxobj: DFCX object ie: flow, page, route, etc.
+          page_param: plain text (string) name of page_param reference.
+          route_group: plain text (string) name of route_group reference.
+
+        Returns:
+          Dataframe of parameter presets with columns:
+            flow,
+            page,
+            intent,
+            event,
+            route_group,
+            condition,
+            form_filling,
+            location,
+            param_name,
+            param_value
+        """
+
+        flow_names = []
+        page_names = []
+        route_intents = []
+        route_events = []
+        route_group_names = []
+        route_conditions = []
+        page_param_names = []
+        location_names = []
+        parameter_preset_names = []
+        parameter_preset_values = []
+
+        fulfillment_type = ""
+        location = ""
+        if isinstance(cxobj, DFCXRoute):
+            fulfillment_type = "trigger_fulfillment"
+            location = "Transition Route"
+            if route_group:
+                location = "Route Group"
+        elif isinstance(cxobj, DFCXEventHandler):
+            fulfillment_type = "trigger_fulfillment"
+            location = "Event Handler"
+            if page_param:
+                location = "Form Filling Event Handler"
+        elif isinstance(cxobj, DFCXPage):
+            fulfillment_type = "entry_fulfillment"
+            location = "Entry Fulfillment"
+        else:
+            fulfillment_type = "initial_prompt_fulfillment"
+            location = "Parameter Filling"
+
+        # Error checking
+        if hasattr(cxobj,fulfillment_type) and getattr(cxobj,fulfillment_type):
+            ful_data = getattr(cxobj, fulfillment_type)
+            spa = "set_parameter_actions"
+            if hasattr(ful_data, spa) and ful_data.set_parameter_actions:
+                for param_data in ful_data.set_parameter_actions:
+                    param_name = param_data.parameter
+                    param_value = param_data.value
+                    if isinstance(param_value, MapComposite):
+                        param_value=self.convert_protobuf(param_value)
+                    if isinstance(param_value, RepeatedComposite):
+                        param_value=self.convert_protobuf(param_value)
+                    flow_names.append(flow_name)
+                    page_names.append(page_name)
+                    if hasattr(cxobj, "intent") and cxobj.intent:
+                        if cxobj.intent in self.intents_map:
+                            route_intents.append(
+                                self.intents_map[cxobj.intent]
+                            )
+                        else:
+                            route_intents.append("")
+                    else:
+                        route_intents.append("")
+                    if hasattr(cxobj, "event") and cxobj.event:
+                        route_events.append(cxobj.event)
+                    else:
+                        route_events.append("")
+                    route_group_names.append(route_group)
+                    page_param_names.append(page_param)
+                    if hasattr(cxobj,"condition") and cxobj.condition:
+                        route_conditions.append(cxobj.condition)
+                    else:
+                        route_conditions.append("")
+                    location_names.append(location)
+                    parameter_preset_names.append(param_name)
+                    parameter_preset_values.append(param_value)
+
+        return pd.DataFrame({"flow": flow_names,
+            "page": page_names,
+            "intent": route_intents,
+            "event": route_events,
+            "route_group": route_group_names,
+            "condition": route_conditions,
+            "form_filling": page_param_names,
+            "location": location_names,
+            "param_name": parameter_preset_names,
+            "param_value": parameter_preset_values
+        })
+
+    def convert_protobuf(self, obj):
+        """Recursive function to convert protobuf object to
+        python object with lists and/or dictionaries"""
+
+        if isinstance(obj, MapComposite):
+            res = {}
+            for key, value in obj.items():
+                res[key] = self.convert_protobuf(value)
+            return res
+        elif isinstance(obj, RepeatedComposite):
+            res = []
+            for value in obj:
+                res.append(self.convert_protobuf(value))
+            return res
+        else:
+            return obj
 
     def search_conditionals_page(self, page_id, search):
         """Search page for an exact string in conditional routes
@@ -699,11 +1089,11 @@ class SearchUtil(scrapi_base.ScrapiBase):
             agent_id = self.agent_id
 
         agent_results = pd.DataFrame()
-        flow_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
+        flows_map = self.flows.get_flows_map(agent_id=agent_id, reverse=True)
 
-        for flow_display_name in flow_map.keys():
+        for flow_display_name in flows_map.keys():
             flow_scan = self._find_true_routes_flow_level(
-                flow_display_name, flow_map
+                flow_display_name, flows_map
             )
             agent_results = pd.concat([agent_results, flow_scan])
         return agent_results
@@ -953,7 +1343,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         # add in the start pages (flow objects)
         page_df = pd.concat(
-            [page_df, flow_df.assign(page_name="START_PAGE")], ignore_index=True
+            [page_df, flow_df.assign(page_name="START_PAGE")],
+            ignore_index=True
         ).drop(columns="flow_id")
 
         return page_df
