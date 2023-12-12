@@ -449,7 +449,7 @@ class Agents(scrapi_base.ScrapiBase):
           gcs_bucket_uri: The Google Cloud Storage bucket/filepath to restore
             the agent from in the following format:
               `gs://<bucket-name>/<object-name>`
-          restore_option: Optional. 
+          restore_option: Optional.
               if not specified, then restore_option = 0 is assumed
               Below are the options for restoring an agent (int):
                   0:unspecified
