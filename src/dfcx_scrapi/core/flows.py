@@ -117,6 +117,8 @@ class Flows(scrapi_base.ScrapiBase):
         Returns:
           Dictionary containing flow UUIDs as keys and display names as values
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         if reverse:
             flows_dict = {
@@ -202,6 +204,8 @@ class Flows(scrapi_base.ScrapiBase):
         Returns:
           List of Flow objects
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
