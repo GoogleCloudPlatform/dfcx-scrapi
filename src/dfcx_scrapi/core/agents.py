@@ -358,6 +358,72 @@ class Agents(scrapi_base.ScrapiBase):
 
         return val_results_dict
 
+    @scrapi_base.api_call_counter_decorator
+    def get_generative_settings(
+        self, agent_id: str = None, language_code: str = "en"
+        ) -> types.generative_settings.GenerativeSettings:
+        """Get the current Generative Settings for the Agent."""
+        if not agent_id:
+            agent_id = self.agent_id
+
+        request = types.agent.GetGenerativeSettingsRequest()
+        request.name = f"{agent_id}/generativeSettings"
+        request.language_code = language_code
+
+        client_options = self._set_region(agent_id)
+        client = services.agents.AgentsClient(
+            credentials=self.creds, client_options=client_options
+        )
+
+        response = client.get_generative_settings(request)
+
+        return response
+
+    @scrapi_base.api_call_counter_decorator
+    def update_generative_settings(
+        self,
+        agent_id: str = None,
+        language_code: str = "en",
+        obj: types.generative_settings.GenerativeSettings = None,
+        **kwargs) -> types.generative_settings.GenerativeSettings:
+        """Update the existing Generative Settings.
+
+        Args:
+          agent_id: Agent ID string in the following format
+              projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+          obj: (Optional) The Generative Settings object in proper format.
+            This can also be extracted by using the get_generative_settings()
+            method or built directly with the Generative Settings Builder class.
+          kwargs: You can find a list of Generative Settings attributes here:
+              https://cloud.google.com/python/docs/reference/dialogflow-cx/
+               latest/google.cloud.dialogflowcx_v3beta1.types.GenerativeSettings
+        Returns:
+          The updated Generative Settings resource object.
+        """
+        if obj:
+            gen_settings = obj
+        else:
+            gen_settings = self.get_generative_settings(agent_id)
+
+        gen_settings.language_code = language_code
+
+        for key, value in kwargs.items():
+            setattr(gen_settings, key, value)
+
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+
+        client_options = self._set_region(gen_settings.name)
+        client = services.agents.AgentsClient(
+            credentials=self.creds, client_options=client_options
+        )
+
+        response = client.update_generative_settings(
+            generative_settings=gen_settings, update_mask=mask
+        )
+
+        return response
+
 
     @scrapi_base.api_call_counter_decorator
     def export_agent(
