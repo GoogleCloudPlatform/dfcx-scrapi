@@ -182,7 +182,7 @@ class EntityTypeBuilder(BuildersCommon):
                 " 'excluded' or 'excluded phrases', 'whole']"
             )
 
-    def c(
+    def create_new_entity_type(
         self,
         display_name: str,
         kind: int,
