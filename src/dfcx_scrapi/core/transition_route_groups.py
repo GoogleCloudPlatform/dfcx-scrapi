@@ -72,6 +72,8 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
 
+        self._get_agent_level_data_only = False
+
     def _rg_temp_dict_update(self, temp_dict, element):
         """Modify the temp dict and return to dataframe function."""
         element_dict = self.cx_object_to_dict(element)
@@ -305,10 +307,10 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
     def route_groups_to_dataframe(
         self, agent_id: str = None, rate_limit: float = 0.5
     ):
-        """Extracts the Transition Route Groups from a given Agent and
+        """Extracts the Flow Transition Route Groups from a given Agent and
          returns key information about the Route Groups in a Pandas Dataframe
 
-        DFCX Route Groups exist as an Agent level resource, however they are
+        DFCX Route Groups exist as an Agent level resource, however they can
         categorized by the Flow they are associated with. This method will
         extract all Flows for the given agent, then use the Flow IDs to
         extract all Route Groups per Flow. Once all Route Groups have been
@@ -336,18 +338,23 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         all_pages_map = {}
         all_rgs = []
 
-        for flow in flows_map:
-            all_pages_map.update(self.pages.get_pages_map(flow))
-            all_rgs.extend(self.list_transition_route_groups(flow))
-            time.sleep(rate_limit)
+        if self._get_agent_level_data_only:
+            all_rgs.extend(self.list_transition_route_groups(agent_id))
+        else:
+            for flow in flows_map:
+                all_pages_map.update(self.pages.get_pages_map(flow))
+                all_rgs.extend(self.list_transition_route_groups(flow))
+                time.sleep(rate_limit)
 
         rows_list = []
         for route_group in all_rgs:
-            flow = "/".join(route_group.name.split("/")[0:8])
+            if not self._get_agent_level_data_only:
+                flow = "/".join(route_group.name.split("/")[0:8])
             for route in route_group.transition_routes:
                 temp_dict = {}
 
-                temp_dict.update({"flow": flows_map[flow]})
+                if not self._get_agent_level_data_only:
+                    temp_dict.update({"flow": flows_map[flow]})
                 temp_dict.update({"route_group_name": route_group.display_name})
 
                 if route.target_page:
@@ -383,7 +390,39 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
                         )
 
                 rows_list.append(temp_dict)
+        final_dataframe = pd.DataFrame(
+            rows_list,
+            columns=[
+                "flow", "route_group_name", "target_page", "intent",
+                "condition", "webhook", "webhook_tag", "custom_payload",
+                "live_agent_handoff","conversation_success", "play_audio",
+                "output_audio_text", "fulfillment_message"]
+        )
 
-        final_dataframe = pd.DataFrame(rows_list)
+        return final_dataframe
 
+    def agent_route_groups_to_dataframe(
+            self, agent_id: str = None, rate_limit: float = 0.5
+    ):
+        """Extracts the Transition Route Groups from a given Agent and
+        returns key information about the Route Groups in a Pandas Dataframe
+
+        This method will extract all Agent Level Route Groups and convert
+        the DFCX object to a Pandas Dataframe and return this to the user.
+
+        Args:
+        agent_id: the Agent ID string in the following format:
+            projects/<project_id>/locations/<location_id>/agents/<agent_id>
+        rate_limit: Time in seconds to wait between each API call. Use this
+            to control hitting Quota limits on your project.
+
+        Returns:
+        a Pandas Dataframe with columns: route_group_name, target_page,
+        intent, condition, webhook, webhook_tag, custom_payload,
+        live_agent_handoff, conversation_success, play_audio,
+        output_audio_text, fulfillment_message
+        """
+        self._get_agent_level_data_only = True
+        final_dataframe = self.route_groups_to_dataframe(agent_id, rate_limit)
+        self._get_agent_level_data_only = False
         return final_dataframe
