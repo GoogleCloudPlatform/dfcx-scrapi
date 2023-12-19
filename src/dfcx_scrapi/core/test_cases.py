@@ -584,15 +584,15 @@ class TestCases(scrapi_base.ScrapiBase):
             agent_id = self.agent_id
 
         if reverse:
-          test_cases_dict = {
-              test_case.display_name: test_case.name
-              for test_case in self.list_test_cases(agent_id = agent_id)
-          }
+            test_cases_dict = {
+                test_case.display_name: test_case.name
+                for test_case in self.list_test_cases(agent_id = agent_id)
+            }
         else:
-          test_cases_dict = {
-              test_case.name: test_case.display_name
-              for test_case in self.list_test_cases(agent_id = agent_id)
-          }
+            test_cases_dict = {
+                test_case.name: test_case.display_name
+                for test_case in self.list_test_cases(agent_id = agent_id)
+            }
         return test_cases_dict
 
     def get_test_case_results_df(self, agent_id=None, retest_all=False):
