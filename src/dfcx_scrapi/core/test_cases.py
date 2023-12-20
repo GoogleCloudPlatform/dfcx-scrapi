@@ -574,9 +574,10 @@ class TestCases(scrapi_base.ScrapiBase):
         """Exports Agent Test Cases and UUIDs into a user friendly dict.
 
         Args:
-          agent_id: The agent to create the test case for. Format:
-              `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
+          agent_id: The formatted CX Agent ID to use. Format:
+            `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
           reverse: (Optional) Boolean flag to swap key:value -> value:key
+
         Returns:
           Dict containing Test Case UUIDs as keys and display names as values.
         """
@@ -586,13 +587,14 @@ class TestCases(scrapi_base.ScrapiBase):
         if reverse:
             test_cases_dict = {
                 test_case.display_name: test_case.name
-                for test_case in self.list_test_cases(agent_id = agent_id)
+                for test_case in self.list_test_cases(agent_id=agent_id)
             }
         else:
             test_cases_dict = {
                 test_case.name: test_case.display_name
-                for test_case in self.list_test_cases(agent_id = agent_id)
+                for test_case in self.list_test_cases(agent_id=agent_id)
             }
+
         return test_cases_dict
 
     def get_test_case_results_df(self, agent_id=None, retest_all=False):
