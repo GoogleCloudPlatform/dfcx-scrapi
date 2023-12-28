@@ -24,6 +24,7 @@ from typing import Dict
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
+from google.protobuf import field_mask_pb2
 
 from proto.marshal.collections import repeated
 from proto.marshal.collections import maps
@@ -332,6 +333,26 @@ class ScrapiBase:
                              ": `chat`, `search`, `recommendation`")
 
         return solution_map[solution_type]
+
+    @staticmethod
+    def _update_kwargs(
+        resource_type: str, obj, kwargs: Dict) -> field_mask_pb2.FieldMask:
+        """Create a `mask` for update methods based on kwargs.
+
+        Args:
+          resource_type (str): The type of the input resource as a string.
+          obj: The protobuf object.
+          kwargs (Dict): A dictionary with obj's attributes as keys and
+            thier values as values.
+
+        Returns:
+          A FieldMask protobuf.
+        """
+        for key, value in kwargs.items():
+            setattr(obj, key, value)
+
+        return field_mask_pb2.FieldMask(paths=kwargs.keys())
+
 
     def _build_data_store_parent(self, location: str) -> str:
         """Build the Parent ID needed for Discovery Engine API calls."""

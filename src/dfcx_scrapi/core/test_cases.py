@@ -20,7 +20,6 @@ from typing import Dict, List
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
-from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import flows
@@ -468,14 +467,10 @@ class TestCases(scrapi_base.ScrapiBase):
                 test_case_id = self.test_case_id
             test_case = self.get_test_case(test_case_id)
 
-        for key, value in kwargs.items():
-            setattr(test_case, key, value)
-        paths = kwargs.keys()
-        mask = field_mask_pb2.FieldMask(paths=paths)
-
         request = types.test_case.UpdateTestCaseRequest()
         request.test_case = test_case
-        request.update_mask = mask
+        if kwargs:
+            request.update_mask = self._update_kwargs("test_case", obj, kwargs)
 
         client_options = self._set_region(test_case_id)
         client = services.test_cases.TestCasesClient(
