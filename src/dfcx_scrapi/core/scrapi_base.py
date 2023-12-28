@@ -336,7 +336,7 @@ class ScrapiBase:
 
     @staticmethod
     def _update_kwargs(
-        resource_type: str, obj, kwargs: Dict) -> field_mask_pb2.FieldMask:
+        resource_type: str, obj, kwargs: Dict) -> field_mask_pb2.FieldMask: # pylint: disable=W0613
         """Create a `mask` for update methods based on kwargs.
 
         Args:
