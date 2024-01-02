@@ -965,7 +965,7 @@ class IntentStats():
 
     def calc_tps_stats(self):
         """Calculating stats related to training phrases."""
-        for tp in self.intent_proto_obj.training_phrases:
+        for tp in self.intent_proto_obj.training_phrases: # pylint: disable=E1133
             self.repeat_count_dict[tp.repeat_count] += 1
 
             for part in tp.parts:

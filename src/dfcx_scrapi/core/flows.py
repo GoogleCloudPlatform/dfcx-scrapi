@@ -107,7 +107,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return nlu_settings
 
-    def get_flows_map(self, agent_id: str, reverse=False):
+    def get_flows_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
@@ -117,6 +117,8 @@ class Flows(scrapi_base.ScrapiBase):
         Returns:
           Dictionary containing flow UUIDs as keys and display names as values
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         if reverse:
             flows_dict = {
@@ -192,7 +194,7 @@ class Flows(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def list_flows(self, agent_id: str) -> List[types.Flow]:
+    def list_flows(self, agent_id: str = None) -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
         Args:
@@ -202,6 +204,8 @@ class Flows(scrapi_base.ScrapiBase):
         Returns:
           List of Flow objects
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
@@ -469,23 +473,26 @@ class Flows(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def delete_flow(self, flow_id: str, force: bool = False):
+    def delete_flow(
+        self, flow_id: str = None, obj: types.Flow = None, force: bool = False
+    ):
         """Deletes a single CX Flow Object resource.
 
         Args:
-          flow_id: flow to delete
-          force: False means a flow will not be deleted if a route to the flow
-            exists, True means the flow will be deleted as well as all the
-            transition routes leading to the flow.
+          flow_id: The formatted CX Flow ID to delete.
+          obj: (Optional) a CX Flow object of types.Flow
+          force: (Optional) False means a flow will not be deleted if a route
+            to the flow exists, True means the flow will be deleted as well as
+            all the transition routes leading to the flow.
         """
+        if not flow_id:
+            flow_id = self.flow_id
 
-        request = types.DeleteFlowRequest()
-        request.name = flow_id
-        request.force = force
+        if obj:
+            flow_id = obj.name
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
-            credentials=self.creds, client_options=client_options
-        )
-
-        client.delete_flow(request)
+            credentials=self.creds, client_options=client_options)
+        req = types.DeleteFlowRequest(name=flow_id, force=force)
+        client.delete_flow(request=req)

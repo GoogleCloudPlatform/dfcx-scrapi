@@ -238,25 +238,27 @@ class Pages(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def delete_page(self, page_id: str = None, force: bool = False) -> str:
+    def delete_page(
+        self, page_id: str = None,
+        obj: gcdc_page.Page = None, force: bool = False
+    ):
         """Deletes the specified Page.
 
         Args:
-          page_id: CX Page ID string in the following Format:
-            ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
-              flows/<Flow ID>/pages/<Page ID>``
+          page_id: The formatted CX Page ID to delete.
+          obj: (Optional) a CX Page object of gcdc_page.Page
           force: (Optional) This field has no effect for pages with no incoming
             transitions. If set to True, Dialogflow will remove the page,
             as well as any transitions to the page.
-
-        Returns:
-          String "Page `{page_id}` successfully deleted."
         """
+        if not page_id:
+            page_id = self.page_id
+
+        if obj:
+            page_id = obj.name
+
         client_options = self._set_region(page_id)
         client = pages.PagesClient(
-            credentials=self.creds, client_options=client_options
-        )
+            credentials=self.creds, client_options=client_options)
         req = gcdc_page.DeletePageRequest(name=page_id, force=force)
         client.delete_page(request=req)
-
-        return f"Page `{page_id}` successfully deleted."

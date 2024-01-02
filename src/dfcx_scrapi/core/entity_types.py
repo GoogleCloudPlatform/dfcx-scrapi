@@ -421,23 +421,29 @@ class EntityTypes(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def delete_entity_type(self, entity_id: str = None, obj=None) -> None:
+    def delete_entity_type(
+        self, entity_id: str = None,
+        obj: types.EntityType = None, force: bool = False
+    ):
         """Deletes a single Entity Type resource object.
 
         Args:
-          entity_id: the formatted CX Entity ID to delete
-
-        Returns:
-          None
+          entity_id: The formatted CX Entity ID to delete.
+          obj: (Optional) a CX EntityType object of types.EntityType
+          force: (Optional) If ``force`` is set to true, Dialogflow will remove
+            the entity type, as well as any references to the entity type.
+            (i.e. Page's form Parameter of the entity type will be changed to
+            '@sys.any' and intent's Parameter of the entity type
+            will be removed).
         """
         if not entity_id:
             entity_id = self.entity_id
 
         if obj:
             entity_id = obj.name
-        else:
-            client_options = self._set_region(entity_id)
-            client = services.entity_types.EntityTypesClient(
-                credentials=self.creds, client_options=client_options
-            )
-            client.delete_entity_type(name=entity_id)
+
+        client_options = self._set_region(entity_id)
+        client = services.entity_types.EntityTypesClient(
+            credentials=self.creds, client_options=client_options)
+        req = types.DeleteEntityTypeRequest(name=entity_id, force=force)
+        client.delete_entity_type(request=req)

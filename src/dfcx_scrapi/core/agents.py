@@ -358,6 +358,72 @@ class Agents(scrapi_base.ScrapiBase):
 
         return val_results_dict
 
+    @scrapi_base.api_call_counter_decorator
+    def get_generative_settings(
+        self, agent_id: str = None, language_code: str = "en"
+        ) -> types.generative_settings.GenerativeSettings:
+        """Get the current Generative Settings for the Agent."""
+        if not agent_id:
+            agent_id = self.agent_id
+
+        request = types.agent.GetGenerativeSettingsRequest()
+        request.name = f"{agent_id}/generativeSettings"
+        request.language_code = language_code
+
+        client_options = self._set_region(agent_id)
+        client = services.agents.AgentsClient(
+            credentials=self.creds, client_options=client_options
+        )
+
+        response = client.get_generative_settings(request)
+
+        return response
+
+    @scrapi_base.api_call_counter_decorator
+    def update_generative_settings(
+        self,
+        agent_id: str = None,
+        language_code: str = "en",
+        obj: types.generative_settings.GenerativeSettings = None,
+        **kwargs) -> types.generative_settings.GenerativeSettings:
+        """Update the existing Generative Settings.
+
+        Args:
+          agent_id: Agent ID string in the following format
+              projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+          obj: (Optional) The Generative Settings object in proper format.
+            This can also be extracted by using the get_generative_settings()
+            method or built directly with the Generative Settings Builder class.
+          kwargs: You can find a list of Generative Settings attributes here:
+              https://cloud.google.com/python/docs/reference/dialogflow-cx/
+               latest/google.cloud.dialogflowcx_v3beta1.types.GenerativeSettings
+        Returns:
+          The updated Generative Settings resource object.
+        """
+        if obj:
+            gen_settings = obj
+        else:
+            gen_settings = self.get_generative_settings(agent_id)
+
+        gen_settings.language_code = language_code
+
+        for key, value in kwargs.items():
+            setattr(gen_settings, key, value)
+
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+
+        client_options = self._set_region(gen_settings.name)
+        client = services.agents.AgentsClient(
+            credentials=self.creds, client_options=client_options
+        )
+
+        response = client.update_generative_settings(
+            generative_settings=gen_settings, update_mask=mask
+        )
+
+        return response
+
 
     @scrapi_base.api_call_counter_decorator
     def export_agent(
@@ -435,11 +501,13 @@ class Agents(scrapi_base.ScrapiBase):
 
 
     @scrapi_base.api_call_counter_decorator
-    def restore_agent(self, agent_id: str, gcs_bucket_uri: str) -> str:
+    def restore_agent(
+        self,
+        agent_id: str,
+        gcs_bucket_uri: str,
+        restore_option: int = None
+    ) -> str:
         """Restores a CX agent from a gcs_bucket location.
-
-        Currently there is no way to restore back to default
-        settings via the api. The feature request for this is logged.
 
         Args:
           agent_id: CX Agent ID string in the following format
@@ -447,6 +515,12 @@ class Agents(scrapi_base.ScrapiBase):
           gcs_bucket_uri: The Google Cloud Storage bucket/filepath to restore
             the agent from in the following format:
               `gs://<bucket-name>/<object-name>`
+          restore_option: Optional.
+              if not specified, then restore_option = 0 is assumed
+              Below are the options for restoring an agent (int):
+                  0:unspecified
+                  1:always respect the settings from the exported agent file
+                  2:fallback to default settings if not supported
 
         Returns:
           A Long Running Operation (LRO) ID that can be used to
@@ -457,6 +531,11 @@ class Agents(scrapi_base.ScrapiBase):
         request = types.RestoreAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
+
+        if restore_option:
+            request.restore_option = types.RestoreAgentRequest.RestoreOption(
+                restore_option
+            )
 
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
@@ -505,20 +584,27 @@ class Agents(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def delete_agent(self, agent_id: str) -> str:
+    def delete_agent(
+        self, agent_id: str = None, obj: types.Agent = None) -> str:
         """Deletes the specified Dialogflow CX Agent.
 
         Args:
           agent_id: CX Agent ID string in the following format
             projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+          obj: (Optional) a CX Agent object of types.Agent
 
         Returns:
           String "Agent '(agent_id)' successfully deleted."
         """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        if obj:
+            agent_id = obj.name
+
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
-            credentials=self.creds, client_options=client_options
-        )
+            credentials=self.creds, client_options=client_options)
         client.delete_agent(name=agent_id)
 
         return "Agent '{agent_id}' successfully deleted."

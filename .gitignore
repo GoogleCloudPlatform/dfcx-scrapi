@@ -65,6 +65,7 @@ docs.metadata
 # Virtual environment
 env/
 venv/
+.python-version
 
 coverage.xml
 sponge_log.xml
