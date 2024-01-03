@@ -29,7 +29,7 @@ logging.basicConfig(
     format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO
 )
 
-class Test_Cases_Util(scrapi_base.ScrapiBase):
+class TestCasesUtil(scrapi_base.ScrapiBase):
     """Util class for CX test cases"""
 
     def __init__(
