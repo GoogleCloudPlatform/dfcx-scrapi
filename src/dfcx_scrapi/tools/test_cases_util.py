@@ -26,7 +26,9 @@ from dfcx_scrapi.core import intents
 from dfcx_scrapi.core import test_cases
 
 logging.basicConfig(
-    format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 class TestCasesUtil(scrapi_base.ScrapiBase):
@@ -465,7 +467,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         ) -> List[types.TestCase]:
         """The purpose of this method is to create a new set of the test cases
             from (old) a source agent to (new) a target agent.
-            When the new agent (target) is created by the agent builder,
+            When the new agent (target) is created by the copy util,
             UUIDs of flows, pages, intents, and etc are newly generated.
             Therefore, the discrepencies of the uuids creates conflict
             when importing the test cases from a source to a target agent.
@@ -520,6 +522,21 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
                 new_conversation_turns,
                 new_last_test_result_conv_turns
             ]:
+                if not new_test_config:
+                    logging.warning(
+                        f"test_case: {test_case.display_name} "\
+                        f"Reason: test_config is None."
+                    )
+                elif not new_conversation_turns:
+                    logging.warning(
+                        f"test_case: {test_case.display_name} "\
+                        f"Reason: test_conversation_turns is None."
+                    )
+                elif not new_last_test_result_conv_turns:
+                    logging.warning(
+                        f"test_case: {test_case.display_name} "\
+                        f"Reason: last_test_result is None."
+                    )
                 continue
             test_case.test_config = new_test_config
             test_case.test_case_conversation_turns = new_conversation_turns
