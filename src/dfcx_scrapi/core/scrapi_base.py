@@ -21,6 +21,7 @@ import functools
 from collections import defaultdict
 from typing import Dict
 
+import numpy as np
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
@@ -394,6 +395,14 @@ class ScrapiBase:
           Total calls to the API so far as an int.
         """
         return sum(self.get_api_calls_details().values())
+
+    class _AllPagesCustomDict(dict):
+
+        def __missing__(self, key):
+            if isinstance(key, str) and key.endswith("PAGE"):
+                return str(key).rsplit("/", maxsplit=1)[-1]
+
+            return np.nan
 
 
 def api_call_counter_decorator(func):

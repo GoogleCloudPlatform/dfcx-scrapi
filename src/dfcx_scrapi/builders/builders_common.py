@@ -15,8 +15,9 @@
 # limitations under the License.
 
 import logging
-from typing import List, Union
+from typing import List, Dict, Union, Any
 
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
 
@@ -29,31 +30,37 @@ logging.basicConfig(
 
 
 class BuildersCommon:
-    """Base class for other Builder classes"""
+    """Base class for other Builder classes."""
 
     _proto_type = None
     _proto_type_str = "None"
+    _proto_attrs = []
 
 
     def __init__(self, obj=None):
         self.proto_obj = None
-        if obj:
+        if obj is not None:
             self.load_proto_obj(obj)
 
+        self._dataframe_instance = self._Dataframe(self)
+
+    def _add_proto_attrs_to_builder_obj(self):
+        for attr_name in self._proto_attrs:
+            attr = getattr(self.proto_obj, attr_name)
+            setattr(self, f"d_{attr_name}", attr)
 
     def _check_proto_obj_attr_exist(self):
         """Check if the proto_obj exists otherwise raise an error."""
-        if not self.proto_obj:
+        if self.proto_obj is None:
             raise ValueError(
-                "There is no proto_obj!"
-                "\nUse `create_new_proto_obj` or `load_proto_obj` to continue."
+                f"\nUse `create_new_{self._proto_type_str.lower()}`"
+                " or `load_proto_obj` to continue."
             )
         elif not isinstance(self.proto_obj, self._proto_type):  # pylint: disable=W1116
             raise ValueError(
                 f"proto_obj is not {self._proto_type_str} type."
                 "\nPlease create or load the correct type to continue."
             )
-
 
     def load_proto_obj(self, obj, overwrite: bool = False):
         """Load an existing object to proto_obj for further uses.
@@ -81,8 +88,13 @@ class BuildersCommon:
 
         if overwrite or not self.proto_obj:
             self.proto_obj = obj
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
+
+    def _create_new_proto_obj(self):
+        """Prototype method to create a new proto obj."""
+        raise NotImplementedError("Subclass should implement this method!")
 
 
     def _is_type_or_list_of_types(self, obj, type_, var_name: str = None):
@@ -140,7 +152,7 @@ class BuildersCommon:
         Args:
             transition_route (TransitionRoute):
               The TransitionRoute that input should match with.
-            taget_route (TransitionRoute):
+            target_route (TransitionRoute):
               The target TransitionRoute that we want to match.
             intent (str):
               TransitionRoute's intent that we want to match.
@@ -167,6 +179,7 @@ class BuildersCommon:
             is_match = self._check_transition_route_with_target_route(
                 transition_route, target_route
             )
+
         if intent and condition:
             is_match = self._check_transition_route_with_intent_and_condition(
                 transition_route, intent, condition
@@ -181,7 +194,6 @@ class BuildersCommon:
             )
 
         return is_match
-
 
     def _check_transition_route_with_target_route(
         self,
@@ -210,7 +222,6 @@ class BuildersCommon:
         ):
             return True
         return False
-
 
     def _check_transition_route_with_intent_and_condition(
         self,
@@ -243,7 +254,6 @@ class BuildersCommon:
             return True
         return False
 
-
     def _check_transition_route_with_intent(
         self,
         transition_route: TransitionRoute,
@@ -267,7 +277,6 @@ class BuildersCommon:
         if transition_route.intent == intent:
             return True
         return False
-
 
     def _check_transition_route_with_condition(
         self,
@@ -322,7 +331,6 @@ class BuildersCommon:
             if eh not in event_handlers
         ]
 
-
     def _find_unmatched_event_handlers_by_name(
         self, event_names: Union[str, List[str]]
     ) -> List[EventHandler]:
@@ -349,3 +357,440 @@ class BuildersCommon:
             for eh in self.proto_obj.event_handlers
             if eh.event not in event_names
         ]
+
+
+    def to_dataframe(self, mode: str = "basic") -> pd.DataFrame:
+        """Creates a DataFrame for proto_obj.
+
+        Args:
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+
+        Returns:
+          A pandas DataFrame.
+        """
+        self._check_proto_obj_attr_exist()
+
+        return self._dataframe_instance.proto_to_dataframe(
+            obj=self.proto_obj, mode=mode)
+
+    def from_dataframe(self, df: pd.DataFrame, action: str):
+        """Perform an `action` from the DataFrame `df` on proto_obj.
+
+        Args:
+            df (pd.DataFrame):
+                The input DataFrame.
+            action (str):
+                'create', 'delete', 'append'
+
+        Returns:
+          A protobuf object stored in proto_obj
+        """
+        if action != "create":
+            self._check_proto_obj_attr_exist()
+
+        return self._dataframe_instance.dataframe_to_proto(
+            df=df, action=action)
+
+
+    class _DataframeCommon():
+        """An internal base class to store DataFrame related methods."""
+
+        # pylint: disable=line-too-long
+        _dataframes_map = {
+            "Intent": {
+                "basic": ["display_name", "training_phrase"],
+                "advanced": [
+                    "name", "display_name", "description", "priority",
+                    "is_fallback", "labels", "id", "repeat_count",
+                    "training_phrase", "training_phrase_idx",
+                    "text", "text_idx",
+                    "parameter_id", "entity_type", "is_list", "redact",
+                ],
+            },
+            "EntityType": {
+                "basic": ["display_name", "entity_value", "synonyms"],
+                "advanced": [
+                    "name", "display_name", "kind",
+                    "auto_expansion_mode", "fuzzy_extraction", "redact",
+                    "entity_value", "synonyms", "excluded_phrases",
+                ],
+            },
+            "Webhook": {
+                "basic": ["display_name", "uri"],
+                "advanced": [
+                    "name", "display_name", "timeout", "disabled",
+                    "service_type", "uri",
+                    "username", "password", "request_headers",
+                ]
+            },
+            "Flow": {
+                "basic": [
+                    "name", "display_name", "description",
+                    "nlu_settings", "intent", "condition", "event",
+                    "transition_type", "transition_to", "route_groups",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "name", "display_name", "description",
+                    "nlu_settings", "intent", "condition", "event",
+                    "transition_type", "transition_to", "route_groups",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
+            "Page": {
+                "basic": [
+                    "name", "display_name", "flow",
+                    "parameter_display_name", "parameter_entity_type",
+                    "intent", "condition", "event",
+                    "transition_type", "transition_to", "route_groups",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "name", "display_name", "flow",
+                    "parameter_display_name", "parameter_entity_type",
+                    "parameter_is_required", "parameter_is_list",
+                    "parameter_is_redact", "parameter_default_value",
+                    "intent", "condition", "event",
+                    "transition_type", "transition_to", "route_groups",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
+            "TransitionRouteGroup": {
+                "basic": [
+                    "name", "display_name", "flow",
+                    "intent", "condition", "transition_type", "transition_to",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "name", "display_name", "flow",
+                    "intent", "condition", "transition_type", "transition_to",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
+            "TransitionRoute": {
+                "basic": [
+                    "intent", "condition", "transition_type", "transition_to",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "intent", "condition", "transition_type", "transition_to",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
+            "EventHandler": {
+                "basic": [
+                    "event", "transition_type", "transition_to",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "event", "transition_type", "transition_to",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ],
+            },
+            "Fulfillment": {
+                "basic": ["has_fulfillment", "has_fulfillment_webhook"],
+                "advanced": [
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ]
+            },
+        }
+        # pylint: disable=line-too-long
+
+
+        def __init__(self, outer_self):
+            self._outer_self = outer_self
+
+
+        def _find_mode(self, df: pd.DataFrame) -> str:
+            """Find the mode that the `df` represents.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame
+
+            Returns:
+                The mode as a string.
+            """
+            proto_name = self._outer_self._proto_type_str # pylint: disable=W0212
+            output_schemas = self._dataframes_map.get(proto_name)
+
+            if output_schemas is not None:
+                for mode, schema in output_schemas.items():
+                    if set(df.columns) == set(schema):
+                        return str(mode)
+
+            raise ValueError(
+                "`df` does not match with any of the schemas."
+            )
+
+        @staticmethod
+        def _is_column_has_single_value(df: pd.DataFrame, column: str) -> bool:
+            """Check whether the `column` in the `df` has only one value.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame.
+                column (str):
+                    column name as string.
+
+            Returns:
+                True if the `column` has single value else False
+            """
+            if column not in df.columns:
+                raise ValueError(
+                    f"column `{column}` is not present in the df."
+                )
+
+            vals = list(df[column].unique())
+            if len(vals) != 1:
+                return False
+            return True
+
+        @staticmethod
+        def _get_unique_value_of_a_column(
+            df: pd.DataFrame, column: str
+        ) -> Any:
+            """Check whether the `column` in the `df` has only one value
+            and returns that value.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame.
+                column (str):
+                    column name as string.
+
+            Returns:
+                Unique value of the column.
+            """
+            if not __class__._is_column_has_single_value(df, column): # pylint: disable=W0212
+                raise UserWarning(
+                    f"The column `{column}` has none or"
+                    " more than one unique value."
+                )
+
+            val = list(df[column].unique())[0]
+            if pd.isna(val):
+                return None
+            return val
+
+        @staticmethod
+        def _is_df_has_single_display_name(df: pd.DataFrame) -> str:
+            """Check whether the 'display_name' column in df has only one value
+            and returns that value.
+
+            Args:
+                df (pd.DataFrame):
+                    The input DataFrame.
+
+            Returns:
+                display_name as a string.
+            """
+            return __class__._get_unique_value_of_a_column(df, "display_name") # pylint: disable=W0212
+
+        def _is_df_display_name_match_with_proto(self, df: pd.DataFrame):
+            """Check whether the 'display_name' column in df matches with
+            the proto_obj 'display_name'.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame.
+
+            Raises:
+              ValueError: If the 'display_name' of df does not match
+              with the proto_obj.
+            """
+            self._outer_self._check_proto_obj_attr_exist() # pylint: disable=W0212
+
+            proto_disp_name = self._outer_self.proto_obj.display_name
+            df_disp_name = self._is_df_has_single_display_name(df)
+            if df_disp_name != proto_disp_name:
+                raise ValueError(
+                    "The input DataFrame `df` refers to a proto with a"
+                    " different display_name from the one stored in proto_obj."
+                )
+
+
+        def _process_from_df_create_basic(self, df: pd.DataFrame):
+            """Prototype method to perform basic `create` action."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_create_advanced(self, df: pd.DataFrame):
+            """Prototype method to perform advanced `create` action."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_append_basic(self, df: pd.DataFrame):
+            """Prototype method to perform basic `append` action."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_append_advanced(self, df: pd.DataFrame):
+            """Prototype method to perform advanced `append` action."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_delete_basic(self, df: pd.DataFrame):
+            """Prototype method to perform basic `delete` action."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_from_df_delete_advanced(self, df: pd.DataFrame):
+            """Prototype method to perform advanced `delete` action."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+
+        def _helper_from_df_create(self, df: pd.DataFrame, mode: str):
+            """Perform the create action on proto_obj using `df`.
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              mode (str):
+                Whether the dataframe is using 'basic' or 'advance' schema.
+
+            Returns:
+              A protobuf object stored in the proto_obj.
+            """
+            if mode == "basic":
+                return self._process_from_df_create_basic(df)
+            elif mode == "advanced":
+                return self._process_from_df_create_advanced(df)
+            else:
+                raise ValueError("`mode` types: ['basic', 'advanced'].")
+
+        def _helper_from_df_append(self, df: pd.DataFrame, mode: str):
+            """Perform the append action on proto_obj using `df`.
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              mode (str):
+                Whether the dataframe is using 'basic' or 'advance' schema.
+
+            Returns:
+              A protobuf object stored in the proto_obj.
+            """
+            if mode == "basic":
+                return self._process_from_df_append_basic(df)
+            elif mode == "advanced":
+                return self._process_from_df_append_advanced(df)
+            else:
+                raise ValueError("`mode` types: ['basic', 'advanced'].")
+
+        def _helper_from_df_delete(self, df: pd.DataFrame, mode: str):
+            """Perform the delete action on proto_obj using `df`.
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              mode (str):
+                Whether the dataframe is using 'basic' or 'advance' schema.
+
+            Returns:
+              A protobuf object stored in the proto_obj.
+            """
+            if mode == "basic":
+                return self._process_from_df_delete_basic(df)
+            elif mode == "advanced":
+                return self._process_from_df_delete_advanced(df)
+            else:
+                raise ValueError("`mode` types: ['basic', 'advanced'].")
+
+        def dataframe_to_proto(
+            self, df: pd.DataFrame, action: str
+        ):
+            """Perform an `action` from the DataFrame `df` on proto_obj.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              action (str):
+                'create', 'delete', 'append'
+
+            Returns:
+              A protobuf object stored in the proto_obj.
+            """
+            # Find the `mode` value based on passed df
+            mode = self._find_mode(df)
+
+            # TODO(miladt): Input df check: schema, values
+            if action == "create":
+                return self._helper_from_df_create(df=df, mode=mode)
+            elif action == "append":
+                return self._helper_from_df_append(df=df, mode=mode)
+            elif action == "delete":
+                return self._helper_from_df_delete(df=df, mode=mode)
+            else:
+                raise ValueError(
+                    "`action` types: ['create', 'delete', 'append']."
+                )
+
+
+        @staticmethod
+        def _concat_dict_to_df(
+            df: pd.DataFrame, dict_: Dict[str, Any]
+        ) -> pd.DataFrame:
+            """Transform a dictionary to a DataFrame then
+            concatenate with the existing DataFrame.
+
+            Args:
+              df (pd.DataFrame):
+                The DataFrame to append the row to.
+              dict_ (Dict[str, Any]):
+                The dictionary representing a row.
+
+            Returns:
+              A DataFrame with a new row.
+            """
+            # Error checking: `dict_` keys against `df` columns
+            extra_keys = [k for k in dict_ if k not in df.columns]
+            if extra_keys:
+                raise ValueError(
+                    "`dict_` has a key that is not included in"
+                    f" the `df` columns: {extra_keys}."
+                )
+
+            # Alternative row creation:
+            # row = pd.DataFrame.from_dict(dict_, orient="index").transpose()
+            row = pd.DataFrame(dict_, index=[0])
+            df = pd.concat([df, row], ignore_index=True)
+
+            return df
+
+        def _process_proto_to_df_basic(self, obj) -> pd.DataFrame:
+            """Prototype method to create a DataFrame
+            from a proto_obj in basic mode."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def _process_proto_to_df_advanced(self, obj) -> pd.DataFrame:
+            """Prototype method to create a DataFrame
+            from a proto_obj in advanced mode."""
+            raise NotImplementedError("Subclass should implement this method!")
+
+        def proto_to_dataframe(
+            self, obj, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a protobuf object to pandas DataFrame.
+
+            Args:
+              obj:
+                A protobuf object.
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas DataFrame
+            """
+            if mode == "basic":
+                return self._process_proto_to_df_basic(obj)
+            elif mode == "advanced":
+                return self._process_proto_to_df_advanced(obj)
+            else:
+                raise ValueError("`mode` types: ['basic', 'advanced'].")
+
+
+    class _Dataframe(_DataframeCommon):
+        """Prototype class to create a DataFrame from a proto_obj."""
+        pass # pylint: disable=W0107

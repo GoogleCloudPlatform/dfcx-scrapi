@@ -16,16 +16,21 @@
 
 import logging
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Dict, Union
 
+import numpy as np
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Flow
 from google.cloud.dialogflowcx_v3beta1.types import NluSettings
+from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.routes import TransitionRouteBuilder
 from dfcx_scrapi.builders.routes import EventHandlerBuilder
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
+
 
 # logging config
 logging.basicConfig(
@@ -40,6 +45,17 @@ class FlowBuilder(BuildersCommon):
 
     _proto_type = Flow
     _proto_type_str = "Flow"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "description",
+        "transition_routes",
+        "event_handlers",
+        "transition_route_groups",
+        "nlu_settings",
+        "advanced_settings",
+        "knowledge_connector_settings",
+    ]
 
 
     def __str__(self) -> str:
@@ -53,7 +69,6 @@ class FlowBuilder(BuildersCommon):
             f"\n\n\nEventHandlers:\n{'='*25}\n{self._show_event_handlers()}"
             f"\n\n\nTransitoinRouteGroups:\n{'='*25}"
             f"\n{self._show_transition_route_groups()}")
-
 
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
@@ -73,7 +88,6 @@ class FlowBuilder(BuildersCommon):
             f"\nNLU settings:\n{nlu_settings_str}"
         )
 
-
     def _show_transition_routes(self) -> str:
         """String representation for the transition routes of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -84,7 +98,6 @@ class FlowBuilder(BuildersCommon):
             for i, tr in enumerate(self.proto_obj.transition_routes)
         ])
 
-
     def _show_event_handlers(self) -> str:
         """String representation for the event handlers of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -93,7 +106,6 @@ class FlowBuilder(BuildersCommon):
             f"EventHandler {i+1}:\n{str(EventHandlerBuilder(eh))}\n{'*'*20}\n"
             for i, eh in enumerate(self.proto_obj.event_handlers)
         ])
-
 
     def _show_transition_route_groups(self) -> str:
         """String representation for the transition route groups of proto_obj"""
@@ -104,53 +116,7 @@ class FlowBuilder(BuildersCommon):
             for i, trg_id in enumerate(self.proto_obj.transition_route_groups)
         ])
 
-
-    def show_flow_info(
-        self, mode: str = "whole"
-    ) -> None:
-        """Show the proto_obj information.
-
-        Args:
-          mode (str):
-            Specifies what part of the page to show.
-              Options:
-              ['basic', 'whole',
-              'routes' or 'transition routes',
-              'route groups' or 'transition route groups',
-              'events' or 'event handlers'
-              ]
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "basic":
-            print(self._show_basic_info())
-        elif mode in ["routes", "transition routes"]:
-            print(self._show_transition_routes())
-        elif mode in ["route groups", "transition route groups"]:
-            print(self._show_transition_route_groups())
-        elif mode in ["events", "event handlers"]:
-            print(self._show_event_handlers())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                "['basic', 'whole',"
-                " 'routes', 'transition routes',"
-                " 'route groups', 'transition route groups',"
-                " 'events', 'event handlers']"
-            )
-
-
-    def show_stats(self) -> None:
-        """Provide some stats about the Page."""
-        self._check_proto_obj_attr_exist()
-
-        stats_instance = FlowStats(self.proto_obj)
-        stats_instance.generate_stats()
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         display_name: str,
         description: str = None,
@@ -196,9 +162,77 @@ class FlowBuilder(BuildersCommon):
             )
         # Set the NLU settings to default
         self.nlu_settings()
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
+
+    def show_flow_info(
+        self, mode: str = "whole"
+    ) -> None:
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the page to show.
+              Options:
+              ['basic', 'whole',
+              'routes' or 'transition routes',
+              'route groups' or 'transition route groups',
+              'events' or 'event handlers'
+              ]
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode in ["routes", "transition routes"]:
+            print(self._show_transition_routes())
+        elif mode in ["route groups", "transition route groups"]:
+            print(self._show_transition_route_groups())
+        elif mode in ["events", "event handlers"]:
+            print(self._show_event_handlers())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'whole',"
+                " 'routes', 'transition routes',"
+                " 'route groups', 'transition route groups',"
+                " 'events', 'event handlers']"
+            )
+
+    def show_stats(self) -> None:
+        """Provide some stats about the Page."""
+        self._check_proto_obj_attr_exist()
+
+        stats_instance = FlowStats(self.proto_obj)
+        stats_instance.generate_stats()
+
+    def create_new_flow(
+        self,
+        display_name: str,
+        description: str = None,
+        overwrite: bool = False
+    ) -> Flow:
+        """Create a new Flow.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the flow.
+          description (str):
+            The description of the flow. The maximum length is 500 characters.
+            If exceeded, the request is rejected.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already contains a Flow.
+
+        Returns:
+          A Flow object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, description=description,
+            overwrite=overwrite)
 
     def nlu_settings(
         self,
@@ -263,62 +297,157 @@ class FlowBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def add_transition_route(
         self,
-        transition_routes: Union[TransitionRoute, List[TransitionRoute]]
+        transition_routes: Union[TransitionRoute, List[TransitionRoute]] = None,
+        intent: str = None,
+        condition: str = None,
+        target_page: str = None,
+        target_flow: str = None,
+        trigger_fulfillment: Fulfillment = None,
+        agent_response: Union[str, List[str]] = None,
+        parameter_map: Dict[str, str] = None,
     ) -> Flow:
         """Add single or multiple TransitionRoutes to the Flow.
+        You can either pass TransitionRoute objects or create a TransitionRoute
+        on the fly by passing other parameters. Note that `transition_routes`
+        takes priority over other parameters.
 
         Args:
           transition_routes (TransitionRoute | List[TransitionRoute]):
             A single or list of TransitionRoutes to add
-            to the Flow existing in proto_obj.
+            to the Flow existed in proto_obj.
+          intent (str):
+            Indicates that the transition can only happen when the given
+            intent is matched.
+            Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/intents/<Intent ID>``.
+            At least one of ``intent`` or ``condition`` must be specified.
+            When both ``intent`` and ``condition`` are specified,
+            the transition can only happen when both are fulfilled.
+          condition (str):
+            The condition to evaluate.
+            See the conditions reference:
+            https://cloud.google.com/dialogflow/cx/docs/reference/condition
+            At least one of ``intent`` or ``condition`` must be specified.
+            When both ``intent`` and ``condition`` are specified,
+            the transition can only happen when both are fulfilled.
+          target_page (str):
+            The target page to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          target_flow (str):
+            The target flow to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          trigger_fulfillment (Fulfillment):
+            The fulfillment to call when the condition is satisfied.
+            When ``trigger_fulfillment`` and ``target`` are defined,
+            ``trigger_fulfillment`` is executed first.
+          agent_response (str | List[str]):
+            Agent's response message (Fulfillment). A single message as
+            a string or multiple messages as a list of strings.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
 
         Returns:
           A Flow object stored in proto_obj.
         """
         self._check_proto_obj_attr_exist()
 
-        # Type error checking
-        self._is_type_or_list_of_types(
-            transition_routes, TransitionRoute, "transition_routes"
-        )
+        if not transition_routes is None:
+            self._is_type_or_list_of_types(
+                transition_routes, TransitionRoute, "transition_routes")
 
-        if not isinstance(transition_routes, list):
-            transition_routes = [transition_routes]
+            if not isinstance(transition_routes, list):
+                transition_routes = [transition_routes]
+        else:
+            trb = TransitionRouteBuilder()
+            trb.create_new_proto_obj(
+                intent, condition, trigger_fulfillment,
+                target_page, target_flow)
+            if trigger_fulfillment is None:
+                trb.set_fulfillment(
+                    message=agent_response, parameter_map=parameter_map)
+            transition_routes = [trb.proto_obj]
+
         self.proto_obj.transition_routes.extend(transition_routes)
-
         return self.proto_obj
-
 
     def add_event_handler(
         self,
-        event_handlers: Union[EventHandler, List[EventHandler]]
+        event_handlers: Union[EventHandler, List[EventHandler]] = None,
+        event: str = None,
+        target_page: str = None,
+        target_flow: str = None,
+        trigger_fulfillment: Fulfillment = None,
+        agent_response: Union[str, List[str]] = None,
+        parameter_map: Dict[str, str] = None,
     ) -> Flow:
         """Add single or multiple EventHandlers to the Flow.
+        You can either pass EventHandler objects or create a EventHandler
+        on the fly by passing other parameters. Note that `event_handlers`
+        takes priority over other parameters.
 
         Args:
           event_handlers (EventHandler | List[EventHandler]):
             A single or list of EventHandler to add
             to the Flow existing in proto_obj.
+          event (str):
+            The name of the event to handle.
+          target_page (str):
+            The target page to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          target_flow (str):
+            The target flow to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          trigger_fulfillment (Fulfillment):
+            The fulfillment to call when the condition is satisfied.
+            When ``trigger_fulfillment`` and ``target`` are defined,
+            ``trigger_fulfillment`` is executed first.
+          agent_response (str | List[str]):
+            Agent's response message (Fulfillment). A single message as
+            a string or multiple messages as a list of strings.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
 
         Returns:
           A Flow object stored in proto_obj.
         """
         self._check_proto_obj_attr_exist()
 
-        # Type error checking
-        self._is_type_or_list_of_types(
-            event_handlers, EventHandler, "event_handlers"
-        )
+        if not event_handlers is None:
+            self._is_type_or_list_of_types(
+                event_handlers, EventHandler, "event_handlers")
 
-        if not isinstance(event_handlers, list):
-            event_handlers = [event_handlers]
+            if not isinstance(event_handlers, list):
+                event_handlers = [event_handlers]
+        else:
+            ehb = EventHandlerBuilder()
+            ehb.create_new_proto_obj(
+                event, trigger_fulfillment, target_page, target_flow)
+            if trigger_fulfillment is None:
+                ehb.set_fulfillment(
+                    message=agent_response, parameter_map=parameter_map)
+            event_handlers = [ehb.proto_obj]
+
         self.proto_obj.event_handlers.extend(event_handlers)
-
         return self.proto_obj
-
 
     def add_transition_route_group(
         self,
@@ -348,7 +477,6 @@ class FlowBuilder(BuildersCommon):
         self.proto_obj.transition_route_groups.extend(transition_route_groups)
 
         return self.proto_obj
-
 
     def remove_transition_route(
         self,
@@ -385,7 +513,6 @@ class FlowBuilder(BuildersCommon):
         self.proto_obj.transition_routes = new_routes
 
         return self.proto_obj
-
 
     def remove_event_handler(
         self,
@@ -430,7 +557,6 @@ class FlowBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def remove_transition_route_group(
         self,
         transition_route_groups: Union[str, List[str]]
@@ -466,6 +592,89 @@ class FlowBuilder(BuildersCommon):
 
         return self.proto_obj
 
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _parse_nlu_settings(self, obj: Flow) -> str:
+            """Return NLU settings in a human readable way.
+
+            Args:
+              obj (Flow):
+                Flow protobuf object
+
+            Returns:
+              NLU settings as a string
+            """
+            nlu = obj.nlu_settings
+            if nlu.model_type == 2:
+                model_type = "MODEL_TYPE_CUSTOM"
+            else:
+                model_type = nlu.model_type.name
+
+            return (
+                f"Type: {model_type}"
+                f"\nTraining: {nlu.model_training_mode.name}"
+                f"\nThreshold: {nlu.classification_threshold}"
+            )
+            # # Alternative approach
+            # return (
+            #     f"{nlu.model_type.name} type with"
+            #     f" {nlu.model_training_mode.name} training and"
+            #     f" classification threshold of {nlu.classification_threshold}"
+            # )
+
+
+        def proto_to_dataframe(
+            self, obj: Flow, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a Flow protobuf object to pandas Dataframe.
+
+            Args:
+              obj (Flow):
+                Flow protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode not in ["basic", "advanced"]:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+            routes_df = pd.DataFrame(
+                columns=self._dataframes_map["TransitionRoute"][mode]
+            )
+            for route in obj.transition_routes:
+                trb = TransitionRouteBuilder(route)
+                trb_df = trb.to_dataframe(mode)
+                routes_df = pd.concat([routes_df, trb_df], ignore_index=True)
+
+            ehs_df = pd.DataFrame(
+                columns=self._dataframes_map["EventHandler"][mode]
+            )
+            for eh in obj.event_handlers:
+                ehb = EventHandlerBuilder(eh)
+                ehb_df = ehb.to_dataframe(mode)
+                ehs_df = pd.concat([ehs_df, ehb_df], ignore_index=True)
+
+            trgs_df = pd.DataFrame({
+                "route_groups": list(obj.transition_route_groups)
+            })
+
+            desc = str(obj.description) if str(obj.description) else np.nan
+            # Concatenate `routes_df` and `ehs_df` and add the rest of the info
+            flow_df = pd.concat(
+                [routes_df, ehs_df, trgs_df], axis=0, ignore_index=True
+            )
+            flow_df["name"] = str(obj.name)
+            flow_df["display_name"] = str(obj.display_name)
+            flow_df["description"] = desc
+            flow_df["nlu_settings"] = self._parse_nlu_settings(obj)
+
+            return flow_df[self._dataframes_map["Flow"][mode]]
 
 
 @dataclass

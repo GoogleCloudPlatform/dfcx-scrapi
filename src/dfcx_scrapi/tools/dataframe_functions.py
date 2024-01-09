@@ -18,22 +18,31 @@ import json
 import logging
 import time
 from typing import Dict, List
-import google.auth
-import gspread
-import pandas as pd
-import numpy as np
-from tabulate import tabulate
-from gspread_dataframe import set_with_dataframe
-from oauth2client.service_account import ServiceAccountCredentials
 
+import numpy as np
+import pandas as pd
+from tabulate import tabulate
+import gspread
+from gspread_dataframe import set_with_dataframe
+import google.auth
+from oauth2client.service_account import ServiceAccountCredentials
 from google.cloud.dialogflowcx_v3beta1 import types
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.intents import Intents
 from dfcx_scrapi.core.entity_types import EntityTypes
 from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.pages import Pages
+from dfcx_scrapi.core.webhooks import Webhooks
 from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
+from dfcx_scrapi.builders.intents import IntentBuilder
+from dfcx_scrapi.builders.entity_types import EntityTypeBuilder
+from dfcx_scrapi.builders.flows import FlowBuilder
+from dfcx_scrapi.builders.pages import PageBuilder
+from dfcx_scrapi.builders.webhooks import WebhookBuilder
+from dfcx_scrapi.builders.transition_route_groups import TransitionRouteGroupBuilder
+
 
 GLOBAL_SCOPE = [
     "https://spreadsheets.google.com/feeds",
@@ -57,6 +66,7 @@ class DataframeFunctions(ScrapiBase):
         creds=None,
         principal=False,
         scope=False,
+        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -92,11 +102,19 @@ class DataframeFunctions(ScrapiBase):
             creds = google.auth.default(scopes=scopes)[0]
             self.sheets_client = gspread.authorize(creds)
 
-        self.entities = EntityTypes(creds=self.creds)
-        self.intents = Intents(creds=self.creds)
-        self.flows = Flows(creds=self.creds)
-        self.pages = Pages(creds=self.creds)
-        self.route_groups = TransitionRouteGroups(creds=self.creds)
+        logging.info("create dfcx creds %s", creds_path)
+        self.agent_id = agent_id
+
+        self.agents = Agents(creds_path, creds_dict)
+        self.entities = EntityTypes(creds_path, creds_dict)
+        self.intents = Intents(creds_path, creds_dict)
+        self.flows = Flows(creds_path, creds_dict)
+        self.pages = Pages(creds_path, creds_dict)
+        self.webhooks = Webhooks(creds_path, creds_dict)
+        self.route_groups = TransitionRouteGroups(
+            creds_path, creds_dict
+        )
+        self.creds_path = creds_path
 
     @staticmethod
     def progress_bar(current, total, bar_length=50, type_="Progress"):
@@ -1082,8 +1100,21 @@ class DataframeFunctions(ScrapiBase):
 
         return route_group
 
-    def sheets_to_dataframe(self, sheet_name, worksheet_name):
-        """Move Intent/TP data from Google Sheets to a DataFrame."""
+
+    def sheets_to_dataframe(
+        self, sheet_name: str, worksheet_name: str
+    ) -> pd.DataFrame:
+        """Retrieve a Google Sheets spreadsheet as a pandas DataFrame.
+
+        Args:
+          sheet_name (str):
+            The spread sheet name.
+          worksheet_name (str):
+            The worksheet tab name.
+
+        Returns:
+          The content of the spreadsheet as a pandas DataFrame.
+        """
         g_sheets = self.sheets_client.open(sheet_name)
         sheet = g_sheets.worksheet(worksheet_name)
         data_pull = sheet.get_all_values()
@@ -1091,8 +1122,440 @@ class DataframeFunctions(ScrapiBase):
 
         return data
 
-    def dataframe_to_sheets(self, sheet_name, worksheet_name, dataframe):
-        """Move Intent/TP data from a DataFrame to Google Sheets."""
+    def dataframe_to_sheets(
+        self,
+        sheet_name: str, worksheet_name: str,
+        dataframe: pd.DataFrame, create_worksheet: bool = False
+    ):
+        """Dump a pandas DataFrame to a Google Sheets spreadsheet.
+
+        Args:
+          sheet_name (str):
+            The spread sheet name.
+          worksheet_name (str):
+            The worksheet tab name.
+          dataframe (pd.DataFrame):
+            The pandas DataFrame that will export to sheets.
+          create_worksheet (bool):
+            Whether to create a new worksheet or use the existing one.
+        """
         g_sheets = self.sheets_client.open(sheet_name)
-        worksheet = g_sheets.worksheet(worksheet_name)
+        if not create_worksheet:
+            worksheet = g_sheets.worksheet(worksheet_name)
+        else:
+            worksheet = g_sheets.add_worksheet(
+                title=worksheet_name, rows=len(dataframe) + 1,
+                cols=len(dataframe.columns) + 1
+            )
         set_with_dataframe(worksheet, dataframe)
+
+
+    def _human_readable_map(
+        self, df: pd.DataFrame, agent_id: str, rate_limit: float = 0.5
+    ):
+        """docs here!"""
+        flows_map = self.flows.get_flows_map(agent_id)
+        time.sleep(rate_limit)
+
+        if "intent" in df.columns:
+            intents_map = self.intents.get_intents_map(agent_id)
+            df["intent"] = df["intent"].map(intents_map)
+        if "parameter_entity_type" in df.columns:
+            entities_map = self.entities.get_entities_map(agent_id)
+            col = "parameter_entity_type"
+            df[col] = df[col].map(entities_map)
+        if "entity_type" in df.columns:
+            entities_map = self.entities.get_entities_map(agent_id)
+            df["entity_type"] = df["entity_type"].map(entities_map)
+        if "webhook" in df.columns:
+            webhooks_map = self.webhooks.get_webhooks_map(agent_id)
+            df["webhook"] = df["webhook"].map(webhooks_map)
+        if "transition_to" in df.columns:
+            all_pages_map = self._AllPagesCustomDict()
+            all_pages_map.update(flows_map)
+            for flow_id in flows_map:
+                all_pages_map.update(self.pages.get_pages_map(flow_id))
+                time.sleep(rate_limit)
+
+            df["transition_to"] = df["transition_to"].map(all_pages_map)
+        if "flow" in df.columns:
+            df["flow"] = df["flow"].map(flows_map)
+        if "route_groups" in df.columns:
+            all_rgs = {}
+            for flow_id in flows_map:
+                all_rgs.update(self.route_groups.get_route_groups_map(flow_id))
+
+            df["route_groups"] = df["route_groups"].map(all_rgs)
+
+    def intents_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        intent_subset: List[str] = None,
+        transpose: bool = False,
+        language_code: str = None,
+        convert_ids_to_display_name: bool = True,
+        rate_limit: float = 0.5) -> pd.DataFrame:
+        """Extracts all Intents and Training Phrases into a Pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of intents
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          intent_subset (List[str]):
+            A subset of Intents to extract the Intents from.
+          transpose (bool):
+            Return the transposed DataFrame. If this flag passed as True,
+            mode won't affect the result and the result would be like basic.
+          language_code (str):
+            Language code of the intents being uploaded. Ref:
+            https://cloud.google.com/dialogflow/cx/docs/reference/language
+
+        Returns:
+          A pandas Dataframe
+        """
+
+        if not agent_id:
+            agent_id = self.agent_id
+
+        if transpose:
+            _, intents_dict = self.intents.intents_to_df_cosine_prep(agent_id)
+            transposed_df = pd.DataFrame.from_dict(
+                intents_dict, "index"
+            ).transpose()
+            if intent_subset:
+                transposed_df = transposed_df[intent_subset]
+
+            return transposed_df
+
+        if mode not in ["basic", "advanced"]:
+            raise ValueError("Mode types: [basic, advanced]")
+
+        main_df = pd.DataFrame()
+        intents = self.intents.list_intents(
+            agent_id, language_code=language_code)
+
+        for obj in intents:
+            if (intent_subset) and (obj.display_name not in intent_subset):
+                continue
+            ib = IntentBuilder(obj)
+            intent_df = ib.to_dataframe(mode=mode)
+            main_df = pd.concat([main_df, intent_df], ignore_index=True)
+
+
+        if convert_ids_to_display_name:
+            self._human_readable_map(main_df, agent_id, rate_limit)
+
+        return main_df
+
+    def entity_types_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        entity_type_subset: List[str] = None) -> pd.DataFrame:
+        """Extracts all EntityTypes into a pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of entity_types
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          entity_type_subset (List[str]):
+            A subset of EntityTypes to extract the EntityTypes from.
+
+        Returns:
+          A pandas Dataframe
+        """
+
+        if not agent_id:
+            agent_id = self.agent_id
+
+        # Error checking for `mode`
+        if mode not in ["basic", "advanced"]:
+            raise ValueError("Mode types: [basic, advanced]")
+
+        main_df = pd.DataFrame()
+        entity_types = self.entities.list_entity_types(agent_id)
+
+        for obj in entity_types:
+            if (
+                (entity_type_subset)
+                and (obj.display_name not in entity_type_subset)
+            ):
+                continue
+            etb = EntityTypeBuilder(obj)
+            entity_df = etb.to_dataframe(mode=mode)
+            main_df = pd.concat([main_df, entity_df], ignore_index=True)
+
+        return main_df
+
+    def flows_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        flow_subset: List[str] = None,
+        convert_ids_to_display_name: bool = True,
+        rate_limit: float = 0.5) -> pd.DataFrame:
+        """Extracts all Flows and put it into a Pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of intents
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          flow_subset (List[str]):
+            A subset of Flows to extract the Flows from.
+          rate_limit (float):
+            Time in seconds to wait between each API call.
+            Use this to control hitting Quota limits on your project.
+
+        Returns:
+          A pandas Dataframe
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        if mode not in ["basic", "advanced"]:
+            raise ValueError("Mode types: [basic, advanced]")
+
+        flows_list = self.flows.list_flows(agent_id)
+        time.sleep(rate_limit)
+
+        main_df = pd.DataFrame()
+        for obj in flows_list:
+            if (flow_subset) and (obj.display_name not in flow_subset):
+                continue
+            fb = FlowBuilder(obj)
+            flow_df = fb.to_dataframe(mode=mode)
+            main_df = pd.concat([main_df, flow_df], ignore_index=True)
+
+        if main_df.empty:
+            return main_df
+
+        if convert_ids_to_display_name:
+            self._human_readable_map(main_df, agent_id, rate_limit)
+
+        return main_df
+
+    def pages_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        flow_subset: List[str] = None,
+        page_subset: List[str] = None,
+        convert_ids_to_display_name: bool = True,
+        rate_limit: float = 0.5) -> pd.DataFrame:
+        """Extracts all Flows and put it into a Pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of intents
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          flow_subset (List[str]):
+            A subset of Flows to extract the Pages from.
+          page_subset (List[str]):
+            A subset of Pages to extract the Pages from.
+          rate_limit (float):
+            Time in seconds to wait between each API call.
+            Use this to control hitting Quota limits on your project.
+
+        Returns:
+          A pandas Dataframe
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        if mode not in ["basic", "advanced"]:
+            raise ValueError("Mode types: [basic, advanced]")
+
+        flows_list = self.flows.list_flows(agent_id)
+        time.sleep(rate_limit)
+
+        main_df = pd.DataFrame()
+        for f_obj in flows_list:
+            if (flow_subset) and (f_obj.display_name not in flow_subset):
+                continue
+
+            pages_list = self.pages.list_pages(f_obj.name)
+            time.sleep(rate_limit)
+            for obj in pages_list:
+                if (page_subset) and (obj.display_name not in page_subset):
+                    continue
+
+                pb = PageBuilder(obj)
+                page_df = pb.to_dataframe(mode=mode)
+                main_df = pd.concat([main_df, page_df], ignore_index=True)
+
+        if main_df.empty:
+            return main_df
+
+        if convert_ids_to_display_name:
+            self._human_readable_map(main_df, agent_id, rate_limit)
+
+        return main_df
+
+    def webhooks_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        webhook_subset: List[str] = None,
+    ) -> pd.DataFrame:
+        """Extracts all Webhooks into a pandas DataFrame.
+
+        Args:
+          agent_id (str):
+            agent to pull list of webhooks
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          webhook_subset (List[str]):
+            A subset of Webhooks to extract the Webhooks from.
+
+        Returns:
+          A pandas Dataframe
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        # Error checking for `mode`
+        if mode not in ["basic", "advanced"]:
+            raise ValueError("Mode types: [basic, advanced]")
+
+        main_df = pd.DataFrame()
+        webhooks = self.webhooks.list_webhooks(agent_id)
+
+        for obj in webhooks:
+            if (webhook_subset) and (obj.display_name not in webhook_subset):
+                continue
+            wb = WebhookBuilder(obj)
+            webhook_df = wb.to_dataframe(mode=mode)
+            main_df = pd.concat([main_df, webhook_df], ignore_index=True)
+
+        return main_df
+
+    def route_groups_to_df(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        convert_ids_to_display_name: bool = True,
+        rate_limit: float = 0.5
+    ) -> pd.DataFrame:
+        """Extracts the Transition Route Groups from a given Agent and
+         returns key information about the Route Groups in a Pandas Dataframe
+
+        DFCX Route Groups exist as an Agent level resource, however they are
+        categorized by the Flow they are associated with. This method will
+        extract all Flows for the given agent, then use the Flow IDs to
+        extract all Route Groups per Flow. Once all Route Groups have been
+        extracted, the method will convert the DFCX object to a Pandas
+        Dataframe and return this to the user.
+
+        Args:
+          agent_id (str):
+            agent to pull transition routes from.
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          rate_limit (float):
+            Time in seconds to wait between each API call.
+            Use this to control hitting Quota limits on your project.
+
+        Returns:
+          A pandas Dataframe
+        """
+        # Error checking for `mode`
+        if mode not in ["basic", "advanced"]:
+            raise ValueError("Mode types: [basic, advanced]")
+
+        if not agent_id:
+            agent_id = self.agent_id
+
+        # Get all the TransitionRouteGroups
+        flows_list = self.flows.list_flows(agent_id)
+        time.sleep(rate_limit)
+
+        main_df = pd.DataFrame()
+        for f_obj in flows_list:
+            rg_list = self.route_groups.list_transition_route_groups(f_obj.name)
+            for obj in rg_list:
+                trgb = TransitionRouteGroupBuilder(obj)
+                trgb_df = trgb.to_dataframe(mode=mode)
+                main_df = pd.concat([main_df, trgb_df], ignore_index=True)
+
+            time.sleep(rate_limit)
+
+        if main_df.empty:
+            return main_df
+
+        if convert_ids_to_display_name:
+            self._human_readable_map(main_df, agent_id, rate_limit)
+
+        return main_df
+
+
+    def agent_to_sheets(
+        self,
+        agent_id: str = None,
+        mode: str = "basic",
+        sheet_name: str = None,
+        email_address: str = None
+    ):
+        """Dump agent resources to a spreadsheet.
+
+        Args:
+          agent_id (str):
+            agent to pull the resources from.
+          mode (str):
+            Whether to return 'basic' DataFrame or 'advanced' one.
+            Refer to `data.dataframe_schemas.json` for schemas.
+          sheet_name (str):
+            The spread sheet name. If it's not present, a new spreadsheet will
+            be created by the name of 'AGENT_NAME DFCX resources' and it will
+            be shared with the `email_address`
+          email_address (str):
+            The email address to share the spreadsheet with. If `sheet_name`
+            is not present you must pass `email_address` to share
+            the spreadsheet with it.
+        """
+        # Get the dataframes
+        input_kwargs = {"agent_id": agent_id, "mode": mode}
+        df_dict = {
+            "Intents": self.intents_to_df(**input_kwargs),
+            "EntityTypes": self.entity_types_to_df(**input_kwargs),
+            "Flows": self.flows_to_df(**input_kwargs),
+            "Pages": self.pages_to_df(**input_kwargs),
+            "Webhooks": self.webhooks_to_df(**input_kwargs),
+            "RouteGroups": self.route_groups_to_df(**input_kwargs),
+        }
+
+        # Get the agent name
+        the_agent = self.agents.get_agent(agent_id=agent_id)
+        agent_name = the_agent.display_name
+        # Create a spreadsheet and import the dataframes
+        if sheet_name is None:
+            if email_address is None:
+                raise ValueError(
+                    "Either enter an existing `sheet_name` or pass"
+                    " an `email_address` to share the new spreadsheet."
+                )
+            sheet_name = f"{agent_name} DFCX resources"
+            tmp_g_sheets = self.sheets_client.create(sheet_name)
+            tmp_g_sheets.share(
+                email_address, perm_type="user", role="writer")
+
+        for worksheet_name, dataframe in df_dict.items():
+            self.dataframe_to_sheets(
+                sheet_name=sheet_name, worksheet_name=worksheet_name,
+                dataframe=dataframe, create_worksheet=True
+            )
+
+        # # Delete the Sheet1 worksheet
+        # tmp_g_sheets.del_worksheet(tmp_g_sheets.worksheet("Sheet1"))
+
+        logging.info("Agent's resources spreadsheet: %s", tmp_g_sheets.url)

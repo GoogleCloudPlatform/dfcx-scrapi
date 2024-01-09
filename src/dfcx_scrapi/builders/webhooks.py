@@ -1,0 +1,349 @@
+"""A set of builder methods to create CX proto resource objects"""
+
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import logging
+from datetime import timedelta
+from typing import Dict
+
+import numpy as np
+import pandas as pd
+from google.cloud.dialogflowcx_v3beta1.types import Webhook
+from dfcx_scrapi.builders.builders_common import BuildersCommon
+
+# logging config
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+
+class WebhookBuilder(BuildersCommon):
+    """Base Class for CX Webhook builder."""
+    _proto_type = Webhook
+    _proto_type_str = "Webhook"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "generic_web_service",
+        "service_directory",
+        "timeout",
+        "disabled",
+    ]
+
+
+    def __str__(self) -> str:
+        """String representation of the proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        basic_info = self._show_basic_info()
+        service_info = self._show_service_info()
+
+        return f"{basic_info}\n{service_info}"
+
+    def _show_basic_info(self) -> str:
+        """String representation for the basic information of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        return (
+            f"display_name: {self.proto_obj.display_name}"
+            f"\ntimeout: {self.proto_obj.timeout.seconds}"
+            f"\ndisabled: {self.proto_obj.disabled}"
+        )
+
+    def _show_service_info(self) -> str:
+        """String representation for the service information of proto_obj."""
+        self._check_proto_obj_attr_exist()
+
+        service_type = "Generic Web Service"
+        gws = self.proto_obj.generic_web_service
+        if self.proto_obj.service_directory:
+            service_type = "Service Directory"
+            gws = self.proto_obj.service_directory.generic_web_service
+
+        have_ca_certs = bool(gws.allowed_ca_certs)
+
+        return (
+            f"service_type: {service_type}"
+            f"\n\turi: {gws.uri}"
+            f"\n\tusername: {gws.username}"
+            f"\n\tpassword: {gws.password}"
+            f"\n\trequest_headers: {gws.request_headers}"
+            f"\n\thave_ca_certs: {have_ca_certs}"
+        )
+
+    def _create_new_proto_obj(
+        self,
+        display_name: str,
+        timeout: int = 5,
+        disabled: bool = False,
+        overwrite: bool = False
+    ):
+        """Create a new Webhook.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the webhook.
+            It should be unique within the agent.
+          timeout (int):
+            Webhook execution timeout. Execution is
+            considered failed if Dialogflow doesn't receive
+            a response from webhook at the end of the
+            timeout period. Defaults to 5 seconds, maximum
+            allowed timeout is 30 seconds.
+          disabled (bool):
+            Indicates whether the webhook is disabled.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a Webhook.
+
+        Returns:
+          A Webhook object stored in proto_obj.
+        """
+        # Types error checking
+        if not isinstance(display_name, str):
+            raise ValueError("`display_name` should be a string.")
+        if not(isinstance(timeout, int) and (0 <= timeout < 30)):
+            raise ValueError(
+                "`timeout` should be an int within the range [0, 30] seconds."
+            )
+        if not isinstance(disabled, bool):
+            raise ValueError("`disabled` should be a bool.")
+
+        # `overwrite` parameter error checking
+        if self.proto_obj and not overwrite:
+            raise UserWarning(
+                "proto_obj already contains a Webhook."
+                " If you wish to overwrite it, pass overwrite as True."
+            )
+
+        # Create the webhook
+        if overwrite or not self.proto_obj:
+            self.proto_obj = Webhook(
+                display_name=display_name,
+                timeout=timedelta(seconds=timeout),
+                disabled=disabled
+            )
+        self._add_proto_attrs_to_builder_obj()
+
+        return self.proto_obj
+
+
+    def create_new_webhook(
+        self,
+        display_name: str,
+        timeout: int = 5,
+        disabled: bool = False,
+        overwrite: bool = False
+    ):
+        """Create a new Webhook.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the webhook.
+            It should be unique within the agent.
+          timeout (int):
+            Webhook execution timeout. Execution is
+            considered failed if Dialogflow doesn't receive
+            a response from webhook at the end of the
+            timeout period. Defaults to 5 seconds, maximum
+            allowed timeout is 30 seconds.
+          disabled (bool):
+            Indicates whether the webhook is disabled.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a Webhook.
+
+        Returns:
+          A Webhook object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, timeout=timeout, disabled=disabled,
+            overwrite=overwrite)
+
+    def add_web_service(
+        self,
+        uri: str,
+        service: str = None,
+        username: str = None,
+        password: str = None,
+        request_headers: Dict[str, str] = None
+    ):
+        """Add a configuration for a generic web service or a service directory.
+
+        Args:
+          uri (str):
+            Required. The webhook URI for receiving POST
+            requests. It must use https protocol.
+          service (str):
+            The name of the service directory. If it's None it'll configure a
+            "generic web service" otherwise it'll configure a service.
+            `Service Directory <https://cloud.google.com/service-directory>`
+            Format for service directory:
+            ``projects/<Project ID>/locations/<Location ID>/namespaces/
+              <Namespace ID>/services/<Service ID>``.
+            `Location ID` of the service directory must be the same as
+            the location of the agent.
+          username (str):
+            The user name for HTTP Basic authentication.
+          password (str):
+            The password for HTTP Basic authentication.
+          request_headers (Dict[str, str]):
+            The HTTP request headers to send together
+            with webhook requests.
+
+        Returns:
+          A Webhook object stored in proto_obj.
+        """
+        # TODO: allowed_ca_certs:
+        # https://github.com/googleapis/python-dialogflow-cx/blob/f2d12c53804dec7b236509aa29b200aebcc53c8a/google/cloud/dialogflowcx_v3beta1/types/webhook.py#L103
+        self._check_proto_obj_attr_exist()
+
+        # Type error checking
+        if ((not isinstance(uri, str)) or
+            (username and not isinstance(username, str)) or
+            (password and not isinstance(password, str))
+        ):
+            raise ValueError(
+                "`uri`, `username`, and `password` if present should be string."
+            )
+        req_head_err_msg = (
+            "`request_headers` should be a dict with string keys and values."
+        )
+        if request_headers is not None:
+            if not isinstance(request_headers, dict):
+                raise ValueError(req_head_err_msg)
+            for k, v in request_headers.items():
+                if not(isinstance(k, str) and isinstance(v, str)):
+                    raise ValueError(req_head_err_msg)
+
+        # Create a generic web service
+        gws = Webhook.GenericWebService(
+            uri=uri, username=username, password=password,
+            request_headers=request_headers
+        )
+        if service:
+            # TODO: Format checking for service
+            sdc = Webhook.ServiceDirectoryConfig(
+                service=service, generic_web_service=gws
+            )
+            self.proto_obj.service_directory = sdc
+        else:
+            self.proto_obj.generic_web_service = gws
+
+        return self.proto_obj
+
+    def show_webhook(self):
+        """Show the proto_obj information."""
+        self._check_proto_obj_attr_exist()
+
+        print(self)
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _process_proto_to_df_basic(
+            self, obj: Webhook
+        ) -> pd.DataFrame:
+            """Process Webhook Proto to DataFrame in basic mode."""
+            if obj.generic_web_service:
+                web_service = obj.generic_web_service
+            else:
+                web_service = obj.service_directory.generic_web_service
+
+            return pd.DataFrame({
+                "display_name": [str(obj.display_name)],
+                "uri": [str(web_service.uri)],
+            })
+
+        def _process_proto_to_df_advanced(
+            self, obj: Webhook
+        ) -> pd.DataFrame:
+            """Process Webhook Proto to DataFrame in advanced mode."""
+            if obj.generic_web_service:
+                service_type = "Generic Web Service"
+                web_service = obj.generic_web_service
+            else:
+                service_type = obj.service_directory.service
+                web_service = obj.service_directory.generic_web_service
+
+            usrname, psswrd = web_service.username, web_service.password
+            req_headers = "\n".join([
+                f"{k}: {v}" for k, v in web_service.request_headers.items()
+            ])
+
+            # Make NaN as default values
+            usrname = str(usrname) if usrname else np.nan
+            psswrd = str(psswrd) if psswrd else np.nan
+            req_headers = req_headers if req_headers else np.nan
+
+            return pd.DataFrame({
+                "name": [str(obj.name)],
+                "display_name": [str(obj.display_name)],
+                "timeout": [int(obj.timeout.seconds)],
+                "disabled": [bool(obj.disabled)],
+                "service_type": [service_type], "uri": [str(web_service.uri)],
+                "username": [usrname], "password": [psswrd],
+                "request_headers": [req_headers],
+            })
+
+
+        def _process_from_df_create_basic(self, df: pd.DataFrame):
+            """Prototype method to perform basic `create` action."""
+            disp_name = self._is_df_has_single_display_name(df)
+            uri = self._get_unique_value_of_a_column(df, "uri")
+
+            self._outer_self.create_new_webhook(
+                display_name=disp_name)
+            self._outer_self.add_web_service(uri=uri)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_create_advanced(self, df: pd.DataFrame):
+            """Prototype method to perform advanced `create` action."""
+            disp_name = self._is_df_has_single_display_name(df)
+            timeout = int(self._get_unique_value_of_a_column(df, "timeout"))
+            disabled = bool(self._get_unique_value_of_a_column(df, "disabled"))
+            service_type = self._get_unique_value_of_a_column(
+                df, "service_type")
+            uri = self._get_unique_value_of_a_column(df, "uri")
+            username = self._get_unique_value_of_a_column(df, "username")
+            password = self._get_unique_value_of_a_column(df, "password")
+            request_headers = self._get_unique_value_of_a_column(
+                df, "request_headers")
+
+            if service_type == "Generic Web Service":
+                service_type = None
+
+            else:
+                req_header_list = [
+                    req_header_str.split(": ")
+                    for req_header_str in request_headers.split("\n")
+                ]
+                request_headers = {
+                    item[0]: item[1]
+                    for item in req_header_list
+                }
+
+            self._outer_self.create_new_webhook(
+                display_name=disp_name, timeout=timeout, disabled=disabled)
+            self._outer_self.add_web_service(
+                uri=uri, service=service_type,
+                username=username, password=password,
+                request_headers=request_headers)
+
+            return self._outer_self.proto_obj

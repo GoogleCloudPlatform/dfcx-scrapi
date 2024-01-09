@@ -15,8 +15,10 @@
 # limitations under the License.
 
 import logging
-from typing import Dict
+from typing import List, Dict, Union, Any
 
+import numpy as np
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
 from dfcx_scrapi.builders.builders_common import BuildersCommon
@@ -36,6 +38,16 @@ class FulfillmentBuilder(BuildersCommon):
 
     _proto_type = Fulfillment
     _proto_type_str = "Fulfillment"
+    _proto_attrs = [
+        "messages",
+        "webhook",
+        "return_partial_responses",
+        "tag",
+        "set_parameter_actions",
+        "conditional_cases",
+        "advanced_settings",
+        "enable_generative_fallback",
+    ]
 
 
     def __str__(self) -> str:
@@ -55,7 +67,6 @@ class FulfillmentBuilder(BuildersCommon):
             f"\n\n\nFulfillment Parameters:\n{'-'*20}\n{params_str}"
         )
 
-
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -67,7 +78,6 @@ class FulfillmentBuilder(BuildersCommon):
             f"\nreturn_partial_responses: {partial_resp}"
         )
 
-
     def _show_parameters(self) -> str:
         """String representation for the parameters presets of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -76,7 +86,6 @@ class FulfillmentBuilder(BuildersCommon):
             f"{param.parameter}: {param.value if param.value else 'null'}"
             for param in self.proto_obj.set_parameter_actions
         ])
-
 
     def _show_response_messages(self) -> str:
         """String representation of response messages in proto_obj."""
@@ -87,35 +96,7 @@ class FulfillmentBuilder(BuildersCommon):
             for i, msg in enumerate(self.proto_obj.messages)
         ])
 
-
-    def show_fulfillment(self, mode: str = "whole"):
-        """Show the proto_obj information.
-        Args:
-          mode (str):
-            Specifies what part of the fulfillment to show.
-            Options:
-              ['basic', 'parameters',
-                'messages' or 'response messages', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "basic":
-            print(self._show_basic_info())
-        elif mode == "parameters":
-            print(self._show_parameters())
-        elif mode in ["messages", "response messages"]:
-            print(self._show_response_messages())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                "['basic', 'parameters',"
-                " 'messages' or 'response messages', 'whole']"
-            )
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         webhook: str = None,
         tag: str = None,
@@ -171,30 +152,134 @@ class FulfillmentBuilder(BuildersCommon):
         # Create the fulfillment
         if overwrite or not self.proto_obj:
             self.proto_obj = Fulfillment(
-                webhook=webhook,
+                webhook=webhook, tag=tag,
                 return_partial_responses=return_partial_responses,
-                tag=tag
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
 
+    def show_fulfillment(self, mode: str = "whole"):
+        """Show the proto_obj information.
+        Args:
+          mode (str):
+            Specifies what part of the fulfillment to show.
+            Options:
+              ['basic', 'parameters',
+                'messages' or 'response messages', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode == "parameters":
+            print(self._show_parameters())
+        elif mode in ["messages", "response messages"]:
+            print(self._show_response_messages())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'parameters',"
+                " 'messages' or 'response messages', 'whole']"
+            )
+
+    def create_new_fulfillment(
+        self,
+        webhook: str = None,
+        tag: str = None,
+        return_partial_responses: bool = False,
+        overwrite: bool = False
+    ) -> Fulfillment:
+        """Create a new Fulfillment.
+
+        Args:
+          webhook (str):
+            The webhook to call. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents
+              /<Agent ID>/webhooks/<Webhook ID>``.
+          tag (str):
+            The tag is typically used by
+            the webhook service to identify which fulfillment is being
+            called, but it could be used for other purposes. This field
+            is required if ``webhook`` is specified.
+          return_partial_responses (bool):
+            Whether Dialogflow should return currently
+            queued fulfillment response messages in
+            streaming APIs. If a webhook is specified, it
+            happens before Dialogflow invokes webhook.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a Fulfillment.
+
+        Returns:
+            A Fulfillment object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            webhook=webhook, tag=tag, overwrite=overwrite,
+            return_partial_responses=return_partial_responses)
+
     def add_response_message(
         self,
-        response_message: ResponseMessage
+        response_message: ResponseMessage = None,
+        message: Union[str, List[str], Dict[str, Any]] = None,
+        response_type: str = "text",
+        mode: str = None,
     ) -> Fulfillment:
         """Add a rich message response to present to the user.
+        You can use either ResponseMessage object directly or pass
+        `message`, `response_type`, `mode` to build one on the fly.
+        Note that `response_message` has more priority and is being used
+        if other parameters have been passed.
 
         Args:
           response_message (ResponseMessage):
             The ResponseMessage to add to the Fulfillment.
             Refer to `builders.response_message.ResponseMessageBuilder`
               to build one.
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
 
         Returns:
           A Fulfillment object stored in proto_obj
         """
         self._check_proto_obj_attr_exist()
+
+        if response_message is None:
+            rmb = ResponseMessageBuilder()
+            rmb.create_new_proto_obj(
+                message=message, response_type=response_type, mode=mode)
+            response_message = rmb.proto_obj
 
         if not isinstance(response_message, ResponseMessage):
             raise ValueError(
@@ -204,7 +289,6 @@ class FulfillmentBuilder(BuildersCommon):
         self.proto_obj.messages.append(response_message)
 
         return self.proto_obj
-
 
     def add_parameter_presets(
         self,
@@ -243,7 +327,6 @@ class FulfillmentBuilder(BuildersCommon):
             raise ValueError(
                 "parameter_map should be a dictionary."
             )
-
 
     def remove_parameter_presets(
         self,
@@ -290,7 +373,6 @@ class FulfillmentBuilder(BuildersCommon):
                 "parameter_map should be a dictionary."
             )
 
-
     def has_webhook(self) -> bool:
         """Check whether the Fulfillment in proto_obj uses a Webhook.
 
@@ -303,3 +385,96 @@ class FulfillmentBuilder(BuildersCommon):
             return False
 
         return bool(self.proto_obj.webhook)
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _parse_response_message(self, obj: ResponseMessage):
+            """Parse the ResponseMessage as a string."""
+            if obj.text:
+                resp_type = "text"
+                resp_msg = obj.text.text
+            elif obj.payload:
+                resp_type = "payload"
+                proto_struct = obj.payload
+                resp_msg_helper = ", ".join([
+                    f"{k}: {v}" for k, v in proto_struct.items()
+                ])
+                resp_msg = f"[{resp_msg_helper}]"
+            elif obj.conversation_success:
+                resp_type = "conversation_success"
+                proto_struct = obj.conversation_success.metadata
+                resp_msg_helper = ", ".join([
+                    f"{k}: {v}" for k, v in proto_struct.items()
+                ])
+                resp_msg = f"[{resp_msg_helper}]"
+            elif obj.output_audio_text:
+                if obj.output_audio_text.text:
+                    resp_type = "output_audio_text - text"
+                    resp_msg = obj.output_audio_text.text
+                elif obj.output_audio_text.ssml:
+                    resp_type = "output_audio_text - ssml"
+                    resp_msg = obj.output_audio_text.ssml
+            elif obj.live_agent_handoff:
+                resp_type = "live_agent_handoff"
+                proto_struct = obj.live_agent_handoff.metadata
+                resp_msg_helper = ", ".join([
+                    f"{k}: {v}" for k, v in proto_struct.items()
+                ])
+                resp_msg = f"[{resp_msg_helper}]"
+            elif obj.play_audio:
+                resp_type = "play_audio"
+                resp_msg = obj.play_audio.audio_uri
+            elif obj.telephony_transfer_call:
+                resp_type = "telephony_transfer_call"
+                resp_msg = obj.telephony_transfer_call.phone_number
+            else:
+                return f"NOT FOUND\n{obj}"
+
+            return f"{resp_type}: {resp_msg}"
+
+        def _process_proto_to_df_basic(
+            self, obj: Fulfillment
+        ) -> pd.DataFrame:
+            """Process Fulfillment Proto to DataFrame in basic mode."""
+            has_fulfillment, has_fulfillment_webhook = False, False
+            if obj.messages or obj.conditional_cases:
+                has_fulfillment = True
+            if obj.webhook and obj.tag:
+                has_fulfillment_webhook = True
+
+            return pd.DataFrame({
+                "has_fulfillment": [bool(has_fulfillment)],
+                "has_fulfillment_webhook": [bool(has_fulfillment_webhook)],
+            })
+
+        def _process_proto_to_df_advanced(
+            self, obj: Fulfillment
+        ) -> pd.DataFrame:
+            """Process Fulfillment Proto to DataFrame in advanced mode."""
+            messages = "\n".join([
+                self._parse_response_message(msg)
+                for msg in obj.messages
+            ])
+            params = "\n".join([
+                f"{param.parameter}: {param.value if param.value else 'null'}"
+                for param in obj.set_parameter_actions
+            ])
+            # TODO: Human readable way for conditional_cases
+            cond_cases = obj.conditional_cases
+            partial_resp = obj.return_partial_responses
+
+            # Make NaN as default values
+            messages = messages if messages else np.nan
+            params = params if params else np.nan
+            cond_cases = cond_cases if cond_cases else np.nan
+            wbhk = str(obj.webhook) if obj.webhook else np.nan
+            tag = str(obj.tag) if obj.tag else np.nan
+
+            return pd.DataFrame({
+                "messages": [messages], "preset_parameters": [params],
+                "conditional_cases": [cond_cases],
+                "webhook": [wbhk], "webhook_tag": [tag],
+                "return_partial_responses": [bool(partial_resp)],
+            })

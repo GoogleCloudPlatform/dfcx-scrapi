@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import List, Dict, Union
 
+import numpy as np
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Intent
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 
@@ -38,6 +40,16 @@ class IntentBuilder(BuildersCommon):
 
     _proto_type = Intent
     _proto_type_str = "Intent"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "training_phrases",
+        "parameters",
+        "priority",
+        "is_fallback",
+        "labels",
+        "description",
+    ]
 
 
     def __str__(self) -> str:
@@ -47,7 +59,6 @@ class IntentBuilder(BuildersCommon):
         return (f"{self._show_basic_info()}"
             f"\n\n{self._show_parameters()}"
             f"\n\n{self._show_training_phrases()}")
-
 
     def _include_spaces_to_phrase(self, phrase: List[str], annots: List[str]):
         """Internal method to add spaces to the training phrase list and
@@ -90,7 +101,6 @@ class IntentBuilder(BuildersCommon):
                 del phrase[i+1]
                 del annots[i+1]
 
-
     def _label_constraints_check(self, key: str, value: str):
         """Check constraints for the label's key and value
         and raise an error if needed.
@@ -101,8 +111,8 @@ class IntentBuilder(BuildersCommon):
           value (str):
             Label's value.
         """
+        # TODO(miladt): Add International characteres to allowed_chars
         allowed_chars = ascii_lowercase + digits + "-_"
-        # TODO Add International characteres to allowed_chars
         allowed_char_error_msg = (
             "Key and Value can only contain lowercase letters,"
             " numeric characters, underscores and dashes."
@@ -128,7 +138,6 @@ class IntentBuilder(BuildersCommon):
             if s not in allowed_chars:
                 raise ValueError(allowed_char_error_msg)
 
-
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -143,7 +152,6 @@ class IntentBuilder(BuildersCommon):
             f"\nis_fallback: {self.proto_obj.is_fallback}"
             f"\nlabels: {labels}")
 
-
     def _show_parameters(self) -> str:
         """String representation for the parameters of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -155,7 +163,6 @@ class IntentBuilder(BuildersCommon):
             f"\n\tredact: {bool(param.redact)}")
             for param in self.proto_obj.parameters
         ])
-
 
     def _show_training_phrases(self, repeat_count: int = None) -> str:
         """String representation for the training phrases of proto_obj."""
@@ -179,93 +186,7 @@ class IntentBuilder(BuildersCommon):
 
         return "\n".join(phrases)
 
-
-    def show_intent(
-        self, mode: str = "whole", repeat_count: int = None
-    ) -> None:
-        """Show the proto_obj information.
-
-        Args:
-          mode (str):
-            Specifies what part of the intent to show.
-              Options:
-              ['basic', 'parameters', 'phrases' or 'training phrases', 'whole']
-          repeat_count (int):
-            Indicates how many times the training phrases
-            was added to the intent.
-        """
-        self._check_proto_obj_attr_exist()
-
-        self.parameter_checking()
-
-        if mode == "basic":
-            print(self._show_basic_info())
-        elif mode == "parameters":
-            print(self._show_parameters())
-        elif mode in ["phrases", "training phrases"]:
-            print(self._show_training_phrases(repeat_count=repeat_count))
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                " ['basic', 'parameters',"
-                " 'phrases', 'training phrases', 'whole']"
-            )
-
-
-    def show_stats(self):
-        """Provide some stats about the intent."""
-        self._check_proto_obj_attr_exist()
-
-        stats_instance = IntentStats(self.proto_obj)
-        stats_instance.generate_stats()
-
-
-    def parameter_checking(self, raise_error: bool = False) -> bool:
-        """Check if the annotated parameters exist
-        in the Parameter attribute of proto_obj.
-
-        Args:
-          raise_error (bool):
-            A flag to whether raise an error. If False, it will log a warning.
-
-        Returns:
-          True if annotated parameters are the same as parameters in proto_obj
-        """
-        self._check_proto_obj_attr_exist()
-
-        tp_params_set = set()
-        for tp in self.proto_obj.training_phrases:
-            for part in tp.parts:
-                tp_params_set.add(part.parameter_id)
-        # Remove the empty string for unannotated parts
-        try:
-            tp_params_set.remove("")
-        except KeyError:
-            pass
-
-        # Get the parameters from proto_obj
-        parameters_set = {param.id for param in self.proto_obj.parameters}
-
-        # Check for not existing annotated parameters
-        return_flag = True
-        for tp_param in tp_params_set:
-            if tp_param not in parameters_set:
-                return_flag = False
-                msg = (
-                    f"parameter_id `{tp_param}` does not exist in parameters."
-                    "\nPlease add it using add_parameter method to continue."
-                )
-                if raise_error:
-                    raise UserWarning(msg)
-                else:
-                    logging.warning(msg)
-
-        return bool(return_flag)
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         display_name: str,
         priority: int = 500000,
@@ -322,9 +243,141 @@ class IntentBuilder(BuildersCommon):
                 is_fallback=is_fallback,
                 description=description
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
+
+    def show_intent(
+        self, mode: str = "whole", repeat_count: int = None
+    ) -> None:
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the intent to show.
+              Options:
+              ['basic', 'parameters', 'phrases' or 'training phrases', 'whole']
+          repeat_count (int):
+            Indicates how many times the training phrases
+            was added to the intent.
+        """
+        self._check_proto_obj_attr_exist()
+
+        self.parameter_checking()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode == "parameters":
+            print(self._show_parameters())
+        elif mode in ["phrases", "training phrases"]:
+            print(self._show_training_phrases(repeat_count=repeat_count))
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                " ['basic', 'parameters',"
+                " 'phrases', 'training phrases', 'whole']"
+            )
+
+    def show_stats(self):
+        """Provide some stats about the intent."""
+        self._check_proto_obj_attr_exist()
+
+        stats_instance = IntentStats(self.proto_obj)
+        stats_instance.generate_stats()
+
+    def parameter_checking(self, raise_error: bool = False) -> bool:
+        """Check if the annotated parameters exist
+        in the Parameter attribute of proto_obj.
+
+        Args:
+          raise_error (bool):
+            A flag to whether raise an error. If False, it will log a warning.
+
+        Returns:
+          True if annotated parameters are the same as parameters in proto_obj
+        """
+        self._check_proto_obj_attr_exist()
+
+        tp_params_set = set()
+        for tp in self.proto_obj.training_phrases:
+            for part in tp.parts:
+                tp_params_set.add(part.parameter_id)
+        # Remove the empty string for unannotated parts
+        try:
+            tp_params_set.remove("")
+        except KeyError:
+            pass
+
+        # Get the parameters from proto_obj
+        parameters_set = {param.id for param in self.proto_obj.parameters}
+
+        # Check for not existing annotated parameters
+        return_flag = True
+        for tp_param in tp_params_set:
+            if tp_param not in parameters_set:
+                return_flag = False
+                msg = (
+                    f"parameter_id `{tp_param}` does not exist in parameters."
+                    "\nPlease add it using add_parameter method to continue."
+                )
+                if raise_error:
+                    raise UserWarning(msg)
+                else:
+                    logging.warning(msg)
+
+        return bool(return_flag)
+
+    def create_new_intent(
+        self,
+        display_name: str,
+        priority: int = 500000,
+        is_fallback: bool = False,
+        description: str = None,
+        overwrite: bool = False,
+    ) -> Intent:
+        """Create a new Intent.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the
+            intent, unique within the agent.
+          priority (int):
+            The priority of this intent. Higher numbers represent higher
+            priorities.
+            -  If the supplied value is unspecified or 0, the service
+            translates the value to 500,000, which corresponds to the
+            ``Normal`` priority in the console.
+            -  If the supplied value is negative, the intent is ignored
+            in runtime detect intent requests.
+          is_fallback (bool):
+            Indicates whether this is a fallback intent.
+            Currently only default fallback intent is
+            allowed in the agent, which is added upon agent
+            creation.
+            Adding training phrases to fallback intent is
+            useful in the case of requests that are
+            mistakenly matched, since training phrases
+            assigned to fallback intents act as negative
+            examples that triggers no-match event.
+          description (str):
+            Human readable description for better
+            understanding an intent like its scope, content,
+            result etc. Maximum character limit: 140
+            characters.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains an Intent.
+
+        Returns:
+          An Intent object stored in proto_obj
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, priority=priority,
+            is_fallback=is_fallback, description=description,
+            overwrite=overwrite)
 
     def add_training_phrase(
         self,
@@ -430,7 +483,6 @@ class IntentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def add_parameter(
         self,
         parameter_id: str,
@@ -482,7 +534,6 @@ class IntentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def add_label(
         self, label: Union[Dict[str, str], str]
     ) -> Intent:
@@ -523,7 +574,6 @@ class IntentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def remove_training_phrase(self, phrase: str) -> Intent:
         """Remove a training phrase from proto_obj.
 
@@ -548,7 +598,6 @@ class IntentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def remove_parameter(self, parameter_id: str) -> Intent:
         """Remove a parameter from proto_obj.
 
@@ -570,7 +619,6 @@ class IntentBuilder(BuildersCommon):
                 break
 
         return self.proto_obj
-
 
     def remove_label(self, label: Union[Dict[str, str], str]) -> Intent:
         """Remove a single or multiple labels from proto_obj.
@@ -604,6 +652,293 @@ class IntentBuilder(BuildersCommon):
             )
 
         return self.proto_obj
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        @staticmethod
+        def _parse_phrase_for_parameter_info(
+            intent_dict: Dict[str,str],
+            params_dict: Dict[str,str],
+            part: Intent.TrainingPhrase.Part,
+            part_count: int
+        ):
+            """Parse through Phrase part and update Dict with Parameter info."""
+            intent_dict.update({
+                "text": part.text,
+                "text_idx": part_count
+                })
+
+            if part.parameter_id:
+                intent_dict.update(params_dict[part.parameter_id])
+            elif intent_dict.get("entity_type"):
+                # Remove existing parameter_id if exist
+                key_to_remove = [
+                    "parameter_id", "entity_type", "is_list", "redact",
+                ]
+
+                for key in key_to_remove:
+                    intent_dict.pop(key, None)
+
+            return intent_dict
+
+        def _process_proto_to_df_basic(self, obj: Intent):
+            """Process Intent Proto in basic mode."""
+            cols = ["display_name", "training_phrase"]
+            intent_df = pd.DataFrame(columns=cols)
+
+            intent_dict = {"display_name": str(obj.display_name)}
+
+            if not obj.training_phrases:
+                intent_df = self._concat_dict_to_df(intent_df, intent_dict)
+
+            else:
+                for phrase in obj.training_phrases:
+                    parts_list = [part.text for part in phrase.parts]
+                    intent_dict.update({"training_phrase": "".join(parts_list)})
+
+                    intent_df = self._concat_dict_to_df(intent_df, intent_dict)
+
+            return intent_df
+
+        def _process_proto_to_df_advanced(self, obj: Intent):
+            """Process Intent Proto in advanced mode."""
+            cols = [
+                "name", "display_name", "description", "priority",
+                "is_fallback", "labels", "id", "repeat_count",
+                "training_phrase", "training_phrase_idx", "text", "text_idx",
+                "parameter_id", "entity_type", "is_list", "redact",
+            ]
+
+            intent_df = pd.DataFrame(columns=cols)
+
+            desc = str(obj.description) if str(obj.description) else np.nan
+            intent_dict = {
+                "name": str(obj.name),
+                "display_name": str(obj.display_name),
+                "description": desc,
+                "priority": int(obj.priority),
+                "is_fallback": bool(obj.is_fallback),
+            }
+
+            # labels
+            label = ",".join([
+                key if key == val else f"{key}:{val}"
+                for key, val in obj.labels.items()
+            ])
+            intent_dict["labels"] = label if label else np.nan
+            # parameters
+            params_dict = {
+                str(param.id): {
+                    "parameter_id": str(param.id),
+                    "entity_type": str(param.entity_type),
+                    "is_list": bool(param.is_list),
+                    "redact": bool(param.redact),
+                }
+                for param in obj.parameters
+            }
+            # training phrases
+            if not obj.training_phrases:
+                intent_df = self._concat_dict_to_df(intent_df, intent_dict)
+
+            else:
+                for tp_count, phrase in enumerate(obj.training_phrases):
+                    whole_phrase = "".join([part.text for part in phrase.parts])
+                    phrase_id = str(phrase.id) if str(phrase.id) else np.nan
+                    intent_dict.update({
+                        "id": phrase_id,
+                        "repeat_count": int(phrase.repeat_count),
+                        "training_phrase": whole_phrase,
+                        "training_phrase_idx": tp_count,
+                    })
+                    for part_count, part in enumerate(phrase.parts):
+                        intent_dict = self._parse_phrase_for_parameter_info(
+                            intent_dict, params_dict, part, part_count
+                        )
+                        intent_df = self._concat_dict_to_df(
+                            intent_df, intent_dict
+                        )
+
+            return intent_df
+
+
+        def _add_parameter_from_df_advanced(
+            self, df: pd.DataFrame, overwrite: bool = False
+        ):
+            """Helper method to add parameters for annotation to an Intent
+            from df in advanced mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+              overwrite (bool):
+                Whether to overwrite the existing parameters with
+                the ones in the `df`.
+            """
+            param_cols = ["parameter_id", "entity_type", "is_list", "redact"]
+            params_df = df[df["parameter_id"].notnull()][param_cols]
+            for param_id in params_df["parameter_id"].unique():
+                # Create a DataFrame for each parameter_id and extract its info
+                tmp_df = params_df[params_df["parameter_id"] == param_id]
+
+                entity_type = self._get_unique_value_of_a_column(
+                    tmp_df, "entity_type")
+                is_list = self._get_unique_value_of_a_column(tmp_df, "is_list")
+                redact = self._get_unique_value_of_a_column(tmp_df, "redact")
+                if not overwrite:
+                    # skip if the parameter already exists in the proto_obj
+                    proto_params = self._outer_self.proto_obj.parameters
+                    if param_id in [pp.id for pp in proto_params]:
+                        continue
+                self._outer_self.add_parameter(
+                    parameter_id=param_id, entity_type=entity_type,
+                    is_list=is_list, redact=redact,
+                )
+
+        def _add_training_phrase_from_df_advanced(self, df: pd.DataFrame):
+            """Helper method to add training phrases to an Intent
+            from df in advanced mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+            """
+            group_by_df = df.groupby(by=["training_phrase_idx"])
+
+            phrase_series = group_by_df["text"].apply(list)
+            annotation_series = group_by_df["parameter_id"].apply(list)
+            annotation_series = annotation_series.map(
+                lambda val: ["" if pd.isna(item) else item for item in val]
+            )
+
+            for phrase, annotations in zip(phrase_series, annotation_series):
+                # TODO(miladt): Add repeat_count
+                self._outer_self.add_training_phrase(
+                    phrase=phrase, annotations=annotations, include_spaces=False
+                )
+
+        def _process_from_df_create_basic(self, df: pd.DataFrame) -> Intent:
+            """Create a new intent from `df` and store it in the proto_obj
+            in "basic" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
+            disp_name = self._is_df_has_single_display_name(df)
+
+            self._outer_self.create_new_intent(display_name=disp_name)
+            for phrase in df["training_phrase"]:
+                if isinstance(phrase, str):
+                    self._outer_self.add_training_phrase(phrase)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_create_advanced(self, df: pd.DataFrame) -> Intent:
+            """Create a new intent from `df` and store it in the proto_obj
+            in "advanced" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
+            disp_name = self._is_df_has_single_display_name(df)
+            priority = int(self._get_unique_value_of_a_column(df, "priority"))
+            is_fallback = bool(self._get_unique_value_of_a_column(
+                df, "is_fallback"))
+            description = self._get_unique_value_of_a_column(df, "description")
+
+            self._outer_self.create_new_intent(
+                display_name=disp_name, priority=priority,
+                is_fallback=is_fallback, description=description
+            )
+            # TODO(miladt): Add Labels
+            self._add_parameter_from_df_advanced(df, overwrite=True)
+            self._add_training_phrase_from_df_advanced(df)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_append_basic(self, df: pd.DataFrame) -> Intent:
+            """Append training phrases that are present in `df`
+            to the proto_obj in "basic" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
+            self._is_df_display_name_match_with_proto(df)
+
+            for phrase in df["training_phrase"]:
+                if isinstance(phrase, str):
+                    self._outer_self.add_training_phrase(phrase)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_append_advanced(self, df: pd.DataFrame) -> Intent:
+            """Append training phrases that are present in `df`
+            to the proto_obj in "advanced" mode.
+
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
+            self._is_df_display_name_match_with_proto(df)
+
+            self._add_parameter_from_df_advanced(df, overwrite=False)
+            self._add_training_phrase_from_df_advanced(df)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_delete_basic(self, df: pd.DataFrame) -> Intent:
+            """Delete training phrases that are present in `df`
+            from the proto_obj in "basic" mode.
+            
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
+            self._is_df_display_name_match_with_proto(df)
+
+            for phrase in df["training_phrase"]:
+                self._outer_self.remove_training_phrase(phrase)
+
+            return self._outer_self.proto_obj
+
+        def _process_from_df_delete_advanced(self, df: pd.DataFrame) -> Intent:
+            """Delete training phrases that are present in `df`
+            from the proto_obj in "advanced" mode.
+            
+            Args:
+              df (pd.DataFrame):
+                The input DataFrame to read the data from.
+
+            Returns:
+              An Intent object stored in proto_obj
+            """
+            self._is_df_display_name_match_with_proto(df)
+
+            group_by_df = df.groupby(by=["training_phrase_idx"])
+            phrase_series = group_by_df["text"].apply("".join)
+            for phrase in phrase_series:
+                self._outer_self.remove_training_phrase(phrase)
+
+            return self._outer_self.proto_obj
 
 
 
@@ -643,9 +978,13 @@ class IntentStats():
         self.uniques_count = self.repeat_count_dict[1]
         self.non_uniques_count = self.phrases_count - self.uniques_count
 
-        annot_pct = 100 * (self.annotated_count / self.phrases_count)
-        uniq_pct = 100 * (self.uniques_count / self.phrases_count)
-        non_uniq_pct = 100 * (self.non_uniques_count / self.phrases_count)
+        if self.phrases_count == 0:
+            annot_pct, uniq_pct, non_uniq_pct = 0, 0, 0
+        else:
+            annot_pct = 100 * (self.annotated_count / self.phrases_count)
+            uniq_pct = 100 * (self.uniques_count / self.phrases_count)
+            non_uniq_pct = 100 * (self.non_uniques_count / self.phrases_count)
+
         self.annotated_pct = round(annot_pct, 1)
         self.uniques_pct = round(uniq_pct, 1)
         self.non_uniques_pct = round(non_uniq_pct, 1)

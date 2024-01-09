@@ -15,10 +15,14 @@
 # limitations under the License.
 
 import logging
+from typing import List, Dict, Union, Any
 
+import numpy as np
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
 
@@ -35,6 +39,15 @@ class TransitionRouteBuilder(BuildersCommon):
 
     _proto_type = TransitionRoute
     _proto_type_str = "TransitionRoute"
+    _proto_attrs = [
+        "name",
+        "description",
+        "intent",
+        "condition",
+        "trigger_fulfillment",
+        "target_page",
+        "target_flow",
+    ]
 
 
     def __str__(self) -> str:
@@ -51,7 +64,6 @@ class TransitionRouteBuilder(BuildersCommon):
             f"\nFulfillment:\n\n{fulfillment_str}"
         )
 
-
     def _show_transition_criteria(self) -> str:
         """String representation for the transition criteria of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -66,7 +78,6 @@ class TransitionRouteBuilder(BuildersCommon):
             f"\n\tIntent: {intent_str}"
             f"\n\tCondition: {cond_str}"
         )
-
 
     def _show_target(self) -> str:
         """String representation for the target of proto_obj."""
@@ -83,7 +94,6 @@ class TransitionRouteBuilder(BuildersCommon):
             target_id = "None"
         return f"Target: {target_type}\nTarget ID: {target_id}"
 
-
     def _show_fulfillment(self) -> str:
         """String representation for the fulfillment of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -96,35 +106,7 @@ class TransitionRouteBuilder(BuildersCommon):
 
         return fulfillment_str
 
-
-    def show_transition_route(self, mode: str = "whole"):
-        """Show the proto_obj information.
-        Args:
-          mode (str):
-            Specifies what part of the TransitionRoute to show.
-            Options:
-              ['target', 'fulfillment',
-               'transition criteria' or 'conditions', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "target":
-            print(self._show_target())
-        elif mode in ["transition criteria", "conditions"]:
-            print(self._show_transition_criteria())
-        elif mode == "fulfillment":
-            print(self._show_fulfillment())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                " ['target', 'fulfillment',"
-                " 'transition criteria' or 'conditions', 'whole']"
-            )
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         intent: str = None,
         condition: str = None,
@@ -220,10 +202,217 @@ class TransitionRouteBuilder(BuildersCommon):
                 target_page=target_page,
                 target_flow=target_flow
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
 
+    def create_new_transition_route(
+        self,
+        intent: str = None,
+        condition: str = None,
+        trigger_fulfillment: Fulfillment = None,
+        target_page: str = None,
+        target_flow: str = None,
+        overwrite: bool = False
+    ) -> TransitionRoute:
+        """Create a new TransitionRoute.
+
+        Args:
+          intent (str):
+            Indicates that the transition can only happen when the given
+            intent is matched.
+            Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/intents/<Intent ID>``.
+            At least one of ``intent`` or ``condition`` must be specified.
+            When both ``intent`` and ``condition`` are specified,
+            the transition can only happen when both are fulfilled.
+          condition (str):
+            The condition to evaluate.
+            See the conditions reference:
+            https://cloud.google.com/dialogflow/cx/docs/reference/condition
+            At least one of ``intent`` or ``condition`` must be specified.
+            When both ``intent`` and ``condition`` are specified,
+            the transition can only happen when both are fulfilled.
+          trigger_fulfillment (Fulfillment):
+            The fulfillment to call when the condition is satisfied.
+            When ``trigger_fulfillment`` and ``target`` are defined,
+            ``trigger_fulfillment`` is executed first.
+          target_page (str):
+            The target page to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          target_flow (str):
+            The target flow to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a TransitionRoute.
+
+        Returns:
+          A TransitionRoute object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            intent=intent, condition=condition,
+            trigger_fulfillment=trigger_fulfillment,
+            target_page=target_page, target_flow=target_flow,
+            overwrite=overwrite)
+
+    def show_transition_route(self, mode: str = "whole"):
+        """Show the proto_obj information.
+        Args:
+          mode (str):
+            Specifies what part of the TransitionRoute to show.
+            Options:
+              ['target', 'fulfillment',
+               'transition criteria' or 'conditions', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "target":
+            print(self._show_target())
+        elif mode in ["transition criteria", "conditions"]:
+            print(self._show_transition_criteria())
+        elif mode == "fulfillment":
+            print(self._show_fulfillment())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                " ['target', 'fulfillment',"
+                " 'transition criteria' or 'conditions', 'whole']"
+            )
+
+    def set_fulfillment(
+        self,
+        message: Union[str, List[str], Dict[str, Any]] = None,
+        response_type: str = "text",
+        mode: str = None,
+        webhook: str = None,
+        tag: str = None,
+        return_partial_responses: bool = False,
+        parameter_map: Dict[str, str] = None,
+    ):
+        """Set the Fulfillment for the proto_obj.
+        This mehotd overwrites the existing Fulfillment.
+
+        Args:
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
+          webhook (str):
+            The webhook to call. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents
+              /<Agent ID>/webhooks/<Webhook ID>``.
+          tag (str):
+            The tag is typically used by
+            the webhook service to identify which fulfillment is being
+            called, but it could be used for other purposes. This field
+            is required if ``webhook`` is specified.
+          return_partial_responses (bool):
+            Whether Dialogflow should return currently
+            queued fulfillment response messages in
+            streaming APIs. If a webhook is specified, it
+            happens before Dialogflow invokes webhook.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
+
+        Returns:
+          A TransitionRoute object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        fb = FulfillmentBuilder()
+        fb.create_new_proto_obj(
+            webhook=webhook, tag=tag,
+            return_partial_responses=return_partial_responses)
+        fb.add_response_message(
+            message=message, response_type=response_type, mode=mode)
+        if not parameter_map is None:
+            fb.add_parameter_presets(parameter_map)
+
+        self.proto_obj.trigger_fulfillment = fb.proto_obj
+
+        return self.proto_obj
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def proto_to_dataframe(
+            self, obj: TransitionRoute, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a TransitionRoute protobuf object to pandas Dataframe.
+
+            Args:
+              obj (TransitionRoute):
+                TransitionRoute protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode not in ["basic", "advanced"]:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+            fb = FulfillmentBuilder(obj.trigger_fulfillment)
+            fulfillment_df = fb.to_dataframe(mode)
+
+            if obj.target_page:
+                target_type, target_id = "page", str(obj.target_page)
+            elif obj.target_flow:
+                target_type, target_id = "flow", str(obj.target_flow)
+            else:
+                target_type, target_id = np.nan, np.nan
+
+            intent = str(obj.intent) if obj.intent else np.nan
+            condition = str(obj.condition) if obj.condition else np.nan
+            route_df = pd.DataFrame({
+                "intent": [intent],
+                "condition": [condition],
+                "transition_type": [target_type],
+                "transition_to": [target_id],
+            })
+
+            return pd.concat([route_df, fulfillment_df], axis=1)
 
 
 class EventHandlerBuilder(BuildersCommon):
@@ -231,6 +420,13 @@ class EventHandlerBuilder(BuildersCommon):
 
     _proto_type = EventHandler
     _proto_type_str = "EventHandler"
+    _proto_attrs = [
+        "name",
+        "event",
+        "trigger_fulfillment",
+        "target_page",
+        "target_flow",
+    ]
 
 
     def __str__(self) -> str:
@@ -244,7 +440,6 @@ class EventHandlerBuilder(BuildersCommon):
             f"{event_and_target_str}"
             f"\nFulfillment:\n\n{fulfillment_str}"
         )
-
 
     def _show_event_and_target(self) -> str:
         """String representation for the target of proto_obj."""
@@ -268,7 +463,6 @@ class EventHandlerBuilder(BuildersCommon):
             f"\nTarget ID: {target_id}"
         )
 
-
     def _show_fulfillment(self) -> str:
         """String representation for the fulfillment of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -281,31 +475,7 @@ class EventHandlerBuilder(BuildersCommon):
 
         return fulfillment_str
 
-
-    def show_event_handler(self, mode: str = "whole"):
-        """Show the proto_obj information.
-        Args:
-          mode (str):
-            Specifies what part of the EventHandler to show.
-            Options:
-              ['basic' or 'target' or 'event', 'fulfillment', 'whole']
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode in ["basic", "target", "event"]:
-            print(self._show_event_and_target())
-        elif mode == "fulfillment":
-            print(self._show_fulfillment())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                " ['basic' or 'target' or 'event', 'fulfillment', 'whole']"
-            )
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         event: str,
         trigger_fulfillment: Fulfillment = None,
@@ -374,5 +544,193 @@ class EventHandlerBuilder(BuildersCommon):
                 target_page=target_page,
                 target_flow=target_flow
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
+
+
+    def create_new_event_handler(
+        self,
+        event: str,
+        trigger_fulfillment: Fulfillment = None,
+        target_page: str = None,
+        target_flow: str = None,
+        overwrite: bool = False
+    ) -> EventHandler:
+        """Create a new EventHandler.
+
+        Args:
+          event (str):
+            Required. The name of the event to handle.
+          trigger_fulfillment (Fulfillment):
+            The fulfillment to call when the event occurs.
+            Handling webhook errors with a fulfillment enabled with webhook
+            could cause infinite loop. It is invalid to specify
+            such fulfillment for a handler handling webhooks.
+          target_page (str):
+            The target page to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          target_flow (str):
+            The target flow to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains a EventHandler.
+
+        Returns:
+          An EventHandler object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            event=event, trigger_fulfillment=trigger_fulfillment,
+            target_page=target_page, target_flow=target_flow,
+            overwrite=overwrite)
+
+    def show_event_handler(self, mode: str = "whole"):
+        """Show the proto_obj information.
+        Args:
+          mode (str):
+            Specifies what part of the EventHandler to show.
+            Options:
+              ['basic' or 'target' or 'event', 'fulfillment', 'whole']
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode in ["basic", "target", "event"]:
+            print(self._show_event_and_target())
+        elif mode == "fulfillment":
+            print(self._show_fulfillment())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                " ['basic' or 'target' or 'event', 'fulfillment', 'whole']"
+            )
+
+    def set_fulfillment(
+        self,
+        message: Union[str, List[str], Dict[str, Any]] = None,
+        response_type: str = "text",
+        mode: str = None,
+        webhook: str = None,
+        tag: str = None,
+        return_partial_responses: bool = False,
+        parameter_map: Dict[str, str] = None,
+    ):
+        """Set the Fulfillment for the proto_obj.
+        This mehotd overwrites the existing Fulfillment.
+
+        Args:
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
+          webhook (str):
+            The webhook to call. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents
+              /<Agent ID>/webhooks/<Webhook ID>``.
+          tag (str):
+            The tag is typically used by
+            the webhook service to identify which fulfillment is being
+            called, but it could be used for other purposes. This field
+            is required if ``webhook`` is specified.
+          return_partial_responses (bool):
+            Whether Dialogflow should return currently
+            queued fulfillment response messages in
+            streaming APIs. If a webhook is specified, it
+            happens before Dialogflow invokes webhook.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
+
+        Returns:
+          A TransitionRoute object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        fb = FulfillmentBuilder()
+        fb.create_new_proto_obj(
+            webhook=webhook, tag=tag,
+            return_partial_responses=return_partial_responses)
+        fb.add_response_message(
+            message=message, response_type=response_type, mode=mode)
+        if not parameter_map is None:
+            fb.add_parameter_presets(parameter_map)
+
+        self.proto_obj.trigger_fulfillment = fb.proto_obj
+
+        return self.proto_obj
+
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def proto_to_dataframe(
+            self, obj: EventHandler, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a EventHandler protobuf object to pandas Dataframe.
+
+            Args:
+              obj (EventHandler):
+                EventHandler protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode not in ["basic", "advanced"]:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+            fb = FulfillmentBuilder(obj.trigger_fulfillment)
+            fulfillment_df = fb.to_dataframe(mode)
+
+            if obj.target_page:
+                target_type, target_id = "page", str(obj.target_page)
+            elif obj.target_flow:
+                target_type, target_id = "flow", str(obj.target_flow)
+            else:
+                target_type, target_id = np.nan, np.nan
+
+            event = str(obj.event) if obj.event else np.nan
+            event_handler_df = pd.DataFrame({
+                "event": [event],
+                "transition_type": [target_type],
+                "transition_to": [target_id],
+            })
+
+            return pd.concat([event_handler_df, fulfillment_df], axis=1)

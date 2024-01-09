@@ -35,6 +35,19 @@ class ResponseMessageBuilder(BuildersCommon):
 
     _proto_type = ResponseMessage
     _proto_type_str = "ResponseMessage"
+    _proto_attrs = [
+        "text",
+        "payload",
+        "conversation_success",
+        "output_audio_text",
+        "live_agent_handoff",
+        "end_interaction",
+        "play_audio",
+        "mixed_audio",
+        "telephony_transfer_call",
+        "knowledge_info_card",
+        "channel",
+    ]
 
 
     def __str__(self) -> str:
@@ -80,17 +93,201 @@ class ResponseMessageBuilder(BuildersCommon):
             f"Response Type: {resp_type}\nMessage:\n\t{resp_msg}"
         )
 
+    def _create_text_response(
+        self, message: Union[str, List[str]]
+    ) -> ResponseMessage:
+        """Create a text ResponseMessage.
 
-    def show_response_message(self):
-        """Show the proto_obj information."""
-        self._check_proto_obj_attr_exist()
-        print(self)
+        Args:
+          message (str | List[str]):
+            The output message. A single message as a string or
+            multiple messages as a list of strings
 
+        Returns:
+          A ResponseMessage object
+        """
+        if isinstance(message, str):
+            message = [message]
+        elif isinstance(message, list):
+            if not all((isinstance(msg, str) for msg in message)):
+                raise ValueError(
+                    "Only strings are allowed in message list for `text`."
+                )
+        else:
+            raise ValueError(
+                "For 'text' message should be"
+                " either a string or a list of strings."
+            )
 
-    def create_new_proto_obj(
+        return ResponseMessage(text=ResponseMessage.Text(text=message))
+
+    def _create_payload_response(
+        self, message: Dict[str, Any]
+    ) -> ResponseMessage:
+        """Create a payload ResponseMessage.
+
+        Args:
+          message (Dict[str, Any]):
+            The output message. Any dictionary which its keys are string.
+            Dialogflow doesn't impose any structure on the values.
+
+        Returns:
+          A ResponseMessage object
+        """
+        if not(
+            isinstance(message, dict)
+            and all((isinstance(key, str) for key in message.keys()))
+        ):
+            raise ValueError(
+                "For `payload`, message should be"
+                " a dictionary and its keys should be strings."
+            )
+
+        proto_struct = struct_pb2.Struct()
+        proto_struct.update(message)
+
+        return ResponseMessage(payload=proto_struct)
+
+    def _create_conversation_success_response(
+        self, message: Dict[str, Any]
+    ) -> ResponseMessage:
+        """Create a conversation_success ResponseMessage.
+
+        Args:
+          message (Dict[str, Any]):
+            The output message. Any dictionary which its keys are string.
+            Dialogflow doesn't impose any structure on the values.
+
+        Returns:
+          A ResponseMessage object
+        """
+        proto_struct = struct_pb2.Struct()
+        proto_struct.update(message)
+        convo_success = ResponseMessage.ConversationSuccess(
+            metadata=proto_struct
+        )
+
+        return ResponseMessage(conversation_success=convo_success)
+
+    def _create_output_audio_text_response(
+        self, message: str, mode: str
+    ) -> ResponseMessage:
+        """Create a output_audio_text ResponseMessage.
+
+        Args:
+          message (str):
+            The output message. A text or ssml response as a string.
+          mode (str):
+            It should be one of the following: 'text', 'ssml'
+
+        Returns:
+          A ResponseMessage object
+        """
+        if not isinstance(message, str):
+            raise ValueError(
+                "For 'output_audio_text', message should be a string."
+            )
+
+        if mode == "text":
+            output_audio_text = ResponseMessage.OutputAudioText(
+                text=message
+            )
+        elif mode == "ssml":
+            output_audio_text = ResponseMessage.OutputAudioText(
+                ssml=message
+            )
+        else:
+            raise ValueError(
+                "mode should be either 'text' or 'ssml'"
+                " for `output_audio_text`."
+            )
+
+        return ResponseMessage(output_audio_text=output_audio_text)
+
+    def _create_live_agent_handoff_response(
+        self, message: Dict[str, Any]
+    ) -> ResponseMessage:
+        """Create a live_agent_handoff ResponseMessage.
+
+        Args:
+          message (Dict[str, Any]):
+            The output message. Any dictionary which its keys are string.
+            Dialogflow doesn't impose any structure on the values.
+
+        Returns:
+          A ResponseMessage object
+        """
+        if not(
+            isinstance(message, dict)
+            and all((isinstance(key, str) for key in message.keys()))
+        ):
+            raise ValueError(
+                "For `live_agent_handoff`, message should be"
+                " a dictionary and its keys should be strings."
+            )
+
+        proto_struct = struct_pb2.Struct()
+        proto_struct.update(message)
+        live_agent_handoff = ResponseMessage.LiveAgentHandoff(
+            metadata=proto_struct
+        )
+
+        return ResponseMessage(live_agent_handoff=live_agent_handoff)
+
+    def _create_play_audio_response(self, message: str) -> ResponseMessage:
+        """Create a play_audio ResponseMessage.
+
+        Args:
+          message (str):
+            The output message. URI of the audio clip.
+            Dialogflow does not impose any validation on this value.
+
+        Returns:
+          A ResponseMessage object
+        """
+        if not isinstance(message, str):
+            raise ValueError(
+                "For 'play_audio', message should be a valid URI string."
+            )
+
+        # TODO: Validate the URI here
+
+        return ResponseMessage(
+            play_audio=ResponseMessage.PlayAudio(audio_uri=message)
+        )
+
+    def _create_telephony_transfer_call_response(
+        self, message: str
+    ) -> ResponseMessage:
+        """Create a telephony_transfer_call ResponseMessage.
+
+        Args:
+          message (str):
+            The output message. A phone number in E.164 format as a string.
+            `<https://en.wikipedia.org/wiki/E.164>`
+
+        Returns:
+          A ResponseMessage object
+        """
+        e_164_re_pattern = r"^\+[1-9]\d{1,14}$"
+        if not (
+            isinstance(message, str)
+            and re.search(e_164_re_pattern, message)
+        ):
+            raise ValueError(
+                "For 'telephony_transfer_call',"
+                " message should be a valid E.164 format phone number."
+            )
+        transfer_call_obj = ResponseMessage.TelephonyTransferCall(
+            phone_number=message
+        )
+
+        return ResponseMessage(telephony_transfer_call=transfer_call_obj)
+
+    def _create_new_proto_obj(
         self,
-        response_type: str,
         message: Union[str, List[str], Dict[str, Any]],
+        response_type: str = "text",
         mode: str = None
     ) -> ResponseMessage:
         """Create a ResponseMessage that can be returned by a
@@ -98,11 +295,7 @@ class ResponseMessageBuilder(BuildersCommon):
         ResponseMessages are also used for output audio synthesis.
 
         Args:
-          response_type (str):
-            Type of the response message. It should be one of the following:
-            'text', 'payload', 'conversation_success', 'output_audio_text',
-            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
-          message (str | List[str] | Dict[str, str]):
+          message (str | List[str] | Dict[str, Any]):
             The output message. For each response_type
             it should be formatted like the following:
               text --> str | List[str]
@@ -125,119 +318,31 @@ class ResponseMessageBuilder(BuildersCommon):
               telephony_transfer_call --> str
                 A phone number in E.164 format as a string.
                 `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
           mode (str):
             This argument is only applicable for `output_audio_text`.
             It should be one of the following: 'text', 'ssml'
 
         Returns:
-          A ResponseMessage object
+          A ResponseMessage object stored in proto_obj
         """
         if response_type == "text":
-            if isinstance(message, str):
-                message = [message]
-            elif isinstance(message, list):
-                if not all((isinstance(msg, str) for msg in message)):
-                    raise ValueError(
-                        "Only strings are allowed in message list for `text`."
-                    )
-            else:
-                raise ValueError(
-                    "For 'text' message should be"
-                    " either a string or a list of strings."
-                )
-
-            response_message = ResponseMessage(
-                text=ResponseMessage.Text(text=message)
-            )
+            resp = self._create_text_response(message)
         elif response_type == "payload":
-            if not(
-                isinstance(message, dict)
-                and all((isinstance(key, str) for key in message.keys()))
-            ):
-                raise ValueError(
-                    "For `payload`, message should be"
-                    " a dictionary and its keys should be strings."
-                )
-
-            proto_struct = struct_pb2.Struct()
-            proto_struct.update(message)
-            response_message = ResponseMessage(payload=proto_struct)
+            resp = self._create_payload_response(message)
         elif response_type == "conversation_success":
-            proto_struct = struct_pb2.Struct()
-            proto_struct.update(message)
-            convo_success = ResponseMessage.ConversationSuccess(
-                metadata=proto_struct
-            )
-            response_message = ResponseMessage(
-                conversation_success=convo_success
-            )
+            resp = self._create_conversation_success_response(message)
         elif response_type == "output_audio_text":
-            if not isinstance(message, str):
-                raise ValueError(
-                    "For 'output_audio_text', message should be a string."
-                )
-
-            if mode == "text":
-                output_audio_text = ResponseMessage.OutputAudioText(
-                    text=message
-                )
-            elif mode == "ssml":
-                output_audio_text = ResponseMessage.OutputAudioText(
-                    ssml=message
-                )
-            else:
-                raise ValueError(
-                    "mode should be either 'text' or 'ssml'"
-                    " for `output_audio_text`."
-                )
-
-            response_message = ResponseMessage(
-                output_audio_text=output_audio_text
-            )
+            resp = self._create_output_audio_text_response(message, mode)
         elif response_type == "live_agent_handoff":
-            if not(
-                isinstance(message, dict)
-                and all((isinstance(key, str) for key in message.keys()))
-            ):
-                raise ValueError(
-                    "For `live_agent_handoff`, message should be"
-                    " a dictionary and its keys should be strings."
-                )
-
-            proto_struct = struct_pb2.Struct()
-            proto_struct.update(message)
-            live_agent_handoff = ResponseMessage.LiveAgentHandoff(
-                metadata=proto_struct
-            )
-            response_message = ResponseMessage(
-                live_agent_handoff=live_agent_handoff
-            )
+            resp = self._create_live_agent_handoff_response(message)
         elif response_type == "play_audio":
-            if not isinstance(message, str):
-                raise ValueError(
-                    "For 'play_audio', message should be a valid URI string."
-                )
-
-            # TODO: Validate the URI here
-            response_message = ResponseMessage(
-                play_audio=ResponseMessage.PlayAudio(audio_uri=message)
-            )
+            resp = self._create_play_audio_response(message)
         elif response_type == "telephony_transfer_call":
-            e_164_re_pattern = r"^\+[1-9]\d{1,14}$"
-            if not (
-                isinstance(message, str)
-                and re.search(e_164_re_pattern, message)
-            ):
-                raise ValueError(
-                    "For 'telephony_transfer_call',"
-                    " message should be a valid E.164 format phone number."
-                )
-            transfer_call_obj = ResponseMessage.TelephonyTransferCall(
-                phone_number=message
-            )
-            response_message = ResponseMessage(
-                telephony_transfer_call=transfer_call_obj
-            )
+            resp = self._create_telephony_transfer_call_response(message)
         else:
             raise ValueError(
                 "response_type should be one of the following:"
@@ -245,6 +350,61 @@ class ResponseMessageBuilder(BuildersCommon):
                 " 'output_audio_text', 'live_agent_handoff', 'play_audio',"
                 " 'telephony_transfer_call']"
             )
+        self._add_proto_attrs_to_builder_obj()
 
-        self.proto_obj = response_message
+        self.proto_obj = resp
         return self.proto_obj
+
+
+    def create_new_response_message(
+        self,
+        message: Union[str, List[str], Dict[str, Any]],
+        response_type: str = "text",
+        mode: str = None
+    ) -> ResponseMessage:
+        """Create a ResponseMessage that can be returned by a
+        conversational agent.
+        ResponseMessages are also used for output audio synthesis.
+
+        Args:
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
+
+        Returns:
+          A ResponseMessage object stored in proto_obj
+        """
+        return self._create_new_proto_obj(
+            message=message, response_type=response_type, mode=mode)
+
+    def show_response_message(self):
+        """Show the proto_obj information."""
+        self._check_proto_obj_attr_exist()
+        print(self)

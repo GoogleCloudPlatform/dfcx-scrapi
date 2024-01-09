@@ -34,6 +34,26 @@ class AgentBuilder(BuildersCommon):
 
     _proto_type = Agent
     _proto_type_str = "Agent"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "default_language_code",
+        "supported_language_codes",
+        "time_zone",
+        "description",
+        "avatar_uri",
+        "speech_to_text_settings",
+        "start_flow",
+        "security_settings",
+        "enable_stackdriver_logging",
+        "enable_spell_correction",
+        "locked",
+        "advanced_settings",
+        "git_integration_settings",
+        "text_to_speech_settings",
+        "gen_app_builder_settings",
+        "answer_feedback_settings",
+    ]
 
 
     def __str__(self) -> str:
@@ -61,14 +81,7 @@ class AgentBuilder(BuildersCommon):
             f"\nsecurity_settings: {self.proto_obj.security_settings}")
 
 
-    def show_agent_info(self):
-        """Show the proto_obj information."""
-        self._check_proto_obj_attr_exist()
-
-        print(self)
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         display_name: str,
         time_zone: str,
@@ -128,9 +141,63 @@ class AgentBuilder(BuildersCommon):
                 avatar_uri=avatar_uri,
                 locked=False,
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
+
+    def show_agent_info(self):
+        """Show the proto_obj information."""
+        self._check_proto_obj_attr_exist()
+
+        print(self)
+
+    def create_new_agent(
+        self,
+        display_name: str,
+        time_zone: str,
+        default_language_code: str = "en",
+        description: str = None,
+        avatar_uri: str = None,
+        overwrite: bool = False
+    ) -> Agent:
+        """Create a new Agent.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the
+            agent, unique within the location.
+          time_zone (str):
+            Required. The time zone of the agent from the
+            `time zone database <https://www.iana.org/time-zones>`.
+            e.g., America/New_York, Europe/Paris.
+          default_language_code (str):
+            Required. Immutable. The default language of the agent as a
+            language tag. See `Language Support
+              <https://cloud.google.com/dialogflow/cx/docs/reference/language>`
+            for a list of the currently supported language codes. This
+            field cannot be updated.
+          description (str):
+            The description of the agent. The maximum
+            length is 500 characters. If exceeded, the
+            request is rejected.
+          avatar_uri (str):
+            The URI of the agent's avatar. Avatars are used throughout
+            the Dialogflow console and in the self-hosted `Web Demo
+              <https://cloud.google.com/dialogflow/docs/integrations/web-demo>`
+            integration.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already
+            contains an Agent.
+
+        Returns:
+          An Agent object stored in proto_obj
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, time_zone=time_zone,
+            default_language_code=default_language_code,
+            description=description, avatar_uri=avatar_uri,
+            overwrite=overwrite)
 
     def language_and_speech_settings(
         self,
@@ -176,7 +243,6 @@ class AgentBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def security_and_logging_settings(
         self,
         enable_stackdriver_logging: bool = False,
@@ -214,5 +280,3 @@ class AgentBuilder(BuildersCommon):
             self.proto_obj.security_settings = security_settings
 
         return self.proto_obj
-
-

@@ -16,13 +16,16 @@
 
 import logging
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Dict, Union, Any
 
+import numpy as np
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1.types import Page
 from google.cloud.dialogflowcx_v3beta1.types import Form
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
 from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.routes import TransitionRouteBuilder
 from dfcx_scrapi.builders.routes import EventHandlerBuilder
@@ -41,6 +44,17 @@ class PageBuilder(BuildersCommon):
 
     _proto_type = Page
     _proto_type_str = "Page"
+    _proto_attrs = [
+        "name",
+        "display_name",
+        "entry_fulfillment",
+        "form",
+        "transition_route_groups",
+        "transition_routes",
+        "event_handlers",
+        "advanced_settings",
+        "knowledge_connector_settings",
+    ]
 
 
     def __str__(self) -> str:
@@ -56,7 +70,6 @@ class PageBuilder(BuildersCommon):
             f"\n\n\nTransitoinRouteGroups:\n{'='*25}"
             f"\n{self._show_transition_route_groups()}")
 
-
     def _show_basic_info(self) -> str:
         """String representation for the basic information of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -68,7 +81,6 @@ class PageBuilder(BuildersCommon):
             f"display_name: {self.proto_obj.display_name}"
             f"\nentry_fulfillment:\n\n{entry_fulfillment_str}"
         )
-
 
     def _show_parameters(self) -> str:
         """String representation for the parameters of proto_obj."""
@@ -86,7 +98,6 @@ class PageBuilder(BuildersCommon):
             for param in self.proto_obj.form.parameters
         ])
 
-
     def _show_transition_routes(self) -> str:
         """String representation for the transition routes of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -97,7 +108,6 @@ class PageBuilder(BuildersCommon):
             for i, tr in enumerate(self.proto_obj.transition_routes)
         ])
 
-
     def _show_event_handlers(self) -> str:
         """String representation for the event handlers of proto_obj."""
         self._check_proto_obj_attr_exist()
@@ -106,7 +116,6 @@ class PageBuilder(BuildersCommon):
             f"EventHandler {i+1}:\n{str(EventHandlerBuilder(eh))}\n{'*'*20}\n"
             for i, eh in enumerate(self.proto_obj.event_handlers)
         ])
-
 
     def _show_transition_route_groups(self) -> str:
         """String representation for the transition route groups of proto_obj"""
@@ -117,55 +126,7 @@ class PageBuilder(BuildersCommon):
             for i, trg_id in enumerate(self.proto_obj.transition_route_groups)
         ])
 
-
-    def show_page_info(
-        self, mode: str = "whole"
-    ) -> None:
-        """Show the proto_obj information.
-
-        Args:
-          mode (str):
-            Specifies what part of the page to show.
-              Options:
-              ['basic', 'whole', 'parameters',
-              'routes' or 'transition routes',
-              'route groups' or 'transition route groups',
-              'events' or 'event handlers'
-              ]
-        """
-        self._check_proto_obj_attr_exist()
-
-        if mode == "basic":
-            print(self._show_basic_info())
-        elif mode == "parameters":
-            print(self._show_parameters())
-        elif mode in ["routes", "transition routes"]:
-            print(self._show_transition_routes())
-        elif mode in ["route groups", "transition route groups"]:
-            print(self._show_transition_route_groups())
-        elif mode in ["events", "event handlers"]:
-            print(self._show_event_handlers())
-        elif mode == "whole":
-            print(self)
-        else:
-            raise ValueError(
-                "mode should be in"
-                "['basic', 'whole', 'parameters',"
-                " 'routes', 'transition routes',"
-                " 'route groups', 'transition route groups',"
-                " 'events', 'event handlers']"
-            )
-
-
-    def show_stats(self) -> None:
-        """Provide some stats about the Page."""
-        self._check_proto_obj_attr_exist()
-
-        stats_instance = PageStats(self.proto_obj)
-        stats_instance.generate_stats()
-
-
-    def create_new_proto_obj(
+    def _create_new_proto_obj(
         self,
         display_name: str,
         entry_fulfillment: Fulfillment = None,
@@ -208,9 +169,160 @@ class PageBuilder(BuildersCommon):
                 display_name=display_name,
                 entry_fulfillment=entry_fulfillment
             )
+        self._add_proto_attrs_to_builder_obj()
 
         return self.proto_obj
 
+
+    def show_page_info(
+        self, mode: str = "whole"
+    ) -> None:
+        """Show the proto_obj information.
+
+        Args:
+          mode (str):
+            Specifies what part of the page to show.
+              Options:
+              ['basic', 'whole', 'parameters',
+              'routes' or 'transition routes',
+              'route groups' or 'transition route groups',
+              'events' or 'event handlers'
+              ]
+        """
+        self._check_proto_obj_attr_exist()
+
+        if mode == "basic":
+            print(self._show_basic_info())
+        elif mode == "parameters":
+            print(self._show_parameters())
+        elif mode in ["routes", "transition routes"]:
+            print(self._show_transition_routes())
+        elif mode in ["route groups", "transition route groups"]:
+            print(self._show_transition_route_groups())
+        elif mode in ["events", "event handlers"]:
+            print(self._show_event_handlers())
+        elif mode == "whole":
+            print(self)
+        else:
+            raise ValueError(
+                "mode should be in"
+                "['basic', 'whole', 'parameters',"
+                " 'routes', 'transition routes',"
+                " 'route groups', 'transition route groups',"
+                " 'events', 'event handlers']"
+            )
+
+    def show_stats(self) -> None:
+        """Provide some stats about the Page."""
+        self._check_proto_obj_attr_exist()
+
+        stats_instance = PageStats(self.proto_obj)
+        stats_instance.generate_stats()
+
+    def create_new_page(
+        self,
+        display_name: str,
+        entry_fulfillment: Fulfillment = None,
+        overwrite: bool = False
+    ) -> Page:
+        """Create a new Page.
+
+        Args:
+          display_name (str):
+            Required. The human-readable name of the
+            page, unique within the flow.
+          entry_fulfillment (Fulfillment):
+            The fulfillment to call when the session is entering the page.
+          overwrite (bool)
+            Overwrite the new proto_obj if proto_obj already contains a Page.
+
+        Returns:
+          A Page object stored in proto_obj.
+        """
+        return self._create_new_proto_obj(
+            display_name=display_name, entry_fulfillment=entry_fulfillment,
+            overwrite=overwrite)
+
+    def set_entry_fulfillment(
+        self,
+        message: Union[str, List[str], Dict[str, Any]] = None,
+        response_type: str = "text",
+        mode: str = None,
+        webhook: str = None,
+        tag: str = None,
+        return_partial_responses: bool = False,
+        parameter_map: Dict[str, str] = None,
+    ):
+        """Set the EntryFulfillment of the Page.
+        This mehotd overwrites the existing Fulfillment.
+
+        Args:
+          message (str | List[str] | Dict[str, Any]):
+            The output message. For each response_type
+            it should be formatted like the following:
+              text --> str | List[str]
+                A single message as a string or
+                multiple messages as a list of strings
+              payload --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              conversation_success --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              output_audio_text --> str
+                A text or ssml response as a string.
+              live_agent_handoff --> Dict[str, Any]
+                Any dictionary which its keys are string.
+                Dialogflow doesn't impose any structure on the values.
+              play_audio --> str
+                URI of the audio clip.
+                Dialogflow does not impose any validation on this value.
+              telephony_transfer_call --> str
+                A phone number in E.164 format as a string.
+                `<https://en.wikipedia.org/wiki/E.164>`
+          response_type (str):
+            Type of the response message. It should be one of the following:
+            'text', 'payload', 'conversation_success', 'output_audio_text',
+            'live_agent_handoff', 'play_audio', 'telephony_transfer_call'
+          mode (str):
+            This argument is only applicable for `output_audio_text`.
+            It should be one of the following: 'text', 'ssml'
+          webhook (str):
+            The webhook to call. Format:
+            ``projects/<Project ID>/locations/<Location ID>/agents
+              /<Agent ID>/webhooks/<Webhook ID>``.
+          tag (str):
+            The tag is typically used by
+            the webhook service to identify which fulfillment is being
+            called, but it could be used for other purposes. This field
+            is required if ``webhook`` is specified.
+          return_partial_responses (bool):
+            Whether Dialogflow should return currently
+            queued fulfillment response messages in
+            streaming APIs. If a webhook is specified, it
+            happens before Dialogflow invokes webhook.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
+
+        Returns:
+          A TransitionRoute object stored in proto_obj.
+        """
+        self._check_proto_obj_attr_exist()
+
+        fb = FulfillmentBuilder()
+        fb.create_new_proto_obj(
+            webhook=webhook, tag=tag,
+            return_partial_responses=return_partial_responses)
+        fb.add_response_message(
+            message=message, response_type=response_type, mode=mode)
+        if not parameter_map is None:
+            fb.add_parameter_presets(parameter_map)
+
+        self.proto_obj.entry_fulfillment = fb.proto_obj
+
+        return self.proto_obj
 
     def add_parameter(
         self,
@@ -333,60 +445,157 @@ class PageBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def add_transition_route(
         self,
-        transition_routes: Union[TransitionRoute, List[TransitionRoute]]
+        transition_routes: Union[TransitionRoute, List[TransitionRoute]] = None,
+        intent: str = None,
+        condition: str = None,
+        target_page: str = None,
+        target_flow: str = None,
+        trigger_fulfillment: Fulfillment = None,
+        agent_response: Union[str, List[str]] = None,
+        parameter_map: Dict[str, str] = None,
     ) -> Page:
         """Add single or multiple TransitionRoutes to the Page.
+        You can either pass TransitionRoute objects or create a TransitionRoute
+        on the fly by passing other parameters. Note that `transition_routes`
+        takes priority over other parameters.
 
         Args:
           transition_routes (TransitionRoute | List[TransitionRoute]):
             A single or list of TransitionRoutes to add
-            to the Page existing in proto_obj.
+            to the Page existed in proto_obj.
+          intent (str):
+            Indicates that the transition can only happen when the given
+            intent is matched.
+            Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/intents/<Intent ID>``.
+            At least one of ``intent`` or ``condition`` must be specified.
+            When both ``intent`` and ``condition`` are specified,
+            the transition can only happen when both are fulfilled.
+          condition (str):
+            The condition to evaluate.
+            See the conditions reference:
+            https://cloud.google.com/dialogflow/cx/docs/reference/condition
+            At least one of ``intent`` or ``condition`` must be specified.
+            When both ``intent`` and ``condition`` are specified,
+            the transition can only happen when both are fulfilled.
+          target_page (str):
+            The target page to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          target_flow (str):
+            The target flow to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          trigger_fulfillment (Fulfillment):
+            The fulfillment to call when the condition is satisfied.
+            When ``trigger_fulfillment`` and ``target`` are defined,
+            ``trigger_fulfillment`` is executed first.
+          agent_response (str | List[str]):
+            Agent's response message (Fulfillment). A single message as
+            a string or multiple messages as a list of strings.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
+
         Returns:
           A Page object stored in proto_obj.
         """
         self._check_proto_obj_attr_exist()
 
-        # Type/Error checking
-        self._is_type_or_list_of_types(
-            transition_routes, TransitionRoute, "transition_routes"
-        )
+        if not transition_routes is None:
+            self._is_type_or_list_of_types(
+                transition_routes, TransitionRoute, "transition_routes")
 
-        if not isinstance(transition_routes, list):
-            transition_routes = [transition_routes]
+            if not isinstance(transition_routes, list):
+                transition_routes = [transition_routes]
+        else:
+            trb = TransitionRouteBuilder()
+            trb.create_new_proto_obj(
+                intent, condition, trigger_fulfillment,
+                target_page, target_flow)
+            if trigger_fulfillment is None:
+                trb.set_fulfillment(
+                    message=agent_response, parameter_map=parameter_map)
+            transition_routes = [trb.proto_obj]
+
         self.proto_obj.transition_routes.extend(transition_routes)
-
         return self.proto_obj
-
 
     def add_event_handler(
         self,
-        event_handlers: Union[EventHandler, List[EventHandler]]
+        event_handlers: Union[EventHandler, List[EventHandler]] = None,
+        event: str = None,
+        target_page: str = None,
+        target_flow: str = None,
+        trigger_fulfillment: Fulfillment = None,
+        agent_response: Union[str, List[str]] = None,
+        parameter_map: Dict[str, str] = None,
     ) -> Page:
         """Add single or multiple EventHandlers to the Page.
+        You can either pass EventHandler objects or create a EventHandler
+        on the fly by passing other parameters. Note that `event_handlers`
+        takes priority over other parameters.
 
         Args:
           event_handlers (EventHandler | List[EventHandler]):
             A single or list of EventHandler to add
             to the Page existing in proto_obj.
+          event (str):
+            The name of the event to handle.
+          target_page (str):
+            The target page to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          target_flow (str):
+            The target flow to transition to. Format:
+            ``projects/<Project ID>/locations/<Location ID>/
+              agents/<Agent ID>/flows/<Flow ID>``.
+            At most one of ``target_page`` and ``target_flow``
+            can be specified at the same time.
+          trigger_fulfillment (Fulfillment):
+            The fulfillment to call when the condition is satisfied.
+            When ``trigger_fulfillment`` and ``target`` are defined,
+            ``trigger_fulfillment`` is executed first.
+          agent_response (str | List[str]):
+            Agent's response message (Fulfillment). A single message as
+            a string or multiple messages as a list of strings.
+          parameter_map (Dict[str, str]):
+            A dictionary that represents parameters as keys
+            and the parameter values as it's values.
+            A `None` value clears the parameter.
+
         Returns:
           A Page object stored in proto_obj.
         """
         self._check_proto_obj_attr_exist()
 
-        # Type/Error checking
-        self._is_type_or_list_of_types(
-            event_handlers, EventHandler, "event_handlers"
-        )
+        if not event_handlers is None:
+            self._is_type_or_list_of_types(
+                event_handlers, EventHandler, "event_handlers")
 
-        if not isinstance(event_handlers, list):
-            event_handlers = [event_handlers]
+            if not isinstance(event_handlers, list):
+                event_handlers = [event_handlers]
+        else:
+            ehb = EventHandlerBuilder()
+            ehb.create_new_proto_obj(
+                event, trigger_fulfillment, target_page, target_flow)
+            if trigger_fulfillment is None:
+                ehb.set_fulfillment(
+                    message=agent_response, parameter_map=parameter_map)
+            event_handlers = [ehb.proto_obj]
+
         self.proto_obj.event_handlers.extend(event_handlers)
-
         return self.proto_obj
-
 
     def add_transition_route_group(
         self,
@@ -400,6 +609,7 @@ class PageBuilder(BuildersCommon):
             to the Page existing in proto_obj. Format:
             ``projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/
               flows/<Flow ID>/transitionRouteGroups/<TransitionRouteGroup ID>``.
+
         Returns:
           A Page object stored in proto_obj.
         """
@@ -415,7 +625,6 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.transition_route_groups.extend(transition_route_groups)
 
         return self.proto_obj
-
 
     def remove_parameter(
         self,
@@ -449,7 +658,6 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.form.parameters = new_params
 
         return self.proto_obj
-
 
     def remove_transition_route(
         self,
@@ -486,7 +694,6 @@ class PageBuilder(BuildersCommon):
         self.proto_obj.transition_routes = new_routes
 
         return self.proto_obj
-
 
     def remove_event_handler(
         self,
@@ -531,7 +738,6 @@ class PageBuilder(BuildersCommon):
 
         return self.proto_obj
 
-
     def remove_transition_route_group(
         self,
         transition_route_groups: Union[str, List[str]]
@@ -567,6 +773,144 @@ class PageBuilder(BuildersCommon):
 
         return self.proto_obj
 
+
+    class _Dataframe(BuildersCommon._DataframeCommon): # pylint: disable=W0212
+        """An internal class to store DataFrame related methods."""
+
+        def _create_form_params_df(
+            self,
+            form_parameter_list: List[Form.Parameter],
+            mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Create a DataFrame from the form parameters of a page.
+
+            Args:
+              params (List[Form.Parameter]):
+                A list of page's form parameters.
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+
+            Returns:
+                A pandas DataFrame
+            """
+            cols_map = {
+                "basic": [
+                    "parameter_display_name", "parameter_entity_type",
+                    "has_fulfillment", "has_fulfillment_webhook",
+                ],
+                "advanced": [
+                    "parameter_display_name", "parameter_entity_type",
+                    "parameter_is_required", "parameter_is_list",
+                    "parameter_is_redact", "parameter_default_value",
+                    "messages", "preset_parameters", "conditional_cases",
+                    "webhook", "webhook_tag", "return_partial_responses",
+                ]
+            }
+            cols = cols_map[mode]
+            if not form_parameter_list:
+                return pd.DataFrame(columns=cols)
+
+            out_df = pd.DataFrame(columns=cols)
+            for param in form_parameter_list:
+
+                if mode == "basic":
+                    param_df = pd.DataFrame({
+                        "parameter_display_name": [str(param.display_name)],
+                        "parameter_entity_type": [str(param.entity_type)],
+                    })
+                elif mode == "advanced":
+                    required = bool(param.required)
+                    tmp_val = str(param.default_value)
+                    default_val = np.nan if required else tmp_val
+                    param_df = pd.DataFrame({
+                        "parameter_display_name": [str(param.display_name)],
+                        "parameter_entity_type": [str(param.entity_type)],
+                        "parameter_is_required": [required],
+                        "parameter_is_list": [bool(param.is_list)],
+                        "parameter_is_redact": [bool(param.redact)],
+                        "parameter_default_value": [default_val],
+                    })
+
+                # Initial Prompt Fulfillment
+                prompt_ff = param.fill_behavior.initial_prompt_fulfillment
+                prompt_ff_builder = FulfillmentBuilder(prompt_ff)
+                prompt_ff_df = prompt_ff_builder.to_dataframe(mode)
+                tmp_df = pd.concat([param_df, prompt_ff_df], axis=1)
+
+                out_df = pd.concat([out_df, tmp_df], ignore_index=True)
+
+                # Reprompt Event Handlers
+                ehs_df = pd.DataFrame()
+                for eh in param.fill_behavior.reprompt_event_handlers:
+                    ehb = EventHandlerBuilder(eh)
+                    ehb_df = ehb.to_dataframe(mode)
+                    ehs_df = pd.concat([ehs_df, ehb_df], ignore_index=True)
+
+                if ehs_df.empty:
+                    return out_df
+
+                tmp_param_df = pd.concat(
+                    [param_df] * len(ehs_df), ignore_index=True)
+                param_eh_df = pd.concat([tmp_param_df, ehs_df], axis=1)
+                out_df = pd.concat([out_df, param_eh_df], ignore_index=True)
+
+            return out_df
+
+
+        def proto_to_dataframe(
+            self, obj: Page, mode: str = "basic"
+        ) -> pd.DataFrame:
+            """Converts a Page protobuf object to pandas Dataframe.
+
+            Args:
+              obj (Page):
+                Page protobuf object
+              mode (str):
+                Whether to return 'basic' DataFrame or 'advanced' one.
+                Refer to `data.dataframe_schemas.json` for schemas.
+
+            Returns:
+              A pandas Dataframe
+            """
+            if mode not in ["basic", "advanced"]:
+                raise ValueError("Mode types: ['basic', 'advanced'].")
+
+            routes_df = pd.DataFrame(
+                columns=self._dataframes_map["TransitionRoute"][mode]
+            )
+            for route in obj.transition_routes:
+                trb = TransitionRouteBuilder(route)
+                trb_df = trb.to_dataframe(mode)
+                routes_df = pd.concat([routes_df, trb_df], ignore_index=True)
+
+            ehs_df = pd.DataFrame(
+                columns=self._dataframes_map["EventHandler"][mode]
+            )
+            for eh in obj.event_handlers:
+                ehb = EventHandlerBuilder(eh)
+                ehb_df = ehb.to_dataframe(mode)
+                ehs_df = pd.concat([ehs_df, ehb_df], ignore_index=True)
+
+            trgs_df = pd.DataFrame({
+                "route_groups": list(obj.transition_route_groups)
+            })
+
+            entry_fb = FulfillmentBuilder(obj.entry_fulfillment)
+            entry_fb_df = entry_fb.to_dataframe(mode)
+            parameters_df = self._create_form_params_df(
+                form_parameter_list=obj.form.parameters, mode=mode
+            )
+
+            # Concatenate `routes_df` and `ehs_df` and add the rest of the info
+            page_df = pd.concat(
+                [entry_fb_df, parameters_df, routes_df, ehs_df, trgs_df],
+                axis=0, ignore_index=True
+            )
+            page_df["name"] = str(obj.name)
+            page_df["display_name"] = str(obj.display_name)
+            page_df["flow"] = str(obj.name).split("/pages", maxsplit=1)[0]
+
+            return page_df[self._dataframes_map["Page"][mode]]
 
 
 @dataclass
