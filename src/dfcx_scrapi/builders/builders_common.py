@@ -43,7 +43,7 @@ class BuildersCommon:
 
     def _check_proto_obj_attr_exist(self):
         """Check if the proto_obj exists otherwise raise an error."""
-        if not self.proto_obj:
+        if self.proto_obj is None:
             raise ValueError(
                 "There is no proto_obj!"
                 "\nUse `create_new_proto_obj` or `load_proto_obj` to continue."
