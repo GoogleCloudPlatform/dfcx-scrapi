@@ -136,9 +136,8 @@ class CopyUtil(ScrapiBase):
     ):
         special_pages = [
             "END_FLOW", "END_SESSION",
-            "CURRENT_PAGE", "PREVIOUS_PAGE", "START_PAGE"
+            "CURRENT_PAGE", "PREVIOUS_PAGE", "START_PAGE", "END_FLOW_WITH_FAILURE", "END_FLOW_WITH_HUMAN_ESCALATION"
         ]
-
         if convert_type == "source":
             last_part = trans_route.target_page.split("/")[-1]
             if last_part in special_pages:
@@ -909,6 +908,7 @@ class CopyUtil(ScrapiBase):
         start_page,
         agent_type="source",
         flow="Default Start Flow",
+        source_agent=None
     ):
         """Convert all Source Agent Start page dependencies to Display Names.
         In order to copy resources over to a Destination Agent, we need to
@@ -995,6 +995,8 @@ class CopyUtil(ScrapiBase):
             trgs_map = self.route_groups.get_route_groups_map(
                 flows_map[flow], reverse=True
             )
+            if source_agent is not None:
+                source_flows_map = self.flows.get_flows_map(source_agent)
 
             page_mod.name = flows_map[flow]
             print(page_mod.name)
@@ -1015,6 +1017,12 @@ class CopyUtil(ScrapiBase):
                         trans_route.target_page = pages_map[
                             trans_route.target_page
                         ]
+                if source_agent is not None and "target_flow" in trans_route:
+                    print("HERE: ", trans_route.target_flow)
+                    trans_route.target_flow = flows_map[
+                        source_flows_map[trans_route.target_flow]
+                    ]
+                    
 
                 if "intent" in trans_route:
                     if trans_route.intent not in intents_map:
@@ -1073,7 +1081,7 @@ class CopyUtil(ScrapiBase):
 
         return page_mod
 
-    def get_page_dependencies(self, obj_list):
+def get_page_dependencies(self, obj_list):
         """Pass in DFCX Page object(s) and retrieve all resource dependencies.
         Args:
           obj_list: a List of one or more DFCX Page Objects
@@ -1108,7 +1116,7 @@ class CopyUtil(ScrapiBase):
 
         return resources
 
-    def copy_route_groups(
+def copy_route_groups(
         self, agent_id: str, source_flow: str, target_flow: str
     ):
         """Creates new route groups in the target flow to match the route groups
