@@ -21,6 +21,7 @@ import functools
 from collections import defaultdict
 from typing import Dict
 
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
@@ -334,26 +335,6 @@ class ScrapiBase:
 
         return solution_map[solution_type]
 
-    @staticmethod
-    def _update_kwargs(
-        resource_type: str, obj, kwargs: Dict) -> field_mask_pb2.FieldMask: # pylint: disable=W0613
-        """Create a `mask` for update methods based on kwargs.
-
-        Args:
-          resource_type (str): The type of the input resource as a string.
-          obj: The protobuf object.
-          kwargs (Dict): A dictionary with obj's attributes as keys and
-            thier values as values.
-
-        Returns:
-          A FieldMask protobuf.
-        """
-        for key, value in kwargs.items():
-            setattr(obj, key, value)
-
-        return field_mask_pb2.FieldMask(paths=kwargs.keys())
-
-
     def _build_data_store_parent(self, location: str) -> str:
         """Build the Parent ID needed for Discovery Engine API calls."""
         return (f"projects/{self.project_id}/locations/{location}/collections/"
@@ -415,6 +396,51 @@ class ScrapiBase:
           Total calls to the API so far as an int.
         """
         return sum(self.get_api_calls_details().values())
+
+
+    @staticmethod
+    def _update_kwargs(obj, **kwargs) -> field_mask_pb2.FieldMask:
+        """Create a FieldMask for Environment, Experiment, TestCase, Version."""
+        if kwargs:
+            for key, value in kwargs.items():
+                setattr(obj, key, value)
+            return field_mask_pb2.FieldMask(paths=kwargs.keys())
+        attrs_map = {
+            "Environment": [
+                "name", "display_name", "description", "version_configs",
+                "update_time", "test_cases_config", "webhook_config",
+            ],
+            "Experiment": [
+                "name", "display_name", "description", "state", "definition",
+                "rollout_config", "rollout_state", "rollout_failure_reason",
+                "result", "create_time", "start_time", "end_time",
+                "last_update_time", "experiment_length", "variants_history",
+            ],
+            "TestCase": [
+                "name", "tags", "display_name", "notes", "test_config",
+                "test_case_conversation_turns", "creation_time",
+                "last_test_result",
+            ],
+            "Version": [
+                "name", "display_name", "description", "nlu_settings",
+                "create_time", "state",
+            ],
+        }
+        if isinstance(obj, types.Environment):
+            paths = attrs_map["Environment"]
+        elif isinstance(obj, types.Experiment):
+            paths = attrs_map["Experiment"]
+        elif isinstance(obj, types.TestCase):
+            paths = attrs_map["TestCase"]
+        elif isinstance(obj, types.Version):
+            paths = attrs_map["Version"]
+        else:
+            raise ValueError(
+                "`obj` should be one of the following:"
+                " [Environment, Experiment, TestCase, Version]."
+            )
+
+        return field_mask_pb2.FieldMask(paths=paths)
 
 
 def api_call_counter_decorator(func):

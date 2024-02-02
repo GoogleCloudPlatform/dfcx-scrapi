@@ -462,15 +462,15 @@ class TestCases(scrapi_base.ScrapiBase):
         if obj:
             test_case = obj
             test_case.name = test_case_id
-        else:
+            mask = self._update_kwargs(obj)
+        elif kwargs:
             if not test_case_id:
                 test_case_id = self.test_case_id
             test_case = self.get_test_case(test_case_id)
+            mask = self._update_kwargs(obj, **kwargs)
 
-        request = types.test_case.UpdateTestCaseRequest()
-        request.test_case = test_case
-        if kwargs:
-            request.update_mask = self._update_kwargs("test_case", obj, kwargs)
+        request = types.test_case.UpdateTestCaseRequest(
+            test_case=test_case, update_mask=mask)
 
         client_options = self._set_region(test_case_id)
         client = services.test_cases.TestCasesClient(
