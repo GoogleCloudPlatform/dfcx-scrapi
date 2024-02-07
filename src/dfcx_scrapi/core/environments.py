@@ -293,44 +293,35 @@ class Environments(scrapi_base.ScrapiBase):
     def update_environment(
         self,
         environment_id: str,
-        environment_obj: types.Environment = None,
+        obj: types.Environment = None,
         **kwargs):
         """Update an existing environment for a specified agent.
 
         Args:
           environment_id: The specified environment to update.
-          environment_obj: Optional Environment object of types.Environment
+          obj: Optional Environment object of types.Environment
             that can be provided when you are planning to replace the full
             object vs. just partial updates.
 
         Returns:
           An object representing a long-running operation. (LRO)
         """
+        if obj:
+            env = obj
+            env.name = environment_id
+            mask = self._update_kwargs(obj)
+        elif kwargs:
+            env = self.get_environment(environment_id)
+            mask = self._update_kwargs(obj, **kwargs)
 
-        if environment_obj:
-            env = environment_obj
-        else:
-            env = types.Environment()
-
-        env.name = environment_id
-
-        # set environment attributes from kwargs
-        for key, value in kwargs.items():
-            setattr(env, key, value)
-        paths = kwargs.keys()
-        mask = field_mask_pb2.FieldMask(paths=paths)
+        request = types.environment.UpdateEnvironmentRequest(
+            environment=env, update_mask=mask)
 
         client_options = self._set_region(environment_id)
         client = services.environments.EnvironmentsClient(
             credentials=self.creds, client_options=client_options
         )
-
-        request = types.environment.UpdateEnvironmentRequest()
-        request.environment = env
-        request.update_mask = mask
-
         response = client.update_environment(request)
-
         return response
 
 
