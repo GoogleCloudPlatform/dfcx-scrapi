@@ -50,7 +50,7 @@ class DataStores(scrapi_base.ScrapiBase):
         self.project_id = project_id
 
     @staticmethod
-    def __get_content_config(content_type: str) -> DataStore.ContentConfig:
+    def _get_content_config(content_type: str) -> DataStore.ContentConfig:
         """Build the Content Config used for the Data Store."""
         cc_map = {
             "unstructured": 1,
@@ -140,7 +140,7 @@ class DataStores(scrapi_base.ScrapiBase):
         data_store.display_name = display_name
         data_store.industry_vertical = 1
         data_store.solution_types = [self._get_solution_type(solution_type)]
-        data_store.content_config = self.__get_content_config(datastore_type)
+        data_store.content_config = self._get_content_config(datastore_type)
 
         request = discoveryengine_v1alpha.CreateDataStoreRequest(
             parent=parent,
