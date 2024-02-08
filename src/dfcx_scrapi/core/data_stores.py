@@ -50,7 +50,7 @@ class DataStores(scrapi_base.ScrapiBase):
         self.project_id = project_id
 
     @staticmethod
-    def __get_content_config(content_type: str) -> DataStore.ContentConfig:
+    def _get_content_config(content_type: str) -> DataStore.ContentConfig:
         """Build the Content Config used for the Data Store."""
         cc_map = {
             "unstructured": 1,
@@ -82,7 +82,12 @@ class DataStores(scrapi_base.ScrapiBase):
             self, location: str = "global") -> List[DataStore]:
         """List all data stores for a given project and location."""
         parent = self._build_data_store_parent(location)
-        client = discoveryengine_v1alpha.DataStoreServiceClient()
+        client_options = self._client_options_discovery_engine(
+            f"projects/{self.project_id}/locations/{location}"
+        )
+        client = discoveryengine_v1alpha.DataStoreServiceClient(
+            credentials=self.creds, client_options=client_options
+        )
         request = discoveryengine_v1alpha.ListDataStoresRequest(parent=parent)
         page_result = client.list_data_stores(request=request)
 
@@ -94,7 +99,10 @@ class DataStores(scrapi_base.ScrapiBase):
 
     def get_data_store(self, data_store_id: str) -> DataStore:
         """Get a single Data Store by specified ID."""
-        client = discoveryengine_v1alpha.DataStoreServiceClient()
+        client_options = self._client_options_discovery_engine(data_store_id)
+        client = discoveryengine_v1alpha.DataStoreServiceClient(
+            credentials=self.creds, client_options=client_options
+        )
         request = discoveryengine_v1alpha.GetDataStoreRequest(
             name=data_store_id
             )
@@ -122,12 +130,17 @@ class DataStores(scrapi_base.ScrapiBase):
           location: the GCP region to create the Data Store in
         """
         parent = self._build_data_store_parent(location)
-        client = discoveryengine_v1alpha.DataStoreServiceClient()
+        client_options = self._client_options_discovery_engine(
+            f"projects/{self.project_id}/locations/{location}"
+        )
+        client = discoveryengine_v1alpha.DataStoreServiceClient(
+            credentials=self.creds, client_options=client_options
+        )
         data_store = discoveryengine_v1alpha.DataStore()
         data_store.display_name = display_name
         data_store.industry_vertical = 1
         data_store.solution_types = [self._get_solution_type(solution_type)]
-        data_store.content_config = self.__get_content_config(datastore_type)
+        data_store.content_config = self._get_content_config(datastore_type)
 
         request = discoveryengine_v1alpha.CreateDataStoreRequest(
             parent=parent,
