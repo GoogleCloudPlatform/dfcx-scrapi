@@ -19,7 +19,7 @@ import logging
 from google.oauth2 import service_account
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
-from google.protobuf import field_mask_pb2
+
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import flows
 from dfcx_scrapi.core import versions
@@ -306,31 +306,22 @@ class Environments(scrapi_base.ScrapiBase):
         Returns:
           An object representing a long-running operation. (LRO)
         """
-
         if environment_obj:
             env = environment_obj
-        else:
-            env = types.Environment()
+            env.name = environment_id
+            mask = self._update_kwargs(environment_obj)
+        elif kwargs:
+            env = self.get_environment(environment_id)
+            mask = self._update_kwargs(environment_obj, **kwargs)
 
-        env.name = environment_id
-
-        # set environment attributes from kwargs
-        for key, value in kwargs.items():
-            setattr(env, key, value)
-        paths = kwargs.keys()
-        mask = field_mask_pb2.FieldMask(paths=paths)
+        request = types.environment.UpdateEnvironmentRequest(
+            environment=env, update_mask=mask)
 
         client_options = self._set_region(environment_id)
         client = services.environments.EnvironmentsClient(
             credentials=self.creds, client_options=client_options
         )
-
-        request = types.environment.UpdateEnvironmentRequest()
-        request.environment = env
-        request.update_mask = mask
-
         response = client.update_environment(request)
-
         return response
 
 
