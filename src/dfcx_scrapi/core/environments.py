@@ -309,10 +309,10 @@ class Environments(scrapi_base.ScrapiBase):
         if environment_obj:
             env = environment_obj
             env.name = environment_id
-            mask = self._update_kwargs(environment_obj)
+            mask = self._update_kwargs(env)
         elif kwargs:
             env = self.get_environment(environment_id)
-            mask = self._update_kwargs(environment_obj, **kwargs)
+            mask = self._update_kwargs(env, **kwargs)
 
         request = types.environment.UpdateEnvironmentRequest(
             environment=env, update_mask=mask)
