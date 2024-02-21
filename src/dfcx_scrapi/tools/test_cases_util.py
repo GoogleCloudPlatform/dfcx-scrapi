@@ -24,7 +24,7 @@ from dfcx_scrapi.core import flows
 from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import intents
 from dfcx_scrapi.core import test_cases
-from google.api_core import exceptions as core_exceptions
+from google.api_core import exceptions
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,7 +42,6 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         creds=None,
         scope=False,
         agent_id: str = None,
-        test_case_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -156,15 +155,15 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
         return updated_test_cases_list
 
-    def _reverse_dict(self, _dict):
-      """Utility method that reverse the dict keys and values
-        Args:
-          _dict: a dictionary
-        Returns:
-          a reversed dictionary
-      """
+    def _reverse_dict(self, dict_):
+        """Utility method that reverse the dict keys and values
+            Args:
+                dict_: a dictionary
+            Returns:
+                a reversed dictionary
+        """
 
-      return {v: k for k, v in _dict.items()}
+        return {v: k for k, v in dict_.items()}
 
     def _get_commons_config(
         self,
@@ -363,8 +362,9 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         self,
         virtual_agent_output: types.ConversationTurn.VirtualAgentOutput,
         target: dict) -> Union[str, None]:
-        """Attempt to find the intent id from the source's agent conversation turn
-          virtual agent output intent display name to the target's intents map
+        """Attempt to find the intent id from the source's agent 
+        conversation_turn.virtual_agent_output triggered intent
+        display name using the target's intents map
         """
 
         source_intent = (
@@ -518,7 +518,10 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
                 s_commons, t_commons, tc.test_case_conversation_turns)
             new_last_test_conv_turns = self._get_new_conversation_turns(
                 s_commons, t_commons, tc.last_test_result.conversation_turns)
-            if None in [new_test_config, new_conv_turns, new_last_test_conv_turns]:
+            if None in [
+                new_test_config,
+                new_conv_turns,
+                new_last_test_conv_turns]:
                 if not new_test_config:
                     logging.warning(
                         f"test_case: {tc.display_name} "\
@@ -542,7 +545,8 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
                 time.sleep(rate_limit)
             except exceptions.InternalServerError as err:
                 logging.error(
-                    "---- ERROR --- InternalServerError caught on CX.detect %s", err)
+                    "---- ERROR --- InternalServerError caught on CX.detect\
+                    %s", err)
                 logging.error("test_case: %s", tc.display_name)
                 continue
             except exceptions.ClientError as err:
