@@ -24,7 +24,7 @@ from dfcx_scrapi.core import flows
 from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import intents
 from dfcx_scrapi.core import test_cases
-from google.api_core import exceptions
+from google.api_core import exceptions as core_exceptions
 
 logging.basicConfig(
     level=logging.INFO,
@@ -543,13 +543,13 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
                 new_test_case = target_dfcx_test_cases.create_test_case(
                     test_case=tc)
                 time.sleep(rate_limit)
-            except exceptions.InternalServerError as err:
+            except core_exceptions.InternalServerError as err:
                 logging.error(
                     "---- ERROR --- InternalServerError caught on CX.detect\
                     %s", err)
                 logging.error("test_case: %s", tc.display_name)
                 continue
-            except exceptions.ClientError as err:
+            except core_exceptions.ClientError as err:
                 logging.error(
                     "---- ERROR --- ClientError caught on CX.detect %s", err)
                 logging.error("test_case: %s", tc.display_name)
