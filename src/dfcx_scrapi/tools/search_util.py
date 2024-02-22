@@ -16,10 +16,14 @@
 
 import logging
 import time
-from typing import Dict, List
+from typing import Dict, List, Any, Generator
 from operator import attrgetter
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+from google.cloud.dialogflowcx_v3beta1 import types
+from google.oauth2 import service_account
+
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import intents
 from dfcx_scrapi.core import flows
@@ -27,8 +31,6 @@ from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import entity_types
 from dfcx_scrapi.core import transition_route_groups
 
-from google.cloud.dialogflowcx_v3beta1 import types
-from google.oauth2 import service_account
 
 # logging config
 logging.basicConfig(
@@ -58,25 +60,22 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
         logging.info("create dfcx creds %s", creds_path)
         self.intents = intents.Intents(
-            creds_path=creds_path, creds_dict=creds_dict
-        )
+            creds_path=creds_path, creds_dict=creds_dict)
         self.entities = entity_types.EntityTypes(
-            creds_path=creds_path, creds_dict=creds_dict
-        )
+            creds_path=creds_path, creds_dict=creds_dict)
         self.flows = flows.Flows(creds_path=creds_path, creds_dict=creds_dict)
         self.pages = pages.Pages(creds_path=creds_path, creds_dict=creds_dict)
         self.route_groups = transition_route_groups.TransitionRouteGroups(
-            creds_path, creds_dict
-        )
+            creds_path=creds_path, creds_dict=creds_dict)
+
         self.creds_path = creds_path
-        self.intents_map = None
+        self.intents_map, self.all_flows = None, None
+        self.all_pages_per_flow, self.all_route_groups_per_flow = None, None
         if agent_id:
             self.agent_id = agent_id
             self.flow_map = self.flows.get_flows_map(
-                agent_id=agent_id, reverse=True
-            )
+                agent_id=agent_id, reverse=True)
             self.intents_map = self.intents.get_intents_map(agent_id)
-            self.client_options = self._set_region(agent_id)
 
     @staticmethod
     def get_route_df(page_df: pd.DataFrame, route_group_df: pd.DataFrame):
@@ -234,6 +233,211 @@ class SearchUtil(scrapi_base.ScrapiBase):
         """
         flat_texts = "\n".join(text_message.text)
         return flat_texts
+
+    @staticmethod
+    def _location_finder(
+        flow: str, page: str, trg: str,
+        intent: str, cond: str, event: str, param: str,
+        target_type: str, target_id: str
+    ) -> Dict[str, str]:
+        """Returns a dictionary with provided arguments and
+          set empty strings to None."""
+        out = {
+            "Flow": flow, "Page": page, "TransitionRouteGroup": trg,
+            "Intent": intent, "Condition": cond, "Event": event, "Param": param,
+            "TargetType": target_type, "TargetId": target_id,
+        }
+
+        for k, v in out.items():
+            if v == "":
+                out[k] = None
+
+        return out
+
+    @staticmethod
+    def _target_type_finder(tr) -> str:
+        """Return a target type of a route(TransitionRoute/EventHandler)."""
+        if tr.target_flow:
+            return "Flow"
+        elif tr.target_page:
+            return "Page"
+        else:
+            return None
+
+    @staticmethod
+    def _target_id_finder(tr) -> str:
+        """Return a target id of a route(TransitionRoute/EventHandler)."""
+        if tr.target_flow:
+            return tr.target_flow
+        elif tr.target_page:
+            return tr.target_page
+        else:
+            return None
+
+    def _fetch_fulfillment_gen_resources(
+        self, agent_id: str, rate_limit: float = 0.5
+    ):
+        """Fetch the agent resources to feed to fulfillment_generator."""
+        self.all_flows = self.flows.list_flows(agent_id=agent_id)
+        self.flows_map_reverse = self.flows.get_flows_map(
+            agent_id=agent_id, reverse=True)
+        self.intents_map = self.intents.get_intents_map(agent_id=agent_id)
+        time.sleep(3 * rate_limit)
+
+        self.all_pages_per_flow, self.all_route_groups_per_flow = {}, {}
+        for flow_name, flow_id in self.flows_map_reverse.items():
+            self.all_pages_per_flow[flow_name] = self.pages.list_pages(
+                flow_id=flow_id)
+            time.sleep(rate_limit)
+
+            route_groups_list = self.route_groups.list_transition_route_groups(
+                flow_id=flow_id)
+            self.all_route_groups_per_flow[flow_name] = route_groups_list
+            time.sleep(rate_limit)
+
+    def fulfillment_generator(
+        self, agent_id: str, new_fetch: bool = False, rate_limit: float = 0.5
+    ) -> Generator[Dict[str, Any], None, None]:
+        """Main function for the fulfillment generator.
+        It loops through all of the flows (START_PAGEs),
+        all the pages of each flow, and all the transition routes of each flow.
+        For each fulfillment it faces, it will return a dictionary with
+        the following content:
+            "fulfillment": The fulfillment proto obj.
+            "location": The location of the fulfillment as a dictionary.
+            "parent_proto": The parent proto obj of the fulfillment.
+              In order to update the fulfillment after making changes,
+              we need to update the parent proto.
+            "link": Link to the parent proto obj in DFCX UI for ease of use.
+        """
+        required_resources = [
+            self.intents_map, self.all_flows, self.all_pages_per_flow,
+            self.all_route_groups_per_flow
+        ]
+        if new_fetch or not all(required_resources):
+            self._fetch_fulfillment_gen_resources(agent_id, rate_limit)
+
+        # Flows
+        for flow in self.all_flows:
+            flow_link = self.get_resource_link(flow.name)
+            # TransitionRoutes
+            for tr in flow.transition_routes:
+                yield {
+                    "fulfillment": tr.trigger_fulfillment,
+                    "location": self._location_finder(
+                        flow=flow.display_name, page="START_PAGE", trg=None,
+                        intent=self.intents_map.get(tr.intent),
+                        cond=tr.condition, event=None, param=None,
+                        target_type=self._target_type_finder(tr),
+                        target_id=self._target_id_finder(tr)
+                    ),
+                    "parent_proto": flow,
+                    "link": flow_link,
+                }
+            # EventHandlers
+            for eh in flow.event_handlers:
+                yield {
+                    "fulfillment": eh.trigger_fulfillment,
+                    "location": self._location_finder(
+                        flow=flow.display_name, page="START_PAGE", trg=None,
+                        intent=None, cond=None, event=eh.event, param=None,
+                        target_type=self._target_type_finder(eh),
+                        target_id=self._target_id_finder(eh)
+                    ),
+                    "parent_proto": flow,
+                    "link": flow_link,
+                }
+
+        # Pages
+        for flow_name, page_list in self.all_pages_per_flow.items():
+            for page in page_list:
+                page_link = self.get_resource_link(page.name)
+                tmp_page_name = page.display_name
+                # Entry Fulfillment
+                yield {
+                    "fulfillment": page.entry_fulfillment,
+                    "location": self._location_finder(
+                        flow=flow_name, page=tmp_page_name, trg=None,
+                        intent=None, cond=None, event=None, param=None,
+                        target_type=None, target_id=None
+                    ),
+                    "parent_proto": page,
+                    "link": page_link,
+                }
+                # Parameters
+                for param in page.form.parameters:
+                    tmp_ff = param.fill_behavior.initial_prompt_fulfillment
+                    yield {
+                        "fulfillment": tmp_ff,
+                        "location": self._location_finder(
+                            flow=flow_name, page=tmp_page_name, trg=None,
+                            intent=None, cond=None, event=None,
+                            param=param.display_name,
+                            target_type=None, target_id=None
+                        ),
+                        "parent_proto": page,
+                        "link": page_link,
+                    }
+                    # EventHandlers
+                    for eh in param.fill_behavior.reprompt_event_handlers:
+                        yield {
+                            "fulfillment": eh.trigger_fulfillment,
+                            "location": self._location_finder(
+                                flow=flow_name, page=tmp_page_name, trg=None,
+                                intent=None, cond=None, event=eh.event,
+                                param=param.display_name,
+                                target_type=self._target_type_finder(eh),
+                                target_id=self._target_id_finder(eh)
+                            ),
+                            "parent_proto": page,
+                            "link": page_link,
+                        }
+                # TransitionRoutes
+                for tr in page.transition_routes:
+                    yield {
+                        "fulfillment": tr.trigger_fulfillment,
+                        "location": self._location_finder(
+                            flow=flow_name, page=tmp_page_name, trg=None,
+                            intent=self.intents_map.get(tr.intent),
+                            cond=tr.condition, event=None, param=None,
+                            target_type=self._target_type_finder(tr),
+                            target_id=self._target_id_finder(tr)
+                        ),
+                        "parent_proto": page,
+                        "link": page_link,
+                    }
+                # EventHandlers
+                for eh in page.event_handlers:
+                    yield {
+                        "fulfillment": eh.trigger_fulfillment,
+                        "location": self._location_finder(
+                            flow=flow_name, page=tmp_page_name, trg=None,
+                            intent=None, cond=None, event=eh.event, param=None,
+                            target_type=self._target_type_finder(eh),
+                            target_id=self._target_id_finder(eh)
+                        ),
+                        "parent_proto": page,
+                        "link": page_link,
+                    }
+
+        # TransitionRouteGroups
+        for flow_name,trg_list in self.all_route_groups_per_flow.items():
+            for trg in trg_list:
+                trg_link = self.get_resource_link(trg.name)
+                # TransitionRoutes
+                for tr in trg.transition_routes:
+                    yield {
+                        "fulfillment": tr.trigger_fulfillment,
+                        "location": self._location_finder(
+                            flow=flow_name, page=None, trg=trg.display_name,
+                            intent=self.intents_map.get(tr.intent),
+                            cond=tr.condition, event=None, param=None,
+                            target_type=self._target_type_finder(tr),
+                            target_id=self._target_id_finder(tr)
+                        ),
+                        "parent_proto": trg,
+                        "link": trg_link,
+                    }
 
     def _format_response_message(
         self, message: types.ResponseMessage, message_format: str
