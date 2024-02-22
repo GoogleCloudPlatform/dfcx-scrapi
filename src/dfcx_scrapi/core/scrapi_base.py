@@ -335,6 +335,78 @@ class ScrapiBase:
 
         return solution_map[solution_type]
 
+    @staticmethod
+    def _update_kwargs(obj, **kwargs) -> field_mask_pb2.FieldMask:
+        """Create a FieldMask for Environment, Experiment, TestCase, Version."""
+        if kwargs:
+            for key, value in kwargs.items():
+                setattr(obj, key, value)
+            return field_mask_pb2.FieldMask(paths=kwargs.keys())
+        attrs_map = {
+            "Environment": [
+                "name", "display_name", "description", "version_configs",
+                "update_time", "test_cases_config", "webhook_config",
+            ],
+            "Experiment": [
+                "name", "display_name", "description", "state", "definition",
+                "rollout_config", "rollout_state", "rollout_failure_reason",
+                "result", "create_time", "start_time", "end_time",
+                "last_update_time", "experiment_length", "variants_history",
+            ],
+            "TestCase": [
+                "name", "tags", "display_name", "notes", "test_config",
+                "test_case_conversation_turns", "creation_time",
+                "last_test_result",
+            ],
+            "Version": [
+                "name", "display_name", "description", "nlu_settings",
+                "create_time", "state",
+            ],
+        }
+        if isinstance(obj, types.Environment):
+            paths = attrs_map["Environment"]
+        elif isinstance(obj, types.Experiment):
+            paths = attrs_map["Experiment"]
+        elif isinstance(obj, types.TestCase):
+            paths = attrs_map["TestCase"]
+        elif isinstance(obj, types.Version):
+            paths = attrs_map["Version"]
+        else:
+            raise ValueError(
+                "`obj` should be one of the following:"
+                " [Environment, Experiment, TestCase, Version]."
+            )
+
+        return field_mask_pb2.FieldMask(paths=paths)
+
+    @staticmethod
+    def _create_link_helper(parsed_resoure_dict, resource_type):
+        # pylint: disable=line-too-long
+        hyperlink_base_endpoint = "https://dialogflow.cloud.google.com/cx"
+        hyperlink_root = f"{hyperlink_base_endpoint}/projects/{parsed_resoure_dict.get('project')}/locations/{parsed_resoure_dict.get('location')}"
+        agent_hyperlink = f"{hyperlink_root}/agents/{parsed_resoure_dict.get('agent')}"
+
+        # TODO(miladt): Make the link fot the commented resources if possible
+        link_map = {
+            "agent": agent_hyperlink,
+            "entity_type": f"{agent_hyperlink}/entityTypes?id={parsed_resoure_dict.get('entity')}",
+            # "environment": f"",
+            "flow": f"{agent_hyperlink}/flows/{parsed_resoure_dict.get('flow')}/flow_creation?pageId=START_PAGE",
+            "intent": f"{agent_hyperlink}/intents?id={parsed_resoure_dict.get('intent')}",
+            "page": f"{agent_hyperlink}/flows/{parsed_resoure_dict.get('flow')}/flow_creation?pageId={parsed_resoure_dict.get('page')}",
+            # "project": f"",
+            # "security_setting": f"",
+            # "session": f"",
+            # "session_entity_type": f"",
+            "test_case": f"{agent_hyperlink}/testCases/{parsed_resoure_dict.get('test_case')}",
+            "transition_route_group": f"{agent_hyperlink}/transitionRouteGroups?flowId={parsed_resoure_dict.get('flow')}&routeGroupId={parsed_resoure_dict.get('transition_route_group')}",
+            # "version": f"",
+            "webhook": f"{agent_hyperlink}/webhooks?id={parsed_resoure_dict.get('webhook')}",
+        }
+
+        # pylint: enable=line-too-long
+        return link_map.get(resource_type)
+
     def _build_data_store_parent(self, location: str) -> str:
         """Build the Parent ID needed for Discovery Engine API calls."""
         return (f"projects/{self.project_id}/locations/{location}/collections/"
@@ -397,50 +469,29 @@ class ScrapiBase:
         """
         return sum(self.get_api_calls_details().values())
 
+    def get_resource_link(self, resource_id):
+        resources = [
+            "agent", "entity_type", "environment", "flow", "intent", "page",
+            "project", "security_setting", "session", "session_entity_type",
+            "test_case", "transition_route_group", "version", "webhook",
+        ]
 
-    @staticmethod
-    def _update_kwargs(obj, **kwargs) -> field_mask_pb2.FieldMask:
-        """Create a FieldMask for Environment, Experiment, TestCase, Version."""
-        if kwargs:
-            for key, value in kwargs.items():
-                setattr(obj, key, value)
-            return field_mask_pb2.FieldMask(paths=kwargs.keys())
-        attrs_map = {
-            "Environment": [
-                "name", "display_name", "description", "version_configs",
-                "update_time", "test_cases_config", "webhook_config",
-            ],
-            "Experiment": [
-                "name", "display_name", "description", "state", "definition",
-                "rollout_config", "rollout_state", "rollout_failure_reason",
-                "result", "create_time", "start_time", "end_time",
-                "last_update_time", "experiment_length", "variants_history",
-            ],
-            "TestCase": [
-                "name", "tags", "display_name", "notes", "test_config",
-                "test_case_conversation_turns", "creation_time",
-                "last_test_result",
-            ],
-            "Version": [
-                "name", "display_name", "description", "nlu_settings",
-                "create_time", "state",
-            ],
-        }
-        if isinstance(obj, types.Environment):
-            paths = attrs_map["Environment"]
-        elif isinstance(obj, types.Experiment):
-            paths = attrs_map["Experiment"]
-        elif isinstance(obj, types.TestCase):
-            paths = attrs_map["TestCase"]
-        elif isinstance(obj, types.Version):
-            paths = attrs_map["Version"]
-        else:
-            raise ValueError(
-                "`obj` should be one of the following:"
-                " [Environment, Experiment, TestCase, Version]."
-            )
+        output_dict = {}
+        for rsrc in resources:
+            parsed_output = self._parse_resource_path(
+                resource_type=rsrc, resource_id=resource_id, validate=False)
+            if parsed_output:
+                output_dict[rsrc] = self._create_link_helper(
+                    parsed_output, rsrc)
 
-        return field_mask_pb2.FieldMask(paths=paths)
+        # Check for possible duplicates and non generated links
+        if len(output_dict) > 1:
+            logging.warning("Can create more than one resource link.")
+            return output_dict
+        elif len(output_dict) == 0:
+            raise UserWarning("No link can be created.")
+
+        return list(output_dict.values())[0]
 
 
 def api_call_counter_decorator(func):
