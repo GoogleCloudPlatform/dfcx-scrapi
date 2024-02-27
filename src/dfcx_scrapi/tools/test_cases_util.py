@@ -475,8 +475,8 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         test_config: types.TestConfig,
         conv_turns: List[types.ConversationTurn],
         last_test_conv_turns: List[types.ConversationTurn]):
-        """This method is a logger that indicates which attributes are missing
-          from the test case.
+        """This method is a logger that indicates which attributes are not
+        convertible in the test case.
         Args:
           test_config: types.TestConfig
           conv_turns: List[types.ConversationTurn]
@@ -507,6 +507,9 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         rate_limit: int = 5) -> Union[types.TestCase, None]:
         """This method converts the test case from the source agent to the
           target agent.
+          Note: In dfcx_scrapi.core.test_case.TestCases, it requires
+          list_test_cases(include_conversation_turns=True),
+          Otherwise, it will fail to convert.
         Args:
           test_case: types.TestCase
           source_agent_id: str
@@ -516,6 +519,12 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
           types.TestCase or None if  fails
         """
 
+        if not test_case.test_case_conversation_turns:
+            raise UserWarning(
+                "types.TestCase is not convertible if "
+                "test_case_conversation_turns is empty "
+                f"test case : {test_case.display_name}"
+            )
         if not self.source_commons.get("agent_id") == source_agent_id:
             self.source_commons = self._get_commons_config(
                 agent_id=source_agent_id)
