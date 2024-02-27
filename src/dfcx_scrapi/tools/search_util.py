@@ -18,6 +18,7 @@ import logging
 import time
 from typing import Dict, List, Any, Generator
 from operator import attrgetter
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -30,6 +31,7 @@ from dfcx_scrapi.core import flows
 from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import entity_types
 from dfcx_scrapi.core import transition_route_groups
+from dfcx_scrapi.core import webhooks
 
 
 # logging config
@@ -66,6 +68,8 @@ class SearchUtil(scrapi_base.ScrapiBase):
         self.flows = flows.Flows(creds_path=creds_path, creds_dict=creds_dict)
         self.pages = pages.Pages(creds_path=creds_path, creds_dict=creds_dict)
         self.route_groups = transition_route_groups.TransitionRouteGroups(
+            creds_path=creds_path, creds_dict=creds_dict)
+        self.webhooks = webhooks.Webhooks(
             creds_path=creds_path, creds_dict=creds_dict)
 
         self.creds_path = creds_path
@@ -274,7 +278,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         else:
             return None
 
-    def _fetch_fulfillment_gen_resources(
+    def _fetch_fulfillment_generator_resources(
         self, agent_id: str, rate_limit: float = 0.5
     ):
         """Fetch the agent resources to feed to fulfillment_generator."""
@@ -438,6 +442,140 @@ class SearchUtil(scrapi_base.ScrapiBase):
                         "parent_proto": trg,
                         "link": trg_link,
                     }
+
+    def get_paths_to_page_dataframe(
+        self, agent_id: str, flow_name: str, page_name: str,
+        new_fetch: bool = False, rate_limit: float = 0.5
+    ) -> pd.DataFrame:
+        """"""
+        ff_gen = self.fulfillment_generator(agent_id, new_fetch, rate_limit)
+
+        target_page_proto = [
+            page
+            for page in self.all_pages_per_flow[flow_name]
+            if page.display_name == page_name
+        ]
+        if not target_page_proto:
+            raise ValueError(f"Page `{page_name}` couldn't be found!")
+        target_page_proto = target_page_proto[0]
+
+        out_records = []
+        while True:
+            try:
+                next_ff = next(ff_gen)
+            except StopIteration:
+                break
+
+            # Get the fulfillment parts
+            location = next_ff["location"]
+            link = next_ff["link"]
+
+            if location["TargetId"] == target_page_proto.name:
+                out_records.append({**location, **{"Link": link}})
+
+
+        return pd.DataFrame.from_records(out_records)
+
+    def get_fulfillments_with_unicodes_dataframe(
+        self, agent_id: str, unicodes: Unioin[int, List[int]],
+        new_fetch: bool = False, rate_limit: float = 0.5
+    ) -> pd.DataFrame:
+        """"""
+        if isinstance(unicodes, int):
+            unicodes = [unicodes]
+        elif not isinstance(unicodes, list):
+            raise ValueError(
+                "`unicodes` should be either an int or a list of ints")
+
+
+        ff_gen = self.fulfillment_generator(agent_id, new_fetch, rate_limit)
+        out_recs = []
+        while True:
+            try:
+                next_ff = next(ff_gen)
+            except StopIteration:
+                break
+
+            # Get the fulfillment parts
+            the_fulfillment = next_ff["fulfillment"]
+            location = next_ff["location"]
+            link = next_ff["link"]
+
+            for msg in the_fulfillment.messages:
+                # TODO(miladt): Should add msg.payload/conditional cases
+                if msg.text:
+                    for txt in msg.text.text:
+                        for ch in txt:
+                            if ord(ch) in unicodes:
+                                ff_msg = the_fulfillment.messages
+                                out_recs.append({
+                                    **location, **{"Link": link},
+                                    **{"Fulfillment": ff_msg},
+                                    **{"utf_code": f"U+{ord(ch):04X}"}
+                                })
+
+        return pd.DataFrame.from_records(out_recs)
+
+    def get_unicodes_count_dataframe(
+        self, agent_id: str, new_fetch: bool = False, rate_limit: float = 0.5
+    ) -> pd.DataFrame:
+        """"""
+        ff_gen = self.fulfillment_generator(agent_id, new_fetch, rate_limit)
+
+        unicode_dict, unicode_count = {}, defaultdict(int)
+        while True:
+            try:
+                next_ff = next(ff_gen)
+            except StopIteration:
+                break
+
+            the_fulfillment = next_ff["fulfillment"]
+            for msg in the_fulfillment.messages:
+                # TODO(miladt): Should add msg.payload/conditional cases
+                if msg.text:
+                    for txt in msg.text.text:
+                        for ch in txt:
+                            unicode_dict[ord(ch)] = ch
+                            unicode_count[ord(ch)] += 1
+
+        recs = []
+        for ord_ch in unicode_dict:
+            recs.append({
+                "unicode": ord_ch,
+                "char": unicode_dict[ord_ch],
+                "count": unicode_count[ord_ch],
+                "code": f"U+{ord_ch:04X}",
+            })
+
+        return pd.DataFrame.from_records(recs)
+
+    def get_webhooks_tag_dataframe(
+        self, agent_id: str, new_fetch: bool = False, rate_limit: float = 0.5
+    ) -> pd.DataFrame:
+        """"""
+        ff_gen = self.fulfillment_generator(agent_id, new_fetch, rate_limit)
+        time.sleep(rate_limit)
+        webhooks_map = self.webhooks.get_webhooks_map(agent_id=agent_id)
+
+        webhook_tags_dict = defaultdict(set)
+        while True:
+            try:
+                next_ff = next(ff_gen)
+            except StopIteration:
+                break
+
+            the_fulfillment = next_ff["fulfillment"]
+            if the_fulfillment.webhook:
+                webhook_name = webhooks_map[the_fulfillment.webhook]
+                webhook_tags_dict[webhook_name].add(the_fulfillment.tag)
+
+        max_len = max(len(item) for item in webhook_tags_dict.values())
+        data = {
+            k: list(v) + [np.nan] * (max_len - len(v))
+            for k, v in webhook_tags_dict.items()
+        }
+
+        return pd.DataFrame(data)
 
     def _format_response_message(
         self, message: types.ResponseMessage, message_format: str
