@@ -226,24 +226,15 @@ class Sessions(scrapi_base.ScrapiBase):
 
         logging.info(f"Starting Session ID {session_id}")
 
+        query_input = self._build_query_input(text, language_code)
+
+        request = types.session.DetectIntentRequest()
+        request.session = session_id
+        request.query_input = query_input
+
         if parameters:
             query_params = types.session.QueryParameters(parameters=parameters)
-
-            query_input = self._build_query_input(text, language_code)
-
-            request = types.session.DetectIntentRequest()
-            request.session = session_id
-            request.query_input = query_input
             request.query_params = query_params
-
-            response = session_client.detect_intent(request=request)
-
-        else:
-            query_input = self._build_query_input(text, language_code)
-
-            request = types.session.DetectIntentRequest()
-            request.session = session_id
-            request.query_input = query_input
 
         response = session_client.detect_intent(request)
         query_result = response.query_result
