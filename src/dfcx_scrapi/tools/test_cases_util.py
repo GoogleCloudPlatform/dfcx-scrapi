@@ -17,14 +17,15 @@
 import logging
 from typing import Dict, List, Union
 import time
+
 from google.cloud.dialogflowcx_v3beta1 import types
+from google.api_core import exceptions as core_exceptions
 
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import flows
 from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import intents
 from dfcx_scrapi.core import test_cases
-from google.api_core import exceptions as core_exceptions
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,6 +50,11 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
             creds=creds,
             scope=scope,
         )
+
+        if not agent_id:
+            self.agent_id = agent_id
+        self.source_commons = {}
+        self.target_commons = {}
 
     def _toggle_sentiment_in_convturns(
         self,
@@ -87,8 +93,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         if not agent_id:
             agent_id = self.agent_id
         dfcx_testcases = test_cases.TestCases(
-            creds=self.creds,
-            agent_id=agent_id)
+            creds=self.creds, agent_id=agent_id)
         test_cases_list = dfcx_testcases.list_test_cases(
             agent_id, include_conversation_turns=True)
         updated_test_cases_list = []
@@ -139,8 +144,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         if not agent_id:
             agent_id = self.agent_id
         dfcx_testcases = test_cases.TestCases(
-            creds=self.creds,
-            agent_id=agent_id)
+            creds=self.creds, agent_id=agent_id)
         test_cases_list = dfcx_testcases.list_test_cases(
             agent_id, include_conversation_turns=True)
         updated_test_cases_list = []
@@ -155,7 +159,8 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
         return updated_test_cases_list
 
-    def _reverse_dict(self, dict_):
+    @staticmethod
+    def _reverse_dict(dict_):
         """Utility method that reverse the dict keys and values
             Args:
                 dict_: a dictionary
@@ -177,14 +182,18 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         """
 
         commons_config = {}
+        commons_config["agent_id"] = agent_id
         dfcx_flows = flows.Flows(creds=self.creds, agent_id=agent_id)
         dfcx_pages = pages.Pages(creds=self.creds)
         dfcx_intents = intents.Intents(creds=self.creds, agent_id=agent_id)
+        dfcx_testcases = test_cases.TestCases(
+            creds=self.creds, agent_id=agent_id)
         dfcx_intents_map = dfcx_intents.get_intents_map(agent_id=agent_id)
         dfcx_flows_map = dfcx_flows.get_flows_map(agent_id=agent_id)
         dfcx_pages_map = {}
         for flow_id in dfcx_flows_map.keys():
             dfcx_pages_map[flow_id] = dfcx_pages.get_pages_map(flow_id=flow_id)
+        commons_config["test_cases"] = dfcx_testcases
         commons_config["flows"] = dfcx_flows
         commons_config["pages"] = dfcx_pages
         commons_config["intents"] = dfcx_intents
@@ -192,11 +201,11 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         commons_config["pages_map"] = dfcx_pages_map
         commons_config["intents_map"] = dfcx_intents_map
         commons_config["flows_map_reverse"] = (
-            self._reverse_dict(commons_config["flows_map"]))
+            self._reverse_dict(dict_=commons_config["flows_map"]))
         commons_config["intents_map_reverse"] = (
-            self._reverse_dict(commons_config["intents_map"]))
+            self._reverse_dict(dict_=commons_config["intents_map"]))
         commons_config["pages_map_reverse"] = (
-            {f_id:self._reverse_dict(pages_map) \
+            {f_id:self._reverse_dict(dict_=pages_map) \
              for f_id, pages_map in dfcx_pages_map.items()})
 
         return commons_config
@@ -226,8 +235,8 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
         if test_case.test_config.flow:
             target_flow_id = self._get_flow_id_by_flow_name(
-                flow_name = source_flow,
-                flows_map = target["flows_map_reverse"])
+                flow_name=source_flow,
+                flows_map=target["flows_map_reverse"])
             if target_flow_id:
                 target_test_config.flow = target_flow_id
             else:
@@ -235,12 +244,12 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
         elif test_case.test_config.page:
             target_flow_id = self._get_flow_id_by_flow_name(
-                flow_name = source_flow,
-                flows_map = target["flows_map_reverse"])
+                flow_name=source_flow,
+                flows_map=target["flows_map_reverse"])
             target_page_id = self._get_page_id_by_page_name(
-                flow_id = target_flow_id,
-                page_name = source_page,
-                pages_map = target["pages_map_reverse"])
+                flow_id=target_flow_id,
+                page_name=source_page,
+                pages_map=target["pages_map_reverse"])
             if target_page_id:
                 target_test_config.page = target_page_id
             else:
@@ -305,9 +314,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         """Attempt to get the Flow id from the Flows Map
             by the flow display name."""
 
-        flow_id = flows_map.get(flow_name, None)
-
-        return flow_id
+        return flows_map.get(flow_name, None)
 
     def _get_page_id_by_page_name(
         self,
@@ -343,9 +350,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         """Attempt to get the intent id from the Intents Map
             by the intent's display name."""
 
-        intent_id = intents_map.get(intent_name, None)
-
-        return intent_id
+        return intents_map.get(intent_name, None)
 
     def _get_intent_name_by_intent_id(
         self,
@@ -354,15 +359,13 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         """Attempt to get the intent display name from the Intents Map
             by the intent's display name."""
 
-        intent_name = intents_map.get(intent_id, None)
-
-        return intent_name
+        return intents_map.get(intent_id, None)
 
     def _get_intent_id_from_virtual_agent_output(
         self,
         virtual_agent_output: types.ConversationTurn.VirtualAgentOutput,
         target: dict) -> Union[str, None]:
-        """Attempt to find the intent id from the source's agent 
+        """Attempt to find the intent id from the source's agent
         conversation_turn.virtual_agent_output triggered intent
         display name using the target's intents map
         """
@@ -370,11 +373,9 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         source_intent = (
           virtual_agent_output.triggered_intent.display_name
         )
-        target_intent_id = self._get_intent_id_by_intent_name(
-          intent_name = source_intent,
-          intents_map = target["intents_map_reverse"])
-
-        return target_intent_id
+        return self._get_intent_id_by_intent_name(
+            intent_name=source_intent,
+            intents_map=target["intents_map_reverse"])
 
     def _get_page_id_from_virtual_agent_output(
         self,
@@ -391,12 +392,12 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
           flow_id = source_page_id.split("/pages/")[0],
           flows_map = source["flows_map"])
         target_flow_id = self._get_flow_id_by_flow_name(
-          flow_name = source_flow,
-          flows_map = target["flows_map_reverse"])
+          flow_name=source_flow,
+          flows_map=target["flows_map_reverse"])
         target_page_id = self._get_page_id_by_page_name(
-          flow_id = target_flow_id,
-          page_name = source_page,
-          pages_map = target["pages_map_reverse"])
+          flow_id=target_flow_id,
+          page_name=source_page,
+          pages_map=target["pages_map_reverse"])
 
         return target_page_id
 
@@ -405,17 +406,17 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         user_input: types.ConversationTurn.UserInput,
         source: dict,
         target: dict) -> Union[str, None]:
-        """Attempt to find the intent id from the source's agent 
+        """Attempt to find the intent id from the source's agent
           conversation turn user input intent id to the target's pages map
         """
 
         source_intent_id = user_input.input.intent
         source_intent = self._get_intent_name_by_intent_id(
-            intent_id = source_intent_id,
-            intents_map = source["intents_map"])
+            intent_id=source_intent_id,
+            intents_map=source["intents_map"])
         target_intent_id = self._get_intent_id_by_intent_name(
-            intent_name = source_intent,
-            intents_map = target["intents_map_reverse"])
+            intent_name=source_intent,
+            intents_map=target["intents_map_reverse"])
 
         return target_intent_id
 
@@ -428,8 +429,8 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         """ Update the uuids of the current page and intent
             by display name in each conversation turn.
           Args:
-            source: The formatted CX Agent ID
-            target: The formatted CX Agent ID
+            source: Source agent's commons_config dictionary
+            target: Target agent's commons_config dictionary
             conversation_turns: types.ConversationTurn
           Returns:
             types.test_case_conversation_turns
@@ -442,28 +443,24 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
             if user_input_intent.input.intent:
                 conv_turn.user_input.input.intent = (
                     self._get_intent_id_from_user_input(
-                        user_input = user_input_intent,
-                        source = source,
-                        target = target
-                    )
+                        user_input=user_input_intent,
+                        source=source, target=target)
                 )
                 if not conv_turn.user_input.input.intent:
                     return None
             if virtual_agent_output.current_page:
                 conv_turn.virtual_agent_output.current_page.name = (
                     self._get_page_id_from_virtual_agent_output(
-                        virtual_agent_output = virtual_agent_output,
-                        source = source,
-                        target = target
-                    )
+                        virtual_agent_output=virtual_agent_output,
+                        source=source, target=target)
                 )
                 if not conv_turn.virtual_agent_output.current_page.name:
                     return None
             if virtual_agent_output.triggered_intent:
                 conv_turn.virtual_agent_output.triggered_intent.name = (
                     self._get_intent_id_from_virtual_agent_output(
-                        virtual_agent_output = virtual_agent_output,
-                        target = target
+                        virtual_agent_output=virtual_agent_output,
+                        target=target
                     )
                 )
                 if not conv_turn.virtual_agent_output.triggered_intent.name:
@@ -472,88 +469,97 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
         return new_conversation_turns
 
-    def migrate_test_cases(
+    def _missing_attribute_logger(
         self,
-        source_agent: str,
-        target_agent: str,
-        rate_limit: int = 5) -> List[types.TestCase]:
-        """The purpose of this method is to create a new set of the test cases
-            from (old) a source agent to (new) a target agent.
-            When the new agent (target) is created by the copy util,
-            UUIDs of flows, pages, intents, and etc are newly generated.
-            Therefore, the discrepencies of the uuids creates conflict
-            when importing the test cases from a source to a target agent.
-            To prevent this, this method helps to migrate the test cases by
-            replacing the UUIDs that are relevant to a target agent. The test
-            cases are only migratable if the display names of flows, pages,
-            intents, and etc have the matching set in both source and target
-            agents.
-          Args:
-            source_agent: The agent that contain the test cases for.
-              Format:
-                `projects/<ProjectID>/locations/<LocationID>/agents/<AgentID>`
-            target_agent: The new agent where you want to migrate.
-              Format:
-                `projects/<ProjectID>/locations/<Location ID>/agents/<AgentID>`
-          Returns:
-            a list of the types.TestCase objects that are created in the
-            target agent.
+        test_case: types.TestCase,
+        test_config: types.TestConfig,
+        conv_turns: List[types.ConversationTurn],
+        last_test_conv_turns: List[types.ConversationTurn]):
+        """This method is a logger that indicates which attributes are missing
+          from the test case.
+        Args:
+          test_config: types.TestConfig
+          conv_turns: List[types.ConversationTurn]
+          last_test_conv_turns: List[types.ConversationTurn]
         """
 
-        source_dfcx_test_cases = test_cases.TestCases(
-            creds=self.creds, agent_id=source_agent)
-        target_dfcx_test_cases = test_cases.TestCases(
-            creds=self.creds, agent_id=target_agent)
-        source_agent_tcs = source_dfcx_test_cases.list_test_cases(
-            source_agent, include_conversation_turns=True)
-        if not source_agent_tcs:
-            raise f"source agent:{source_agent} does not have any test cases"
-        new_test_cases = []
-        s_commons = self._get_commons_config(agent_id=source_agent)
-        t_commons = self._get_commons_config(agent_id=target_agent)
-        for tc in source_agent_tcs:
-            new_test_config = self._get_new_test_config(
-                s_commons, t_commons, tc)
-            new_conv_turns = self._get_new_conversation_turns(
-                s_commons, t_commons, tc.test_case_conversation_turns)
-            new_last_test_conv_turns = self._get_new_conversation_turns(
-                s_commons, t_commons, tc.last_test_result.conversation_turns)
-            if None in [
-                new_test_config,
-                new_conv_turns,
-                new_last_test_conv_turns]:
-                if not new_test_config:
-                    logging.warning(
-                        f"test_case: {tc.display_name} "\
-                        f"Reason: test_config is None.")
-                elif not new_conv_turns:
-                    logging.warning(
-                        f"test_case: {tc.display_name} "\
-                        f"Reason: test_conversation_turns is None.")
-                elif not new_last_test_conv_turns:
-                    logging.warning(
-                        f"test_case: {tc.display_name} "\
-                        f"Reason: last_test_result is None.")
-                continue
-            tc.test_config = new_test_config
-            tc.test_case_conversation_turns = new_conv_turns
-            tc.last_test_result.conversation_turns = new_last_test_conv_turns
-            tc.name = None
-            try:
-                new_test_case = target_dfcx_test_cases.create_test_case(
-                    test_case=tc)
-                time.sleep(rate_limit)
-            except core_exceptions.InternalServerError as err:
-                logging.error(
-                    "---- ERROR --- InternalServerError caught on CX.detect\
-                    %s", err)
-                logging.error("test_case: %s", tc.display_name)
-                continue
-            except core_exceptions.ClientError as err:
-                logging.error(
-                    "---- ERROR --- ClientError caught on CX.detect %s", err)
-                logging.error("test_case: %s", tc.display_name)
-                continue
-            new_test_cases.append(new_test_case)
+        if test_config is None:
+            logging.warning(
+                "-- ERROR --  DFCX Test case failed to convert -- "
+                f"test_case: {test_case.display_name} "
+                "Reason: test_config is None.")
+        if conv_turns is None:
+            logging.warning(
+                "-- ERROR --  DFCX Test case failed to convert -- "
+                f"test_case: {test_case.display_name} "
+                "Reason: test_conversation_turns is None.")
+        if last_test_conv_turns is None:
+            logging.warning(
+                "-- ERROR --  DFCX Test case failed to convert -- "
+                f"test_case: {test_case.display_name} "
+                "Reason: last_test_result is None.")
 
-        return new_test_cases
+    def convert_test_case(
+        self,
+        test_case: types.TestCase,
+        source_agent_id: str,
+        target_agent_id: str,
+        rate_limit: int = 5) -> Union[types.TestCase, None]:
+        """This method converts the test case from the source agent to the
+          target agent.
+        Args:
+          test_case: types.TestCase
+          source_agent_id: str
+          target_agent_id: str
+          rate_limit: int
+        Returns:
+          types.TestCase or None if  fails
+        """
+
+        if not self.source_commons.get("agent_id") == source_agent_id:
+            self.source_commons = self._get_commons_config(
+                agent_id=source_agent_id)
+        if not self.target_commons.get("agent_id") == target_agent_id:
+            self.target_commons = self._get_commons_config(
+                agent_id=target_agent_id)
+
+        test_config = self._get_new_test_config(
+            self.source_commons, self.target_commons, test_case)
+        conv_turns = self._get_new_conversation_turns(
+            self.source_commons,
+            self.target_commons,
+            test_case.test_case_conversation_turns)
+        last_test_conv_turns = self._get_new_conversation_turns(
+            self.source_commons,
+            self.target_commons,
+            test_case.last_test_result.conversation_turns)
+
+        if not all([test_config, conv_turns, last_test_conv_turns]):
+            self._missing_attribute_logger(
+                test_case, test_config, conv_turns, last_test_conv_turns)
+            return None
+
+        test_case.name = None
+        test_case.test_config = test_config
+        test_case.test_case_conversation_turns = conv_turns
+        test_case.last_test_result.conversation_turns = last_test_conv_turns
+
+        try:
+            new_test_case = self.target_commons["test_cases"].create_test_case(
+                test_case=test_case)
+            time.sleep(rate_limit)
+        except core_exceptions.InternalServerError as err:
+            logging.error(
+                f"-- ERROR -- InternalServerError caught on CX.detect -- {err}")
+            logging.error("test_case: %s", test_case.display_name)
+            return None
+        except core_exceptions.ClientError as err:
+            logging.error(
+                f"-- ERROR -- ClientError caught on CX.detect -- {err}")
+            logging.error("test_case: %s", test_case.display_name)
+            return None
+
+        logging.info(
+            "-- SUCCESS -- DFCX test_case converted -- "
+            f"test case: {new_test_case.display_name}")
+        return new_test_case
