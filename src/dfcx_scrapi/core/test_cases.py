@@ -16,7 +16,7 @@
 
 import pandas as pd
 import logging
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -52,13 +52,8 @@ class TestCases(scrapi_base.ScrapiBase):
             scope=scope,
         )
 
-        if agent_id:
-            self.agent_id = agent_id
-            self.client_options = self._set_region(self.agent_id)
-
-        if test_case_id:
-            self.test_case_id = test_case_id
-            self.client_options = self._set_region(self.test_case_id)
+        self.agent_id = agent_id
+        self.test_case_id = test_case_id
 
     def _convert_test_result_to_string(self, test_case: types.TestCase) -> str:
         """Converts the Enum result to a string."""
@@ -71,7 +66,8 @@ class TestCases(scrapi_base.ScrapiBase):
         else:
             return ""
 
-    def _convert_test_result_to_bool(self, test_case: types.TestCase) -> bool:
+    def _convert_test_result_to_bool(
+            self, test_case: types.TestCase) -> Union[bool, None]:
         """Converts the String result to a boolean."""
         test_result = self._convert_test_result_to_string(test_case)
 
@@ -103,7 +99,7 @@ class TestCases(scrapi_base.ScrapiBase):
 
     def _get_page_display_name(
             self, flow_id: str, page_id: str,
-            pages_map: Dict[str, Dict[str, str]]) -> str:
+            pages_map: Dict[str, Dict[str, str]]) -> Union[str, None]:
         """Get the Page Display Name from the Pages Map based on the Page ID."""
         page_map = pages_map.get(flow_id, None)
         page = "START_PAGE"
@@ -458,11 +454,25 @@ class TestCases(scrapi_base.ScrapiBase):
         Returns:
           The updated Test Case.
         """
+        if not(obj or test_case_id or self.test_case_id):
+            raise ValueError(
+                "At least one of `test_case_id` or `obj` should be passed.")
+
+        if test_case_id and not (obj or kwargs):
+            raise ValueError(
+                "At least one kwarg or `obj` arg should be passed, otherwise ",
+                "this is noop.")
 
         if obj:
             test_case = obj
-            test_case.name = test_case_id
+
+            if test_case_id:
+                test_case.name = test_case_id
+
+            if not test_case.name:
+                raise ValueError("The `name` of the `obj` should not be empty.")
             mask = self._update_kwargs(test_case)
+
         elif kwargs:
             if not test_case_id:
                 test_case_id = self.test_case_id
@@ -472,7 +482,7 @@ class TestCases(scrapi_base.ScrapiBase):
         request = types.test_case.UpdateTestCaseRequest(
             test_case=test_case, update_mask=mask)
 
-        client_options = self._set_region(test_case_id)
+        client_options = self._set_region(test_case_id or obj.name)
         client = services.test_cases.TestCasesClient(
             credentials=self.creds, client_options=client_options
         )
