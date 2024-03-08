@@ -319,7 +319,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             self.all_route_groups_per_flow
         ]
         if new_fetch or not all(required_resources):
-            self._fetch_fulfillment_gen_resources(agent_id, rate_limit)
+            self._fetch_fulfillment_generator_resources(agent_id, rate_limit)
 
         # Flows
         for flow in self.all_flows:
