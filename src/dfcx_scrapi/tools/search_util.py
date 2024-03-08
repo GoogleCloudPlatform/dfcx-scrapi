@@ -16,7 +16,7 @@
 
 import logging
 import time
-from typing import Dict, List, Any, Generator
+from typing import Dict, List, Any, Generator, Union
 from operator import attrgetter
 from collections import defaultdict
 
@@ -447,7 +447,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
         self, agent_id: str, flow_name: str, page_name: str,
         new_fetch: bool = False, rate_limit: float = 0.5
     ) -> pd.DataFrame:
-        """"""
+        """TODO docs!"""
         ff_gen = self.fulfillment_generator(agent_id, new_fetch, rate_limit)
 
         target_page_proto = [
@@ -477,10 +477,10 @@ class SearchUtil(scrapi_base.ScrapiBase):
         return pd.DataFrame.from_records(out_records)
 
     def get_fulfillments_with_unicodes_dataframe(
-        self, agent_id: str, unicodes: Unioin[int, List[int]],
+        self, agent_id: str, unicodes: Union[int, List[int]],
         new_fetch: bool = False, rate_limit: float = 0.5
     ) -> pd.DataFrame:
-        """"""
+        """TODO docs!"""
         if isinstance(unicodes, int):
             unicodes = [unicodes]
         elif not isinstance(unicodes, list):
@@ -539,10 +539,10 @@ class SearchUtil(scrapi_base.ScrapiBase):
                             unicode_count[ord(ch)] += 1
 
         recs = []
-        for ord_ch in unicode_dict:
+        for ord_ch, uni_char in unicode_dict.items():
             recs.append({
                 "unicode": ord_ch,
-                "char": unicode_dict[ord_ch],
+                "char": uni_char,
                 "count": unicode_count[ord_ch],
                 "code": f"U+{ord_ch:04X}",
             })
@@ -552,7 +552,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
     def get_webhooks_tag_dataframe(
         self, agent_id: str, new_fetch: bool = False, rate_limit: float = 0.5
     ) -> pd.DataFrame:
-        """"""
+        """TODO docs!"""
         ff_gen = self.fulfillment_generator(agent_id, new_fetch, rate_limit)
         time.sleep(rate_limit)
         webhooks_map = self.webhooks.get_webhooks_map(agent_id=agent_id)
