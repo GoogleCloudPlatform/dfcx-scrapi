@@ -193,7 +193,8 @@ class Sessions(scrapi_base.ScrapiBase):
         session_id,
         text,
         language_code="en",
-        parameters=None):
+        parameters=None,
+        populate_data_store_connection_signals=False):
         """Returns the result of detect intent with texts as inputs.
 
         Using the same `session_id` between requests allows continuation
@@ -207,6 +208,10 @@ class Sessions(scrapi_base.ScrapiBase):
           text: the user utterance to run intent detection on
           parameters: (Optional) Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
+          populate_data_store_connection_signals: If set to true and data
+            stores are involved in serving the request then query result will
+            be populated with data_store_connection_signals field which 
+            contains data that can help evaluations.
 
         Returns:
           The CX query result from intent detection
@@ -232,8 +237,18 @@ class Sessions(scrapi_base.ScrapiBase):
         request.session = session_id
         request.query_input = query_input
 
+        query_param_mapping = {}
+
         if parameters:
-            query_params = types.session.QueryParameters(parameters=parameters)
+            query_param_mapping["parameters"] = parameters
+
+        if populate_data_store_connection_signals:
+            query_param_mapping["populate_data_store_connection_signals"] = (
+                populate_data_store_connection_signals
+            )
+
+        if query_param_mapping:
+            query_params = types.session.QueryParameters(query_param_mapping)
             request.query_params = query_params
 
         response = session_client.detect_intent(request)
