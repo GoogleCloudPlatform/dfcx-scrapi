@@ -609,12 +609,12 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
     def _convert_send_objs_to_conv_turns(
         self,
-        send_objs: list[Dict],
+        send_objs: List[Dict],
         webhooks: bool) -> List[types.ConversationTurn]:
         """This function converts the send_objs to conversation turns.
           Iterate send_objs, set the params and a user_input of every turn.
         Args:
-          send_objs: list[dict]
+          send_objs: List[dict]
           webhooks: bool
         Returns:
           List[types.ConversationTurn]
@@ -657,7 +657,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
     def create_test_case_by_send_objs(
         self,
         display_name: str,
-        send_objs: list[Dict],
+        send_objs: List[Dict],
         webhooks: bool = False,
         current_page: str = None,
         tags: List[str] = None,
