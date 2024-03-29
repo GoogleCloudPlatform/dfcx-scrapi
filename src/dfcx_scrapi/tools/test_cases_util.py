@@ -557,17 +557,17 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         logging.info(
             "-- SUCCESS -- DFCX test_case converted -- "
             f"test case: {new_test_case.display_name}")
+
         return new_test_case
 
     def _initialize_conversation_turn(self) -> types.ConversationTurn:
-        """This function initializes the conversation turn.
+        """it initializes the conversation turn.
         Returns:
           types.ConversationTurn
         """
         conversation_turn = types.ConversationTurn()
         conversation_turn.user_input = (
-            conversation_turn.UserInput(input=types.QueryInput())
-        )
+            conversation_turn.UserInput(input=types.QueryInput()))
 
         return conversation_turn
 
@@ -576,8 +576,8 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         send_obj: Dict,
         conversation_turn: types.ConversationTurn
         ) -> types.ConversationTurn:
-        """This function sets the query input. In query input, there are 4 types
-          of input: text, event, intent, dtmf.
+        """it sets the query input. In query input, it handle 4 types
+          of input: text, event, intent, dtmf if not, then it raises a warning.
         Args:
           conversation_turn: types.ConversationTurn
         Returns:
@@ -590,30 +590,29 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
             conversation_turn.user_input.input.dtmf = (
                 types.DtmfInput(
                     digits=send_obj["dtmf"],
-                    finish_digit=finish_digit)
-            )
+                    finish_digit=finish_digit))
         elif "event" in send_obj:
             conversation_turn.user_input.input.event = (
-                types.EventInput(event=send_obj["event"])
-            )
+                types.EventInput(event=send_obj["event"]))
         elif "text" in send_obj:
             conversation_turn.user_input.input.text = (
-                types.TextInput(text=send_obj["text"])
-            )
+                types.TextInput(text=send_obj["text"]))
         elif "intent" in send_obj:
             conversation_turn.user_input.input.intent = (
-                types.IntentInput(intent=send_obj["intent"])
-            )
+                types.IntentInput(intent=send_obj["intent"]))
+        else:
+            raise UserWarning(
+                "send_obj doesn't contain the proper query input type. "
+                "it must contains one of [text, event, intent, dtmf] as a key")
 
         return conversation_turn
 
     def _convert_send_objs_to_conv_turns(
         self,
-        send_objs: List[Dict],
+        send_objs: list[Dict],
         webhooks: bool) -> List[types.ConversationTurn]:
         """This function converts the send_objs to conversation turns.
-          Iterate through the send_objs and set the params and user input of
-          every turn.
+          Iterate send_objs, set the params and a user_input of every turn.
         Args:
           send_objs: list[dict]
           webhooks: bool
@@ -621,13 +620,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
           List[types.ConversationTurn]
         """
         conversation_turns = []
-        input_types = ["text", "event", "intent", "dtmf"]
         for send_obj in send_objs:
-            if not any(input_type in send_obj for input_type in input_types):
-                raise UserWarning(
-                    "send_obj doesn't contain the proper query input type. "
-                    "it must contains [text, event, intent, dtmf] as a key"
-                )
             conversation_turn = self._initialize_conversation_turn()
             if "params" in send_obj:
                 param = Struct()
@@ -636,17 +629,17 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
             conversation_turn.user_input.is_webhook_enabled = webhooks
             conversation_turn = self._set_query_input(
                 send_obj=send_obj,
-                conversation_turn=conversation_turn
-            )
+                conversation_turn=conversation_turn)
             conversation_turns.append(conversation_turn)
         return conversation_turns
 
     def _set_test_config(
         self,
         current_page) -> types.TestConfig:
-        """This method sets the test config.
+        """it sets the test config of the test case.
         if current page is None, then it starts at Default Start Flow/Start page
-        if current page is not None, then it starts at the current page
+        if current page is a page id, then it starts at the specific page id
+        if current page is a flow id, then it starts at the flow start page
         Args:
           current_page: str
         Returns:
@@ -658,22 +651,22 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
                 test_config.page = current_page
             else:
                 test_config.flow = current_page
+
         return test_config
 
     def create_test_case_by_send_objs(
         self,
         display_name: str,
-        send_objs: List[Dict],
+        send_objs: list[Dict],
         webhooks: bool = False,
         current_page: str = None,
         tags: List[str] = None,
         rate_limit: int = 5) ->  Union[types.TestCase, None]:
-        """
-        This function creates a test case by a set of send_objs. Each send_obj
+        """it creates a test case by a set of send_objs. Each send_obj
         consists of params and user input of every turn. Send_obj is commonly
-        used for the e2e testing in dfcx_scrapi.core.conversation.reply
-        function. With this function, it can simultaneously create the test case
-        while running the e2e test.
+        used in the e2e testing, dfcx_scrapi.core.conversation.reply().
+        With this function, it can simultaneously create the test case while
+        running the e2e test.
         Args:
           display_name: a display_name of the test case
           send_objs: a list of send_objs
@@ -707,4 +700,5 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
             logging.error(
                 f"-- ERROR -- ClientError caught on CX.detect -- {err}")
             logging.error("test_case: %s", test_case.display_name)
+
         return response
