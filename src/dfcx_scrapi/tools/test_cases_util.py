@@ -20,6 +20,7 @@ import time
 
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.api_core import exceptions as core_exceptions
+from google.protobuf.struct_pb2 import Struct
 
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import flows
@@ -38,11 +39,11 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
     def __init__(
         self,
+        agent_id: str,
         creds_path: str = None,
         creds_dict: Dict = None,
         creds=None,
         scope=False,
-        agent_id: str = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -51,8 +52,9 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
             scope=scope,
         )
 
-        if not agent_id:
-            self.agent_id = agent_id
+        self.agent_id = agent_id
+        self._global_test_cases = test_cases.TestCases(
+            creds=self.creds, agent_id=self.agent_id)
         self.source_commons = {}
         self.target_commons = {}
 
@@ -66,7 +68,6 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         Returns:
             a list of the conversation turns
         """
-
         new_conversation_turns = []
         for conversation_turn in conv_turns:
             conversation_turn.user_input.enable_sentiment_analysis = sentiment
@@ -77,8 +78,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
     def toggle_sentiment_test_cases(
         self,
         test_case_ids: List[str],
-        sentiment: bool,
-        agent_id: str = None) -> List[types.TestCase]:
+        sentiment: bool) -> List[types.TestCase]:
         """Enable/disable enable_sentiment_analysis for the given test case ids.
         Args:
             test_cases: a list of test case ids
@@ -89,13 +89,8 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         Returns:
             a list of the updated test cases
         """
-
-        if not agent_id:
-            agent_id = self.agent_id
-        dfcx_testcases = test_cases.TestCases(
-            creds=self.creds, agent_id=agent_id)
-        test_cases_list = dfcx_testcases.list_test_cases(
-            agent_id, include_conversation_turns=True)
+        test_cases_list = self._global_test_cases.list_test_cases(
+            agent_id=self.agent_id, include_conversation_turns=True)
         updated_test_cases_list = []
         for test_case in test_cases_list:
             if test_case.name in test_case_ids:
@@ -129,8 +124,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
     def toggle_webhooks_test_cases(
         self,
         test_case_ids: List[str],
-        is_webhook_enabled: bool,
-        agent_id: str = None) -> List[types.TestCase]:
+        is_webhook_enabled: bool) -> List[types.TestCase]:
         """
         Enable/disable webhooks for the given test case ids.
         Args:
@@ -140,13 +134,8 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         Returns:
             list of the updated test caess
         """
-
-        if not agent_id:
-            agent_id = self.agent_id
-        dfcx_testcases = test_cases.TestCases(
-            creds=self.creds, agent_id=agent_id)
-        test_cases_list = dfcx_testcases.list_test_cases(
-            agent_id, include_conversation_turns=True)
+        test_cases_list = self._global_test_cases.list_test_cases(
+            agent_id=self.agent_id, include_conversation_turns=True)
         updated_test_cases_list = []
         for test_case in test_cases_list:
             if test_case.name in test_case_ids:
@@ -389,15 +378,15 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         source_page = virtual_agent_output.current_page.display_name
         source_page_id = virtual_agent_output.current_page.name
         source_flow = self._get_flow_display_name_by_id(
-          flow_id = source_page_id.split("/pages/")[0],
-          flows_map = source["flows_map"])
+            flow_id = source_page_id.split("/pages/")[0],
+            flows_map = source["flows_map"])
         target_flow_id = self._get_flow_id_by_flow_name(
-          flow_name=source_flow,
-          flows_map=target["flows_map_reverse"])
+            flow_name=source_flow,
+            flows_map=target["flows_map_reverse"])
         target_page_id = self._get_page_id_by_page_name(
-          flow_id=target_flow_id,
-          page_name=source_page,
-          pages_map=target["pages_map_reverse"])
+            flow_id=target_flow_id,
+            page_name=source_page,
+            pages_map=target["pages_map_reverse"])
 
         return target_page_id
 
@@ -552,7 +541,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         test_case.test_config = test_config
         test_case.test_case_conversation_turns = conv_turns
         test_case.last_test_result.conversation_turns = last_test_conv_turns
-
+        new_test_case = None
         try:
             new_test_case = self.target_commons["test_cases"].create_test_case(
                 test_case=test_case)
@@ -561,14 +550,161 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
             logging.error(
                 f"-- ERROR -- InternalServerError caught on CX.detect -- {err}")
             logging.error("test_case: %s", test_case.display_name)
-            return None
         except core_exceptions.ClientError as err:
             logging.error(
                 f"-- ERROR -- ClientError caught on CX.detect -- {err}")
             logging.error("test_case: %s", test_case.display_name)
-            return None
-
         logging.info(
             "-- SUCCESS -- DFCX test_case converted -- "
             f"test case: {new_test_case.display_name}")
         return new_test_case
+
+    def _initialize_conversation_turn(self) -> types.ConversationTurn:
+        """This function initializes the conversation turn.
+        Returns:
+          types.ConversationTurn
+        """
+        conversation_turn = types.ConversationTurn()
+        conversation_turn.user_input = (
+            conversation_turn.UserInput(input=types.QueryInput())
+        )
+
+        return conversation_turn
+
+    def _set_query_input(
+        self,
+        send_obj: Dict,
+        conversation_turn: types.ConversationTurn
+        ) -> types.ConversationTurn:
+        """This function sets the query input. In query input, there are 4 types
+          of input: text, event, intent, dtmf.
+        Args:
+          conversation_turn: types.ConversationTurn
+        Returns:
+          types.ConversationTurn
+        """
+        if "dtmf" in send_obj:
+            finish_digit = send_obj.get("finish_digit", None)
+            if finish_digit:
+                finish_digit = str(finish_digit)
+            conversation_turn.user_input.input.dtmf = (
+                types.DtmfInput(
+                    digits=send_obj["dtmf"],
+                    finish_digit=finish_digit)
+            )
+        elif "event" in send_obj:
+            conversation_turn.user_input.input.event = (
+                types.EventInput(event=send_obj["event"])
+            )
+        elif "text" in send_obj:
+            conversation_turn.user_input.input.text = (
+                types.TextInput(text=send_obj["text"])
+            )
+        elif "intent" in send_obj:
+            conversation_turn.user_input.input.intent = (
+                types.IntentInput(intent=send_obj["intent"])
+            )
+
+        return conversation_turn
+
+    def _convert_send_objs_to_conv_turns(
+        self,
+        send_objs: list[Dict],
+        webhooks: bool) -> List[types.ConversationTurn]:
+        """This function converts the send_objs to conversation turns.
+          Iterate through the send_objs and set the params and user input of
+          every turn.
+        Args:
+          send_objs: list[dict]
+          webhooks: bool
+        Returns:
+          List[types.ConversationTurn]
+        """
+        conversation_turns = []
+        input_types = ["text", "event", "intent", "dtmf"]
+        for send_obj in send_objs:
+            if not any(input_type in send_obj for input_type in input_types):
+                raise UserWarning(
+                    "send_obj doesn't contain the proper query input type. "
+                    "it must contains [text, event, intent, dtmf] as a key"
+                )
+            conversation_turn = self._initialize_conversation_turn()
+            if "params" in send_obj:
+                param = Struct()
+                param.update(send_obj["params"])
+                conversation_turn.user_input.injected_parameters = param
+            conversation_turn.user_input.is_webhook_enabled = webhooks
+            conversation_turn = self._set_query_input(
+                send_obj=send_obj,
+                conversation_turn=conversation_turn
+            )
+            conversation_turns.append(conversation_turn)
+        return conversation_turns
+
+    def _set_test_config(
+        self,
+        current_page) -> types.TestConfig:
+        """This method sets the test config.
+        if current page is None, then it starts at Default Start Flow/Start page
+        if current page is not None, then it starts at the current page
+        Args:
+          current_page: str
+        Returns:
+          types.TestConfig
+        """
+        test_config = types.TestConfig()
+        if current_page:
+            if "pages" in current_page:
+                test_config.page = current_page
+            else:
+                test_config.flow = current_page
+        return test_config
+
+    def create_test_case_by_send_objs(
+        self,
+        display_name: str,
+        send_objs: list[Dict],
+        webhooks: bool = False,
+        current_page: str = None,
+        tags: List[str] = None,
+        rate_limit: int = 5) ->  Union[types.TestCase, None]:
+        """
+        This function creates a test case by a set of send_objs. Each send_obj
+        consists of params and user input of every turn. Send_obj is commonly
+        used for the e2e testing in dfcx_scrapi.core.conversation.reply
+        function. With this function, it can simultaneously create the test case
+        while running the e2e test.
+        Args:
+          display_name: a display_name of the test case
+          send_objs: a list of send_objs
+          webhooks: False by default, if True, then it enables webhooks
+          current_page: page_id of where the test case begins
+          tags: List[str]
+          rate_limit: int
+        Returns:
+          types.TestCase or None if fails
+        """
+        test_case = types.TestCase()
+        test_case.display_name = display_name
+        test_case.tags = tags
+        if current_page:
+            test_case.test_config = self._set_test_config(
+                current_page=current_page)
+        test_case.test_case_conversation_turns = (
+            self._convert_send_objs_to_conv_turns(
+                send_objs=send_objs, webhooks=webhooks)
+        )
+        response = None
+        try:
+            response = self._global_test_cases.create_test_case(
+                test_case=test_case)
+            time.sleep(rate_limit)
+        except core_exceptions.InternalServerError as err:
+            logging.error(
+                f"-- ERROR -- InternalServerError caught on CX.detect -- {err}")
+            logging.error("test_case: %s", test_case.display_name)
+        except core_exceptions.ClientError as err:
+            logging.error(
+                f"-- ERROR -- ClientError caught on CX.detect -- {err}")
+            logging.error("test_case: %s", test_case.display_name)
+        return response
