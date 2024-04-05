@@ -159,7 +159,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
         return {v: k for k, v in dict_.items()}
 
-    def _get_commons_config(
+    def _get_resource_map(
         self,
         agent_id: str) -> Dict[str, Dict[str, str]]:
         """This method map flows, pages, and intents
@@ -201,31 +201,40 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
     def _get_new_test_config(
         self,
-        source: dict,
-        target: dict,
+        source_resource_map: dict,
+        target_resource_map: dict,
         test_case: types.TestCase) -> Union[types.TestConfig, None]:
         """Update the test case types.test_config to the new types.test_config
             Update the uuids of flow, page, intent by the display_name
+            If a TestConfig is found, it will return that,
+            otherwise an empty TestConfig is returned.
           args:
-            source: a dictionary of the source agent's flows, pages, and intents
-            target: a dictionary of the target agent's flows, pages, and intents
+            source_resource_map: a source resource dictionary
+            target_resource_map: a target resource dictionary
             test_case: types.test_config object
           returns:
             types.test_config
         """
-        source_flow_id = self._get_flow_id_from_test_config(test_case)
-        source_page_id = self._get_page_id_from_test_config(
-            test_case, source_flow_id)
+        source_flow_id = (
+            # pylint: disable=W0212
+            source_resource_map["test_cases"]._get_flow_id_from_test_config(
+            test_case=test_case)
+        )
+        source_page_id = (
+            # pylint: disable=W0212
+            source_resource_map["test_cases"]._get_page_id_from_test_config(
+                test_case=test_case, flow_id=source_flow_id)
+        )
         source_flow = self._get_flow_display_name_by_id(
-            source_flow_id, source["flows_map"])
+            source_flow_id, source_resource_map["flows_map"])
         source_page = self._get_page_display_name_by_id(
-            source_flow_id, source_page_id, source["pages_map"])
+            source_flow_id, source_page_id, source_resource_map["pages_map"])
         target_test_config = types.TestConfig()
 
         if test_case.test_config.flow:
             target_flow_id = self._get_flow_id_by_flow_name(
                 flow_name=source_flow,
-                flows_map=target["flows_map_reverse"])
+                flows_map=target_resource_map["flows_map_reverse"])
             if target_flow_id:
                 target_test_config.flow = target_flow_id
             else:
@@ -234,41 +243,17 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         elif test_case.test_config.page:
             target_flow_id = self._get_flow_id_by_flow_name(
                 flow_name=source_flow,
-                flows_map=target["flows_map_reverse"])
+                flows_map=target_resource_map["flows_map_reverse"])
             target_page_id = self._get_page_id_by_page_name(
                 flow_id=target_flow_id,
                 page_name=source_page,
-                pages_map=target["pages_map_reverse"])
+                pages_map=target_resource_map["pages_map_reverse"])
             if target_page_id:
                 target_test_config.page = target_page_id
             else:
                 return None
 
         return target_test_config
-
-    def _get_flow_id_from_test_config(
-        self,
-        test_case: types.TestCase) -> str:
-        """Attempt to get the Flow ID from the Test Case Test Config."""
-
-        if "flow" in test_case.test_config:
-            return test_case.test_config.flow
-        elif "page" in test_case.test_config:
-            return "/".join(test_case.test_config.page.split("/")[:8])
-        else:
-            agent_id = "/".join(test_case.name.split("/")[:6])
-            return f"{agent_id}/flows/00000000-0000-0000-0000-000000000000"
-
-    def _get_page_id_from_test_config(
-        self,
-        test_case: types.TestCase,
-        flow_id: str) -> str:
-        """Attempt to get the Page ID from the Test Case Test Config."""
-
-        if "page" in test_case.test_config:
-            return test_case.test_config.page
-        else:
-            return f"{flow_id}/pages/START_PAGE"
 
     def _get_flow_display_name_by_id(
         self,
@@ -353,7 +338,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
     def _get_intent_id_from_virtual_agent_output(
         self,
         virtual_agent_output: types.ConversationTurn.VirtualAgentOutput,
-        target: dict) -> Union[str, None]:
+        target_resource_map: dict) -> Union[str, None]:
         """Attempt to find the intent id from the source's agent
         conversation_turn.virtual_agent_output triggered intent
         display name using the target's intents map
@@ -364,13 +349,13 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         )
         return self._get_intent_id_by_intent_name(
             intent_name=source_intent,
-            intents_map=target["intents_map_reverse"])
+            intents_map=target_resource_map["intents_map_reverse"])
 
     def _get_page_id_from_virtual_agent_output(
         self,
         virtual_agent_output: types.ConversationTurn.VirtualAgentOutput,
-        source: dict,
-        target: dict) -> Union[str, None]:
+        source_resource_map: dict,
+        target_resource_map: dict) -> Union[str, None]:
         """Attempt to find the page id from the source's agent conversation turn
           virtual agent output page id to the target's pages map
         """
@@ -379,22 +364,22 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         source_page_id = virtual_agent_output.current_page.name
         source_flow = self._get_flow_display_name_by_id(
             flow_id = source_page_id.split("/pages/")[0],
-            flows_map = source["flows_map"])
+            flows_map = source_resource_map["flows_map"])
         target_flow_id = self._get_flow_id_by_flow_name(
             flow_name=source_flow,
-            flows_map=target["flows_map_reverse"])
+            flows_map=target_resource_map["flows_map_reverse"])
         target_page_id = self._get_page_id_by_page_name(
             flow_id=target_flow_id,
             page_name=source_page,
-            pages_map=target["pages_map_reverse"])
+            pages_map=target_resource_map["pages_map_reverse"])
 
         return target_page_id
 
     def _get_intent_id_from_user_input(
         self,
         user_input: types.ConversationTurn.UserInput,
-        source: dict,
-        target: dict) -> Union[str, None]:
+        source_resource_map: dict,
+        target_resource_map: dict) -> Union[str, None]:
         """Attempt to find the intent id from the source's agent
           conversation turn user input intent id to the target's pages map
         """
@@ -402,24 +387,24 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         source_intent_id = user_input.input.intent
         source_intent = self._get_intent_name_by_intent_id(
             intent_id=source_intent_id,
-            intents_map=source["intents_map"])
+            intents_map=source_resource_map["intents_map"])
         target_intent_id = self._get_intent_id_by_intent_name(
             intent_name=source_intent,
-            intents_map=target["intents_map_reverse"])
+            intents_map=target_resource_map["intents_map_reverse"])
 
         return target_intent_id
 
-    def _get_new_conversation_turns(
+    def _build_conversation_turns_for_target_agent(
         self,
-        source: dict,
-        target: dict,
+        source_resource_map: dict,
+        target_resource_map: dict,
         conversation_turns: types.ConversationTurn
         ) -> Union[List[types.ConversationTurn], None]:
         """ Update the uuids of the current page and intent
             by display name in each conversation turn.
           Args:
-            source: Source agent's commons_config dictionary
-            target: Target agent's commons_config dictionary
+            source_resource_map: a source resource dictionary
+            target_resource_map: a target commons_config dictionary
             conversation_turns: types.ConversationTurn
           Returns:
             types.test_case_conversation_turns
@@ -433,7 +418,9 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
                 conv_turn.user_input.input.intent = (
                     self._get_intent_id_from_user_input(
                         user_input=user_input_intent,
-                        source=source, target=target)
+                        source_resource_map=source_resource_map,
+                        target_resource_map=target_resource_map
+                        )
                 )
                 if not conv_turn.user_input.input.intent:
                     return None
@@ -441,7 +428,9 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
                 conv_turn.virtual_agent_output.current_page.name = (
                     self._get_page_id_from_virtual_agent_output(
                         virtual_agent_output=virtual_agent_output,
-                        source=source, target=target)
+                        source_resource_map=source_resource_map,
+                        target_resource_map=target_resource_map
+                        )
                 )
                 if not conv_turn.virtual_agent_output.current_page.name:
                     return None
@@ -449,7 +438,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
                 conv_turn.virtual_agent_output.triggered_intent.name = (
                     self._get_intent_id_from_virtual_agent_output(
                         virtual_agent_output=virtual_agent_output,
-                        target=target
+                        target_resource_map=target_resource_map
                     )
                 )
                 if not conv_turn.virtual_agent_output.triggered_intent.name:
@@ -458,7 +447,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
 
         return new_conversation_turns
 
-    def _missing_attribute_logger(
+    def _log_missing_attributes(
         self,
         test_case: types.TestCase,
         test_config: types.TestConfig,
@@ -515,25 +504,25 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
                 f"test case : {test_case.display_name}"
             )
         if not self.source_commons.get("agent_id") == source_agent_id:
-            self.source_commons = self._get_commons_config(
+            self.source_commons = self._get_resource_map(
                 agent_id=source_agent_id)
         if not self.target_commons.get("agent_id") == target_agent_id:
-            self.target_commons = self._get_commons_config(
+            self.target_commons = self._get_resource_map(
                 agent_id=target_agent_id)
 
         test_config = self._get_new_test_config(
             self.source_commons, self.target_commons, test_case)
-        conv_turns = self._get_new_conversation_turns(
+        conv_turns = self._build_conversation_turns_for_target_agent(
             self.source_commons,
             self.target_commons,
             test_case.test_case_conversation_turns)
-        last_test_conv_turns = self._get_new_conversation_turns(
+        last_test_conv_turns = self._build_conversation_turns_for_target_agent(
             self.source_commons,
             self.target_commons,
             test_case.last_test_result.conversation_turns)
 
         if not all([test_config, conv_turns, last_test_conv_turns]):
-            self._missing_attribute_logger(
+            self._log_missing_attributes(
                 test_case, test_config, conv_turns, last_test_conv_turns)
             return None
 
@@ -662,7 +651,7 @@ class TestCasesUtil(scrapi_base.ScrapiBase):
         current_page: str = None,
         tags: List[str] = None,
         rate_limit: int = 5) ->  Union[types.TestCase, None]:
-        """it creates a test case by a set of send_objs. Each send_obj
+        """it creates a test case by a list of send_objs. Each send_obj
         consists of params and user input of every turn. Send_obj is commonly
         used in the e2e testing, dfcx_scrapi.core.conversation.reply().
         With this function, it can simultaneously create the test case while
