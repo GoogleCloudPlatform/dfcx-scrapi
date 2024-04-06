@@ -210,7 +210,7 @@ class Sessions(scrapi_base.ScrapiBase):
             conversation. Typically this is set before a conversation starts.
           populate_data_store_connection_signals: If set to true and data
             stores are involved in serving the request then query result will
-            be populated with data_store_connection_signals field which 
+            be populated with data_store_connection_signals field which
             contains data that can help evaluations.
 
         Returns:

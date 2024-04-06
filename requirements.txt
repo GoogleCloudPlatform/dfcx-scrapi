@@ -1,6 +1,6 @@
 dfcx-scrapi
-google-cloud-dialogflow-cx>=1.31.0
-google-cloud-discoveryengine>=0.11.5
+google-cloud-dialogflow-cx>=1.33.0
+google-cloud-discoveryengine>=0.11.10
 google-auth>=2.27.0
 google-oauth
 oauth2client
