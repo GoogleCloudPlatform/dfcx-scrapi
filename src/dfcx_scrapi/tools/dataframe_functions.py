@@ -105,14 +105,14 @@ class DataframeFunctions(ScrapiBase):
         logging.info("create dfcx creds %s", creds_path)
         self.agent_id = agent_id
 
-        self.agents = Agents(creds_path, creds_dict)
-        self.entities = EntityTypes(creds_path, creds_dict)
-        self.intents = Intents(creds_path, creds_dict)
-        self.flows = Flows(creds_path, creds_dict)
-        self.pages = Pages(creds_path, creds_dict)
-        self.webhooks = Webhooks(creds_path, creds_dict)
-        self.route_groups = TransitionRouteGroups(
-            creds_path, creds_dict
+        self.agents = Agents(creds_path, creds_dict, creds)
+        self.entities = EntityTypes(creds_path, creds_dict, creds)
+        self.intents = Intents(creds_path, creds_dict, creds)
+        self.flows = Flows(creds_path, creds_dict, creds)
+        self.pages = Pages(creds_path, creds_dict, creds)
+        self.webhooks = Webhooks(creds_path, creds_dict, creds)
+        self.route_groups = TransitionRouteGroups, creds(
+            creds_path, creds_dict, creds
         )
         self.creds_path = creds_path
 
