@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import logging
-from typing import Dict
+from typing import List, Dict, Any
 
 from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
 from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
@@ -208,12 +208,12 @@ class FulfillmentBuilder(BuildersCommon):
 
     def add_parameter_presets(
         self,
-        parameter_map: Dict[str, str]
+        parameter_map: Dict[str, Any]
     ) -> Fulfillment:
         """Set parameter values before executing the webhook.
 
         Args:
-          parameter_map (Dict[str, str]):
+          parameter_map (Dict[str, Any]):
             A dictionary that represents parameters as keys
             and the parameter values as it's values.
             A `None` value clears the parameter.
@@ -225,13 +225,10 @@ class FulfillmentBuilder(BuildersCommon):
 
         # Type error checking
         if isinstance(parameter_map, dict):
-            if not all((
-                isinstance(key, str) and isinstance(val, str)
-                for key, val in parameter_map.items()
-            )):
+            if not all(isinstance(k, str) for k in parameter_map.keys()):
                 raise ValueError(
                     "Only strings are allowed as"
-                    " dictionary keys and values in parameter_map."
+                    " dictionary keys in parameter_map."
                 )
             for param, val in parameter_map.items():
                 self.proto_obj.set_parameter_actions.append(
@@ -247,15 +244,14 @@ class FulfillmentBuilder(BuildersCommon):
 
     def remove_parameter_presets(
         self,
-        parameter_map: Dict[str, str]
+        parameters: List[str]
     ) -> Fulfillment:
         """Remove parameter values from the fulfillment.
 
         Args:
-          parameter_map (Dict[str, str]):
-            A dictionary that represents parameters as keys
-            and the parameter values as it's values.
-            A `None` value clears the parameter.
+          parameters (List[str]):
+            A list of parameters that should be removed from the fulfillment.
+            Only strings are allowed.
 
         Returns:
           A Fulfillment object stored in proto_obj
@@ -263,22 +259,15 @@ class FulfillmentBuilder(BuildersCommon):
         self._check_proto_obj_attr_exist()
 
         # Type error checking
-        if isinstance(parameter_map, dict):
-            if not all((
-                isinstance(key, str) and isinstance(val, str)
-                for key, val in parameter_map.items()
-            )):
+        if isinstance(parameters, list):
+            if not all(isinstance(p, str) for p in parameters):
                 raise ValueError(
-                    "Only strings are allowed as"
-                    " dictionary keys and values in parameter_map."
+                    "Only strings are allowed as in parameters."
                 )
 
             new_params = []
             for param in self.proto_obj.set_parameter_actions:
-                if (
-                    param.parameter in parameter_map and
-                    param.value == parameter_map[param.parameter]
-                ):
+                if param.parameter in parameters:
                     continue
 
                 new_params.append(param)
@@ -287,7 +276,7 @@ class FulfillmentBuilder(BuildersCommon):
             return self.proto_obj
         else:
             raise ValueError(
-                "parameter_map should be a dictionary."
+                "parameter_map should be a list of strings."
             )
 
 
