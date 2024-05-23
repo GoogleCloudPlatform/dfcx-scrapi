@@ -163,7 +163,7 @@ class FulfillmentBuilder(BuildersCommon):
                 "tag is required when webhook is specified."
             )
         # `overwrite` parameter error checking
-        if self.proto_obj and not overwrite:
+        if self.proto_obj is not None and not overwrite:
             raise UserWarning(
                 "proto_obj already contains a Fulfillment."
                 " If you wish to overwrite it, pass overwrite as True."
