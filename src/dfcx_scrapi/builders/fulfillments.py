@@ -228,7 +228,7 @@ class FulfillmentBuilder(BuildersCommon):
             if not all(isinstance(k, str) for k in parameter_map.keys()):
                 raise ValueError(
                     "Only strings are allowed as"
-                    " dictionary keys in parameter_map."
+                    " dictionary keys in `parameter_map`."
                 )
             for param, val in parameter_map.items():
                 self.proto_obj.set_parameter_actions.append(
@@ -238,7 +238,7 @@ class FulfillmentBuilder(BuildersCommon):
             return self.proto_obj
         else:
             raise ValueError(
-                "parameter_map should be a dictionary."
+                "`parameter_map` should be a dictionary."
             )
 
 

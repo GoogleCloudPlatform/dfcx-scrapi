@@ -52,3 +52,24 @@ def test_create_new_proto_obj_with_webhook():
         fb.create_new_proto_obj(webhook=custom_wbhk, overwrite=True)
 
 
+def test_add_parameter_presets_with_valid_dict():
+    valid_param_map = {"p1": "v1", "p2": 123, "p3": True, "p4": None}
+    fb = FulfillmentBuilder()
+    fb.create_new_proto_obj()
+    fb.add_parameter_presets(valid_param_map)
+
+    for p in fb.proto_obj.set_parameter_actions:
+        assert p.parameter in valid_param_map
+        assert p.value == valid_param_map[p.parameter]
+
+
+def test_add_parameter_presets_with_invalid_dict():
+    invalid_param_map = {"p1": "v1", 123: "p2"}
+    fb = FulfillmentBuilder()
+    fb.create_new_proto_obj()
+    with pytest.raises(ValueError):
+        fb.add_parameter_presets(invalid_param_map)
+
+    # passing a list instead of dict
+    with pytest.raises(ValueError):
+        fb.add_parameter_presets(list(invalid_param_map.keys()))
