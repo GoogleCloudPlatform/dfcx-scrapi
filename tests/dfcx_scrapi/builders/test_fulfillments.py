@@ -26,14 +26,14 @@ def test_create_new_proto_obj():
 
     fb.create_new_proto_obj()
     assert isinstance(fb.proto_obj, Fulfillment)
-    assert fb.proto_obj.return_partial_responses == False
+    assert fb.proto_obj.return_partial_responses is False
     assert fb.proto_obj.messages == []
 
     with pytest.raises(UserWarning):
         fb.create_new_proto_obj(return_partial_responses=True)
 
     fb.create_new_proto_obj(return_partial_responses=True, overwrite=True)
-    assert fb.proto_obj.return_partial_responses == True
+    assert fb.proto_obj.return_partial_responses is True
 
 
 def test_create_new_proto_obj_with_webhook():
@@ -62,6 +62,13 @@ def test_add_parameter_presets_with_valid_dict():
         assert p.parameter in valid_param_map
         assert p.value == valid_param_map[p.parameter]
 
+    new_params_map = {"n1": 12, "n2": "v2", "n3": 1.2}
+    fb.add_parameter_presets(new_params_map)
+    all_params_map = {**valid_param_map, **new_params_map}
+    for p in fb.proto_obj.set_parameter_actions:
+        assert p.parameter in all_params_map
+        assert p.value == all_params_map[p.parameter]
+
 
 def test_add_parameter_presets_with_invalid_dict():
     invalid_param_map = {"p1": "v1", 123: "p2"}
@@ -73,3 +80,38 @@ def test_add_parameter_presets_with_invalid_dict():
     # passing a list instead of dict
     with pytest.raises(ValueError):
         fb.add_parameter_presets(list(invalid_param_map.keys()))
+
+
+def test_remove_parameter_presets_single_param():
+    fb = FulfillmentBuilder()
+    fb.create_new_proto_obj()
+    params_map = {"p1": "v1", "p2": 123, "p3": True, "p4": None}
+    fb.add_parameter_presets(parameter_map=params_map)
+    fb.remove_parameter_presets(["p1"])
+    params_map.pop("p1")
+    for p in fb.proto_obj.set_parameter_actions:
+        assert p.parameter in params_map
+        assert p.value == params_map[p.parameter]
+
+
+def test_remove_parameter_presets_multi_params():
+    fb = FulfillmentBuilder()
+    fb.create_new_proto_obj()
+    params_map = {"p1": "v1", "p2": 123, "p3": True, "p4": None}
+    fb.add_parameter_presets(parameter_map=params_map)
+    fb.remove_parameter_presets(["p1", "p4"])
+    params_map.pop("p1")
+    params_map.pop("p4")
+    for p in fb.proto_obj.set_parameter_actions:
+        assert p.parameter in params_map
+        assert p.value == params_map[p.parameter]
+
+
+def test_has_webhook():
+    fb = FulfillmentBuilder()
+    fb.create_new_proto_obj()
+    assert not fb.has_webhook()
+
+    fb.create_new_proto_obj(
+        webhook="sample_webhook_id", tag="some_tag", overwrite=True)
+    assert fb.has_webhook()
