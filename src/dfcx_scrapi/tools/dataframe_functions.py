@@ -70,7 +70,10 @@ class DataframeFunctions(ScrapiBase):
         if scope:
             scopes += scope
 
-        if creds_path:
+        if creds:
+            self.sheets_client = gspread.authorize(creds)
+
+        elif creds_path:
             creds = ServiceAccountCredentials.from_json_keyfile_name(
                 filename=creds_path, scopes=scopes
             )
@@ -89,15 +92,11 @@ class DataframeFunctions(ScrapiBase):
             creds = google.auth.default(scopes=scopes)[0]
             self.sheets_client = gspread.authorize(creds)
 
-        logging.info("create dfcx creds %s", creds_path)
-        self.entities = EntityTypes(creds_path, creds_dict)
-        self.intents = Intents(creds_path, creds_dict)
-        self.flows = Flows(creds_path, creds_dict)
-        self.pages = Pages(creds_path, creds_dict)
-        self.route_groups = TransitionRouteGroups(
-            creds_path, creds_dict
-        )
-        self.creds_path = creds_path
+        self.entities = EntityTypes(creds=self.creds)
+        self.intents = Intents(creds=self.creds)
+        self.flows = Flows(creds=self.creds)
+        self.pages = Pages(creds=self.creds)
+        self.route_groups = TransitionRouteGroups(creds=self.creds)
 
     @staticmethod
     def progress_bar(current, total, bar_length=50, type_="Progress"):

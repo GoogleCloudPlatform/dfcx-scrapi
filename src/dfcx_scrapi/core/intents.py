@@ -587,20 +587,23 @@ class Intents(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def delete_intent(self, intent_id: str, obj: types.Intent = None) -> None:
+    def delete_intent(self, intent_id: str = None, obj: types.Intent = None):
         """Deletes an intent by Intent ID.
 
         Args:
           intent_id: intent to delete
+          obj: (Optional) a CX Intent object of types.Intent
         """
+        if not intent_id:
+            intent_id = self.intent_id
+
         if obj:
             intent_id = obj.name
-        else:
-            client_options = self._set_region(intent_id)
-            client = services.intents.IntentsClient(
-                client_options=client_options, credentials=self.creds
-            )
-            client.delete_intent(name=intent_id)
+
+        client_options = self._set_region(intent_id)
+        client = services.intents.IntentsClient(
+            client_options=client_options, credentials=self.creds)
+        client.delete_intent(name=intent_id)
 
     def bulk_intent_to_df(
         self,

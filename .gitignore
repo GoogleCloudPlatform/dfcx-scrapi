@@ -8,6 +8,7 @@
 .ipynb_checkpoints
 *scratch.ipynb
 *scratch.py
+tmp/
 
 # IPython
 profile_default/
@@ -64,6 +65,7 @@ docs.metadata
 # Virtual environment
 env/
 venv/
+.python-version
 
 coverage.xml
 sponge_log.xml

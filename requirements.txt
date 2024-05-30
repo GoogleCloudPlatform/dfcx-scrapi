@@ -1,11 +1,13 @@
 dfcx-scrapi
-google-cloud-dialogflow-cx
-google-auth
+google-cloud-dialogflow-cx>=1.33.0
+google-cloud-discoveryengine>=0.11.10
+google-auth>=2.27.0
 google-oauth
 oauth2client
+pyparsing==2.4.7
 pandas
 tabulate
-gspread
+gspread==5.10.0
 gspread_dataframe
 numpy
 requests

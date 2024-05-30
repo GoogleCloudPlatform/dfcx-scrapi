@@ -19,6 +19,7 @@ import uuid
 from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
+from google.protobuf.json_format import MessageToDict
 
 from dfcx_scrapi.core import scrapi_base
 
@@ -192,7 +193,8 @@ class Sessions(scrapi_base.ScrapiBase):
         session_id,
         text,
         language_code="en",
-        parameters=None):
+        parameters=None,
+        populate_data_store_connection_signals=False):
         """Returns the result of detect intent with texts as inputs.
 
         Using the same `session_id` between requests allows continuation
@@ -206,6 +208,10 @@ class Sessions(scrapi_base.ScrapiBase):
           text: the user utterance to run intent detection on
           parameters: (Optional) Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
+          populate_data_store_connection_signals: If set to true and data
+            stores are involved in serving the request then query result will
+            be populated with data_store_connection_signals field which
+            contains data that can help evaluations.
 
         Returns:
           The CX query result from intent detection
@@ -225,24 +231,25 @@ class Sessions(scrapi_base.ScrapiBase):
 
         logging.info(f"Starting Session ID {session_id}")
 
+        query_input = self._build_query_input(text, language_code)
+
+        request = types.session.DetectIntentRequest()
+        request.session = session_id
+        request.query_input = query_input
+
+        query_param_mapping = {}
+
         if parameters:
-            query_params = types.session.QueryParameters(parameters=parameters)
+            query_param_mapping["parameters"] = parameters
 
-            query_input = self._build_query_input(text, language_code)
+        if populate_data_store_connection_signals:
+            query_param_mapping["populate_data_store_connection_signals"] = (
+                populate_data_store_connection_signals
+            )
 
-            request = types.session.DetectIntentRequest()
-            request.session = session_id
-            request.query_input = query_input
+        if query_param_mapping:
+            query_params = types.session.QueryParameters(query_param_mapping)
             request.query_params = query_params
-
-            response = session_client.detect_intent(request=request)
-
-        else:
-            query_input = self._build_query_input(text, language_code)
-
-            request = types.session.DetectIntentRequest()
-            request.session = session_id
-            request.query_input = query_input
 
         response = session_client.detect_intent(request)
         query_result = response.query_result
@@ -285,3 +292,17 @@ class Sessions(scrapi_base.ScrapiBase):
         response = session_client.detect_intent(request=request)
 
         return response
+
+    def get_agent_answer(self, user_query: str) -> str:
+        """Extract the answer/citation from a Vertex Conversation response."""
+
+        session_id = self.build_session_id(self.agent_id)
+        res = MessageToDict(self.detect_intent( # pylint: disable=W0212
+            self.agent_id, session_id, user_query)._pb)
+
+        answer_text = res["responseMessages"][0]["text"]["text"][0]
+        answer_link = res["responseMessages"][1]["payload"][
+            "richContent"][0][0]["actionLink"] if len(
+                res["responseMessages"]) > 1 else ""
+
+        return f"{answer_text} ({answer_link})"

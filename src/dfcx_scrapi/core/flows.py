@@ -15,11 +15,13 @@
 # limitations under the License.
 
 import logging
+import time
 from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import pages
 
 # logging config
 logging.basicConfig(
@@ -54,6 +56,7 @@ class Flows(scrapi_base.ScrapiBase):
             self.flow_id = flow_id
 
         self.agent_id = agent_id
+        self.pages = pages.Pages(creds=self.creds)
 
     # TODO: Migrate to Flow Builder class when ready
     @staticmethod
@@ -104,7 +107,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         return nlu_settings
 
-    def get_flows_map(self, agent_id: str, reverse=False):
+    def get_flows_map(self, agent_id: str = None, reverse=False):
         """Exports Agent Flow Names and UUIDs into a user friendly dict.
 
         Args:
@@ -114,6 +117,8 @@ class Flows(scrapi_base.ScrapiBase):
         Returns:
           Dictionary containing flow UUIDs as keys and display names as values
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         if reverse:
             flows_dict = {
@@ -128,6 +133,38 @@ class Flows(scrapi_base.ScrapiBase):
             }
 
         return flows_dict
+
+    def get_flow_page_map(
+            self, agent_id: str, rate_limit: float = 1.0
+            ) -> Dict[str, Dict[str, str]]:
+        """Exports a user friendly dict containing Flows, Pages, and IDs
+        This method builds on top of `get_flows_map` and builds out a nested
+        dictionary containing all of the Page Display Names and UUIDs contained
+        within each Flow. Output Format:
+          {
+            <FLOW_DISPLAY_NAME>: {
+                'id': <FLOW_UUID>
+                'pages': { <PAGE_DISPLAY_NAME> : <PAGE_UUID> }
+            }
+          }
+
+        Args:
+          agent_id: the formatted CX Agent ID to use
+
+        Returns:
+          Dictionary containing Flow Names/UUIDs and Page Names/UUIDs
+        """
+        flow_page_map = {}
+
+        flows_map = self.get_flows_map(agent_id, reverse=True)
+
+        for flow in flows_map:
+            pages_map = self.pages.get_pages_map(
+                flows_map[flow], reverse=True)
+            flow_page_map[flow] = {"id": flows_map[flow], "pages": pages_map}
+            time.sleep(rate_limit)
+
+        return flow_page_map
 
     @scrapi_base.api_call_counter_decorator
     def train_flow(self, flow_id: str) -> str:
@@ -157,7 +194,7 @@ class Flows(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def list_flows(self, agent_id: str) -> List[types.Flow]:
+    def list_flows(self, agent_id: str = None) -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
         Args:
@@ -167,6 +204,8 @@ class Flows(scrapi_base.ScrapiBase):
         Returns:
           List of Flow objects
         """
+        if not agent_id:
+            agent_id = self.agent_id
 
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
@@ -434,23 +473,26 @@ class Flows(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def delete_flow(self, flow_id: str, force: bool = False):
+    def delete_flow(
+        self, flow_id: str = None, obj: types.Flow = None, force: bool = False
+    ):
         """Deletes a single CX Flow Object resource.
 
         Args:
-          flow_id: flow to delete
-          force: False means a flow will not be deleted if a route to the flow
-            exists, True means the flow will be deleted as well as all the
-            transition routes leading to the flow.
+          flow_id: The formatted CX Flow ID to delete.
+          obj: (Optional) a CX Flow object of types.Flow
+          force: (Optional) False means a flow will not be deleted if a route
+            to the flow exists, True means the flow will be deleted as well as
+            all the transition routes leading to the flow.
         """
+        if not flow_id:
+            flow_id = self.flow_id
 
-        request = types.DeleteFlowRequest()
-        request.name = flow_id
-        request.force = force
+        if obj:
+            flow_id = obj.name
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
-            credentials=self.creds, client_options=client_options
-        )
-
-        client.delete_flow(request)
+            credentials=self.creds, client_options=client_options)
+        req = types.DeleteFlowRequest(name=flow_id, force=force)
+        client.delete_flow(request=req)

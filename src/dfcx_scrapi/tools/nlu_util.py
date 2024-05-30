@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import numpy as np
 import pandas as pd
 import scann
@@ -29,9 +30,9 @@ from dfcx_scrapi.core import pages
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import transition_route_groups
 
-from google.colab import data_table
-
-data_table.enable_dataframe_formatter()
+if "google.colab" in sys.modules:
+    from google.colab import data_table
+    data_table.enable_dataframe_formatter()
 
 SHEETS_SCOPE = [
     "https://spreadsheets.google.com/feeds",
@@ -129,21 +130,25 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
             flow_display_name, agent_id
         )
 
-        page_loader = pages.Pages(creds=self.creds)
-        page_map = page_loader.get_pages_map(self.flow.name, reverse=True)
-        page_id = page_map.get(page_display_name, None)
-        if page_id is None:
-            raise ValueError(
-                f'Page "{page_display_name}" does not exist in the '
-                "specified agent."
-            )
-        self.page = page_loader.get_page(page_id)
-
         trg_loader = transition_route_groups.TransitionRouteGroups(
             creds=self.creds
         )
-        self.trgs = trg_loader.list_transition_route_groups(self.flow.name)
+        agent_trgs = trg_loader.list_transition_route_groups(agent_id)
+        self.trgs = (
+            agent_trgs + trg_loader.list_transition_route_groups(self.flow.name)
+        )
         self.name_to_trg = {i.name: i for i in self.trgs}
+
+        if page_display_name != "Start Page":
+            page_loader = pages.Pages(creds=self.creds)
+            page_map = page_loader.get_pages_map(self.flow.name, reverse=True)
+            page_id = page_map.get(page_display_name, None)
+            if page_id is None:
+                raise ValueError(
+                    f'Page "{page_display_name}" does not exist in the '
+                    "specified agent."
+                )
+            self.page = page_loader.get_page(page_id)
 
         intent_names = self._list_page_intents()
         all_intents = intents.Intents(creds=self.creds).list_intents(agent_id)
@@ -160,10 +165,11 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
         for tr in self.flow.transition_routes:
             if tr.intent:
                 relevant_intents.add(tr.intent)
-        relevant_trgs |= set(self.page.transition_route_groups)
-        for tr in self.page.transition_routes:
-            if tr.intent:
-                relevant_intents.add(tr.intent)
+        if hasattr(self, "page"):
+            relevant_trgs |= set(self.page.transition_route_groups)
+            for tr in self.page.transition_routes:
+                if tr.intent:
+                    relevant_intents.add(tr.intent)
         for trg_name in relevant_trgs:
             trg = self.name_to_trg[trg_name]
             for tr in trg.transition_routes:

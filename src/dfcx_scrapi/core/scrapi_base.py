@@ -21,9 +21,11 @@ import functools
 from collections import defaultdict
 from typing import Dict
 
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
+from google.protobuf import field_mask_pb2
 
 from proto.marshal.collections import repeated
 from proto.marshal.collections import maps
@@ -112,11 +114,48 @@ class ScrapiBase:
             return client_options
 
     @staticmethod
+    def _client_options_discovery_engine(resource_id: str):
+        """Different regions have different API endpoints
+
+        Args:
+          resource_id: any type of resource id associated with Discovery Engine
+            resources. Ex: `projects/<GCP PROJECT ID>/locations/<LOCATION ID>`
+
+        Returns:
+          A dictionary containing the api_endpoint and quota project ID to use
+          when calling Discovery Engine API endpoints.
+        """
+        try:
+            location = resource_id.split("/")[3]
+        except IndexError as err:
+            logging.error("Please provide the fully qualified Resource ID: "
+                          "%s", resource_id)
+            raise err
+
+        project_id = resource_id.split("/")[1]
+        base_endpoint = "discoveryengine.googleapis.com:443"
+
+        if location != "global":
+            api_endpoint = f"{location}-{base_endpoint}"
+            client_options = {
+                "api_endpoint": api_endpoint,
+                "quota_project_id": project_id}
+            return client_options
+
+        else:
+            api_endpoint = base_endpoint
+            client_options = {
+                "api_endpoint": api_endpoint,
+                "quota_project_id": project_id}
+
+            return client_options
+
+    @staticmethod
     def pbuf_to_dict(pbuf):
         """Extractor of json from a protobuf"""
         blobstr = json_format.MessageToJson(
             pbuf
-        )  # i think this returns JSON as a string
+        )
         blob = json.loads(blobstr)
         return blob
 
@@ -161,11 +200,13 @@ class ScrapiBase:
             Defaults to True.
         """
 
-        standard_id_match = r"[-0-9a-f]{1,36}"
-        page_id_match = r"[-0-9a-f]{1,36}|START_PAGE|END_SESSION|END_FLOW"
+        data_store_match = r"[\w-]{1,947}"
+        engine_match = r"[a-z0-9][a-z0-9-_]{0,62}"
         entity_id_match = r"[-@.0-9a-z]{1,36}"
         location_id_match = r"[-0-9a-z]{1,36}"
+        page_id_match = r"[-0-9a-f]{1,36}|START_PAGE|END_SESSION|END_FLOW"
         session_id_match = r"[-0-9a-zA-Z!@#$%^&*()_+={}[\]:;\"'<>,.?]{1,36}"
+        standard_id_match = r"[-0-9a-f]{1,36}"
         version_id_match = r"[0-9]{1,4}"
 
         matcher_root = f"^projects/(?P<project>.+?)/locations/(?P<location>{location_id_match})"
@@ -174,6 +215,14 @@ class ScrapiBase:
             "agent": {
                 "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})$",
                 "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`",
+            },
+            "data_store": {
+                "matcher": fr"{matcher_root}/collections/default_collection/dataStores/(?P<data_store>{data_store_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/collections/default_collection/dataStores/<Data Store ID>`"
+            },
+            "engine": {
+                "matcher": fr"{matcher_root}/collections/default_collection/engines/(?P<engine>{engine_match})$",
+                "format": "`projects/<Project ID>/locations/<Location ID>/collections/default_collection/engines/<Engine ID>`"
             },
             "entity_type": {
                 "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/entityTypes/(?P<entity>{entity_id_match})$",
@@ -232,10 +281,10 @@ class ScrapiBase:
         if resource_type not in pattern_map:
             raise KeyError(
                 "`resource_type` must be one of the following resource types:"
-                " `agent`, `entity_type`, `environmnet`, `flow`, `intent`,"
-                "`page`,`project`, `security_setting`, `session`, "
-                "`session_entity_type`,`test_case`, `transition_route_group`, "
-                "`version`, `webhook`"
+                " `agent`, `data_store`, `engine`, `entity_type`, "
+                "`environmnet`, `flow`, `intent`, `page`, `project`, "
+                "`security_setting`, `session`, `session_entity_type`, "
+                "`test_case`, `transition_route_group`, `version`, `webhook`"
             )
 
         match_res = re.match(pattern_map[resource_type]["matcher"], resource_id)
@@ -254,6 +303,42 @@ class ScrapiBase:
 
         # pylint: enable=line-too-long
         return dict_res
+
+    @staticmethod
+    def _validate_data_store_id(data_store_id: str):
+        """Validate the data store ID and extract the ID if needed."""
+        pattern = (r"^projects/(?P<project>.+?)/locations/"
+                   r"(?P<location>[-0-9a-z]{1,36})/collections/"
+                   r"default_collection/dataStores/"
+                   r"(?P<data_store>[\w-]{1,947})$"
+                   )
+        match_res = re.match(pattern, data_store_id)
+        if match_res:
+            parts = match_res.groupdict()
+            data_store_id = parts.get("data_store")
+
+        return data_store_id
+
+    @staticmethod
+    def _get_solution_type(solution_type: str) -> int:
+        """Get SOLUTION_TYPE from simple name reference."""
+        solution_map = {
+            "recommendation": 1,
+            "search": 2,
+            "chat": 3,
+        }
+
+        res = solution_map.get(solution_type, None)
+        if not res:
+            raise ValueError("Solution Type must be one of the following values"
+                             ": `chat`, `search`, `recommendation`")
+
+        return solution_map[solution_type]
+
+    def _build_data_store_parent(self, location: str) -> str:
+        """Build the Parent ID needed for Discovery Engine API calls."""
+        return (f"projects/{self.project_id}/locations/{location}/collections/"
+                  "default_collection")
 
     def recurse_proto_repeated_composite(self, repeated_object):
         repeated_list = []
@@ -311,6 +396,51 @@ class ScrapiBase:
           Total calls to the API so far as an int.
         """
         return sum(self.get_api_calls_details().values())
+
+
+    @staticmethod
+    def _update_kwargs(obj, **kwargs) -> field_mask_pb2.FieldMask:
+        """Create a FieldMask for Environment, Experiment, TestCase, Version."""
+        if kwargs:
+            for key, value in kwargs.items():
+                setattr(obj, key, value)
+            return field_mask_pb2.FieldMask(paths=kwargs.keys())
+        attrs_map = {
+            "Environment": [
+                "name", "display_name", "description", "version_configs",
+                "update_time", "test_cases_config", "webhook_config",
+            ],
+            "Experiment": [
+                "name", "display_name", "description", "state", "definition",
+                "rollout_config", "rollout_state", "rollout_failure_reason",
+                "result", "create_time", "start_time", "end_time",
+                "last_update_time", "experiment_length", "variants_history",
+            ],
+            "TestCase": [
+                "name", "tags", "display_name", "notes", "test_config",
+                "test_case_conversation_turns", "creation_time",
+                "last_test_result",
+            ],
+            "Version": [
+                "name", "display_name", "description", "nlu_settings",
+                "create_time", "state",
+            ],
+        }
+        if isinstance(obj, types.Environment):
+            paths = attrs_map["Environment"]
+        elif isinstance(obj, types.Experiment):
+            paths = attrs_map["Experiment"]
+        elif isinstance(obj, types.TestCase):
+            paths = attrs_map["TestCase"]
+        elif isinstance(obj, types.Version):
+            paths = attrs_map["Version"]
+        else:
+            raise ValueError(
+                "`obj` should be one of the following:"
+                " [Environment, Experiment, TestCase, Version]."
+            )
+
+        return field_mask_pb2.FieldMask(paths=paths)
 
 
 def api_call_counter_decorator(func):

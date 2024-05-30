@@ -14,15 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import pandas as pd
 import logging
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
-from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core import scrapi_base
+from dfcx_scrapi.core import flows
+from dfcx_scrapi.core import pages
 
 # logging config
 logging.basicConfig(
@@ -51,13 +52,123 @@ class TestCases(scrapi_base.ScrapiBase):
             scope=scope,
         )
 
-        if agent_id:
-            self.agent_id = agent_id
-            self.client_options = self._set_region(self.agent_id)
+        self.agent_id = agent_id
+        self.test_case_id = test_case_id
 
-        if test_case_id:
-            self.test_case_id = test_case_id
-            self.client_options = self._set_region(self.test_case_id)
+    def _convert_test_result_to_string(self, test_case: types.TestCase) -> str:
+        """Converts the Enum result to a string."""
+        if test_case.last_test_result.test_result == 0:
+            return "TEST_RESULT_UNSPECIFIED"
+        elif test_case.last_test_result.test_result == 1:
+            return "PASSED"
+        elif test_case.last_test_result.test_result == 2:
+            return "FAILED"
+        else:
+            return ""
+
+    def _convert_test_result_to_bool(
+            self, test_case: types.TestCase) -> Union[bool, None]:
+        """Converts the String result to a boolean."""
+        test_result = self._convert_test_result_to_string(test_case)
+
+        if test_result == "PASSED":
+            return True
+        elif test_result == "FAILED":
+            return False
+        else:
+            return None
+
+    def _get_flow_id_from_test_config(
+            self, test_case: types.TestCase) -> str:
+        """Attempt to get the Flow ID from the Test Case Test Config."""
+        if "flow" in test_case.test_config:
+            return test_case.test_config.flow
+        elif "page" in test_case.test_config:
+            return "/".join(test_case.test_config.page.split("/")[:8])
+        else:
+            agent_id = "/".join(test_case.name.split("/")[:6])
+            return f"{agent_id}/flows/00000000-0000-0000-0000-000000000000"
+
+    def _get_page_id_from_test_config(
+            self, test_case: types.TestCase, flow_id: str) -> str:
+        """Attempt to get the Page ID from the Test Case Test Config."""
+        if "page" in test_case.test_config:
+            return test_case.test_config.page
+        else:
+            return f"{flow_id}/pages/START_PAGE"
+
+    def _get_page_display_name(
+            self, flow_id: str, page_id: str,
+            pages_map: Dict[str, Dict[str, str]]) -> Union[str, None]:
+        """Get the Page Display Name from the Pages Map based on the Page ID."""
+        page_map = pages_map.get(flow_id, None)
+        page = "START_PAGE"
+        if page_map:
+            page = page_map.get(page_id, None)
+
+        return page
+
+    def _process_test_case(self, test_case, flows_map, pages_map):
+        """Takes a response from list_test_cases and returns a single row
+        dataframe of the test case result.
+
+        Args:
+          test_case: The test case response
+          flows_map: A dictionary mapping flow IDs to flow display names
+          pages_map: A dictionary with keys as flow IDs and values as
+            dictionaries mapping page IDs to page display names for that flow
+
+        Returns: A dataframe with columns:
+          display_name, id, short_id, tags, creation_time, start_flow,
+          start_page, test_result, passed, test_time
+        """
+        flow_id = self._get_flow_id_from_test_config(test_case)
+        page_id = self._get_page_id_from_test_config(test_case, flow_id)
+        page = self._get_page_display_name(flow_id, page_id, pages_map)
+        test_result = self._convert_test_result_to_bool(test_case)
+
+        return pd.DataFrame(
+            {
+                "display_name": [test_case.display_name],
+                "id": [test_case.name],
+                "short_id": [test_case.name.split("/")[-1]],
+                "tags": [",".join(test_case.tags)],
+                "creation_time": [test_case.creation_time],
+                "start_flow": [flows_map.get(flow_id, None)],
+                "start_page": [page],
+                # "test_result": [test_result],
+                "passed": [test_result],
+                "test_time": [test_case.last_test_result.test_time]
+            }
+        )
+
+    def _retest_cases(
+            self, test_case_df: pd.DataFrame, retest_ids: List[str]
+            ) -> pd.DataFrame:
+        print("To retest:", len(retest_ids))
+        response = self.batch_run_test_cases(retest_ids, self.agent_id)
+        for result in response.results:
+            # Results may not be in the same order as they went in
+            # Process the name a bit to remove the /results/id part
+            tc_id_full = "/".join(result.name.split("/")[:-2])
+            tc_id = tc_id_full.rsplit("/", maxsplit=1)[-1]
+
+            # Update dataframe where id = tc_id_full
+            # row = test_case_df.loc[test_case_df['id']==tc_id_full]
+            test_case_df.loc[
+                test_case_df["id"] == tc_id_full, "short_id"
+            ] = tc_id
+            # test_case_df.loc[
+            #     test_case_df["id"] == tc_id_full, "test_result"
+            # ] = str(result.test_result)
+            test_case_df.loc[
+                test_case_df["id"] == tc_id_full, "test_time"
+            ] = result.test_time
+            test_case_df.loc[test_case_df["id"] == tc_id_full,"passed"] = (
+                str(result.test_result) == "TestResult.PASSED"
+            )
+
+        return test_case_df
 
     @scrapi_base.api_call_counter_decorator
     def list_test_cases(
@@ -343,25 +454,35 @@ class TestCases(scrapi_base.ScrapiBase):
         Returns:
           The updated Test Case.
         """
+        if not(obj or test_case_id or self.test_case_id):
+            raise ValueError(
+                "At least one of `test_case_id` or `obj` should be passed.")
+
+        if test_case_id and not (obj or kwargs):
+            raise ValueError(
+                "At least one kwarg or `obj` arg should be passed, otherwise ",
+                "this is noop.")
 
         if obj:
             test_case = obj
-            test_case.name = test_case_id
-        else:
+
+            if test_case_id:
+                test_case.name = test_case_id
+
+            if not test_case.name:
+                raise ValueError("The `name` of the `obj` should not be empty.")
+            mask = self._update_kwargs(test_case)
+
+        elif kwargs:
             if not test_case_id:
                 test_case_id = self.test_case_id
             test_case = self.get_test_case(test_case_id)
+            mask = self._update_kwargs(test_case, **kwargs)
 
-        for key, value in kwargs.items():
-            setattr(test_case, key, value)
-        paths = kwargs.keys()
-        mask = field_mask_pb2.FieldMask(paths=paths)
+        request = types.test_case.UpdateTestCaseRequest(
+            test_case=test_case, update_mask=mask)
 
-        request = types.test_case.UpdateTestCaseRequest()
-        request.test_case = test_case
-        request.update_mask = mask
-
-        client_options = self._set_region(test_case_id)
+        client_options = self._set_region(test_case_id or obj.name)
         client = services.test_cases.TestCasesClient(
             credentials=self.creds, client_options=client_options
         )
@@ -453,3 +574,77 @@ class TestCases(scrapi_base.ScrapiBase):
         )
         response = client.calculate_coverage(request)
         return response
+
+    def get_test_cases_map(self, agent_id: str = None, reverse=False):
+        """Exports Agent Test Cases and UUIDs into a user friendly dict.
+
+        Args:
+          agent_id: The formatted CX Agent ID to use. Format:
+            `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
+          reverse: (Optional) Boolean flag to swap key:value -> value:key
+
+        Returns:
+          Dict containing Test Case UUIDs as keys and display names as values.
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        if reverse:
+            test_cases_dict = {
+                test_case.display_name: test_case.name
+                for test_case in self.list_test_cases(agent_id=agent_id)
+            }
+        else:
+            test_cases_dict = {
+                test_case.name: test_case.display_name
+                for test_case in self.list_test_cases(agent_id=agent_id)
+            }
+
+        return test_cases_dict
+
+    def get_test_case_results_df(self, agent_id=None, retest_all=False):
+        """Convert Test Cases to Dataframe.
+
+        Gets the test case results for this agent, and generates a dataframe
+        with their details. Any tests without a result will be run in a batch.
+
+        Args:
+          agent_id: The agent to create the test case for. Format:
+              `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`
+          retest_all: if true, all test cases are re-run,
+            regardless of whether or not they had a result
+
+        Returns:
+          DataFrame of test case results for this agent, with columns:
+            display_name, id, short_id, tags, creation_time, start_flow,
+            start_page, passed, test_time
+        """
+        if agent_id:
+            self.agent_id = agent_id
+
+        dfcx_flows = flows.Flows(creds=self.creds, agent_id=self.agent_id)
+        dfcx_pages = pages.Pages(creds=self.creds)
+        flows_map = dfcx_flows.get_flows_map(agent_id=self.agent_id)
+        pages_map = {}
+        for flow_id in flows_map.keys():
+            pages_map[flow_id] = dfcx_pages.get_pages_map(flow_id=flow_id)
+
+        test_case_results = self.list_test_cases(self.agent_id)
+        retest_ids = []
+        test_case_rows = []
+
+        for test_case in test_case_results:
+            row = self._process_test_case(test_case, flows_map, pages_map)
+            test_case_rows.append(row)
+            test_result = self._convert_test_result_to_string(test_case)
+            if retest_all or test_result == "TEST_RESULT_UNSPECIFIED":
+                retest_ids.append(test_case.name)
+
+        # Create dataframe
+        test_case_df = pd.concat(test_case_rows)
+
+        # Retest any that haven't been run yet
+        if len(retest_ids) > 0:
+            test_case_df = self._retest_cases(test_case_df,retest_ids)
+
+        return test_case_df
