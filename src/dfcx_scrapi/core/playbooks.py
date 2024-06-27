@@ -17,8 +17,8 @@
 import logging
 from typing import Dict, List, Optional, Union
 
-from google.cloud.dialogflow_v3alpha1 import services
-from google.cloud.dialogflow_v3alpha1 import types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core import scrapi_base
@@ -58,6 +58,19 @@ class Playbooks(scrapi_base.ScrapiBase):
         self.agents_client = services.agents.AgentsClient(
             credentials=self.creds, client_options=client_options
         )
+
+    @staticmethod
+    def build_instructions(
+        instructions: List[str]) -> List[types.Playbook.Step]:
+        if not isinstance(instructions, list):
+            raise TypeError(
+                "Instructions must be provided as a List of strings.")
+
+        all_steps = []
+        for instruction in instructions:
+            all_steps.append(types.Playbook.Step(text=instruction))
+
+        return all_steps
 
     def set_default_playbook(self, playbook_id: str):
         """Sets the default Playbook for the Agent."""
@@ -151,7 +164,7 @@ class Playbooks(scrapi_base.ScrapiBase):
         self,
         agent_id: str,
         obj: types.Playbook = None,
-        display_name: str = None,
+        instructions: List[str] = None,
         **kwargs,
     ):
         """Create a Dialogflow CX Playbook with given display name.
@@ -162,7 +175,6 @@ class Playbooks(scrapi_base.ScrapiBase):
 
         Args:
           agent_id: DFCX Agent id where the Playbook will be created
-          display_name: Human readable display name for the CX Playbook
           obj: (Optional) Playbook object to create in proto format
 
         Returns:
@@ -176,15 +188,12 @@ class Playbooks(scrapi_base.ScrapiBase):
             playbook_obj.name = ""
         else:
             playbook_obj = types.Playbook()
-            playbook_obj.display_name = display_name
 
             # set optional args as agent attributes
             for key, value in kwargs.items():
-                if key in ["steps", "instructions"]:
-                    steps = types.Playbook.Step(
-                        instruction=value
-                    )
-                    setattr(playbook_obj, "steps", steps)
+                if key == "instructions":
+                    instructions = self.build_instructions(instructions)
+                    setattr(playbook_obj, "instructions", instructions)
                 else:
                     setattr(playbook_obj, key, value)
 
@@ -226,7 +235,8 @@ class Playbooks(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def delete_playbook(self, playbook_id: str = None, obj: types.Playbook = None):
+    def delete_playbook(
+        self, playbook_id: str = None, obj: types.Playbook = None):
         """Deletes a single CX Playbook Object resource.
 
         Args:
