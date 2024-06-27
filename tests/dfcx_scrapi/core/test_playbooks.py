@@ -1,11 +1,28 @@
+"""Unit Tests for Playbooks."""
+
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
+
+
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import pytest
 from unittest.mock import patch
 from dfcx_scrapi.core.playbooks import Playbooks
-from google.cloud.dialogflow_v3alpha1 import types
-from google.cloud.dialogflow_v3alpha1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
+from google.cloud.dialogflowcx_v3beta1 import services
 
 @pytest.fixture
 def test_config():
@@ -13,12 +30,18 @@ def test_config():
     playbook_id = f"{agent_id}/playbooks/1234"
     goal = """You are a Google caliber software engineer that helps users write
         code."""
-    steps = "Help the users write code snippets in python."
+    instructions = ["Help the users write code snippets in python."]
+    instructions_proto = {"steps": [
+        types.Playbook.Step(
+            text="Help the users write code snippets in python."
+            )
+    ]}
     return {
         "agent_id": agent_id,
         "playbook_id": playbook_id,
         "goal": goal,
-        "steps": steps
+        "instructions": instructions,
+        "instructions_proto": instructions_proto
     }
 
 @pytest.fixture
@@ -27,7 +50,7 @@ def mock_playbook_obj(test_config):
         name=test_config["playbook_id"],
         display_name="mock playbook",
         goal=test_config["goal"],
-        steps=test_config["steps"]
+        instruction=test_config["instructions_proto"]
     )
 
 
@@ -90,14 +113,27 @@ def test_get_playbook(mock_client, mock_playbook_obj, test_config):
 
 # Test create_playbook
 @patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
-def test_create_playbook(mock_client, mock_playbook_obj, test_config):
+def test_create_playbook_from_kwargs(
+    mock_client, mock_playbook_obj, test_config):
     mock_client.return_value.create_playbook.return_value = mock_playbook_obj
     pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.create_playbook(
         agent_id=test_config["agent_id"],
         display_name="mock playbook",
         goal=test_config["goal"],
-        steps=test_config["steps"]
+        instructions=test_config["instructions"]
+    )
+    assert isinstance(res, types.Playbook)
+    assert res.display_name == "mock playbook"
+
+@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
+def test_create_playbook_from_proto_object(
+    mock_client, mock_playbook_obj, test_config):
+    mock_client.return_value.create_playbook.return_value = mock_playbook_obj
+    pb = Playbooks(agent_id=test_config["agent_id"])
+    res = pb.create_playbook(
+        agent_id=test_config["agent_id"],
+        obj=mock_playbook_obj
     )
     assert isinstance(res, types.Playbook)
     assert res.display_name == "mock playbook"
@@ -137,12 +173,10 @@ def test_update_playbook_with_kwargs(
 
 # Test delete_playbook
 @patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
-def test_delete_playbook(mock_client, mock_playbook_obj, test_config):
+def test_delete_playbook(mock_client, test_config):
     pb = Playbooks(agent_id=test_config["agent_id"])
     pb.delete_playbook(playbook_id=test_config["playbook_id"])
-    mock_client.assert_called_once_with(
-        name=test_config["playbook_id"]
-    )
+    mock_client.return_value.delete_playbook.assert_called()
 
 
 # Test set_default_playbook
