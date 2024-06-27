@@ -21,6 +21,8 @@
 import os
 import json
 import pytest
+from unittest.mock import patch
+
 from dfcx_scrapi.core.conversation_history import ConversationHistory
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.cloud.dialogflowcx_v3beta1 import services
