@@ -1,5 +1,5 @@
 dfcx-scrapi
-google-cloud-dialogflow-cx>=1.33.0
+google-cloud-dialogflow-cx>=1.34.0
 google-cloud-discoveryengine>=0.11.10
 google-auth>=2.27.0
 google-oauth
@@ -19,3 +19,6 @@ pyyaml==5.4
 torch
 transformers
 sentencepiece
+
+--find-links data
+google-cloud-dialogflow-v3alpha1==0.0.0
