@@ -20,6 +20,7 @@ from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf.json_format import MessageToDict
+from proto.marshal.collections import maps
 
 from dfcx_scrapi.core import scrapi_base
 
@@ -72,6 +73,58 @@ class Sessions(scrapi_base.ScrapiBase):
             text=text_input, language_code=language_code)
 
         return query_input
+
+    @staticmethod
+    def get_text_response(res: types.session.QueryResult) -> str:
+      if res.response_messages:
+        for rm in res.response_messages:
+          if rm.text:
+            return rm.text.text[0]
+
+    @staticmethod
+    def get_tool_action(tool_use: types.example.ToolUse) -> str:
+      return tool_use.action
+
+    def get_tool_name(self, tool_use: types.example.ToolUse) -> str:
+      return self.tools_map[tool_use.tool]
+
+    def get_tool_input_parameters(self, tool_use: types.example.ToolUse) -> str:
+      input_params = {}
+      for param in tool_use.input_parameters:
+        if isinstance(param.value, maps.MapComposite):
+          input_params = self.recurse_proto_marshal_to_dict(param.value)
+        else:
+          input_params[param.name] = param.value
+
+      return input_params
+
+    def get_tool_output_parameters(
+          self, tool_use: types.example.ToolUse) -> str:
+      output_params = {}
+      for param in tool_use.output_parameters:
+        output_params[param.name] = self.recurse_proto_marshal_to_dict(
+           param.value)
+
+      return output_params
+
+    def collect_tool_responses(
+          self, res: types.session.QueryResult) -> List[Dict[str, str]]:
+      """Gather all the tool responses into a list of dicts."""
+      tool_responses = []
+      for action in res.generative_info.action_tracing_info.actions:
+        if action.tool_use:
+          tool_responses.append(
+              {
+                  "tool_name": self.get_tool_name(action.tool_use),
+                  "tool_action": self.get_tool_action(action.tool_use),
+                  "input_params": self.get_tool_input_parameters(
+                     action.tool_use),
+                  "output_params": self.get_tool_output_parameters(
+                     action.tool_use)
+              }
+          )
+
+      return tool_responses
 
     def build_session_id(
         self, agent_id:str = None, overwrite:bool = True) -> str:
