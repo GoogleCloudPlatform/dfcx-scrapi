@@ -11,7 +11,7 @@ pfreeze:
 	pip freeze > requirements.txt
 
 test:
-	pytest tests/dfcx_scrapi/core/
+	pytest tests/dfcx_scrapi/core/$(file)
 
 lint:
 	pylint --rcfile=.pylintrc src/dfcx_scrapi/*
@@ -27,6 +27,10 @@ autofix-all:
 	autopep8 --aggressive --aggressive --verbose --in-place ${f}
 
 # use it like this:
-# f=tools/validation_kit.py make lint-lines
-lint-lines:
+# make fix f=tools/validation_util.py
+fix:
 	black --line-length=80 ${f}
+
+build:
+	python3 -m build
+	pip uninstall dfcx-scrapi -y
