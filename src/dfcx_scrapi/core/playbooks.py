@@ -189,7 +189,7 @@ class Playbooks(scrapi_base.ScrapiBase):
         else:
             playbook_obj = types.Playbook()
 
-            # set optional args as agent attributes
+            # set optional args as playbook attributes
             for key, value in kwargs.items():
                 if key == "instructions":
                     instructions = self.build_instructions(instructions)
