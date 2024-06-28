@@ -17,7 +17,7 @@
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import playbooks
 from dfcx_scrapi.core import tools
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -171,7 +171,7 @@ class Examples(scrapi_base.ScrapiBase):
           reverse: (Optional) Boolean flag to swap key:value -> value:key
 
         Returns:
-          Dictionary containing Example UUIDs as keys and display names as values
+          Dict containing Example UUIDs as keys and display names as values
         """
         if not playbook_id:
             playbook_id = self.playbook_id
@@ -199,10 +199,7 @@ class Examples(scrapi_base.ScrapiBase):
 
         Args:
           playbook_id: the properly formatted Playbook ID string
-          language_code: Specifies the language of the Examples listed. While the
-            majority of contents of a Page is language agnostic, the contents
-            in the "Agent Says" and similar parts of a Page are affected by
-            language code.
+          language_code: Specifies the language of the Examples listed.
 
         Returns:
           A List of CX Example objects for the specific Playbook ID
@@ -259,7 +256,7 @@ class Examples(scrapi_base.ScrapiBase):
         """Create a single CX Example object in the specified Playbook ID.
 
         Args:
-          playbook_id: the CX Playbook ID where the Example object will be created
+          playbook_id: the CX Playbook ID where the Example will be created
           obj: (Optional) a CX Example object of types.Example
 
         Returns:

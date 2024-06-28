@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import logging
-from typing import Dict, List, Optional, Union
+from typing import Dict, List
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types

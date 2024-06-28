@@ -177,11 +177,11 @@ class ScrapiBase:
 
     @staticmethod
     def dict_to_struct(some_dict: Dict[str, Any]):
-      new_struct = struct_pb2.Struct()
-      for k,v in some_dict.items():
-        new_struct[k] = v
+        new_struct = struct_pb2.Struct()
+        for k,v in some_dict.items():
+            new_struct[k] = v
 
-      return new_struct
+        return new_struct
 
     @staticmethod
     def _parse_resource_path(
