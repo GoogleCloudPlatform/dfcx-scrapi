@@ -143,12 +143,16 @@ class Examples(scrapi_base.ScrapiBase):
         pb_input = types.PlaybookInput()
         pb_input.preceding_conversation_summary = action.get(
             "playbook_input_summary", None)
-        pb_input.action_parameters = action.get("playbook_input_parameters", None)
+        input_params = action.get("playbook_input_parameters", None)
+        if input_params:
+            pb_input.action_parameters = input_params
 
         pb_output = types.PlaybookOutput()
-        pb_output.execution_summary = action.get("playbook_output_summary", None)
-        pb_output.action_parameters = action.get(
-            "playbook_output_parameters", None)
+        pb_output.execution_summary = action.get(
+            "playbook_output_summary", None)
+        output_params = action.get("playbook_output_parameters", None)
+        if output_params:
+            pb_output.action_parameters = output_params
 
         pb_state = types.OutputState(
             self.get_playbook_state(action.get("playbook_state", None)))
