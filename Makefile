@@ -11,10 +11,10 @@ pfreeze:
 	pip freeze > requirements.txt
 
 test:
-	pytest tests --cov=tests --project=${gcp_project} --gcs_bucket=${gcs_bucket} --creds=${creds}
+	pytest tests/dfcx_scrapi/core/
 
 lint:
-	make pylint ${dir}/*
+	pylint --rcfile=.pylintrc src/dfcx_scrapi/*
 
 # just fix selected whitespace
 autofix-min-whitespace:
