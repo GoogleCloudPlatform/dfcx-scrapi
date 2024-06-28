@@ -15,7 +15,9 @@
 # limitations under the License.
 
 from dfcx_scrapi.core import scrapi_base
-from typing import Dict, List, Union
+from dfcx_scrapi.core import playbooks
+from dfcx_scrapi.core import tools
+from typing import Dict, List, Any, Tuple
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -27,13 +29,15 @@ class Examples(scrapi_base.ScrapiBase):
 
     def __init__(
         self,
+        agent_id: str,
         creds_path: str = None,
         creds_dict: Dict = None,
         creds=None,
         scope=False,
         example_id: str = None,
         playbook_id: str = None,
-        agent_id: str = None,
+        playbooks_map: Dict[str, str] = None,
+        tools_map: Dict[str, str] = None
     ):
         super().__init__(
             creds_path=creds_path,
@@ -42,15 +46,118 @@ class Examples(scrapi_base.ScrapiBase):
             scope=scope,
         )
 
-        if example_id:
-            self.example_id = example_id
-            self.client_options = self._set_region(example_id)
+        self.agent_id = agent_id
 
-        if playbook_id:
-            self.playbook_id = playbook_id
+        client_options = self._set_region(self.agent_id)
+        self.examples_client = services.examples.ExamplesClient(
+            credentials=self.creds, client_options=client_options
+        )
+        self.playbooks_client = playbooks.Playbooks(agent_id=self.agent_id)
+        self.tools_client = tools.Tools(agent_id=self.agent_id)
 
-        if agent_id:
-            self.agent_id = agent_id
+        self.playbook_id = playbook_id
+        self.example_id = example_id
+        self.playbooks_map = playbooks_map
+        self.tools_map = tools_map
+
+    @staticmethod
+    def get_playbook_state(playbook_state: str):
+        """Simple converter for enum values on playbook state."""
+        if playbook_state == "OK":
+            return 1
+        elif playbook_state == "CANCELLED":
+            return 2
+        elif playbook_state == "FAILED":
+            return 3
+        elif playbook_state == "ESCALATED":
+            return 4
+        elif playbook_state == "PENDING":
+            return 5
+        else:
+            return 0
+
+    def build_example_from_action_list_dict(
+        self,
+        display_name: str,
+        action_list: List[Dict],
+        description: str = None
+        ) -> types.Example:
+        """Builds an Example from a list of action dictionaries."""
+
+        example = types.Example()
+        example.display_name = display_name
+        example.description = description
+
+        for action_dict in action_list:
+            action_type, action_data = next(iter(action_dict.items()))
+
+            if action_type == "user_utterance":
+                example.actions.append(
+                    types.Action(
+                        user_utterance=types.UserUtterance(text=action_data)))
+
+            elif action_type == "agent_utterance":
+                example.actions.append(
+                    types.Action(
+                        agent_utterance=types.AgentUtterance(text=action_data)))
+
+            elif action_type == "tool_use":
+                if not self.tools_map:
+                    self.tools_map = self.tools_client.get_tools_map(
+                        self.agent_id, reverse=True
+                    )
+
+                tool_name = action_data.get("tool_name")
+
+                action = types.Action()
+                tool_use = types.ToolUse()
+                tool_use.tool = self.tools_map.get(tool_name)
+                tool_use.action = action_data.get("action")
+                tool_use.input_action_parameters = action_data.get(
+                    "input_action_parameters", None)
+                tool_use.output_action_parameters = action_data.get(
+                    "output_action_parameters", None)
+
+                action.tool_use = tool_use
+                example.actions.append(action)
+
+            elif action_type == "playbook_invocation":
+                example.actions.append(
+                    types.Action(
+                        playbook_invocation=self.build_playbook_invocation(
+                            action_data)))
+
+        return example
+
+    def build_playbook_invocation(
+        self, action: Dict[str, Any]) -> types.PlaybookInvocation:
+        """Helper method for constructing Playbook invocation."""
+        if not self.playbooks_map:
+            self.playbooks_map = self.playbooks_client.get_playbooks_map(
+                self.agent_id, reverse=True
+            )
+
+        pb_inv = types.PlaybookInvocation()
+        pb_inv.playbook = self.playbooks_map[action.get("playbook_name", None)]
+
+        pb_input = types.PlaybookInput()
+        pb_input.preceding_conversation_summary = action.get(
+            "playbook_input_summary", None)
+        pb_input.action_parameters = action.get("playbook_input_parameters", None)
+
+        pb_output = types.PlaybookOutput()
+        pb_output.execution_summary = action.get("playbook_output_summary", None)
+        pb_output.action_parameters = action.get(
+            "playbook_output_parameters", None)
+
+        pb_state = types.OutputState(
+            self.get_playbook_state(action.get("playbook_state", None)))
+
+        pb_inv.playbook_input = pb_input
+        pb_inv.playbook_output = pb_output
+        pb_inv.playbook_state = pb_state
+
+        return pb_inv
 
     def get_examples_map(self, playbook_id: str = None, reverse=False):
         """Exports Agent Example Names and UUIDs into a user friendly dict.
@@ -144,7 +251,7 @@ class Examples(scrapi_base.ScrapiBase):
         playbook_id: str = None,
         obj: types.Example = None,
         **kwargs
-    ) -> types.Example:
+        ) -> types.Example:
         """Create a single CX Example object in the specified Playbook ID.
 
         Args:
@@ -181,7 +288,7 @@ class Examples(scrapi_base.ScrapiBase):
         example_id: str = None,
         obj: types.Example = None,
         **kwargs
-    ) -> types.Example:
+        ) -> types.Example:
         """Update a single CX Example object.
 
         Args:
