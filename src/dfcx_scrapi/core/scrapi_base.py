@@ -19,13 +19,13 @@ import json
 import re
 import functools
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, Any
 
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.protobuf import json_format  # type: ignore
-from google.protobuf import field_mask_pb2
+from google.protobuf import field_mask_pb2, struct_pb2
 
 from proto.marshal.collections import repeated
 from proto.marshal.collections import maps
@@ -174,6 +174,14 @@ class ScrapiBase:
         """Convert to json so we can get at the object"""
         blob = ScrapiBase.cx_object_to_dict(msg)
         return blob.get("payload")  # deref for nesting
+
+    @staticmethod
+    def dict_to_struct(some_dict: Dict[str, Any]):
+      new_struct = struct_pb2.Struct()
+      for k,v in some_dict.items():
+        new_struct[k] = v
+
+      return new_struct
 
     @staticmethod
     def _parse_resource_path(
