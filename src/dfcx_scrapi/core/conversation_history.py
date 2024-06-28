@@ -57,10 +57,13 @@ class ConversationHistory(scrapi_base.ScrapiBase):
     @staticmethod
     def get_query_result(query_result: types.QueryResult):
         """Extract the query result from the agent."""
+        messages = []
         if "response_messages" in query_result:
             for rm in query_result.response_messages:
                 if "text" in rm:
-                    return rm.text.text[0]
+                    messages.append(rm.text.text[0])
+
+        return " ".join(messages)
 
     def list_conversations(self, agent_id: str):
         request = types.conversation_history.ListConversationsRequest(
@@ -113,9 +116,10 @@ class ConversationHistory(scrapi_base.ScrapiBase):
         # Check if the file exists
         if not os.path.exists(filename):
             # If not, create an empty file
-            open(filename, 'w').close()
+            with open(filename, "w", encoding="utf-8") as new_file:
+                new_file.close()
 
-        with open(filename, "w") as json_file:
+        with open(filename, "w", encoding="utf-8") as json_file:
             for data_dict in convos:
                 json.dump(data_dict, json_file)
                 json_file.write("\n")
@@ -123,7 +127,7 @@ class ConversationHistory(scrapi_base.ScrapiBase):
     def read_conversations_from_file(self, filename: str):
         """Loads a JSON Lines file and returns a list of dictionaries."""
         data = []
-        with open(filename, 'r') as f:
+        with open(filename, "r", encoding="utf-8") as f:
             for line in f:
                 data.append(json.loads(line))
 
