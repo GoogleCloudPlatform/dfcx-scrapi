@@ -1,0 +1,14 @@
+steps:
+  - id: deployagent
+    name: 'python:3.10'
+    entrypoint: /bin/bash
+    args:
+    - -c
+    - |
+      echo "printing recieved variables now"
+      echo ${_COMMIT_SHA}
+      pip3 install -r prod/requirements.txt
+      python3 prod/deploy.py ${_COMMIT_SHA}
+ 
+options:
+  logging: CLOUD_LOGGING_ONLY
