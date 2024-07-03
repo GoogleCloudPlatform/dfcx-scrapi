@@ -152,7 +152,7 @@ Create a gcs bucket and that will be used by the pipeline for storing
 agents while exporting and restoring. Below is how the bucket structure
 might look like.
 
-![](media/image1.png){width="4.75in" height="3.9166666666666665in"}
+![](media/image1.png)
 
 ## Cloud Build Configurations
 
