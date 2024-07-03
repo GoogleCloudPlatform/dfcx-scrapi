@@ -65,7 +65,7 @@ Using this CICD pipeline, you can
 
 # High level architecture
 
-![](media/image6.png){width="6.5in" height="5.916666666666667in"}
+![](media/image6.png)
 
 # 
 
@@ -166,18 +166,15 @@ the variables that will be defined for the Cloud Build.
 
 ### Export Build:
 
-![](media/image3.png){width="3.0208333333333335in"
-height="8.118055555555555in"}
+![](media/image3.png)
 
 ### UAT deploy build
 
-![](media/image4.png){width="3.5009765966754154in"
-height="8.583333333333334in"}
+![](media/image4.png)
 
 ### Prod deploy build
 
-![](media/image2.png){width="2.9479166666666665in"
-height="8.131944444444445in"}
+![](media/image2.png)
 
 ## DFCX APIs
 
@@ -278,7 +275,7 @@ In our CI/CD pipeline below operations are achieved using SCRAPI API
 8.  Now you can come back to cloud build console and build history tab
     and approve the build that is waiting for your approval and you can
     see that it will deploy the agent in prod post approval
-    ![](media/image5.png){width="6.5in" height="1.0694444444444444in"}
+    ![](media/image5.png)
 
 ## Cavet
 
