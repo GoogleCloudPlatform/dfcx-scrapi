@@ -1,5 +1,5 @@
 ---
-title: "[]{#_ezgbx76tr6oc .anchor}DFCX_CICD_readme"
+title: "DFCX_CICD_readme"
 ---
 
 This Document outlines how to use this sample code and set up the CICD
