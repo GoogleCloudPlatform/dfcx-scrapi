@@ -23,6 +23,7 @@ from typing import Dict
 from google.cloud.dialogflow_v3alpha1 import services
 from google.cloud.dialogflow_v3alpha1 import types
 
+
 class Tools(scrapi_base.ScrapiBase):
     """Core Class for Tools Resource methods."""
     def __init__(

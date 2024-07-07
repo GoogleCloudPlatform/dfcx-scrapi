@@ -71,7 +71,8 @@ def test_get_tools_map(mock_client, mock_list_tools_pager, test_config):
 
 # Test get_tools_map (reversed)
 @patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
-def test_get_tools_map_reversed(mock_client, mock_list_tools_pager, test_config):
+def test_get_tools_map_reversed(
+    mock_client, mock_list_tools_pager, test_config):
     mock_client.return_value.list_tools.return_value = mock_list_tools_pager
     tools = Tools(agent_id=test_config["agent_id"])
     res = tools.get_tools_map(agent_id=test_config["agent_id"], reverse=True)
@@ -107,9 +108,9 @@ def test_create_tool_from_kwargs(
     mock_client.return_value.create_tool.return_value = mock_tool_obj
     tools = Tools(agent_id=test_config["agent_id"])
     res = tools.create_tool(
-    agent_id=test_config["agent_id"],
-    display_name=test_config["display_name"]
-    )
+        agent_id=test_config["agent_id"],
+        display_name=test_config["display_name"]
+        )
     assert isinstance(res, types.Tool)
     assert res.display_name == test_config["display_name"]
 
@@ -119,9 +120,9 @@ def test_create_tool_from_proto_object(
     mock_client.return_value.create_tool.return_value = mock_tool_obj
     tools = Tools(agent_id=test_config["agent_id"])
     res = tools.create_tool(
-    agent_id=test_config["agent_id"],
-    obj=mock_tool_obj
-    )
+        agent_id=test_config["agent_id"],
+        obj=mock_tool_obj
+        )
     assert isinstance(res, types.Tool)
     assert res.display_name == test_config["display_name"]
 
@@ -131,8 +132,8 @@ def test_delete_tool_with_tool_id(mock_client, test_config):
     tools = Tools(agent_id=test_config["agent_id"])
     tools.delete_tool(tool_id=test_config["tool_id"])
     mock_client.return_value.delete_tool.assert_called_once_with(
-    name=test_config["tool_id"]
-    )
+        name=test_config["tool_id"]
+        )
 
 # Test delete_tool with obj
 @patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")

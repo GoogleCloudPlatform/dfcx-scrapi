@@ -76,7 +76,7 @@ class Examples(scrapi_base.ScrapiBase):
         else:
             return 0
 
-    def build_example_from_action_list_dict(
+    def build_example_from_action_list(
         self,
         display_name: str,
         action_list: List[Dict],
