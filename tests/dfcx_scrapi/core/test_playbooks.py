@@ -80,7 +80,7 @@ def mock_list_playbooks_pager(mock_playbook_obj):
 # Test get_playbooks_map
 @patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
 def test_get_playbooks_map(mock_client, mock_list_playbooks_pager, test_config):
-    mock_client.return_value.list_playbooks.return_value = mock_list_playbooks_pager
+    mock_client.return_value.list_playbooks.return_value = mock_list_playbooks_pager # pylint: disable=C0301
     pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.get_playbooks_map(agent_id=test_config["agent_id"])
 
@@ -92,7 +92,7 @@ def test_get_playbooks_map(mock_client, mock_list_playbooks_pager, test_config):
 # Test list_playbooks
 @patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
 def test_list_playbooks(mock_client, mock_list_playbooks_pager, test_config):
-    mock_client.return_value.list_playbooks.return_value = mock_list_playbooks_pager
+    mock_client.return_value.list_playbooks.return_value = mock_list_playbooks_pager # pylint: disable=C0301
     pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.list_playbooks()
 

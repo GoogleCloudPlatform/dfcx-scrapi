@@ -15,6 +15,7 @@ test:
 
 lint:
 	pylint --rcfile=.pylintrc src/dfcx_scrapi/*
+	pylint --rcfile=.pylintrc tests/dfcx_scrapi/*
 
 # just fix selected whitespace
 autofix-min-whitespace:

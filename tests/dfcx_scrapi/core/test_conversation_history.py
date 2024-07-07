@@ -41,7 +41,7 @@ def test_config():
 @pytest.fixture
 def test_conversation(test_config):
     conversation = types.Conversation(
-        name=f"{test_config['conversation_id']}/conversations/test-conversation",
+        name=f"{test_config['conversation_id']}",
         start_time=timestamp_pb2.Timestamp(seconds=1678886400)
         )
     interaction_1 = types.Conversation.Interaction(
@@ -91,7 +91,8 @@ def test_get_user_input():
 # Test get_query_result
 def test_get_query_result():
     query_result = types.QueryResult(response_messages=[
-        types.ResponseMessage(text=types.ResponseMessage.Text(text=["test result"]))
+        types.ResponseMessage(
+            text=types.ResponseMessage.Text(text=["test result"]))
     ])
     agent_response = ConversationHistory.get_query_result(query_result)
     assert agent_response == "test result"
