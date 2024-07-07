@@ -197,13 +197,13 @@ def test_get_playbook_state(test_config):
     assert ex.get_playbook_state(None) == 0
 
 # Test build_example_from_action_list_dict
-def test_build_example_from_action_list_dict(test_config):
+def test_build_example_from_action_list(test_config):
     ex = Examples(agent_id=test_config["agent_id"])
     action_list = [
     {"user_utterance": "hello"},
     {"agent_utterance": "hi there"},
     ]
-    example = ex.build_example_from_action_list_dict(
+    example = ex.build_example_from_action_list(
         display_name="test_example", action_list=action_list
         )
     assert isinstance(example, types.Example)
