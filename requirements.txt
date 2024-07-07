@@ -19,6 +19,3 @@ pyyaml==5.4
 torch
 transformers
 sentencepiece
-
---find-links data
-google-cloud-dialogflow-v3alpha1==0.0.0
