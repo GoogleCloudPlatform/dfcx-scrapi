@@ -184,6 +184,17 @@ class ScrapiBase:
         return new_struct
 
     @staticmethod
+    def parse_agent_id(resource_id: str):
+        """Attempts to parse Agent ID from provided Resource ID."""
+        try:
+            agent_id = "/".join(resource_id.split("/")[:6])
+        except IndexError as err:
+            logging.error("IndexError - path too short? %s", resource_id)
+            raise err
+
+        return agent_id
+
+    @staticmethod
     def _parse_resource_path(
         resource_type,
         resource_id,
