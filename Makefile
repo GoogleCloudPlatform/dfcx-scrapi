@@ -11,10 +11,11 @@ pfreeze:
 	pip freeze > requirements.txt
 
 test:
-	pytest tests --cov=tests --project=${gcp_project} --gcs_bucket=${gcs_bucket} --creds=${creds}
+	pytest tests/dfcx_scrapi/core/$(file)
 
 lint:
-	make pylint ${dir}/*
+	pylint --rcfile=.pylintrc src/dfcx_scrapi/*
+	pylint --rcfile=.pylintrc tests/dfcx_scrapi/*
 
 # just fix selected whitespace
 autofix-min-whitespace:
@@ -27,6 +28,10 @@ autofix-all:
 	autopep8 --aggressive --aggressive --verbose --in-place ${f}
 
 # use it like this:
-# f=tools/validation_kit.py make lint-lines
-lint-lines:
+# make fix f=tools/validation_util.py
+fix:
 	black --line-length=80 ${f}
+
+build:
+	python3 -m build
+	pip uninstall dfcx-scrapi -y

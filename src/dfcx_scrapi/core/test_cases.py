@@ -463,6 +463,8 @@ class TestCases(scrapi_base.ScrapiBase):
                 "At least one kwarg or `obj` arg should be passed, otherwise ",
                 "this is noop.")
 
+        mask = None
+
         if obj:
             test_case = obj
 

@@ -20,7 +20,7 @@
 import pytest
 import pandas as pd
 from unittest.mock import patch
-from dfcx_scrapi.core.test_cases import TestCases
+from dfcx_scrapi.core.test_cases import TestCases as PyTestCases
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.cloud.dialogflowcx_v3beta1.services import test_cases
 
@@ -160,7 +160,7 @@ def mock_list_tc_pager_no_turns(mock_tc_obj_no_turns):
 # Private Methods
 def test_convert_test_result_to_string(mock_tc_obj_turns):
     tests = [(0, "TEST_RESULT_UNSPECIFIED"), (1, "PASSED"), (2, "FAILED")]
-    tc = TestCases()
+    tc = PyTestCases()
 
     for int_value, str_value in tests:
         mock_tc_obj_turns.last_test_result.test_result = types.TestResult(
@@ -173,7 +173,7 @@ def test_convert_test_result_to_string(mock_tc_obj_turns):
 
 def test_convert_test_result_to_bool(mock_tc_obj_turns):
     tests = [(0, None), (1, True), (2, False)]
-    tc = TestCases()
+    tc = PyTestCases()
     for int_value, res_value in tests:
         if int_value in [1, 2]:
             mock_tc_obj_turns.last_test_result.test_result = types.TestResult(
@@ -197,7 +197,7 @@ def test_get_flow_id_from_test_config(mock_tc_obj_turns, test_config):
         ("page", test_config["page_id"]),
         (None, ""),
     ]
-    tc = TestCases()
+    tc = PyTestCases()
     for str_value, test_case_id in tests:
         if str_value == "flow":
             mock_tc_obj_turns.test_config.flow = test_case_id
@@ -216,7 +216,7 @@ def test_get_page_id_from_test_config(mock_tc_obj_turns, test_config):
         ("page", test_config["page_id"]),
         ("start_page", f"{test_config['flow_id']}/pages/START_PAGE"),
     ]
-    tc = TestCases()
+    tc = PyTestCases()
     for str_value, page_id in tests:
         if str_value == "page":
             mock_tc_obj_turns.test_config.page = page_id
@@ -236,7 +236,7 @@ def test_get_page_id_from_test_config(mock_tc_obj_turns, test_config):
 
 
 def test_get_page_display_name_flow_exists(test_config):
-    tc = TestCases()
+    tc = PyTestCases()
 
     res = tc._get_page_display_name(
         test_config["flow_id"], test_config["page_id"], test_config["pages_map"]
@@ -246,7 +246,7 @@ def test_get_page_display_name_flow_exists(test_config):
 
 
 def test_get_page_display_name_flow_exists_no_page_map(test_config):
-    tc = TestCases()
+    tc = PyTestCases()
 
     res = tc._get_page_display_name(
         test_config["other_flow_id"], None, test_config["pages_map"]
@@ -255,7 +255,7 @@ def test_get_page_display_name_flow_exists_no_page_map(test_config):
 
 
 def test_get_page_display_name_flow_does_not_exist(test_config):
-    tc = TestCases()
+    tc = PyTestCases()
 
     res = tc._get_page_display_name(
         f"{test_config['agent_id']}/flows/doesnt-exist-1234",
@@ -278,7 +278,7 @@ def test_process_test_case(mock_tc_obj_turns, test_config):
         "passed",
         "test_time",
     ]
-    tc = TestCases()
+    tc = PyTestCases()
 
     res = tc._process_test_case(
         mock_tc_obj_turns, test_config["flows_map"], test_config["pages_map"]
@@ -304,7 +304,7 @@ def test_retest_cases(mock_batch_run, mock_tc_df):
     mock_batch_run.return_value.batch_run_test_cases.return_value = mock_tc_df
 
     retest_ids = mock_tc_df.id.to_list()[:1]
-    tc = TestCases()
+    tc = PyTestCases()
     res = tc._retest_cases(mock_tc_df, retest_ids)
     assert isinstance(res, pd.DataFrame)
     assert set(res.columns.to_list()) == set(cols)
@@ -317,7 +317,7 @@ def test_list_test_cases_agent_id_not_in_instance(
 ):
     mock_client.return_value.list_test_cases.return_value = [mock_tc_obj_turns]
 
-    tc = TestCases()
+    tc = PyTestCases()
 
     with pytest.raises(AttributeError):
         _ = tc.list_test_cases()
@@ -329,7 +329,7 @@ def test_list_test_cases_agent_id_in_instance(
 ):
     mock_client.return_value.list_test_cases.return_value = mock_list_tc_pager
 
-    tc = TestCases(agent_id=test_config["agent_id"])
+    tc = PyTestCases(agent_id=test_config["agent_id"])
     res = tc.list_test_cases()
 
     assert isinstance(res, list)
@@ -344,7 +344,7 @@ def test_list_test_cases_agent_id_in_method(
         mock_list_tc_pager_no_turns
     )
 
-    tc = TestCases()
+    tc = PyTestCases()
     res = tc.list_test_cases(test_config["agent_id"])
 
     assert isinstance(res, list)
@@ -358,7 +358,7 @@ def test_list_test_cases_include_conversation_turns(
 ):
     mock_client.return_value.list_test_cases.return_value = mock_list_tc_pager
 
-    tc = TestCases()
+    tc = PyTestCases()
     res = tc.list_test_cases(
         test_config["agent_id"], include_conversation_turns=True
     )
@@ -375,7 +375,7 @@ def test_list_test_cases_include_conversation_turns(
 def test_update_test_case_no_args(mock_client, mock_tc_obj_turns):
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
 
-    tc = TestCases()
+    tc = PyTestCases()
 
     # Assertions
     with pytest.raises(ValueError):
@@ -386,7 +386,7 @@ def test_update_test_case_no_args(mock_client, mock_tc_obj_turns):
 def test_update_test_case_kwargs_only(mock_client, mock_tc_obj_turns):
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
 
-    tc = TestCases()
+    tc = PyTestCases()
 
     # Assertions
     with pytest.raises(ValueError):
@@ -398,7 +398,7 @@ def test_update_test_case_id_only(mock_client, test_config, mock_tc_obj_turns):
 
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
 
-    tc = TestCases()
+    tc = PyTestCases()
 
     # Assertions
     with pytest.raises(ValueError):
@@ -409,7 +409,7 @@ def test_update_test_case_id_only(mock_client, test_config, mock_tc_obj_turns):
 def test_update_test_case_obj_only(mock_client, mock_tc_obj_turns):
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
 
-    tc = TestCases()
+    tc = PyTestCases()
     result = tc.update_test_case(obj=mock_tc_obj_turns)
 
     # Assertions
@@ -423,7 +423,7 @@ def test_update_test_case_obj_only_empty_name(mock_client, mock_tc_obj_turns):
 
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
 
-    tc = TestCases()
+    tc = PyTestCases()
 
     # Assertions
     with pytest.raises(ValueError):
@@ -437,7 +437,7 @@ def test_update_test_case_with_obj_and_kwargs(
 
     mock_client.return_value.update_test_case.return_value = mock_updated_tc_obj
 
-    tc = TestCases()
+    tc = PyTestCases()
     result = tc.update_test_case(
         obj=mock_tc_obj_turns, display_name="mock test case object updated"
     )
@@ -452,7 +452,7 @@ def test_update_test_case_with_id_and_kwargs(
     mock_client, test_config, mock_tc_obj_turns
 ):
 
-    tc = TestCases()
+    tc = PyTestCases()
 
     mock_client.return_value.get_test_case.return_value = mock_tc_obj_turns
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
@@ -472,7 +472,7 @@ def test_update_test_case_with_obj_id_and_kwargs(
 ):
     """For this case, kwargs should be ignored in favor of the obj."""
 
-    tc = TestCases()
+    tc = PyTestCases()
 
     mock_client.return_value.get_test_case.return_value = mock_tc_obj_turns
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
