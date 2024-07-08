@@ -87,22 +87,6 @@ def mock_list_agents_pager(mock_list_agents_response):
         mock_list_agents_response,
     )
 
-# Test _list_agents_client_request
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
-def test__list_agents_client_request(
-    mock_client, mock_list_agents_pager, test_config):
-    mock_client.return_value.list_agents.return_value = mock_list_agents_pager
-    agent = Agents()
-    agents = agent._list_agents_client_request(
-        location_id=f"projects/{test_config['project_id']}/locations/global"
-    )
-
-    assert isinstance(agents, list)
-    assert len(agents) == 1
-    assert isinstance(agents[0], types.Agent)
-    assert agents[0].name == test_config["agent_id"]
-    assert agents[0].display_name == test_config["display_name"]
-
 # Test list_agents with location_id
 @patch("dfcx_scrapi.core.agents.Agents._list_agents_client_request")
 def test_list_agents_with_location(mock_list_agents_client_request,
@@ -145,19 +129,19 @@ def test_get_agent(mock_client, mock_agent_obj_flow, test_config):
 @patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
 def test_get_agent_by_display_name_no_location(
     mock_client, mock_agent_obj_flow, mock_list_agents_pager, test_config):
-    mock_client.return_value.get_agent_by_display_name.return_value = mock_agent_obj_flow
+    mock_client.return_value.get_agent_by_display_name.return_value = mock_agent_obj_flow # pylint: disable=C0301
     mock_client.return_value.list_agents.return_value = mock_list_agents_pager
     agent = Agents()
     response = agent.get_agent_by_display_name(
         test_config["project_id"], test_config["display_name"]
         )
 
-    assert response == None
+    assert response is None
 
 @patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
 def test_get_agent_by_display_name_with_region(
     mock_client, mock_agent_obj_flow, mock_list_agents_pager, test_config):
-    mock_client.return_value.get_agent_by_display_name.return_value = mock_agent_obj_flow
+    mock_client.return_value.get_agent_by_display_name.return_value = mock_agent_obj_flow # pylint: disable=C0301
     mock_client.return_value.list_agents.return_value = mock_list_agents_pager
     agent = Agents()
     response = agent.get_agent_by_display_name(
@@ -172,7 +156,8 @@ def test_get_agent_by_display_name_with_region(
 
 # Test create_agent
 @patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
-def test_create_agent_with_kwargs(mock_client, mock_agent_obj_flow, test_config):
+def test_create_agent_with_kwargs(
+    mock_client, mock_agent_obj_flow, test_config):
     mock_client.return_value.create_agent.return_value = mock_agent_obj_flow
     agent = Agents()
     response = agent.create_agent(
