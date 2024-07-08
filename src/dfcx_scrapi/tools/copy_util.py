@@ -357,6 +357,7 @@ class CopyUtil(ScrapiBase):
         This performs a lookup based on Intent Display Name, retrieves the
         Destination Intent object, and then updates it appropriately.
         """
+        destination_intent_obj = None
 
         destination_intents = self.intents.list_intents(destination_agent)
         for intent in destination_intents:

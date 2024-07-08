@@ -165,7 +165,7 @@ def test_read_conversations_from_file(tmpdir):
     ch = ConversationHistory()
     data = [{"test": "data"}]
     filename = os.path.join(tmpdir, "test.json")
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         for item in data:
             json.dump(item, f)
             f.write("\n")

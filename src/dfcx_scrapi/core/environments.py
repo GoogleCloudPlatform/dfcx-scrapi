@@ -306,6 +306,8 @@ class Environments(scrapi_base.ScrapiBase):
         Returns:
           An object representing a long-running operation. (LRO)
         """
+        mask = None
+
         if environment_obj:
             env = environment_obj
             env.name = environment_id

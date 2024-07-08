@@ -841,6 +841,7 @@ class DataframeFunctions(ScrapiBase):
           Dictionary with entity display names as keys and the
           new entity protobufs as values
         """
+        meta = None
 
         if "meta" in entities_df.columns:
             meta = (
@@ -901,6 +902,8 @@ class DataframeFunctions(ScrapiBase):
           Dictionary with entity display names as keys and the
           new entity protobufs as values
         """
+        meta = None
+
         if "meta" in entities_df.columns:
             meta = (
                 entities_df.copy()[["display_name", "meta"]]

@@ -181,6 +181,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     @staticmethod
     def _build_query_input_object(input_obj, language_code):
+        query_input = types.session.QueryInput()
+
         if "dtmf" in input_obj:
             digits = str(input_obj["dtmf"])
 
