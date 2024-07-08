@@ -1,6 +1,6 @@
 """Agent Resource functions."""
 
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -223,6 +223,7 @@ class Agents(scrapi_base.ScrapiBase):
         display_name: str = None,
         gcp_region: str = "global",
         obj: types.Agent = None,
+        playbook_agent: bool = False,
         **kwargs,
     ):
         """Create a Dialogflow CX Agent with given display name.
@@ -264,6 +265,12 @@ class Agents(scrapi_base.ScrapiBase):
             # set optional args as agent attributes
             for key, value in kwargs.items():
                 setattr(agent_obj, key, value)
+
+        if playbook_agent:
+            default_playbook_id = "00000000-0000-0000-0000-000000000000"
+            agent_obj.start_playbook = (
+                f"{parent}/agents/-/playbooks/{default_playbook_id}"
+            )
 
         client_options = self._set_region(parent)
         client = services.agents.AgentsClient(
@@ -607,4 +614,4 @@ class Agents(scrapi_base.ScrapiBase):
             credentials=self.creds, client_options=client_options)
         client.delete_agent(name=agent_id)
 
-        return "Agent '{agent_id}' successfully deleted."
+        return f"Agent '{agent_id}' successfully deleted."
