@@ -21,8 +21,8 @@
 import pytest
 from unittest.mock import patch
 from dfcx_scrapi.core.tools import Tools
-from google.cloud.dialogflow_v3alpha1 import types
-from google.cloud.dialogflow_v3alpha1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
+from google.cloud.dialogflowcx_v3beta1 import services
 
 @pytest.fixture
 def test_config():
