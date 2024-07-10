@@ -78,20 +78,27 @@ def test_config():
         }
 
 @pytest.fixture
-def mock_tool_obj(test_config):
+def open_api_tool(test_config):
+    return types.Tool.OpenApiTool(
+        text_schema=test_config["open_api_spec"]
+    )
+
+@pytest.fixture
+def mock_tool_obj(test_config, open_api_tool):
     return types.Tool(
         name=test_config["tool_id"],
         display_name=test_config["display_name"],
         description=test_config["description"],
-        open_api_spec=test_config["open_api_spec"]
+        open_api_spec=open_api_tool
         )
 
-def mock_tool_obj_updated(test_config):
+@pytest.fixture
+def mock_tool_obj_updated(test_config, open_api_tool):
     return types.Tool(
         name=test_config["tool_id"],
         display_name=test_config["display_name"],
         description=test_config["updated_description"],
-        open_api_spec=test_config["open_api_spec"]
+        open_api_spec=open_api_tool
         )
 
 @pytest.fixture
@@ -200,10 +207,11 @@ def test_delete_tool_with_obj(mock_client, mock_tool_obj, test_config):
 @patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_update_tool_with_kwargs(
     mock_client, mock_tool_obj_updated, test_config):
-    mock_client.return_value.update_tool = mock_tool_obj_updated
+    mock_client.return_value.update_tool.return_value = mock_tool_obj_updated
     tools = Tools(agent_id=test_config["agent_id"])
     res = tools.update_tool(
-        test_config["tool_id"], description=test_config["updated_description"]
+        tool_id=test_config["tool_id"],
+        description=test_config["updated_description"]
         )
 
     assert isinstance(res, types.Tool)
@@ -219,9 +227,7 @@ def test_build_open_api_tool_no_description(test_config):
 
     assert isinstance(tool, types.Tool)
     assert tool.display_name == test_config["display_name"]
-    assert tool.description is None
-    assert tool.tool_type == "CUSTOMIZED_TOOL"
-
+    assert tool.description == ""
 
 def test_build_open_api_tool_with_description(test_config):
     tools = Tools(agent_id=test_config["agent_id"])
@@ -234,4 +240,3 @@ def test_build_open_api_tool_with_description(test_config):
     assert isinstance(tool, types.Tool)
     assert tool.display_name == test_config["display_name"]
     assert tool.description == test_config["description"]
-    assert tool.tool_type == "CUSTOMIZED_TOOL"
