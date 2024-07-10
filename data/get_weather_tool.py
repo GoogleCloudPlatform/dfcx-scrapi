@@ -1,3 +1,4 @@
+"""Sample Tool for Agent Builder."""
 import logging
 import requests
 from google.auth import default as google_default_auth
@@ -21,7 +22,8 @@ def get_request_params(param, default=None):
     request_json = request.get_json(silent=True)
     request_args = request.args
 
-    return (request_json or {}).get(param, default) or request_args.get(param, default)
+    return (request_json or {}).get(param, default) or request_args.get(
+        param, default)
 
 @app.route("/get_weather_grid", methods=["GET", "POST"])
 def get_weather_grid():
@@ -43,7 +45,10 @@ def get_weather_grid():
 
             # just take the weather from the current period
             period = data["properties"]["periods"][0]
-            return {"temperature": period["temperature"], "temperatureUnit": period["temperatureUnit"]}
+            return {
+                "temperature": period["temperature"],
+                "temperatureUnit": period["temperatureUnit"]
+                }
 
     return {}
 
