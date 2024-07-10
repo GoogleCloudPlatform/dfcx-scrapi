@@ -11,7 +11,7 @@ pfreeze:
 	pip freeze > requirements.txt
 
 test:
-	pytest tests/dfcx_scrapi/core/$(file)
+	pytest tests/dfcx_scrapi/core/$(f)
 
 lint:
 	pylint --rcfile=.pylintrc src/dfcx_scrapi/*
