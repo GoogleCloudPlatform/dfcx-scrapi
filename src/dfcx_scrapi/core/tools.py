@@ -17,11 +17,8 @@
 from dfcx_scrapi.core import scrapi_base
 from typing import Dict
 
-# TODO (pmarlow) Pending Bug fix to remove visibility on v3beta1 service
-# from google.cloud.dialogflowcx_v3beta1 import services
-# from google.cloud.dialogflowcx_v3beta1 import types
-from google.cloud.dialogflow_v3alpha1 import services
-from google.cloud.dialogflow_v3alpha1 import types
+from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import types
 
 
 class Tools(scrapi_base.ScrapiBase):
