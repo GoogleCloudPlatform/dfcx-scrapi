@@ -19,6 +19,7 @@ from typing import Dict
 
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
+from google.protobuf import field_mask_pb2
 
 
 class Tools(scrapi_base.ScrapiBase):
@@ -37,6 +38,16 @@ class Tools(scrapi_base.ScrapiBase):
 
         self.agent_id = agent_id
         self.tool_id = tool_id
+
+    @staticmethod
+    def build_open_api_tool(
+        display_name: str, spec: str, description: str = None):
+        """Helper method to build OpenAPI tool specs."""
+        return types.Tool(
+            display_name=display_name,
+            description=description,
+            open_api_spec=types.Tool.OpenApiTool(text_schema=spec)
+            )
 
     @scrapi_base.api_call_counter_decorator
     def get_tools_map(self, agent_id: str, reverse: bool = False):
@@ -103,6 +114,30 @@ class Tools(scrapi_base.ScrapiBase):
         )
 
         response = client.create_tool(request)
+
+        return response
+
+    @scrapi_base.api_call_counter_decorator
+    def update_tool(self, tool_id: str, obj: types.Tool = None, **kwargs):
+        """Update a single Tool with the specific object or kwargs."""
+        if obj:
+            tool = obj
+            tool.name = tool_id
+        else:
+            tool = self.get_tool(tool_id)
+
+        # set optional tool attributes
+        for key, value in kwargs.items():
+            setattr(tool, key, value)
+        paths = kwargs.keys()
+        mask = field_mask_pb2.FieldMask(paths=paths)
+
+        client_options = self._set_region(tool_id)
+        client = services.tools.ToolsClient(
+            credentials=self.creds, client_options=client_options
+        )
+
+        response = client.update_tool(tool=tool, update_mask=mask)
 
         return response
 
