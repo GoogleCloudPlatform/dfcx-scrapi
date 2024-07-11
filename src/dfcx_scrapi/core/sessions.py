@@ -41,13 +41,15 @@ class Sessions(scrapi_base.ScrapiBase):
         self,
         creds_path: str = None,
         creds_dict: Dict = None,
+        creds=None,
         scope=False,
         agent_id: str = None,
         session_id: str = None,
         tools_map: Dict[str, str] = None,
     ):
         super().__init__(
-            creds_path=creds_path, creds_dict=creds_dict, scope=scope
+            creds_path=creds_path, creds_dict=creds_dict,
+            creds=creds, scope=scope
         )
 
         self.session_id = session_id
