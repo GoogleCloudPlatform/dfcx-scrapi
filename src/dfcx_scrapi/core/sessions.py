@@ -265,6 +265,7 @@ class Sessions(scrapi_base.ScrapiBase):
         text,
         language_code="en",
         parameters=None,
+        end_user_metadata=None,
         populate_data_store_connection_signals=False,
     ):
         """Returns the result of detect intent with texts as inputs.
@@ -314,6 +315,9 @@ class Sessions(scrapi_base.ScrapiBase):
 
         if parameters:
             query_param_mapping["parameters"] = parameters
+
+        if end_user_metadata:
+            query_param_mapping["end_user_metadata"] = end_user_metadata
 
         if populate_data_store_connection_signals:
             query_param_mapping[
