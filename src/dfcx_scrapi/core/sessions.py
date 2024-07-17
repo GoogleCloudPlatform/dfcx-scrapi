@@ -281,6 +281,8 @@ class Sessions(scrapi_base.ScrapiBase):
           text: the user utterance to run intent detection on
           parameters: (Optional) Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
+          end_user_metadata: (Optional) Dict of CX Session endUserMetadata to
+            set in the conversation.
           populate_data_store_connection_signals: If set to true and data
             stores are involved in serving the request then query result will
             be populated with data_store_connection_signals field which
