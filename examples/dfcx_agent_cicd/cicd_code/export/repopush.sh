@@ -5,7 +5,7 @@ echo $agent_name
 cd agenttemp
 ls -all
 gcloud source repos clone agentcicd --project=$project_id
-#git remote add google 'https://source.developers.google.com/p/vs-kit-387413/r/agentTest'
+#git remote add google 'https://source.developers.google.com/p/xxx/r/agentTest'
 
 cd agentcicd
 git checkout main
