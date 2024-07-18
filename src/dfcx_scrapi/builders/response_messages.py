@@ -40,6 +40,8 @@ class ResponseMessageBuilder(BuildersCommon):
     def __str__(self) -> str:
         """String representation of the proto_obj."""
         self._check_proto_obj_attr_exist()
+        resp_type = None
+        resp_msg = None
 
         if self.proto_obj.text:
             resp_type = "text"

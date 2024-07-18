@@ -92,6 +92,7 @@ class Fulfillments:
 
     def get_trigger_info(self, route):
         """Extract trigger info from route based on primary key."""
+        trigger = None
 
         if route.fulfillment_type == "event":
             trigger = f"event : {route.data.get('event', None)}"
