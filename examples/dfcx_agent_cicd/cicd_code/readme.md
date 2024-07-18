@@ -68,7 +68,7 @@ the agent.
 
 # High level Architecture
 
-!media/image1.png
+![](media/image1.png)
 
 # 
 
@@ -153,7 +153,7 @@ Create a gcs bucket and that will be used by the pipeline for storing
 agents while exporting and restoring. Below is how the bucket structure
 might look like.
 
-!media/image2.png
+![](media/image2.png)
 
 ## Cloud Build Configurations
 
@@ -167,15 +167,15 @@ the variables that will be defined for the Cloud Build.
 
 ### Export Build:
 
-!media/image3.png
+![](media/image3.png)
 
 ### UAT deploy build
 
-!media/image4.png
+![](media/image4.png)
 
 ### Prod deploy build
 
-!media/image5.png
+![](media/image5.png)
 
 ## DFCX APIs
 
