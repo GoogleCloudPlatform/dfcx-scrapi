@@ -1,0 +1,45 @@
+steps:
+
+  - id: SHAGCSCopy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    args:
+      - '-c'
+      - |
+        chmod 777 UAT/gcssha.sh
+        UAT/gcssha.sh $COMMIT_SHA
+
+  - id: deployagent
+    name: 'python:3.10'
+    entrypoint: /bin/bash
+    args:
+    - -c
+    - |
+      pip3 install -r UAT/requirements.txt
+      python3 UAT/deploy.py $COMMIT_SHA
+      echo $?
+
+  - id: CheckExitCode
+    name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [[ "$$BUILD_STATUS" -ne 0 ]]; then
+          echo "Stopping the build due to a previous failure."
+          exit 1
+        fi
+
+
+  - id: triggerproddeploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: /bin/bash
+    args:
+      - '-c'
+      - |
+        chmod 777 UAT/trigger.sh
+        UAT/trigger.sh $COMMIT_SHA
+
+
+options:
+  logging: CLOUD_LOGGING_ONLY
