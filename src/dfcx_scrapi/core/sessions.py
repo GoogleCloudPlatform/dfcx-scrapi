@@ -41,13 +41,15 @@ class Sessions(scrapi_base.ScrapiBase):
         self,
         creds_path: str = None,
         creds_dict: Dict = None,
+        creds=None,
         scope=False,
         agent_id: str = None,
         session_id: str = None,
         tools_map: Dict[str, str] = None,
     ):
         super().__init__(
-            creds_path=creds_path, creds_dict=creds_dict, scope=scope
+            creds_path=creds_path, creds_dict=creds_dict,
+            creds=creds, scope=scope
         )
 
         self.session_id = session_id
@@ -265,6 +267,7 @@ class Sessions(scrapi_base.ScrapiBase):
         text,
         language_code="en",
         parameters=None,
+        end_user_metadata=None,
         populate_data_store_connection_signals=False,
     ):
         """Returns the result of detect intent with texts as inputs.
@@ -280,6 +283,8 @@ class Sessions(scrapi_base.ScrapiBase):
           text: the user utterance to run intent detection on
           parameters: (Optional) Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
+          end_user_metadata: (Optional) Dict of CX Session endUserMetadata to
+            set in the conversation.
           populate_data_store_connection_signals: If set to true and data
             stores are involved in serving the request then query result will
             be populated with data_store_connection_signals field which
@@ -314,6 +319,9 @@ class Sessions(scrapi_base.ScrapiBase):
 
         if parameters:
             query_param_mapping["parameters"] = parameters
+
+        if end_user_metadata:
+            query_param_mapping["end_user_metadata"] = end_user_metadata
 
         if populate_data_store_connection_signals:
             query_param_mapping[
