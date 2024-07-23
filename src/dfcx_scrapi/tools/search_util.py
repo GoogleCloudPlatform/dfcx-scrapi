@@ -288,7 +288,6 @@ class SearchUtil(scrapi_base.ScrapiBase):
 
     def _find_true_routes_flow_level(self, flow_display_name, flow_map):
         flow_id = flow_map[flow_display_name]
-        start_page = self.flows.get_flow(flow_id)  # pylint: disable=W0612
         other_pages = self.pages.list_pages(flow_id)
 
         # Start page - no entry fulfillment
