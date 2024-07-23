@@ -77,11 +77,11 @@ class MakerUtil:
         if conditionals is None:
             conditionals = {}
         assert isinstance(obj, list)
-        l = []
+        obj_list = []
         for x in obj:
-            l.append(cls.make_generic(
+            obj_list.append(cls.make_generic(
                 x, obj_type, default, conditionals))
-        return l
+        return obj_list
 
     @classmethod
     def make_transition_route(cls, obj=None, **kwargs):
