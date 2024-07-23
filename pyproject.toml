@@ -33,3 +33,6 @@ exclude = '''
 [build-system]
 requires = ["setuptools>=42", "setuptools-scm", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 80
