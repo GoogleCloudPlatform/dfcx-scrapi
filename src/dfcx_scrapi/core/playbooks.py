@@ -60,22 +60,65 @@ class Playbooks(scrapi_base.ScrapiBase):
         )
 
     @staticmethod
-    def build_instructions(
+    def build_instructions_from_list(
         instructions: List[str]) -> List[types.Playbook.Step]:
         """Helper method to create the playbook instruction set protos."""
         final_instructions = types.Playbook.Instruction(steps=[])
 
-        if not isinstance(instructions, list):
-            raise TypeError(
-                "Instructions must be provided as a List of strings.")
-
-        else:
-            for instruction in instructions:
-                final_instructions.steps.append(
-                    types.Playbook.Step(text=instruction)
-                    )
+        for instruction in instructions:
+            final_instructions.steps.append(
+                types.Playbook.Step(text=instruction)
+                )
 
         return final_instructions
+
+    def parse_steps(
+            self, lines: List[str], start_index: int, indent_level: int):
+        """Recursively parse instructions and build Playbook.Step objects.
+
+        Args:
+            lines: The list of instruction lines.
+            start_index: The index to start parsing from.
+            indent_level: The current indentation level.
+
+        Returns:
+            A tuple containing:
+                - A list of parsed Playbook.Step objects at the current level.
+                - The index of the next line to parse.
+        """
+        steps: List[types.Playbook.Step] = []
+        i = start_index
+        while i < len(lines):
+            line = lines[i]
+            current_indent = len(line) - len(line.lstrip())
+            if current_indent == indent_level:
+                step_text = line.strip()
+                step = types.Playbook.Step(text=step_text)
+                steps.append(step)
+                i += 1
+            elif current_indent > indent_level:
+                # Recursively parse child steps
+                child_steps, next_index = self.parse_steps(
+                    lines, i, current_indent)
+                steps[-1].steps.extend(child_steps)
+                i = next_index
+            else:
+                # Reached a line with lower indentation
+                # stop parsing at this level
+                break
+
+        return steps, i
+
+    def build_instructions_from_string(
+            self,
+            instructions: str) -> types.Playbook.Instruction:
+
+        instruction_obj = types.Playbook.Instruction()
+        lines = instructions.strip().splitlines()
+        parsed_steps, _ = self.parse_steps(lines, 0, 0)
+        instruction_obj.steps.extend(parsed_steps)
+
+        return instruction_obj
 
     def process_playbook_kwargs(
             self,
@@ -85,8 +128,14 @@ class Playbooks(scrapi_base.ScrapiBase):
         paths = []
         for key, value in kwargs.items():
             if key in ["instruction", "instructions"]:
-                instructions = self.build_instructions(value)
-                setattr(playbook, "instruction", instructions)
+                if isinstance(value, list):
+                    instructions = self.build_instructions_from_list(value)
+                    setattr(playbook, "instruction", instructions)
+                elif isinstance(value, str):
+                    instructions = self.build_instructions_from_string(value)
+                    setattr(playbook, "instruction", instructions)
+                elif isinstance(value, types.Playbook.Instruction):
+                    setattr(playbook, "instruction", value)
                 paths.append("instruction")
             else:
                 setattr(playbook, key, value)
