@@ -14,8 +14,7 @@ test:
 	pytest tests/dfcx_scrapi/core/$(f)
 
 lint:
-	pylint --rcfile=.pylintrc src/dfcx_scrapi/*
-	pylint --rcfile=.pylintrc tests/dfcx_scrapi/*
+	pylint --rcfile=.pylintrc $(git ls-files '*.py')
 
 # just fix selected whitespace
 autofix-min-whitespace:
