@@ -19,8 +19,10 @@
 # limitations under the License.
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from dfcx_scrapi.core.examples import Examples
+from dfcx_scrapi.core.playbooks import Playbooks
+from dfcx_scrapi.core.tools import Tools
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.cloud.dialogflowcx_v3beta1 import services
 
@@ -89,47 +91,74 @@ def mock_list_examples_pager(mock_example_obj):
         types.example.ListExamplesResponse(examples=[mock_example_obj]),
         )
 
+@pytest.fixture
+def mock_examples(monkeypatch, test_config):
+    """Fixture to create Example object w/ mocked ExmamplesClient."""
+    mock_examples_client = MagicMock()
+
+    # Override / Intercept Playbook/Tool instantiation in Examples init.
+    def mock_playbooks_init(self, *args, **kwargs):
+        pass
+
+    def mock_tools_init(self, *args, **kwargs):
+        pass
+
+    monkeypatch.setattr(
+        "dfcx_scrapi.core.examples.services.examples.ExamplesClient",
+        mock_examples_client
+    )
+    monkeypatch.setattr(
+        "dfcx_scrapi.core.playbooks.Playbooks.__init__",
+        mock_playbooks_init
+    )
+    monkeypatch.setattr(
+        "dfcx_scrapi.core.tools.Tools.__init__",
+        mock_tools_init
+    )
+
+    examples = Examples(agent_id=test_config["agent_id"])
+
+    yield examples, mock_examples_client
+
 # Test get_examples_map
-@patch("dfcx_scrapi.core.examples.services.examples.ExamplesClient")
-def test_get_examples_map(mock_client, mock_list_examples_pager, test_config):
+def test_get_examples_map(mock_examples, mock_list_examples_pager, test_config):
+    ex, mock_client = mock_examples
     mock_client.return_value.list_examples.return_value = (
         mock_list_examples_pager
         )
-    ex = Examples(agent_id=test_config["agent_id"])
     res = ex.get_examples_map(playbook_id=test_config["playbook_id"])
 
     assert isinstance(res, dict)
     assert test_config["example_id"] in res
     assert res[test_config["example_id"]] == test_config["display_name"]
 
+    print(mock_client.mock_calls)
+
 # Test list_examples
-@patch("dfcx_scrapi.core.examples.services.examples.ExamplesClient")
-def test_list_examples(mock_client, mock_list_examples_pager, test_config):
+def test_list_examples(mock_examples, mock_list_examples_pager, test_config):
+    ex, mock_client = mock_examples
     mock_client.return_value.list_examples.return_value = (
     mock_list_examples_pager
     )
-    ex = Examples(agent_id=test_config["agent_id"])
     res = ex.list_examples(playbook_id=test_config["playbook_id"])
 
     assert isinstance(res, list)
     assert isinstance(res[0], types.Example)
 
 # Test get_example
-@patch("dfcx_scrapi.core.examples.services.examples.ExamplesClient")
-def test_get_example(mock_client, mock_example_obj, test_config):
+def test_get_example(mock_examples, mock_example_obj, test_config):
+    ex, mock_client = mock_examples
     mock_client.return_value.get_example.return_value = mock_example_obj
-    ex = Examples(agent_id=test_config["agent_id"])
     res = ex.get_example(example_id=test_config["example_id"])
 
     assert isinstance(res, types.Example)
     assert res.display_name == test_config["display_name"]
 
 # Test create_example
-@patch("dfcx_scrapi.core.examples.services.examples.ExamplesClient")
 def test_create_example_from_kwargs(
-    mock_client, mock_example_obj, test_config):
+    mock_examples, mock_example_obj, test_config):
+    ex, mock_client = mock_examples
     mock_client.return_value.create_example.return_value = mock_example_obj
-    ex = Examples(agent_id=test_config["agent_id"])
     res = ex.create_example(
     playbook_id=test_config["playbook_id"],
     display_name=test_config["display_name"]
@@ -137,11 +166,10 @@ def test_create_example_from_kwargs(
     assert isinstance(res, types.Example)
     assert res.display_name == test_config["display_name"]
 
-@patch("dfcx_scrapi.core.examples.services.examples.ExamplesClient")
 def test_create_example_from_proto_object(
-    mock_client, mock_example_obj, test_config):
+    mock_examples, mock_example_obj, test_config):
+    ex, mock_client = mock_examples
     mock_client.return_value.create_example.return_value = mock_example_obj
-    ex = Examples(agent_id=test_config["agent_id"])
     res = ex.create_example(
     playbook_id=test_config["playbook_id"],
     obj=mock_example_obj
@@ -150,13 +178,12 @@ def test_create_example_from_proto_object(
     assert res.display_name == test_config["display_name"]
 
 # Test update_example
-@patch("dfcx_scrapi.core.examples.services.examples.ExamplesClient")
 def test_update_example_with_obj(
-    mock_client, mock_updated_example_obj, test_config):
+    mock_examples, mock_updated_example_obj, test_config):
+    ex, mock_client = mock_examples
     mock_client.return_value.update_example.return_value = (
     mock_updated_example_obj
     )
-    ex = Examples(agent_id=test_config["agent_id"])
     res = ex.update_example(
     example_id=test_config["example_id"],
     obj=mock_updated_example_obj
@@ -165,30 +192,28 @@ def test_update_example_with_obj(
     assert isinstance(res, types.Example)
     assert res.display_name == "updated_test_example"
 
-@patch("dfcx_scrapi.core.examples.services.examples.ExamplesClient")
 def test_update_example_with_kwargs(
-    mock_client, mock_example_obj, test_config):
+    mock_examples, mock_example_obj, test_config):
+    ex, mock_client = mock_examples
     mock_client.return_value.get_example.return_value = mock_example_obj
     mock_client.return_value.update_example.return_value = mock_example_obj
-    ex = Examples(agent_id=test_config["agent_id"])
     res = ex.update_example(
-    example_id=test_config["example_id"],
-    display_name="updated_test_example"
-    )
+        example_id=test_config["example_id"],
+        display_name="updated_test_example"
+        )
 
     assert isinstance(res, types.Example)
     assert res.display_name == "updated_test_example"
 
 # Test delete_example
-@patch("dfcx_scrapi.core.examples.services.examples.ExamplesClient")
-def test_delete_example(mock_client, test_config):
-    ex = Examples(agent_id=test_config["agent_id"])
+def test_delete_example(mock_examples, test_config):
+    ex, mock_client = mock_examples
     ex.delete_example(example_id=test_config["example_id"])
     mock_client.return_value.delete_example.assert_called()
 
 # Test get_playbook_state
-def test_get_playbook_state(test_config):
-    ex = Examples(agent_id=test_config["agent_id"])
+def test_get_playbook_state(mock_examples):
+    ex, _ = mock_examples
     assert ex.get_playbook_state("OK") == 1
     assert ex.get_playbook_state("CANCELLED") == 2
     assert ex.get_playbook_state("FAILED") == 3
@@ -197,8 +222,8 @@ def test_get_playbook_state(test_config):
     assert ex.get_playbook_state(None) == 0
 
 # Test build_example_from_action_list_dict
-def test_build_example_from_action_list(test_config):
-    ex = Examples(agent_id=test_config["agent_id"])
+def test_build_example_from_action_list(mock_examples):
+    ex, _ = mock_examples
     action_list = [
     {"user_utterance": "hello"},
     {"agent_utterance": "hi there"},
@@ -211,12 +236,10 @@ def test_build_example_from_action_list(test_config):
     assert len(example.actions) == 2
 
 # Test build_playbook_invocation
-def test_build_playbook_invocation(test_config):
-    playbooks_map = {"test_playbook": test_config["playbook_id"]}
-    ex = Examples(
-        agent_id=test_config["agent_id"],
-        playbooks_map=playbooks_map
-        )
+def test_build_playbook_invocation(mock_examples, test_config):
+    ex, _ = mock_examples
+    ex.playbooks_map = {"test_playbook": test_config["playbook_id"]}
+
     action = {"playbook_name": "test_playbook"}
     pb_inv = ex.build_playbook_invocation(action)
     assert isinstance(pb_inv, types.PlaybookInvocation)
