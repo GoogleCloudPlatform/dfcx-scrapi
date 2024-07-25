@@ -14,7 +14,7 @@ test:
 	pytest tests/dfcx_scrapi/core/$(f)
 
 lint:
-	ruff check $(git ls-files '*.py')
+	ruff check
 
 # just fix selected whitespace
 autofix-min-whitespace:
