@@ -19,7 +19,7 @@
 # limitations under the License.
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from dfcx_scrapi.core.playbooks import Playbooks
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.cloud.dialogflowcx_v3beta1 import services
@@ -154,11 +154,30 @@ def mock_list_playbooks_pager(mock_playbook_obj_list):
             playbooks=[mock_playbook_obj_list]),
     )
 
+
+@pytest.fixture
+def mock_playbooks(monkeypatch, test_config):
+    """Fixture to create a Playbooks object with a mocked PlaybooksClient."""
+    mock_playbooks_client = MagicMock()
+    monkeypatch.setattr(
+        "dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient",
+        mock_playbooks_client
+    )
+
+    mock_agents_client = MagicMock()
+    monkeypatch.setattr(
+        "dfcx_scrapi.core.agents.services.agents.AgentsClient",
+        mock_agents_client
+    )
+
+    playbooks = Playbooks(agent_id=test_config["agent_id"])
+    yield playbooks, mock_playbooks_client, mock_agents_client
+
+
 # Test get_playbooks_map
-@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
-def test_get_playbooks_map(mock_client, mock_list_playbooks_pager, test_config):
+def test_get_playbooks_map(mock_playbooks, mock_list_playbooks_pager, test_config):
+    pb, mock_client, _ = mock_playbooks
     mock_client.return_value.list_playbooks.return_value = mock_list_playbooks_pager # pylint: disable=C0301
-    pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.get_playbooks_map(agent_id=test_config["agent_id"])
 
     assert isinstance(res, dict)
@@ -167,10 +186,9 @@ def test_get_playbooks_map(mock_client, mock_list_playbooks_pager, test_config):
 
 
 # Test list_playbooks
-@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
-def test_list_playbooks(mock_client, mock_list_playbooks_pager, test_config):
+def test_list_playbooks(mock_playbooks, mock_list_playbooks_pager, test_config):
+    pb, mock_client, _ = mock_playbooks
     mock_client.return_value.list_playbooks.return_value = mock_list_playbooks_pager # pylint: disable=C0301
-    pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.list_playbooks()
 
     assert isinstance(res, list)
@@ -178,10 +196,9 @@ def test_list_playbooks(mock_client, mock_list_playbooks_pager, test_config):
 
 
 # Test get_playbook
-@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
-def test_get_playbook(mock_client, mock_playbook_obj_list, test_config):
+def test_get_playbook(mock_playbooks, mock_playbook_obj_list, test_config):
+    pb, mock_client, _ = mock_playbooks
     mock_client.return_value.get_playbook.return_value = mock_playbook_obj_list
-    pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.get_playbook(playbook_id=test_config["playbook_id"])
 
     assert isinstance(res, types.Playbook)
@@ -189,11 +206,10 @@ def test_get_playbook(mock_client, mock_playbook_obj_list, test_config):
 
 
 # Test create_playbook
-@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
 def test_create_playbook_from_kwargs_instruction_list(
-    mock_client, mock_playbook_obj_list, test_config):
+        mock_playbooks, mock_playbook_obj_list, test_config):
+    pb, mock_client, _ = mock_playbooks
     mock_client.return_value.create_playbook.return_value = mock_playbook_obj_list # pylint: disable=C0301
-    pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.create_playbook(
         agent_id=test_config["agent_id"],
         display_name="mock playbook",
@@ -204,11 +220,10 @@ def test_create_playbook_from_kwargs_instruction_list(
     assert res.display_name == "mock playbook"
     assert res.instruction == test_config["instructions_proto_from_list"]
 
-@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
 def test_create_playbook_from_kwargs_instruction_str(
-    mock_client, mock_playbook_obj_str, test_config):
+    mock_playbooks, mock_playbook_obj_str, test_config):
+    pb, mock_client, _ = mock_playbooks
     mock_client.return_value.create_playbook.return_value = mock_playbook_obj_str # pylint: disable=C0301
-    pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.create_playbook(
         agent_id=test_config["agent_id"],
         display_name="mock playbook",
@@ -219,11 +234,10 @@ def test_create_playbook_from_kwargs_instruction_str(
     assert res.display_name == "mock playbook"
     assert res.instruction == test_config["instructions_proto_from_str"]
 
-@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
 def test_create_playbook_from_proto_object(
-    mock_client, mock_playbook_obj_list, test_config):
+    mock_playbooks, mock_playbook_obj_list, test_config):
+    pb, mock_client, _ = mock_playbooks
     mock_client.return_value.create_playbook.return_value = mock_playbook_obj_list # pylint: disable=C0301
-    pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.create_playbook(
         agent_id=test_config["agent_id"],
         obj=mock_playbook_obj_list
@@ -233,13 +247,12 @@ def test_create_playbook_from_proto_object(
 
 
 # Test update_playbook
-@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
 def test_update_playbook_with_obj(
-    mock_client, mock_updated_playbook_obj, test_config):
+    mock_playbooks, mock_updated_playbook_obj, test_config):
+    pb, mock_client, _ = mock_playbooks
     mock_client.return_value.update_playbook.return_value = (
         mock_updated_playbook_obj
     )
-    pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.update_playbook(
         playbook_id=test_config["playbook_id"],
         obj=mock_updated_playbook_obj
@@ -249,12 +262,11 @@ def test_update_playbook_with_obj(
     assert res.display_name == "mock playbook updated"
 
 
-@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
 def test_update_playbook_with_kwargs(
-    mock_client, mock_playbook_obj_list, test_config):
+    mock_playbooks, mock_playbook_obj_list, test_config):
+    pb, mock_client, _ = mock_playbooks
     mock_client.return_value.get_playbook.return_value = mock_playbook_obj_list
     mock_client.return_value.update_playbook.return_value = mock_playbook_obj_list # pylint: disable=C0301
-    pb = Playbooks(agent_id=test_config["agent_id"])
     res = pb.update_playbook(
         playbook_id=test_config["playbook_id"],
         display_name="mock playbook updated"
@@ -264,10 +276,9 @@ def test_update_playbook_with_kwargs(
     assert res.display_name == "mock playbook updated"
 
 # Test the playbook kwarg processing helper methods
-def test_process_playbook_kwargs_display_name(mock_playbook_obj_str,
-        mock_updated_playbook_obj, test_config):
-    pb = Playbooks(agent_id=test_config["agent_id"])
-
+def test_process_playbook_kwargs_display_name(
+        mock_playbooks, mock_playbook_obj_str, mock_updated_playbook_obj):
+    pb, _, _ = mock_playbooks
     kwargs = {"display_name": "mock playbook updated"}
 
     expected_mask = field_mask_pb2.FieldMask(paths=["display_name"])
@@ -277,10 +288,9 @@ def test_process_playbook_kwargs_display_name(mock_playbook_obj_str,
     assert expected_mask == mask
 
 def test_process_playbook_kwargs_instruction_list(
-    mock_playbook_obj_empty_instructions,
-    mock_playbook_obj_list, test_config):
-
-    pb = Playbooks(agent_id=test_config["agent_id"])
+        mock_playbooks, mock_playbook_obj_empty_instructions,
+        mock_playbook_obj_list, test_config):
+    pb, _, _ = mock_playbooks
 
     # patch the object so we can track the internal method call
     with patch.object(
@@ -299,9 +309,9 @@ def test_process_playbook_kwargs_instruction_list(
             test_config["instructions_list"])
 
 def test_process_playbook_kwargs_instruction_str(
-        mock_playbook_obj_empty_instructions, mock_playbook_obj_str,
-        test_config):
-    pb = Playbooks(agent_id=test_config["agent_id"])
+        mock_playbooks, mock_playbook_obj_empty_instructions,
+        mock_playbook_obj_str, test_config):
+    pb, _, _ = mock_playbooks
 
     # patch the object so we can track the internal method call
     with patch.object(
@@ -321,9 +331,9 @@ def test_process_playbook_kwargs_instruction_str(
         )
 
 def test_process_playbook_kwargs_instruction_obj(
-        mock_playbook_obj_empty_instructions, mock_playbook_obj_str,
-        test_config):
-    pb = Playbooks(agent_id=test_config["agent_id"])
+        mock_playbooks, mock_playbook_obj_empty_instructions,
+        mock_playbook_obj_str, test_config):
+    pb, _, _ = mock_playbooks
     kwargs = {"instructions": test_config["instructions_proto_from_str"]}
     expected_mask = field_mask_pb2.FieldMask(paths=["instruction"])
 
@@ -334,39 +344,37 @@ def test_process_playbook_kwargs_instruction_obj(
     assert expected_mask == mask
 
 # Test delete_playbook
-@patch("dfcx_scrapi.core.playbooks.services.playbooks.PlaybooksClient")
-def test_delete_playbook(mock_client, test_config):
-    pb = Playbooks(agent_id=test_config["agent_id"])
+def test_delete_playbook(mock_playbooks, test_config):
+    pb, mock_client, _ = mock_playbooks
     pb.delete_playbook(playbook_id=test_config["playbook_id"])
     mock_client.return_value.delete_playbook.assert_called()
 
-
 # Test set_default_playbook
-@patch("dfcx_scrapi.core.playbooks.services.agents.AgentsClient")
-def test_set_default_playbook(mock_client, mock_agent_obj, test_config):
-    mock_client.return_value.get_agent.return_value = mock_agent_obj
-    mock_client.return_value.update_agent.return_value = mock_agent_obj
-    pb = Playbooks(agent_id=test_config["agent_id"])
+def test_set_default_playbook(mock_playbooks, mock_agent_obj, test_config):
+    pb, _, agent_client = mock_playbooks
+    agent_client.return_value.get_agent.return_value = mock_agent_obj
+    agent_client.return_value.update_agent.return_value = mock_agent_obj
     pb.set_default_playbook(playbook_id=test_config["playbook_id"])
+
     assert mock_agent_obj.start_playbook == test_config["playbook_id"]
 
 # Test build instruction helpers
-def test_build_instructions_from_list(test_config):
-    pb = Playbooks(agent_id=test_config["agent_id"])
+def test_build_instructions_from_list(mock_playbooks, test_config):
+    pb, _, _ = mock_playbooks
     res = pb.build_instructions_from_list(
         instructions=test_config["instructions_list"])
 
     assert res == test_config["instructions_proto_from_list"]
 
-def test_build_instructions_from_str(test_config):
-    pb = Playbooks(agent_id=test_config["agent_id"])
+def test_build_instructions_from_str(mock_playbooks, test_config):
+    pb, _, _ = mock_playbooks
     res = pb.build_instructions_from_string(
         instructions=test_config["instructions_str"])
 
     assert res == test_config["instructions_proto_from_str"]
 
-def test_parse_steps_simple(test_config):
-    pb = Playbooks(agent_id=test_config["agent_id"])
+def test_parse_steps_simple(mock_playbooks):
+    pb, _, _ = mock_playbooks
 
     lines = [
         "Step 1",
@@ -384,8 +392,8 @@ def test_parse_steps_simple(test_config):
     assert steps == expected_steps
     assert next_index == 3
 
-def test_parse_steps_nested(test_config):
-    pb = Playbooks(agent_id=test_config["agent_id"])
+def test_parse_steps_nested(mock_playbooks, test_config):
+    pb, _, _ = mock_playbooks
 
     lines = [
         "- Step 1",
