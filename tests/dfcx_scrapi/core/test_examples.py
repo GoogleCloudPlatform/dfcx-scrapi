@@ -19,10 +19,8 @@
 # limitations under the License.
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from dfcx_scrapi.core.examples import Examples
-from dfcx_scrapi.core.playbooks import Playbooks
-from dfcx_scrapi.core.tools import Tools
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.cloud.dialogflowcx_v3beta1 import services
 
