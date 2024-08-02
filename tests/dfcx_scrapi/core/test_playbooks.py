@@ -56,30 +56,33 @@ def test_config():
             ]
         )
 
+    # Note that we don't want any leading `-` in the final proto text because
+    # the UI / console automatically adds this in. If you include the `-` then
+    # you will end up with double leading `- -` in the console.
     instructions_proto_from_str = types.Playbook.Instruction(
         steps=[
             types.Playbook.Step(
-                text="- Step 1",
+                text="Step 1",
                 steps=[
                     types.Playbook.Step(
-                        text="- Step 1.1"
+                        text="Step 1.1"
                     )
                 ]
             ),
             types.Playbook.Step(
-                text="- Step 2",
+                text="Step 2",
                 steps=[
                     types.Playbook.Step(
-                        text="- Step 2.1",
+                        text="Step 2.1",
                         steps=[
                             types.Playbook.Step(
-                                text="- Step 2.1.1"
+                                text="Step 2.1.1"
                             ),
                             types.Playbook.Step(
-                                text="- Step 2.1.2",
+                                text="Step 2.1.2",
                                 steps=[
                                     types.Playbook.Step(
-                                        text="- Step 2.1.2.1"
+                                        text="Step 2.1.2.1"
                                     )
                                 ]
                             )
@@ -88,7 +91,7 @@ def test_config():
                 ]
             ),
             types.Playbook.Step(
-                text="- Step 3"
+                text="Step 3"
             )
         ]
     )
@@ -373,7 +376,7 @@ def test_build_instructions_from_str(mock_playbooks, test_config):
 
     assert res == test_config["instructions_proto_from_str"]
 
-def test_parse_steps_simple(mock_playbooks):
+def test_parse_steps_simple_list(mock_playbooks):
     pb, _, _ = mock_playbooks
 
     lines = [
@@ -392,7 +395,7 @@ def test_parse_steps_simple(mock_playbooks):
     assert steps == expected_steps
     assert next_index == 3
 
-def test_parse_steps_nested(mock_playbooks, test_config):
+def test_parse_steps_nested_list(mock_playbooks, test_config):
     pb, _, _ = mock_playbooks
 
     lines = [
