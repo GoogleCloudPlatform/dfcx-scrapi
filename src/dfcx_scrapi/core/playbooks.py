@@ -72,6 +72,15 @@ class Playbooks(scrapi_base.ScrapiBase):
 
         return final_instructions
 
+    @staticmethod
+    def clean_line(step_text: str):
+        """Helper method to clean the current line that is being parsed."""
+        step_text = step_text.strip() # clear any whitespace
+        step_text = step_text.strip("-") # clear `-` if exists
+        step_text = step_text.strip() # clear remaining whitespace if exists
+
+        return step_text
+
     def parse_steps(
             self, lines: List[str], start_index: int, indent_level: int):
         """Recursively parse instructions and build Playbook.Step objects.
@@ -92,7 +101,7 @@ class Playbooks(scrapi_base.ScrapiBase):
             line = lines[i]
             current_indent = len(line) - len(line.lstrip())
             if current_indent == indent_level:
-                step_text = line.strip()
+                step_text = self.clean_line(line)
                 step = types.Playbook.Step(text=step_text)
                 steps.append(step)
                 i += 1
