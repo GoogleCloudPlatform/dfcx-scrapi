@@ -11,7 +11,11 @@ pfreeze:
 	pip freeze > requirements.txt
 
 test:
-	pytest tests/dfcx_scrapi/core/$(f)
+	@if [ -n "$(v)" ]; then \
+		pytest tests/dfcx_scrapi/core/$(f) -vv; \
+	else \
+		pytest tests/dfcx_scrapi/core/$(f); \
+	fi
 
 lint:
 	ruff check
