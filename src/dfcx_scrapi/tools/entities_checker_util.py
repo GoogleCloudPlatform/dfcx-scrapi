@@ -1001,7 +1001,8 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
             captured_parameters = row["parameters_set"]
             if captured_parameters:
                 for param, value in captured_parameters.items():
-                    if param == parameter_id and value == entity:
+                    if (param.lower() == parameter_id and
+                    value.lower() == entity):
                         return "PASS"
             return "FAIL"
 
@@ -1065,8 +1066,10 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 for route in routes:
                     if isinstance(route, dict) and bool(route):
                         param, value = route.copy().popitem()
-                        if (row["parameter_id"].lower() == param.lower() and
-                            row["entity"].lower() == value.lower()
+                        param = param.lower()
+                        value = value.lower()
+                        if (row["parameter_id"].lower() == param and
+                            row["entity"].replace(" ", "").lower() == value
                            ):
                             return True
             return False
