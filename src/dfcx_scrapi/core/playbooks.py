@@ -41,6 +41,7 @@ class Playbooks(scrapi_base.ScrapiBase):
         creds_dict: Dict = None,
         creds=None,
         scope=False,
+        playbooks_map: Dict[str, str] = None
     ):
         super().__init__(
             creds_path=creds_path,
@@ -58,6 +59,8 @@ class Playbooks(scrapi_base.ScrapiBase):
         self.agents_client = services.agents.AgentsClient(
             credentials=self.creds, client_options=client_options
         )
+
+        self.playbooks_map = playbooks_map
 
     @staticmethod
     def build_instructions_from_list(

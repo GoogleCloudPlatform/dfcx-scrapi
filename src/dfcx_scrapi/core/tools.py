@@ -31,7 +31,8 @@ class Tools(scrapi_base.ScrapiBase):
         creds=None,
         scope=False,
         agent_id: str = None,
-        tool_id: str = None
+        tool_id: str = None,
+        tools_map: Dict[str, str] = None
     ):
         super().__init__(
             creds_path=creds_path, creds_dict=creds_dict,
@@ -40,6 +41,7 @@ class Tools(scrapi_base.ScrapiBase):
 
         self.agent_id = agent_id
         self.tool_id = tool_id
+        self.tools_map = tools_map
 
     @staticmethod
     def build_open_api_tool(
