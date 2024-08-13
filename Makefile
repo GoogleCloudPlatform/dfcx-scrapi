@@ -38,3 +38,6 @@ fix:
 build:
 	python3 -m build
 	pip uninstall dfcx-scrapi -y
+
+context-file:
+	find . -name "*.py" -print0 | xargs -0 -I {} sh -c 'echo "=== {} ==="; cat {}' > code-context.txt
