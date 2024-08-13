@@ -17,10 +17,13 @@
 import logging
 import json
 import re
+import time
 import functools
+import threading
 from collections import defaultdict
-from typing import Dict, Any
+from typing import Dict, Any, Iterable
 
+from google.api_core import exceptions
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
@@ -30,6 +33,7 @@ from google.protobuf import field_mask_pb2, struct_pb2
 from proto.marshal.collections import repeated
 from proto.marshal.collections import maps
 
+_INTERVAL_SENTINEL = object()
 
 class ScrapiBase:
     """Core Class for managing Auth and other shared functions."""
@@ -473,3 +477,71 @@ def api_call_counter_decorator(func):
     wrapper.calls_api = True
 
     return wrapper
+
+def should_retry(err: exceptions.GoogleAPICallError) -> bool:
+  """Helper function for deciding whether we should retry the error or not."""
+  return isinstance(err, (exceptions.TooManyRequests, exceptions.ServerError))
+
+def ratelimit(rate: float):
+  """Decorator that controls the frequency of function calls."""
+  seconds_per_event = 1.0 / rate
+  lock = threading.Lock()
+  bucket = 0
+  last = 0
+
+  def decorate(func):
+    def rate_limited_function(*args, **kwargs):
+      nonlocal last, bucket
+      while True:
+        with lock:
+          now = time.time()
+          bucket += now - last
+          last = now
+
+          # capping the bucket in order to avoid accumulating too many
+          bucket = min(bucket, seconds_per_event)
+
+          # if bucket is less than `seconds_per_event` then we have to wait
+          # `seconds_per_event` - `bucket` seconds until a new "token" is
+          # refilled
+          delay = max(seconds_per_event - bucket, 0)
+
+          if delay == 0:
+            # consuming a token and breaking out of the delay loop to perform
+            # the function call
+            bucket -= seconds_per_event
+            break
+        time.sleep(delay)
+      return func(*args, **kwargs)
+    return rate_limited_function
+  return decorate
+
+def retry_api_call(retry_intervals: Iterable[float]):
+  """Decorator for retrying certain GoogleAPICallError exception types."""
+  def decorate(func):
+    def retried_api_call_func(*args, **kwargs):
+      interval_iterator = iter(retry_intervals)
+      while True:
+        try:
+          return func(*args, **kwargs)
+        except exceptions.GoogleAPICallError as err:
+          print(f"retrying api call: {err}")
+          if not should_retry(err):
+            raise
+
+          interval = next(interval_iterator, _INTERVAL_SENTINEL)
+          if interval is _INTERVAL_SENTINEL:
+            raise
+          time.sleep(interval)
+    return retried_api_call_func
+  return decorate
+
+def handle_api_error(func):
+  """Decorator that chatches GoogleAPICallError exception and returns None."""
+  def handled_api_error_func(*args, **kwargs):
+    try:
+      return func(*args, **kwargs)
+    except exceptions.GoogleAPICallError as err:
+      print(f"failed api call: {err}")
+      return None
+  return handled_api_error_func
