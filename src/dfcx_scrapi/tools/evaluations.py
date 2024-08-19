@@ -14,23 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ast import literal_eval
-from tqdm import tqdm
-import pandas as pd
-import numpy as np
-import logging
-import math
-from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
-from google.oauth2 import service_account
+import math
+import logging
 import vertexai
-from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+
+from ast import literal_eval
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+from typing import Dict, List, Any
+
+from google.oauth2 import service_account
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.sessions import Sessions
 from dfcx_scrapi.core.tools import Tools
 from dfcx_scrapi.core.playbooks import Playbooks
 from dfcx_scrapi.tools.dataframe_functions import DataframeFunctions
+from dfcx_scrapi.tools.agent_response import AgentResponse
+from dfcx_scrapi.tools.metrics import build_metrics
 
 # logging config
 logging.basicConfig(
@@ -52,8 +55,8 @@ class Evaluations(ScrapiBase):
         sheet_name: str = None,
         metrics: List[str] = ["response_similarity"],
         debug: bool = False,
-        embedding_type: str = "llm",
-        llm_model: str = "text-embedding-004",
+        generation_model: str = "gemini-1.5-flash-001",
+        embedding_model: str = "text-embedding-004",
         playbooks_map: Dict[str, Any] = None,
         tools_map: Dict[str, Any] = None,
     ):
@@ -72,6 +75,7 @@ class Evaluations(ScrapiBase):
         self.sheet_name = sheet_name
         self.session_id = None
         self.metrics = metrics
+        self.init_vertex(self.agent_id)
 
         self.s = Sessions(agent_id=self.agent_id, tools_map=tools_map)
         self.p = Playbooks(agent_id=self.agent_id, playbooks_map=playbooks_map)
@@ -79,25 +83,10 @@ class Evaluations(ScrapiBase):
         self.dffx = DataframeFunctions(
             creds_path=creds_path, creds_dict=creds_dict, creds=creds
         )
+        self.ar = AgentResponse()
 
-        if embedding_type == "llm":
-            parts = self._parse_resource_path("agent", self.agent_id)
-            project_id = parts.get("project")
-            location = parts.get("location")
-            vertexai.init(project=project_id, location=location)
-            embedding_model = TextEmbeddingModel.from_pretrained(llm_model)
-        else:
-            import tensorflow_hub as hub
-
-            model_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
-            embedding_model = hub.load(model_url)
-
-        self.evals = CalculateEvals(embedding_model)
-
-        # Currently supported metric bundles for Agent Builder / DFCX in SCRAPI
-        # Note that these are bundles defined at the SCRAPI level, not at the
-        # Agent Builder / DFCX product level.
-        self.supported_metrics = ["response_similarity", "tool_call_quality"]
+        self.generation_model = self.model_setup(generation_model)
+        self.embedding_model = self.model_setup(embedding_model)
 
         self.required_columns = [
             "eval_id",
@@ -107,7 +96,8 @@ class Evaluations(ScrapiBase):
             "tool_action",
         ]
 
-        self.validate_input_metrics(self.metrics)
+        self.metrics = build_metrics(metrics, self.embedding_model)
+
 
     @staticmethod
     def prep_incoming_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -185,6 +175,73 @@ class Evaluations(ScrapiBase):
 
         return df
 
+    @staticmethod
+    def clean_outputs(df: pd.DataFrame) -> pd.DataFrame:
+        """Clean final output dataframe."""
+        # drop cols used for response mapping
+        df = df.drop(columns=["utterance_pair", "tool_pair", "playbook_pair"])
+        value_map = {}
+        for col, dtype in zip(df.columns, df.dtypes):
+            if dtype in ["string", "object"]:
+                value_map[col] = ""
+            elif dtype == "float64":
+                value_map[col] = np.nan
+
+        df.fillna(value=value_map, inplace=True)
+
+        return df
+
+    @staticmethod
+    def process_playbook_invocations(
+            responses: List[str],
+            index: int,
+            row: pd.Series,
+            df: pd.DataFrame) -> pd.DataFrame:
+        if row["playbook_pair"] in [None, "", "NaN", "nan"]:
+            playbook_index_list = [index]
+        else:
+            playbook_index_list = literal_eval(row["playbook_pair"])
+
+        for idx in playbook_index_list:
+            playbook = responses.pop(0)
+            df.loc[int(idx), ["res_playbook_name"]] = [
+                playbook["playbook_name"]
+            ]
+
+        return df
+
+    @staticmethod
+    def process_tool_invocations(
+        tool_responses: List[str],
+        index: int,
+        row: pd.Series,
+        df: pd.DataFrame) -> pd.DataFrame:
+        # Check if our golden contained a tool_idx or wasn't
+        # expecting tools
+        if row["tool_pair"] in [None, "", "NaN", "nan"]:
+            tool_index_list = [index]
+        else:
+            tool_index_list = literal_eval(row["tool_pair"])
+
+        for idx in tool_index_list:
+            tool = tool_responses.pop(0)
+            df.loc[
+                int(idx),
+                [
+                    "res_tool_name",
+                    "res_tool_action",
+                    "res_input_params",
+                    "res_output_params",
+                ],
+            ] = [
+                tool["tool_name"],
+                tool["tool_action"],
+                tool["input_params"],
+                tool["output_params"],
+            ]
+
+        return df
+
     def pair_tool_calls(self, df: pd.DataFrame) -> pd.DataFrame:
         "Identifies pairings of agent_utterance/tool_invocation by eval_id."
         df["tool_pair"] = pd.Series(dtype="string")
@@ -231,22 +288,6 @@ class Evaluations(ScrapiBase):
 
         return df
 
-    def clean_outputs(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Clean final output dataframe."""
-        # drop cols used for response mapping
-        df = df.drop(columns=["utterance_pair", "tool_pair", "playbook_pair"])
-        df.fillna("", inplace=True)
-
-        return df
-
-    def validate_input_metrics(self, metrics: List[str]):
-        """Validate input metrics"""
-        for metric in metrics:
-            if metric not in self.supported_metrics:
-                raise ValueError(
-                    f"Invalid metric: {metric}. Supported Metrics are: "
-                    f"{self.supported_metrics}"
-                )
 
     def validate_input_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """Validate input columns"""
@@ -336,25 +377,6 @@ class Evaluations(ScrapiBase):
             results.values.tolist(), value_input_option="USER_ENTERED"
         )
 
-    def process_playbook_invocations(
-            self,
-            responses: List[str],
-            index: int,
-            row: pd.Series,
-            df: pd.DataFrame) -> pd.DataFrame:
-        if row["playbook_pair"] in [None, "", "NaN", "nan"]:
-            playbook_index_list = [index]
-        else:
-            playbook_index_list = literal_eval(row["playbook_pair"])
-
-        for idx in playbook_index_list:
-            playbook = responses.pop(0)
-            df.loc[int(idx), ["res_playbook_name"]] = [
-                playbook["playbook_name"]
-            ]
-
-        return df
-
     def run_detect_intent_queries(self, df: pd.DataFrame) -> pd.DataFrame:
         for index, row in tqdm(df.iterrows(), total=df.shape[0]):
             data = {}
@@ -373,7 +395,6 @@ class Evaluations(ScrapiBase):
             if row["action_type"] != "User Utterance":
                 continue
 
-
             res = self.s.detect_intent(
                 self.agent_id, self.session_id, row["action_input"]
             )
@@ -383,7 +404,7 @@ class Evaluations(ScrapiBase):
                 data["session_id"],
                 data["agent_id"],
             ]
-            text_res = self.s.get_text_response(res)
+            text_res = self.ar._extract_text(res)
             utterance_idx = int(row["utterance_pair"])
             df.loc[utterance_idx, ["agent_response"]] = [text_res]
 
@@ -393,215 +414,28 @@ class Evaluations(ScrapiBase):
                 df = self.process_playbook_invocations(
                     playbook_responses, index, row, df
                 )
-                # if row["playbook_pair"] in [None, "", "NaN", "nan"]:
-                #     playbook_index_list = [index]
-                # else:
-                #     playbook_index_list = literal_eval(row["playbook_pair"])
-
-                # for idx in playbook_index_list:
-                #     playbook = playbook_responses.pop(0)
-                #     df.loc[int(idx), ["res_playbook_name"]] = [
-                #         playbook["playbook_name"]
-                #     ]
 
             # Handle Tool Invocations
             tool_responses = self.s.collect_tool_responses(res)
             if len(tool_responses) > 0:
-                # Check if our golden contained a tool_idx or wasn't
-                # expecting tools
-                if row["tool_pair"] in [None, "", "NaN", "nan"]:
-                    tool_index_list = [index]
-                else:
-                    tool_index_list = literal_eval(row["tool_pair"])
-
-                for idx in tool_index_list:
-                    tool = tool_responses.pop(0)
-                    df.loc[
-                        int(idx),
-                        [
-                            "res_tool_name",
-                            "res_tool_action",
-                            "res_input_params",
-                            "res_output_params",
-                        ],
-                    ] = [
-                        tool["tool_name"],
-                        tool["tool_action"],
-                        tool["input_params"],
-                        tool["output_params"],
-                    ]
-
-                df.loc[index, "agent_response"] = "ERROR"
-                logging.warning(f"Error running row {index}. Skipping...")
-
-        return df
-
-    def run_detect_intent(self, df: pd.DataFrame) -> pd.DataFrame:
-        print("Running DetectIntent Queries...")
-        df = self.validate_input_columns(df)
-        df = self.run_detect_intent_queries(df)
-        # df = self.clean_outputs(df)
+                df = self.process_tool_invocations(
+                    tool_responses, index, row, df
+                )
 
         return df
 
     def run_evals(self, df: pd.DataFrame) -> pd.DataFrame:
         print("Starting Evals...")
 
-        if "response_similarity" in self.metrics:
-            df = self.evals.eval_agent_response_similarity(df)
-
-        if "tool_call_quality" in self.metrics:
-            df = self.evals.eval_tool_call_quality(df)
+        for metric in self.metrics:
+           df = pd.concat([df, metric.run(df)], axis=1)
 
         return df
 
-    def run_query_and_eval(
-        self, df: pd.DataFrame, results_tab: str = None
-    ) -> pd.DataFrame:
-        df = self.run_detect_intent(df)
+    def run_query_and_eval(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = self.validate_input_columns(df)
+        df = self.run_detect_intent_queries(df)
         df = self.run_evals(df)
-        # df = self.clean_outputs(df)
-
-        return df
-
-
-class CalculateEvals:
-    """Defines core eval functionalities"""
-
-    def __init__(self, model):
-        self.model: Union[TextEmbeddingModel, Any] = model
-        if isinstance(self.model, TextEmbeddingModel):
-            self.embed_type = "vertex"
-        else:
-            self.embed_type = "tensorflow"
-
-    @staticmethod
-    def metric_exact_match(ground_truth: str, candidate: str) -> int:
-        """Computes exact match metric"""
-        # convert None or NaN to empty string for comparison
-        if candidate is None:
-            candidate = ""
-
-        if isinstance(candidate, float) and math.isnan(candidate):
-            candidate = ""
-
-        return int(ground_truth == candidate)
-
-    @staticmethod
-    def vertex_embed(
-        model,
-        texts: List[str] = ["banana muffins? ", "banana bread? banana muffins?"],
-        task: str = "SEMANTIC_SIMILARITY",
-        dimensionality: Optional[int] = 256,
-        ) -> List[List[float]]:
-        """Embeds texts with a pre-trained, foundational model."""
-        inputs = [TextEmbeddingInput(text, task) for text in texts]
-
-        # These models don't support OutputDimensionality
-        if model._model_id in [
-            "textembedding-gecko@001",
-            "textembedding-gecko@003",
-            "textembedding-gecko-multilingual@001"
-            ]:
-            embeddings = model.get_embeddings(texts)
-
-        else:
-            kwargs = dict(
-                output_dimensionality=dimensionality) if dimensionality else {}
-            embeddings = model.get_embeddings(inputs, **kwargs)
-
-        return [embedding.values for embedding in embeddings]
-
-    def compute_similarity_tensorflow(self, string_a, string_b):
-        """Computes the semantic similarity between two strings.
-
-        Args:
-        string_a: The first string.
-        string_b: The second string.
-
-        Returns:
-        A float value between 0.0 and 1.0, with 1.0 being the most similar.
-        """
-        # Embed the two strings.
-        embed_a = self.model([string_a])
-        embed_b = self.model([string_b])
-
-        # Compute the cosine similarity between the two encodings.
-        similarity = np.inner(embed_a, embed_b) / (
-            np.linalg.norm(embed_a) * np.linalg.norm(embed_b)
-            )
-
-        similarity = round(similarity[0][0], 5)
-
-        return similarity
-
-    def compute_similarity_vertex(self, string_a, string_b):
-        """Computes the semantic similarity between two strings.
-
-        Args:
-        string_a: The first string.
-        string_b: The second string.
-
-        Returns:
-        A float value between 0.0 and 1.0, with 1.0 being the most similar.
-        """
-        # Embed the two strings.
-        embeds = self.vertex_embed(self.model, [string_a, string_b])
-        embed_a = embeds[0]
-        embed_b = embeds[1]
-
-        # Compute the cosine similarity between the two encodings.
-        similarity = np.inner(embed_a, embed_b) / (
-            np.linalg.norm(embed_a) * np.linalg.norm(embed_b)
-            )
-
-        similarity = round(similarity, 5)
-
-        return similarity
-
-    def eval_agent_response_similarity(self, df: pd.DataFrame) -> pd.DataFrame:
-        "Computes Similarity metrics for the Agent Response vs. ground truth."
-
-        for index, row in df.iterrows():
-            if row["action_type"] == "Agent Response":
-                if self.embed_type == "vertex":
-                    similarity = self.compute_similarity_vertex(
-                        row["action_input"], row["agent_response"]
-                    )
-                else:
-                    similarity = self.compute_similarity(
-                        row["action_input"], row["agent_response"]
-                        )
-
-                df.loc[index, ["similarity"]] = [similarity]
-
-        return df
-
-    def eval_tool_call_quality(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Computes tool call quality when applicable.
-
-        This will be a bundle of metrics which can start with the following:
-        - tool_match, determines if the right tool name was called
-        - tool_action_match, determines if the right action in the tool was called
-        - tool_parameters_match, determines if the right parameter keys were used
-            to call the tool
-        - tool_parameters_value_similarity, determines how similar the parameter
-            values are that were used to call the tool
-        """
-        for index, row in df.iterrows():
-            if row["action_type"] == "Tool Invocation":
-                # Basic Exact Match for Tool Name
-                df.loc[index, ["tool_name_match"]] = self.metric_exact_match(
-                    ground_truth=row["action_input"],
-                    candidate=row["res_tool_name"],
-                )
-
-                # Exact Match for Tool Action
-                df.loc[index, ["tool_action_match"]] = self.metric_exact_match(
-                    ground_truth=row["action_input"],
-                    candidate=row["res_tool_action"],
-                )
-
-            # (WIP) Other metrics
+        df = self.clean_outputs(df)
 
         return df

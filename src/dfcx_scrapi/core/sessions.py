@@ -1,6 +1,6 @@
 """CX Session Resource functions."""
 
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import logging
 import uuid
-from typing import Dict, List, Any
+from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf.json_format import MessageToDict
@@ -26,6 +26,7 @@ from IPython.display import display, Markdown
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import tools
 from dfcx_scrapi.core import playbooks
+
 
 # logging config
 logging.basicConfig(
@@ -100,18 +101,6 @@ class Sessions(scrapi_base.ScrapiBase):
         return query_input
 
     @staticmethod
-    def get_text_response(res: types.session.QueryResult) -> str:
-        all_text = []
-        if res.response_messages:
-            for rm in res.response_messages:
-                if rm.text:
-                    all_text.append(rm.text.text[0])
-
-        final_text = "\n".join(all_text)
-
-        return final_text
-
-    @staticmethod
     def get_tool_action(tool_use: types.example.ToolUse) -> str:
         return tool_use.action
 
@@ -124,7 +113,8 @@ class Sessions(scrapi_base.ScrapiBase):
         # Clean up resulting param map. This is because I/O params from Agent
         # Builder proto will have a blank top level key, but the main value
         # info is what is important for return to the user in this tool.
-        if len(param_map.keys()) == 1 and param_map[""]:
+        empty_top_key = param_map.get("", None)
+        if len(param_map.keys()) == 1 and empty_top_key:
             param_map = param_map[""]
 
         return param_map

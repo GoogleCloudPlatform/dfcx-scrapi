@@ -20,6 +20,7 @@ import re
 import time
 import functools
 import threading
+import vertexai
 from collections import defaultdict
 from typing import Dict, Any, Iterable
 
@@ -27,13 +28,45 @@ from google.api_core import exceptions
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
-from google.protobuf import json_format  # type: ignore
+from google.protobuf import json_format
 from google.protobuf import field_mask_pb2, struct_pb2
+
+from vertexai.generative_models import GenerativeModel
+from vertexai.language_models import TextEmbeddingModel, TextGenerationModel
 
 from proto.marshal.collections import repeated
 from proto.marshal.collections import maps
 
 _INTERVAL_SENTINEL = object()
+
+# The following models are supported for Metrics and Evaluations, either for
+# Text Embeddings or used to provide Generations / Predictions.
+SYS_INSTRUCT_MODELS = [
+    "gemini-1.0-pro-002",
+    "gemini-1.5-pro-001",
+    "gemini-1.5-flash-001"
+]
+
+NON_SYS_INSTRUCT_GEM_MODELS = [
+    "gemini-1.0-pro-001"
+]
+
+ALL_GEMINI_MODELS = SYS_INSTRUCT_MODELS + NON_SYS_INSTRUCT_GEM_MODELS
+
+TEXT_GENERATION_MODELS = [
+    "text-bison@002",
+    "text-unicorn@001"
+]
+EMBEDDING_MODELS_NO_DIMENSIONALITY = [
+    "textembedding-gecko@001",
+    "textembedding-gecko@003",
+    "textembedding-gecko-multilingual@001"
+]
+ALL_EMBEDDING_MODELS = EMBEDDING_MODELS_NO_DIMENSIONALITY + [
+    "text-embedding-004"
+]
+
+ALL_GENERATIVE_MODELS = ALL_GEMINI_MODELS + TEXT_GENERATION_MODELS
 
 class ScrapiBase:
     """Core Class for managing Auth and other shared functions."""
@@ -358,6 +391,56 @@ class ScrapiBase:
 
         return solution_map[solution_type]
 
+    @staticmethod
+    def is_valid_sys_instruct_model(llm_model: str) -> bool:
+        valid_sys_instruct = True
+        """Validate if model allows system instructions."""
+        if llm_model in NON_SYS_INSTRUCT_GEM_MODELS:
+            valid_sys_instruct = False
+
+        return valid_sys_instruct
+
+    def build_generative_model(
+            self,
+            llm_model: str,
+            system_instructions: str = None
+            ) -> GenerativeModel:
+        """Build the GenertiveModel object and sys instructions as required."""
+        valid_sys_intruct = self.is_valid_sys_instruct_model(llm_model)
+
+        if valid_sys_intruct and system_instructions:
+            return GenerativeModel(
+                llm_model, system_instruction=system_instructions)
+
+        elif not valid_sys_intruct and system_instructions:
+            raise ValueError(
+                f"Model `{llm_model}` does not support System Instructions"
+                )
+        else:
+            return GenerativeModel(llm_model)
+
+    def model_setup(self, llm_model: str, system_instructions: str = None):
+        """Create a new LLM instance from user inputs."""
+        if llm_model in ALL_EMBEDDING_MODELS:
+            return TextEmbeddingModel.from_pretrained(llm_model)
+
+        elif llm_model in ALL_GEMINI_MODELS:
+            return self.build_generative_model(llm_model, system_instructions)
+
+        elif llm_model in TEXT_GENERATION_MODELS:
+            return TextGenerationModel.from_pretrained(llm_model)
+
+        else:
+            raise ValueError(f"LLM Model `{llm_model}` not supported.")
+
+    def init_vertex(self, agent_id: str):
+        """Use the Agent ID to parse out relevant fields and init Vertex API."""
+        parts = self._parse_resource_path("agent", agent_id)
+        project_id = parts.get("project")
+        location = parts.get("location")
+
+        vertexai.init(project=project_id, location=location)
+
     def _build_data_store_parent(self, location: str) -> str:
         """Build the Parent ID needed for Discovery Engine API calls."""
         return (f"projects/{self.project_id}/locations/{location}/collections/"
@@ -544,4 +627,5 @@ def handle_api_error(func):
     except exceptions.GoogleAPICallError as err:
       print(f"failed api call: {err}")
       return None
+
   return handled_api_error_func
