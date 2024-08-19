@@ -12,9 +12,9 @@ pfreeze:
 
 test:
 	@if [ -n "$(v)" ]; then \
-		pytest tests/dfcx_scrapi/core/$(f) -vv; \
+		pytest tests/dfcx_scrapi/$(f) -vv; \
 	else \
-		pytest tests/dfcx_scrapi/core/$(f); \
+		pytest tests/dfcx_scrapi/$(f); \
 	fi
 
 lint:
