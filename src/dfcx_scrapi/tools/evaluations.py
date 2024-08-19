@@ -15,9 +15,7 @@
 # limitations under the License.
 
 from datetime import datetime
-import math
 import logging
-import vertexai
 
 from ast import literal_eval
 import numpy as np
