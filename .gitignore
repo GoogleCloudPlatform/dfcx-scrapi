@@ -1,6 +1,9 @@
 *.py[cod]
 *.sw[op]
 
+# specific files
+code-context.txt
+
 # cloud shell
 .theia
 

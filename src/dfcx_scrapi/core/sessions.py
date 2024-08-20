@@ -1,6 +1,6 @@
 """CX Session Resource functions."""
 
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ from IPython.display import display, Markdown
 
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import tools
+from dfcx_scrapi.core import playbooks
+
 
 # logging config
 logging.basicConfig(
@@ -46,6 +48,7 @@ class Sessions(scrapi_base.ScrapiBase):
         agent_id: str = None,
         session_id: str = None,
         tools_map: Dict[str, str] = None,
+        playbooks_map: Dict[str, str] = None
     ):
         super().__init__(
             creds_path=creds_path, creds_dict=creds_dict,
@@ -55,6 +58,7 @@ class Sessions(scrapi_base.ScrapiBase):
         self.session_id = session_id
         self.agent_id = agent_id
         self.tools_map = tools_map
+        self.playbooks_map = playbooks_map
 
     @property
     def session_id(self):
@@ -87,18 +91,41 @@ class Sessions(scrapi_base.ScrapiBase):
         return query_input
 
     @staticmethod
-    def get_text_response(res: types.session.QueryResult) -> str:
-        all_text = []
-        if res.response_messages:
-            for rm in res.response_messages:
-                if rm.text:
-                    all_text.append(rm.text.text[0])
+    def build_intent_query_input(intent_id: str, language_code: str):
+        """Build the query_input object for direct Intent request."""
+        intent_input = types.session.IntentInput(intent=intent_id)
+        query_input = types.session.QueryInput(
+            intent=intent_input, language_code=language_code
+        )
 
-        return all_text
+        return query_input
 
     @staticmethod
     def get_tool_action(tool_use: types.example.ToolUse) -> str:
         return tool_use.action
+
+    def get_tool_params(self, params: maps.MapComposite):
+        "Handle various types of param values from Tool input/outputs."
+        param_map = {}
+        if isinstance(params, maps.MapComposite):
+            param_map = self.recurse_proto_marshal_to_dict(params)
+
+        # Clean up resulting param map. This is because I/O params from Agent
+        # Builder proto will have a blank top level key, but the main value
+        # info is what is important for return to the user in this tool.
+        empty_top_key = param_map.get("", None)
+        if len(param_map.keys()) == 1 and empty_top_key:
+            param_map = param_map[""]
+
+        return param_map
+
+    def get_playbook_name(self, playbook_id: str):
+        agent_id = self.parse_agent_id(playbook_id)
+        if not self.playbooks_map:
+            playbook_client = playbooks.Playbooks(agent_id)
+            self.playbooks_map = playbook_client.get_playbooks_map(agent_id)
+
+        return self.playbooks_map[playbook_id]
 
     def get_tool_name(self, tool_use: types.example.ToolUse) -> str:
         agent_id = self.parse_agent_id(tool_use.tool)
@@ -106,27 +133,6 @@ class Sessions(scrapi_base.ScrapiBase):
             tool_client = tools.Tools()
             self.tools_map = tool_client.get_tools_map(agent_id)
         return self.tools_map[tool_use.tool]
-
-    def get_tool_input_parameters(self, tool_use: types.example.ToolUse) -> str:
-        input_params = {}
-        for param in tool_use.input_parameters:
-            if isinstance(param.value, maps.MapComposite):
-                input_params = self.recurse_proto_marshal_to_dict(param.value)
-            else:
-                input_params[param.name] = param.value
-
-        return input_params
-
-    def get_tool_output_parameters(
-        self, tool_use: types.example.ToolUse
-    ) -> str:
-        output_params = {}
-        for param in tool_use.output_parameters:
-            output_params[param.name] = self.recurse_proto_marshal_to_dict(
-                param.value
-            )
-
-        return output_params
 
     def collect_tool_responses(
         self, res: types.session.QueryResult
@@ -139,16 +145,41 @@ class Sessions(scrapi_base.ScrapiBase):
                     {
                         "tool_name": self.get_tool_name(action.tool_use),
                         "tool_action": self.get_tool_action(action.tool_use),
-                        "input_params": self.get_tool_input_parameters(
-                            action.tool_use
-                        ),
-                        "output_params": self.get_tool_output_parameters(
-                            action.tool_use
-                        ),
+                        "input_params": self.get_tool_params(
+                            action.tool_use.input_action_parameters),
+                        "output_params": self.get_tool_params(
+                            action.tool_use.output_action_parameters),
                     }
                 )
 
         return tool_responses
+
+    def collect_playbook_responses(
+        self, res: types.session.QueryResult
+    ) -> List[Dict[str, str]]:
+        """Gather all the playbook responses into a list of dicts."""
+        playbook_responses = []
+        for action in res.generative_info.action_tracing_info.actions:
+            if action.playbook_invocation:
+                playbook_responses.append(
+                    {
+                        "playbook_name": self.get_playbook_name(
+                            action.playbook_invocation.playbook
+                        )
+                    }
+                )
+            else:
+                # If no playbook invocation was found
+                # return the current Playbook
+                playbook_responses.append(
+                    {
+                        "playbook_name": self.get_playbook_name(
+                            res.generative_info.current_playbooks[-1]
+                        )
+                    }
+                )
+
+        return playbook_responses
 
     def build_session_id(
         self, agent_id: str = None, overwrite: bool = True
@@ -269,6 +300,7 @@ class Sessions(scrapi_base.ScrapiBase):
         parameters=None,
         end_user_metadata=None,
         populate_data_store_connection_signals=False,
+        intent_id: str = None
     ):
         """Returns the result of detect intent with texts as inputs.
 
@@ -307,9 +339,11 @@ class Sessions(scrapi_base.ScrapiBase):
                 "Utilize `build_session_id` to create a new Session ID."
             )
 
-        logging.info(f"Starting Session ID {session_id}")
-
-        query_input = self._build_query_input(text, language_code)
+        if intent_id:
+            query_input = self.build_intent_query_input(
+                intent_id, language_code)
+        else:
+            query_input = self._build_query_input(text, language_code)
 
         request = types.session.DetectIntentRequest()
         request.session = session_id
