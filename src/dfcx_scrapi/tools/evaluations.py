@@ -26,6 +26,7 @@ from typing import Dict, List, Any
 from google.oauth2 import service_account
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.sessions import Sessions
 from dfcx_scrapi.core.tools import Tools
 from dfcx_scrapi.core.playbooks import Playbooks
@@ -64,17 +65,13 @@ class Evaluations(ScrapiBase):
             creds=creds,
         )
 
-        if debug:
-            logging.basicConfig(level=logging.DEBUG, force=True)
-        if not debug:
-            logging.basicConfig(level=logging.INFO, force=True)
-
         self.agent_id = agent_id
         self.sheet_name = sheet_name
         self.session_id = None
         self.metrics = metrics
-        self.init_vertex(self.agent_id)
 
+        print("Initializing Vertex AI...")
+        self.init_vertex(self.agent_id)
         self.s = Sessions(agent_id=self.agent_id, tools_map=tools_map)
         self.p = Playbooks(agent_id=self.agent_id, playbooks_map=playbooks_map)
         self.t = Tools(agent_id=self.agent_id, tools_map=tools_map)
@@ -94,21 +91,16 @@ class Evaluations(ScrapiBase):
             "tool_action",
         ]
 
-        self.metrics = build_metrics(metrics, self.embedding_model)
-
-
-    @staticmethod
-    def prep_incoming_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-        """Prepares incoming dataframe for evals"""
-
-        for col in ["agent_utterance", "agent_response"]:
-            assert col in df.columns.to_list(), (
-                f"Dataset is missing column `{col}`. Please update dataset "
-                f"columns."
+        self.metrics = build_metrics(
+            metrics=metrics,
+            generation_model=self.generation_model,
+            embedding_model=self.embedding_model
             )
 
-        return df
-
+        if debug:
+            logging.basicConfig(level=logging.DEBUG, force=True)
+        if not debug:
+            logging.basicConfig(level=logging.ERROR, force=True)
 
     @staticmethod
     def get_matching_list_idx(a, b):
@@ -202,9 +194,7 @@ class Evaluations(ScrapiBase):
 
         for idx in playbook_index_list:
             playbook = responses.pop(0)
-            df.loc[int(idx), ["res_playbook_name"]] = [
-                playbook["playbook_name"]
-            ]
+            df.loc[int(idx), "res_playbook_name"] = playbook["playbook_name"]
 
         return df
 
@@ -237,6 +227,21 @@ class Evaluations(ScrapiBase):
                 tool["input_params"],
                 tool["output_params"],
             ]
+
+        return df
+
+    @staticmethod
+    def add_response_columns(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+
+        df.loc[:, "agent_response"] = pd.Series(dtype="str")
+        df.loc[:, "agent_id"] = pd.Series(dtype="str")
+        df.loc[:, "session_id"] = pd.Series(dtype="str")
+        df.loc[:, "res_playbook_name"] = pd.Series(dtype="str")
+        df.loc[:, "res_tool_name"] = pd.Series(dtype="str")
+        df.loc[:, "res_tool_action"] = pd.Series(dtype="str")
+        df.loc[:, "res_input_params"] = pd.Series(dtype="str")
+        df.loc[:, "res_output_params"] = pd.Series(dtype="str")
 
         return df
 
@@ -364,15 +369,37 @@ class Evaluations(ScrapiBase):
 
         return df
 
+    def build_report_summary(self, df: pd.DataFrame) -> pd.DataFrame:
+        a = Agents()
+        agent = a.get_agent(self.agent_id)
+        gen_settings = a.get_generative_settings(self.agent_id)
+
+        current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        eval_results_summary = pd.DataFrame({
+            'timestamp': [current_datetime],
+            'total_conversations': [len(df['eval_id'].unique())],
+            'similarity': [df['similarity'].mean()],
+            'tool_match': [df['tool_name_match'].mean()],
+            'model_name': [gen_settings.llm_model_settings.model],
+            'agent_name': agent.display_name,
+            'agent_id': [self.agent_id],
+            'notes': [""]
+        })
+
+        return eval_results_summary
+
     def append_test_results_to_sheets(
-        self, results: pd.DataFrame, sheet_name: str, sheet_tab: str
-    ):
+        self, results: pd.DataFrame, sheet_name: str, summary_tab: str
+        ):
+
+        summary = self.build_report_summary(results)
+
         client = self.dffx.sheets_client
         gsheet = client.open(sheet_name)
-        sheet = gsheet.worksheet(sheet_tab)
+        sheet = gsheet.worksheet(summary_tab)
 
         sheet.append_rows(
-            results.values.tolist(), value_input_option="USER_ENTERED"
+            summary.values.tolist(), value_input_option="USER_ENTERED"
         )
 
     def run_detect_intent_queries(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -432,6 +459,7 @@ class Evaluations(ScrapiBase):
 
     def run_query_and_eval(self, df: pd.DataFrame) -> pd.DataFrame:
         df = self.validate_input_columns(df)
+        df = self.add_response_columns(df)
         df = self.run_detect_intent_queries(df)
         df = self.run_evals(df)
         df = self.clean_outputs(df)
