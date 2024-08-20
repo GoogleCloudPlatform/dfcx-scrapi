@@ -1,6 +1,6 @@
 """Utility file for dataframe functions in support of Dialogflow CX."""
 
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,7 +55,6 @@ class DataframeFunctions(ScrapiBase):
         creds_path: str = None,
         creds_dict: dict = None,
         creds=None,
-        principal=False,
         scope=False,
     ):
         super().__init__(
@@ -85,11 +84,8 @@ class DataframeFunctions(ScrapiBase):
             )
             self.sheets_client = gspread.authorize(creds)
 
-        elif principal:
-            self.sheets_client = gspread.oauth()
-
         else:
-            creds = google.auth.default(scopes=scopes)[0]
+            creds, _ = google.auth.default(scopes=scopes)
             self.sheets_client = gspread.authorize(creds)
 
         self.entities = EntityTypes(creds=self.creds)

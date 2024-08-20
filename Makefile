@@ -12,9 +12,9 @@ pfreeze:
 
 test:
 	@if [ -n "$(v)" ]; then \
-		pytest tests/dfcx_scrapi/core/$(f) -vv; \
+		pytest tests/dfcx_scrapi/$(f) -vv; \
 	else \
-		pytest tests/dfcx_scrapi/core/$(f); \
+		pytest tests/dfcx_scrapi/$(f); \
 	fi
 
 lint:
@@ -38,3 +38,6 @@ fix:
 build:
 	python3 -m build
 	pip uninstall dfcx-scrapi -y
+
+context-file:
+	find . -name "*.py" -print0 | xargs -0 -I {} sh -c 'echo "=== {} ==="; cat {}' > code-context.txt
