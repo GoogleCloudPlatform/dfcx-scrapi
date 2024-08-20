@@ -4,7 +4,6 @@ google-cloud-discoveryengine>=0.11.10
 google-auth>=2.27.0
 google-oauth
 oauth2client
-pyparsing==2.4.7
 pandas
 tabulate
 gspread==5.10.0
@@ -16,6 +15,7 @@ pytest==6.0.2
 pytest-cov==2.11.1
 pytest-xdist==2.1.0
 pyyaml
+rouge-score
 torch
 transformers
 tqdm
