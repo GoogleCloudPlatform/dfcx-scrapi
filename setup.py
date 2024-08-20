@@ -23,7 +23,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 setup(
     name='dfcx-scrapi',
-    version='1.11.1',
+    version='1.12.0',
     description='A high level scripting API for bot builders, developers, and\
       maintainers.',
     long_description=long_description,
@@ -45,5 +45,6 @@ setup(
     package_dir={'':'src'},
     packages=find_packages(where='src'),
     python_requires='>=3.6, <4',
-    install_requires=['google-cloud-dialogflow-cx']
+
+    install_requires=['google-cloud-dialogflow-cx', 'rouge-score']
 )
