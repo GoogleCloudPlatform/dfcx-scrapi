@@ -16,9 +16,12 @@
 
 import datetime
 import json
+import re
+import gspread
 import pandas as pd
 from tqdm.auto import tqdm
-from typing import Union
+from typing import Union, Any
+from google.oauth2 import service_account
 
 from dfcx_scrapi.tools.agent_response import AgentResponse
 from dfcx_scrapi.core.scrapi_base import ScrapiBase, retry_api_call
@@ -35,9 +38,45 @@ INPUT_SCHEMA_REQUIRED_COLUMNS = [
     "user_metadata",
 ]
 
+def load_spreadsheet(
+        sheet_url: str, worksheet_name: str, credentials: Any
+        ) -> pd.DataFrame:
+    """Loads the content of a spreadsheet into pandas DataFrame."""
+    sheets_client = gspread.authorize(credentials)
+    sheet = sheets_client.open_by_url(sheet_url)
+    worksheet = sheet.worksheet(worksheet_name)
+
+    return pd.DataFrame(worksheet.get_all_records())
 
 class DataStoreScraper(ScrapiBase):
     """Vertex AI Conversation scraper class."""
+
+    def _extract_url_part(cls, url, pattern):
+        pattern_match = pattern.search(url)
+        if not pattern_match:
+            raise ValueError(f"Invalid url: {url}")
+
+        return pattern_match.group(1)
+
+    @classmethod
+    def from_url(
+        cls,
+        agent_url: str,
+        creds: service_account.Credentials = None,
+        language_code: str = "en"):
+        match = re.search(
+            r'projects/[^/]+/locations/[^/]+/agents/[^/]+', agent_url
+            )
+        if match:
+            agent_id = match.group(0)
+        else:
+            raise ValueError(f"Invalid url: {agent_url}")
+
+        return cls(
+            agent_id=agent_id,
+            language_code=language_code,
+            creds=creds,
+        )
 
     def __init__(
         self,
