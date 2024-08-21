@@ -72,7 +72,7 @@ def build_metrics(
             metric_list.append(RougeL())
         elif metric == "answer_correctness":
             metric_list.append(AnswerCorrectness(llm=generation_model))
-        elif metric == "faitfulness":
+        elif metric == "faithfulness":
             metric_list.append(Faithfulness(llm=generation_model))
         elif metric == "context_recall":
             metric_list.append(ContextRecall(llm=generation_model))
