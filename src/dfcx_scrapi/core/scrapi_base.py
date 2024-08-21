@@ -439,6 +439,12 @@ class ScrapiBase:
         project_id = parts.get("project")
         location = parts.get("location")
 
+        # Vertex doesn't support global region at this time, but Agent Builder
+        # and DFCX do. If this method is used in conjunction with an agent_id
+        # that is located in `global` region, we will fallback to `us-central1`
+        # to init Vertex.
+        location = "us-central1" if location == "global" else location
+
         vertexai.init(project=project_id, location=location)
 
     def _build_data_store_parent(self, location: str) -> str:
