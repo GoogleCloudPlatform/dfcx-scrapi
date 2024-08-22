@@ -46,5 +46,9 @@ setup(
     packages=find_packages(where='src'),
     python_requires='>=3.6, <4',
 
-    install_requires=['google-cloud-dialogflow-cx', 'rouge-score']
+    install_requires=[
+        'google-cloud-dialogflow-cx',
+        'google-cloud-aiplatform',
+        'rouge-score'
+        ]
 )
