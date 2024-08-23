@@ -194,7 +194,10 @@ class Flows(scrapi_base.ScrapiBase):
         return response
 
     @scrapi_base.api_call_counter_decorator
-    def list_flows(self, agent_id: str = None) -> List[types.Flow]:
+    def list_flows(
+        self,
+        agent_id: str = None,
+        language_code: str = "en") -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
         Args:
@@ -209,6 +212,7 @@ class Flows(scrapi_base.ScrapiBase):
 
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
+        request.language_code = language_code
 
         client_options = self._set_region(agent_id)
         client = services.flows.FlowsClient(
@@ -223,7 +227,7 @@ class Flows(scrapi_base.ScrapiBase):
         return flows
 
     def get_flow_by_display_name(
-        self, display_name: str, agent_id: str
+        self, display_name: str, agent_id: str, language_code: str = "en"
     ) -> types.Flow:
         """Get a single CX Flow object based on its display name.
 
@@ -245,12 +249,12 @@ class Flows(scrapi_base.ScrapiBase):
                 f"does not exist in the specified agent."
             )
 
-        flow = self.get_flow(flow_id=flow_id)
+        flow = self.get_flow(flow_id=flow_id, language_code=language_code)
 
         return flow
 
     @scrapi_base.api_call_counter_decorator
-    def get_flow(self, flow_id: str) -> types.Flow:
+    def get_flow(self, flow_id: str, language_code: str = "en") -> types.Flow:
         """Get a single CX Flow object.
 
         Args:
@@ -259,12 +263,15 @@ class Flows(scrapi_base.ScrapiBase):
         Returns:
           A single CX Flow object
         """
+        request = types.flow.GetFlowRequest()
+        request.name = flow_id
+        request.language_code = language_code
 
         client_options = self._set_region(flow_id)
         client = services.flows.FlowsClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.get_flow(name=flow_id)
+        response = client.get_flow(request)
 
         return response
 
