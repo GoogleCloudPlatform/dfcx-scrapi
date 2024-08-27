@@ -36,6 +36,7 @@ INPUT_SCHEMA_REQUIRED_COLUMNS = [
     "expected_answer",
     "expected_uri",
     "user_metadata",
+    "parameters"
 ]
 
 def load_spreadsheet(
@@ -191,15 +192,24 @@ class DataStoreScraper(ScrapiBase):
         query: str,
         session_id: Union[str, None] = None,
         user_metadata: Union[str, None] = None,
+        parameters: Union[str, None] = None
     ) -> AgentResponse:
         if session_id is None:
             session_id = self.sessions.build_session_id(self.agent_id)
 
         if user_metadata:
             try:
-                user_metadata = json.loads(user_metadata)
+                if isinstance(user_metadata, str):
+                    user_metadata = json.loads(user_metadata)
             except ValueError as err:
                 raise UserWarning("Invalid user metadata") from err
+
+        if parameters:
+            try:
+                if isinstance(parameters, str):
+                    parameters = json.loads(parameters)
+            except ValueError as err:
+                raise UserWarning("Invalid parameters") from err
 
         response = self.sessions.detect_intent(
             agent_id=self.agent_id,
@@ -208,6 +218,7 @@ class DataStoreScraper(ScrapiBase):
             language_code=self.language_code,
             end_user_metadata=user_metadata,
             populate_data_store_connection_signals=True,
+            parameters=parameters
         )
 
         ar = AgentResponse()
@@ -224,7 +235,10 @@ class DataStoreScraper(ScrapiBase):
 
         def scrape(row):
             result = self.scrape_detect_intent(
-                row["query"], row["session_id"], row["user_metadata"]
+                query=row["query"],
+                session_id=row["session_id"],
+                user_metadata=row["user_metadata"],
+                parameters=row["parameters"]
             )
             progress_bar.update()
 
