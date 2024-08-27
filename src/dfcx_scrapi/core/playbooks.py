@@ -332,3 +332,20 @@ class Playbooks(scrapi_base.ScrapiBase):
             playbook_id = obj.name
 
         self.playbooks_client.delete_playbook(name=playbook_id)
+
+    @scrapi_base.api_call_counter_decorator
+    def create_playbook_version(
+        self, playbook_id: str, description: str = None
+        ) -> types.PlaybookVersion:
+        """Creates a Playbook Version of the specific Playbook ID."""
+        playbook_version = types.PlaybookVersion()
+        playbook_version.name = playbook_id
+        playbook_version.description = description
+
+        request = types.CreatePlaybookVersionRequest()
+        request.parent = playbook_id
+        request.playbook_version = playbook_version
+
+        response = self.playbooks_client.create_playbook_version(request)
+
+        return response
