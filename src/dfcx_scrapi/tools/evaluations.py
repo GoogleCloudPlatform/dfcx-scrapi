@@ -513,9 +513,8 @@ class DataLoader:
 
         # fill remaining NA with empty string
         for col in df.columns:
-            if df[col].dtype == "object":
+            if df[col].dtype in ["object", "string"]:
                 df[col] = df[col].fillna("")
-        # df.fillna("", inplace=True)
 
         return df
 
