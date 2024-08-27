@@ -96,6 +96,8 @@ def test_config():
         ]
     )
 
+    playbook_version_description = "v1.0"
+
     return {
         "agent_id": agent_id,
         "playbook_id": playbook_id,
@@ -103,7 +105,8 @@ def test_config():
         "instructions_list": instructions_list,
         "instructions_str": instructions_str,
         "instructions_proto_from_list": instructions_proto_from_list,
-        "instructions_proto_from_str": instructions_proto_from_str
+        "instructions_proto_from_str": instructions_proto_from_str,
+        "playbook_version_description": playbook_version_description
     }
 
 @pytest.fixture
@@ -130,6 +133,23 @@ def mock_playbook_obj_str(test_config):
         display_name="mock playbook",
         goal=test_config["goal"],
         instruction=test_config["instructions_proto_from_str"]
+    )
+
+@pytest.fixture
+def mock_playbook_version_obj_no_description(
+    test_config, mock_playbook_obj_empty_instructions):
+    return types.PlaybookVersion(
+        name=test_config["playbook_id"],
+        playbook=mock_playbook_obj_empty_instructions,
+    )
+
+@pytest.fixture
+def mock_playbook_version_obj_with_description(
+    test_config, mock_playbook_obj_empty_instructions):
+    return types.PlaybookVersion(
+        name=test_config["playbook_id"],
+        description=test_config["playbook_version_description"],
+        playbook=mock_playbook_obj_empty_instructions,
     )
 
 
@@ -412,3 +432,29 @@ def test_parse_steps_nested_list(mock_playbooks, test_config):
     steps, next_index = pb.parse_steps(lines, 0, 0)
     assert steps == test_config["instructions_proto_from_str"].steps
     assert next_index == 8
+
+def test_create_playbook_version_no_description(
+        mock_playbooks, test_config, mock_playbook_version_obj_no_description):
+    pb, mock_client, _ = mock_playbooks
+
+    mock_client.return_value.create_playbook_version.return_value = mock_playbook_version_obj_no_description
+
+    res = pb.create_playbook_version(playbook_id=test_config["playbook_id"])
+
+    mock_client.return_value.create_playbook_version.assert_called()
+    assert isinstance(res, types.PlaybookVersion)
+    assert res.playbook.name == test_config["playbook_id"]
+    assert res.description == ""
+
+def test_create_playbook_version_with_description(
+        mock_playbooks, test_config, mock_playbook_version_obj_with_description):
+    pb, mock_client, _ = mock_playbooks
+
+    mock_client.return_value.create_playbook_version.return_value = mock_playbook_version_obj_with_description
+
+    res = pb.create_playbook_version(playbook_id=test_config["playbook_id"])
+
+    mock_client.return_value.create_playbook_version.assert_called()
+    assert isinstance(res, types.PlaybookVersion)
+    assert res.playbook.name == test_config["playbook_id"]
+    assert res.description == test_config["playbook_version_description"]
