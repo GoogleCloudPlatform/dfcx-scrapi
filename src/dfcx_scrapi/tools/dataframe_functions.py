@@ -18,13 +18,11 @@ import json
 import logging
 import time
 from typing import Dict, List
-import google.auth
 import gspread
 import pandas as pd
 import numpy as np
 from tabulate import tabulate
 from gspread_dataframe import set_with_dataframe
-from oauth2client.service_account import ServiceAccountCredentials
 
 from google.cloud.dialogflowcx_v3beta1 import types
 
@@ -69,25 +67,9 @@ class DataframeFunctions(ScrapiBase):
         if scope:
             scopes += scope
 
-        if creds:
-            self.sheets_client = gspread.authorize(creds)
+        self.creds.scopes.extend(scopes)
 
-        elif creds_path:
-            creds = ServiceAccountCredentials.from_json_keyfile_name(
-                filename=creds_path, scopes=scopes
-            )
-            self.sheets_client = gspread.authorize(creds)
-
-        elif creds_dict:
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(
-                keyfile_dict=creds_dict, scopes=scopes
-            )
-            self.sheets_client = gspread.authorize(creds)
-
-        else:
-            creds, _ = google.auth.default(scopes=scopes)
-            self.sheets_client = gspread.authorize(creds)
-
+        self.sheets_client = gspread.authorize(self.creds)
         self.entities = EntityTypes(creds=self.creds)
         self.intents = Intents(creds=self.creds)
         self.flows = Flows(creds=self.creds)
