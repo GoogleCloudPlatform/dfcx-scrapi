@@ -18,10 +18,8 @@ import logging
 import time
 import traceback
 import uuid
-import json
 
 from typing import Dict, Any
-from operator import attrgetter
 from threading import Thread
 
 import pandas as pd
@@ -40,6 +38,7 @@ logging.basicConfig(
     format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO
 )
 
+MAX_RETRIES = 3
 
 class DialogflowConversation(scrapi_base.ScrapiBase):
     """Class that wraps the SessionsClient to hold end to end conversations
@@ -303,80 +302,24 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         self.agent_pages_map = agent_pages_map.reset_index(drop=True)
 
-    def _get_reply_results(
-        self,
-        send_obj,
-        page_id,
-        results,
-        i):
+    def _get_reply_results(self, utterance, page_id, results, i):
         """Get results of single text utterance to CX Agent.
 
         Args:
-          send_obj: A dict to send to the bot for testing.
+          utterance: Text to send to the bot for testing.
           page_id: Specified CX Page to send the utterance request to
           results: Pandas Dataframe to capture and store the results
           i: Internal tracking for Python Threading
         """
 
         response = self.reply(
-            send_obj=send_obj, current_page=page_id, restart=True
+            send_obj={"text": utterance}, current_page=page_id, restart=True
         )
 
         target_page = response["page_name"]
+
         results["target_page"][i] = target_page
         results["match"][i] = response["match"]
-        results["response_messages"][i] = response["response_messages"]
-
-    def _extract_send_objs(self, test_set_mapped):
-        """Extracts send objects from a test set mapped data frame.
-
-        NOTE - This is an internal method used by run_intent_detection to
-          manage parallel intent detection requests and should not be used as a
-          standalone function.
-        Args:
-          test_set_mapped (pandas.DataFrame): The test set mapped data frame.
-
-        Returns:
-          list: A list of send objects, each containing 'text', 'params', and
-          'end_user_metadata'.
-        """
-        def _convert_to_json(json_in_str):
-            if not json_in_str:
-                return None
-            try:
-                return json.loads(json_in_str)
-            except json.JSONDecodeError as e:
-                raise ValueError(f"""Invalid JSON string: {json_in_str}
-                             \nError details: {e}""") from e
-            except TypeError as e:
-                raise ValueError(f"""Unexpected data type: {type(json_in_str)}
-                             \nError details: {e}""") from e
-
-        utterances = test_set_mapped["utterance"].tolist()
-        inject_params = (
-          test_set_mapped["inject_parameters"]
-          .apply(_convert_to_json)
-          .tolist()
-          if "inject_parameters" in test_set_mapped.columns
-          else [None] * len(test_set_mapped)
-        )
-        end_user_metadata = (
-          test_set_mapped["end_user_metadata"]
-          .apply(_convert_to_json)
-          .tolist()
-          if "end_user_metadata" in test_set_mapped.columns
-          else [None] * len(test_set_mapped)
-        )
-        return [
-          {
-            "text": utterance,
-            "params": inject_param,
-            "end_user_metadata": metadata,
-          }
-          for (utterance, inject_param, metadata) in zip(
-              utterances, inject_params, end_user_metadata
-              )
-          ]
 
     def _get_intent_detection(self, test_set: pd.DataFrame):
         """Gets the results of a subset of Intent Detection tests.
@@ -393,8 +336,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             on=["flow_display_name", "page_display_name"],
             how="left",
         )
+        utterances = list(test_set_mapped["utterance"])
         page_ids = list(test_set_mapped["page_id"])
-        send_objs = self._extract_send_objs(test_set_mapped)
 
         self._validate_test_set_input(test_set_mapped)
 
@@ -402,12 +345,11 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         results = {
             "target_page": [None] * len(test_set_mapped),
             "match":[None] * len(test_set_mapped),
-            "response_messages": [None] * len(test_set_mapped),
         }
-        for i, (send_obj, page_id) in enumerate(zip(send_objs, page_ids)):
+        for i, (utterance, page_id) in enumerate(zip(utterances, page_ids)):
             threads[i] = Thread(
                 target=self._get_reply_results,
-                args=(send_obj, page_id, results, i),
+                args=(utterance, page_id, results, i),
             )
             threads[i].start()
 
@@ -416,7 +358,6 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         test_set_mapped["target_page"] = results["target_page"]
         test_set_mapped["match"] = results["match"]
-        test_set_mapped["response_messages"] = results["response_messages"]
         test_set_mapped = test_set_mapped.drop(columns=["page_id"])
         intent_detection = test_set_mapped.copy()
 
@@ -449,6 +390,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self,
         send_obj: Dict[str, str],
         restart: bool = False,
+        retries: int = 0,
         current_page: str = None,
         checkpoints: bool = False,
     ):
@@ -464,6 +406,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             session ID or start a new conversation with a new session ID.
             Passing True will create a new session ID on subsequent calls.
             Defaults to False.
+          retries: used for recurse calling this func if API fails
           current_page: Specify the page id to start the conversation from
           checkpoints: Boolean flag to enable/disable Checkpoint timer
             debugging. Defaults to False.
@@ -561,16 +504,23 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             logging.error("query_params %s", query_params)
             logging.error("query_input %s", query_input)
             logging.error(traceback.print_exc())
-            return {
-                "response_messages": (
-                    f"""---- ERROR --- ClientError caught on CX.detect, {err}"""
-                ),
-                "confidence": "",
-                "page_name": "",
-                "intent_name": "",
-                "match_type": "",
-                "match": None,
-                "params": "",
+            retries += 1
+            if retries < MAX_RETRIES:
+                logging.error("retrying")
+                return self.reply(send_obj, restart=restart, retries=retries)
+            else:
+                logging.error("MAX_RETRIES exceeded")
+                return {
+                    "response_messages": (
+                        f"""---- ERROR --- ClientError caught on CX.detect,
+                        {err}"""
+                    ),
+                    "confidence": "",
+                    "page_name": "",
+                    "intent_name": "",
+                    "match_type": "",
+                    "match": None,
+                    "params": "",
                 }
 
         if checkpoints:
