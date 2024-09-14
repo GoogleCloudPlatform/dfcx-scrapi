@@ -205,10 +205,10 @@ the variables that will be defined for the Cloud Build.
 ## DFCX APIs
 
 The Python Dialogflow CX Scripting [[API (DFCX
-SCRAPI)]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi)
+SCRAPI)]](https://github.com/GoogleCloudPlatform/dfcx-scrapi)
 is a high level API that extends the official Google [[Python Client for
 Dialogflow
-CX]{.underline}](https://github.com/googleapis/python-dialogflow-cx).
+CX]](https://github.com/googleapis/python-dialogflow-cx).
 SCRAPI makes using DFCX easier, more friendly, and more pythonic for bot
 builders, developers, and maintainers. This uses V3/V3beta1 endpoints
 under the hood. Since it is more pythonic way of implementation,
@@ -221,22 +221,22 @@ In our CI/CD pipeline below operations are achieved using SCRAPI API
 -   Find flow id from name
 
 -   [[Export the agent to
-    GCS]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/agents.py#L363)
+    GCS]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/agents.py#L363)
 
 -   [[Restore the
-    agent]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/agents.py#L438)
+    agent]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/agents.py#L438)
 
 -   [[Cut a version of a
-    flow]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/versions.py#L183)
+    flow]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/versions.py#L183)
 
 -   [[Deploy it to an
-    environment]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/environments.py#L359)
+    environment]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/environments.py#L359)
 
 -   [[Run test
-    cases]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/test_cases.py#L410)
+    cases]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/test_cases.py#L410)
 
 -   [[Compare environment
-    history]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/environments.py#L392)
+    history]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/environments.py#L392)
     to find impacted flow the current instance of CI/CD builds.
 
 ## To Set up the pipeline 
