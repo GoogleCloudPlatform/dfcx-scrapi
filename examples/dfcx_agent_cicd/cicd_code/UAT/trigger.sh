@@ -5,7 +5,7 @@ export prod_project_id=$(jq -r .prod_project config.json)
 
 #Use below command to trigger the build if manual invokation is used. Since there is no secret , no extra charges
 
-export build_info=$(gcloud builds triggers run prodbuild --project=$devops_project_id --substitutions=_COMMIT_SHA=$1 --region=us-central1 --format=json)
+export build_info=$(gcloud builds triggers run prodbuild --project=$devops_project_id --substitutions=_COMMIT_SHA=$2 --region=$1 --format=json)
 echo "devops prod triggerdone"
 
 
@@ -17,6 +17,6 @@ echo $prod_build_id
 
 
 #Trigger the build in prod project which is used for approval
-gcloud builds triggers run prodapprovebuild --project=$devops_project_id --substitutions=_APP_BUILD_ID=$prod_build_id --region=us-central1
+gcloud builds triggers run prodapprovebuild --project=$devops_project_id --substitutions=_APP_BUILD_ID=$prod_build_id --region=$1
 
 echo "prod project approve build triggered"

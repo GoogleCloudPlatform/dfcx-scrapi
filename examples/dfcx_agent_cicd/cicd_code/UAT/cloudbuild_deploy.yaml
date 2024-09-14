@@ -2,6 +2,7 @@ steps:
 
   - id: SHAGCSCopy
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    #dir: 'set your path till the readme doc in the git'
     entrypoint: /bin/bash
     args:
       - '-c'
@@ -11,16 +12,18 @@ steps:
 
   - id: deployagent
     name: 'python:3.10'
+    #dir: 'set your path till the readme doc in the git'
     entrypoint: /bin/bash
     args:
     - -c
     - |
       pip3 install -r UAT/requirements.txt
-      python3 UAT/deploy.py $COMMIT_SHA
+      python3 -m UAT.deploy $COMMIT_SHA
       echo $?
 
   - id: CheckExitCode
     name: 'gcr.io/cloud-builders/gcloud'
+    #dir: 'set your path till the readme doc in the git'
     entrypoint: 'bash'
     args:
       - '-c'
@@ -33,12 +36,13 @@ steps:
 
   - id: triggerproddeploy
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    #dir: 'set your path till the readme doc in the git'
     entrypoint: /bin/bash
     args:
       - '-c'
       - |
-        chmod 777 UAT/trigger.sh
-        UAT/trigger.sh $COMMIT_SHA
+        chmod 777 UAT/trigger.sh 
+        UAT/trigger.sh $LOCATION $COMMIT_SHA
 
 
 options:

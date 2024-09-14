@@ -1,6 +1,7 @@
 steps:
   - id: deployagent
     name: 'python:3.10'
+    #dir: 'set your path till the readme doc in the git'
     entrypoint: /bin/bash
     args:
     - -c
@@ -8,7 +9,7 @@ steps:
       echo "printing recieved variables now"
       echo ${_COMMIT_SHA}
       pip3 install -r prod/requirements.txt
-      python3 prod/deploy.py ${_COMMIT_SHA}
+      python3 -m prod.deploy $COMMIT_SHA
  
 options:
   logging: CLOUD_LOGGING_ONLY

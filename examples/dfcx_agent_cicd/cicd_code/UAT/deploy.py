@@ -1,15 +1,12 @@
-from dfcx_scrapi.core.agents import Agents
-from dfcx_scrapi.core.versions import Versions 
-from dfcx_scrapi.core.environments import Environments 
-from dfcx_scrapi.core.flows import Flows
+""" UAT Deployment functions"""
 
 import sys
-import datetime
 import json
-import os
 import logging
-sys.path.append('./shared')
-from deployment import Deployment
+
+from shared.deployment import Deployment
+
+
 #from .shared.deployments import Deployment
 # logging config
 logging.basicConfig(
@@ -20,37 +17,55 @@ logging.basicConfig(
 
 
 def main(data):
+    """
+    Deploys and tests a Dialogflow CX agent in a UAT environment.
+
+    This function performs the following steps:
+
+    1. Initializes a Deployment object with the provided data.
+    2. Imports the agent to the specified UAT webhook environment.
+    3. Validates test cases.
+    4. Collects flow IDs.
+    5. Deletes versions based on count.
+    6. Cuts a new version.
+    7. Deploys the new version.
+    8. Updates the datastore with UAT information.
+
+    Args:
+        data: A dictionary containing configuration data, including the 'uat_webhook_env' key.
+    """
+
     dep=Deployment(data)
     # call the steps sequentially
-    dep.importAgent(webhookenv=data["uat_webhook_env"])
-    dep.testCaseValidation()
-    dep.collectFlowid()
-    dep.versionCountDelete()
-    dep.versionCut()
-    dep.deployVersions()
-    dep.datastoreUpdate("uat")
+    dep.import_agent(webhookenv=data["uat_webhook_env"])
+    dep.test_case_validation()
+    dep.collect_flow_id()
+    dep.version_count_delete()
+    dep.version_cut()
+    dep.deploy_versions()
+    dep.datastore_update("uat")
 
 
 
-if __name__=='__main__':
+if __name__=="__main__":
     # read env variables
-    with open('config.json') as config_file:
+    with open("config.json" , encoding='utf-8') as config_file:
         config = json.load(config_file)
-    logging.info(f"config file: {json.dumps(config, indent=4)}")
     SHA_ID=sys.argv[1]
     obj=f"UAT/{config['agent_name']}/{SHA_ID}"
-    sha_agent_gcs_location=gs_loc=f"gs://{config['bucket']}/UAT/{config['agent_name']}/{SHA_ID}"
-    logging.info(f"agent location {sha_agent_gcs_location}")
+    sha_gs_loc=(
+        f"gs://{config['bucket']}/UAT/{config['agent_name']}/{SHA_ID}"
+    )
+    logging.info("Agent location: %s" ,sha_gs_loc)
     #adding additional variables to dict
-    config["sha_agent_gcs_location"]=sha_agent_gcs_location
-    config['target_project_id'] = config['uat_project']
-    config['target_environment_name']=config['uat_env_deploy']
-    f = open('agent_artifacts/metadata.json')
-    metadata = json.load(f)
-    print(metadata)
+    config["sha_agent_gcs_location"]=sha_gs_loc
+    config["target_project_id"] = config["uat_project"]
+    config["target_environment_name"]=config["uat_env_deploy"]
+    with open("agent_artifacts/metadata.json" , encoding='utf-8') as metadata_file:
+        metadata = json.load(metadata_file)
 
     config["source_flow_names"]=metadata["source_flow_names"]
-    config["updatedcommitmessage"]=metadata["updatedcommitmessage"]
+    config["updated_commit_message"]=metadata["updated_commit_message"]
 
     # To execute steps in order
     main(config)

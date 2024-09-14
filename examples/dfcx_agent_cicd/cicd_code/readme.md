@@ -1,7 +1,3 @@
----
-title: "DFCX_CICD_readme"
----
-
 This Document outlines how to use this sample code and set up the CICD
 pipeline in your gcp projects.
 
@@ -88,10 +84,21 @@ the agent.
 4.  You have a git or similar repo to source the code and to do agent
     check in to store agent artifacts whenever the build is triggered.
 
-5.  You will create all the 3 builds in your dev project. If need be,
+5.  You are going to use same repo to store code artifacts as well as to
+    store agent artifacts that gets checked in during the build process
+
+6.  You will create all the 3 builds in your dev project. If need be,
     you can have all the builds in a centralized project and play around
     with IAM service accounts to enable the builds to access the agent
     in dev/uat/prod projects for migration
+
+7.  You will generate and put the known_hosts.github file in the repo in
+    same level as this readme file is
+
+8.  Set the dir parameter in all the build steps of all the 3 yaml if
+    your repo does not contain this readme file and other folders such
+    as export,UAT and prod in repo root. If these core files are nested
+    then set the dir to the path where this readme file is present
 
 ## IAM Permissions 
 
@@ -111,6 +118,14 @@ the agent.
 
 -   **Dialogflow \> Dialogflow Environment editor**
 
+-   **Cloud Build service account**
+
+-   **Logs Viewer**
+
+-   **Logs Writer**
+
+-   **Cloud Build viewer**
+
 2.  Give the approver person with **cloudbuild.builds.approve** access
     in Dev project
 
@@ -124,7 +139,8 @@ the agent.
     UAT/PROD service account as Service Usage Consumer **and**
     Dialogflow API Admin
 
--   Give Dev build's service account with **cloudbuild.builds.get** access
+-   Give Dev build's service account with **cloudbuild.builds.get**
+    access
 
 ## Code Repository and Branching Strategy
 
@@ -146,6 +162,15 @@ Below is the reason why we need a repository
 4.  Maintain an audit trail to see who checked in agent artifacts in
     repo along with a commit message that explains what the change in
     agent/flow is.
+
+You can use either the GCP's private git ie cloud source repository or
+other gits such as github.
+
+If you use CSR(deprecated for new users) then use the set
+export/cloudbuild_export_csr.yaml and repopush_csr.sh files.
+
+If you use github then use use the set export/cloudbuild_export.yaml and
+repopush.sh files.
 
 ## Storage Bucket
 
@@ -180,10 +205,10 @@ the variables that will be defined for the Cloud Build.
 ## DFCX APIs
 
 The Python Dialogflow CX Scripting [[API (DFCX
-SCRAPI)]](https://github.com/GoogleCloudPlatform/dfcx-scrapi)
+SCRAPI)]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi)
 is a high level API that extends the official Google [[Python Client for
 Dialogflow
-CX]](https://github.com/googleapis/python-dialogflow-cx).
+CX]{.underline}](https://github.com/googleapis/python-dialogflow-cx).
 SCRAPI makes using DFCX easier, more friendly, and more pythonic for bot
 builders, developers, and maintainers. This uses V3/V3beta1 endpoints
 under the hood. Since it is more pythonic way of implementation,
@@ -196,22 +221,22 @@ In our CI/CD pipeline below operations are achieved using SCRAPI API
 -   Find flow id from name
 
 -   [[Export the agent to
-    GCS]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/agents.py#L363)
+    GCS]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/agents.py#L363)
 
 -   [[Restore the
-    agent]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/agents.py#L438)
+    agent]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/agents.py#L438)
 
 -   [[Cut a version of a
-    flow]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/versions.py#L183)
+    flow]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/versions.py#L183)
 
 -   [[Deploy it to an
-    environment]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/environments.py#L359)
+    environment]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/environments.py#L359)
 
 -   [[Run test
-    cases]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/test_cases.py#L410)
+    cases]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/test_cases.py#L410)
 
 -   [[Compare environment
-    history]](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/environments.py#L392)
+    history]{.underline}](https://github.com/GoogleCloudPlatform/dfcx-scrapi/blob/37cf8cf7b2013a377740f68d8dcb7355632161e0/src/dfcx_scrapi/core/environments.py#L392)
     to find impacted flow the current instance of CI/CD builds.
 
 ## To Set up the pipeline 
@@ -219,19 +244,33 @@ In our CI/CD pipeline below operations are achieved using SCRAPI API
 1.  Setup a git or any code repository of your choice to store the code
     and agent artifacts
 
-2.  Push the code you see in the parent folder along with this
-    documentation.
+2.  Push the code you see in the SCRAPI
+    repo(examples/dfcx_agent_cicd/cicd_code) in the parent folder along
+    with this documentation.
 
-3.  Make sure to update the command in the code base in
-    export/repopush.sh file in line
-    #7 to point to your git you have created in step 1 as this would
-    check in the agent artifacts back in the same repo as your code is
-    in a folder called Agent Artifacts.
+3.  If you fork the scrapi repo use this for your cicd pipeline then in
+    all yaml files inside export/UAT/Prod folders add dir: path till the
+    readme doc(I have marked a comment in the yaml files)
 
-4.  Use the config file as a one stop place to initiate values to
+4.  If you use CSR(decommissioned for new users after 06/2024) use the
+    set cloudbuild_export_csr.yaml and repopush_csr.sh(ie you will use
+    this yaml file as trigger in the export build). But mostly likely
+    you would want to use github kind of repos and use the default files
+    cloudbuild_export.yaml and repopush.sh. For the later one you don't
+    need to make any configuration changes
+
+5.  As mentioned in above point, if you use github kind of repo, you
+    need to create SSH key and store it in Secrets for the cloudbuild to
+    do checkin. Please follow this
+    [documentation](https://cloud.google.com/build/docs/access-github-from-build)
+    to create ssh and put it in the GCP secrets and generate
+    known_hosts.github and pushing it your repo in the same level as
+    this readme file.
+
+6.  Use the config file as a one stop place to initiate values to
     variables that will be used throughout the pipeline. Hence this
     eases out the maintenance or reusing of the pipeline for different
-    values
+    values.
 
 {
 
@@ -267,21 +306,21 @@ In our CI/CD pipeline below operations are achieved using SCRAPI API
 
 
 
-5.  Make sure the a GCP bucket is created with said structure and name
+7.  Make sure the a GCP bucket is created with said structure and name
     is configured in config file
 
-6.  Create 3 cloud builds with the configuration and name as shown in
+8.  Create 3 cloud builds with the configuration and name as shown in
     screenshots in the previous section and attach your repo to these
     builds.
 
-7.  Make sure an agent is present in the same name in UAT and Prod(if it
+9.  Make sure an agent is present in the same name in UAT and Prod(if it
     is first time, just create an empty agent in UAT/Prod projects)
 
-8.  Make sure the agent in UAT and Prod projects has the environments
+10. Make sure the agent in UAT and Prod projects has the environments
     created as configured in config file in fields uat_env_deploy and
     prod_env_deploy
 
-9.  Make sure you have also created the env as you configured in config
+11. Make sure you have also created the env as you configured in config
     file devprodsyncenv in all UAT and Dev projects to sync back the
     flows after deployed in prod
 
@@ -303,16 +342,12 @@ In our CI/CD pipeline below operations are achieved using SCRAPI API
 4.  Now you can come back to cloud build console and build history tab
     and approve the build that is waiting for your approval and you can
     see that it will deploy the agent in prod post approval
-    !media/image6.png
+    ![](media/image6.png)
 
-## Cavet
+## Caveat
 
-1.  Make sure to update the git repository name in the code base in
-    export/repopush.sh file in line
-    \# 7
-
-2.  If you datastores linked to the agent, make sure to create datastore
-    ids same across all three project
+1.  If the datastores are linked to the agent, make sure to create
+    datastore with ids same across all three projects
 
 # Benefits
 

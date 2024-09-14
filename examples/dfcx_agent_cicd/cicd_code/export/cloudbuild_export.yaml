@@ -1,4 +1,37 @@
+
+availableSecrets:
+  secretManager:
+  - versionName: # your version name
+    env: 'SSH_KEY'
+
 steps:
+# Access the id_github file fvikramvikrom Secret Manager, and setup SSH
+  - id: mountsshkey 
+    name: 'gcr.io/cloud-builders/git'
+    #dir: 'set your path till the readme doc in the git'
+    secretEnv: ['SSH_KEY']
+    entrypoint: /bin/bash
+    args:
+    - -c
+    - |
+      echo "$$SSH_KEY" >> /root/.ssh/id_rsa
+      chmod 400 /root/.ssh/id_rsa
+      cp known_hosts.github /root/.ssh/known_hosts
+    volumes:
+    - name: 'ssh'
+      path: /root/.ssh
+  
+  # Clone the repository
+  - id: clonerepo
+    name: 'gcr.io/cloud-builders/git'
+    #dir: 'set your path till the readme doc in the git'
+    args:
+    - clone
+    - --recurse-submodules
+    - git@github.com:$REPO_FULL_NAME
+    volumes:
+    - name: 'ssh'
+      path: /root/.ssh
 
   - id: limitbuildcheck
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
@@ -6,8 +39,8 @@ steps:
     args:
     - -c
     - |
-      export parallelbuild=$(gcloud builds list --region=us-central1 --filter="substitutions.TRIGGER_NAME=$TRIGGER_NAME AND status=WORKING" --format="value(status)" | wc -l)        
-      export approvebuild=$(gcloud builds list --region=us-central1 --format="value(status)" --filter="substitutions.TRIGGER_NAME='prodbuild' AND status='PENDING'" | wc -l)
+      export parallelbuild=$(gcloud builds list --region=$LOCATION --filter="substitutions.TRIGGER_NAME=$TRIGGER_NAME AND status=WORKING" --format="value(status)" | wc -l)        
+      export approvebuild=$(gcloud builds list --region=$LOCATION --format="value(status)" --filter="substitutions.TRIGGER_NAME='prodbuild' AND status='PENDING'" | wc -l)
       if [ $parallelbuild -gt 1 ]
       then
         echo "parallel build running. This may corrupt the exported files in GCS location"
@@ -24,6 +57,7 @@ steps:
       fi
 
   - id: fetchuser
+    #dir: 'set your path till the readme doc in the git'
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: /bin/bash
     args:
@@ -31,7 +65,7 @@ steps:
       - |
         echo $BUILD_ID
         export buildhere=$BUILD_ID
-        export trigid=$(gcloud builds describe $BUILD_ID --region=us-central1 --format="value(buildTriggerId)")
+        export trigid=$(gcloud builds describe $BUILD_ID --region=$LOCATION --format="value(buildTriggerId)")
         sed -i "s/triggerhere/$trigid/g" export/trigger.sh
         chmod 777 export/trigger.sh
         export w1=$(export/trigger.sh)
@@ -45,19 +79,27 @@ steps:
         ls
         echo $runnername > ./runnername.txt
         echo $runnerid > ./runnerid.txt
+        echo "path of runner id"
+        pwd
 
         
   - id: Exportgcs
+    #dir: 'set your path till the readme doc in the git'
     name: 'python:3.10'
     entrypoint: /bin/bash
     args:
     - -c
     - |
+      ls
+      pwd
       pip3 install -r export/requirements.txt
       export runnerid=$(cat runnerid.txt)
-      python3 export/export.py ${_USERCOMMITMESSAGE} $runnerid
+      echo "runner id is "
+      echo $runnerid
+      python3 -m export.export ${_USERCOMMITMESSAGE} $runnerid
 
   - id: downloadartifacts
+    #dir: 'set your path till the readme doc in the git'
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: /bin/bash
     args:
@@ -73,6 +115,7 @@ steps:
       gsutil cp "gs://$bucket_name/exports/dev/${agent_name}_metadata.json" agenttemp/metadata.json
 
   - id: csrcheckin
+    #dir: 'set your path till the readme doc in the git'
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: /bin/bash
     args:
@@ -80,8 +123,24 @@ steps:
     - |
       export runnerid=$(cat runnerid.txt)
       export runnername=$(cat runnername.txt)
+
+      export agent_artifacts_path = $(dirname $(dirname $TRIGGER_BUILD_CONFIG_PATH))
       chmod 777 export/repopush.sh
-      export/repopush.sh ${_USERCOMMITMESSAGE} $runnername $runnerid
+      export/repopush.sh $REPO_NAME $agent_artifacts_path
+      cd $REPO_NAME/$agent_artifacts_path
+      ls
+      cd agent_artifacts
+      ls
+      git config --global user.name $runnername
+      git config --global user.email $runnerid
+      git add .
+      git diff --name-only
+      git commit --allow-empty -m "commited by $runnerid with message ${_USERCOMMITMESSAGE}"
+      
+      git push -u origin main
+    volumes:
+    - name: 'ssh'
+      path: /root/.ssh
 
 options:
   logging: CLOUD_LOGGING_ONLY
