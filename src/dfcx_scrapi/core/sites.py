@@ -17,8 +17,17 @@
 import logging
 from typing import Dict, List
 from google.longrunning.operations_pb2 import Operation
-from google.cloud import discoveryengine_v1alpha
-from google.cloud.discoveryengine_v1alpha.types import TargetSite
+from google.cloud.discoveryengine import (
+    TargetSite,
+    SiteSearchEngineServiceClient,
+    ListTargetSitesRequest,
+    GetTargetSiteRequest,
+    CreateTargetSiteRequest,
+    DeleteTargetSiteRequest,
+    EnableAdvancedSiteSearchRequest,
+    DisableAdvancedSiteSearchRequest,
+    RecrawlUrisRequest
+)
 
 from dfcx_scrapi.core import scrapi_base
 
@@ -85,12 +94,12 @@ class Sites(scrapi_base.ScrapiBase):
     def list_sites(self, data_store_id: str) -> List[TargetSite]:
         """List all URL patterns for a given Data Store ID."""
         client_options = self._client_options_discovery_engine(data_store_id)
-        client = discoveryengine_v1alpha.SiteSearchEngineServiceClient(
+        client = SiteSearchEngineServiceClient(
             credentials=self.creds, client_options=client_options
         )
 
         parent = self.__build_site_search_parent(data_store_id)
-        request = discoveryengine_v1alpha.ListTargetSitesRequest(
+        request = ListTargetSitesRequest(
             parent=parent,
             page_size=1000
         )
@@ -106,10 +115,10 @@ class Sites(scrapi_base.ScrapiBase):
     def get_site(self, site_id: str) -> TargetSite:
         """Get a single Site by specified ID."""
         client_options = self._client_options_discovery_engine(site_id)
-        client = discoveryengine_v1alpha.SiteSearchEngineServiceClient(
+        client = SiteSearchEngineServiceClient(
             credentials=self.creds, client_options=client_options
         )
-        request = discoveryengine_v1alpha.GetTargetSiteRequest(name=site_id)
+        request = GetTargetSiteRequest(name=site_id)
         response = client.get_target_site(request=request)
 
         return response
@@ -134,17 +143,17 @@ class Sites(scrapi_base.ScrapiBase):
             search engine.
         """
         client_options = self._client_options_discovery_engine(data_store_id)
-        client = discoveryengine_v1alpha.SiteSearchEngineServiceClient(
+        client = SiteSearchEngineServiceClient(
             credentials=self.creds, client_options=client_options
         )
 
-        target_site = discoveryengine_v1alpha.TargetSite()
+        target_site = TargetSite()
         target_site.provided_uri_pattern = uri_pattern
         target_site.type_ = self.__get_site_type(include_site)
         target_site.exact_match = exact_match
 
         parent = self.__build_site_search_parent(data_store_id)
-        request = discoveryengine_v1alpha.CreateTargetSiteRequest(
+        request = CreateTargetSiteRequest(
             parent=parent,
             target_site=target_site
             )
@@ -156,11 +165,11 @@ class Sites(scrapi_base.ScrapiBase):
     def delete_site(self, site_id: str) -> Operation:
         """Deletes a TargetSite in a Data Store by the specified ID."""
         client_options = self._client_options_discovery_engine(site_id)
-        client = discoveryengine_v1alpha.SiteSearchEngineServiceClient(
+        client = SiteSearchEngineServiceClient(
             credentials=self.creds, client_options=client_options
         )
 
-        request = discoveryengine_v1alpha.DeleteTargetSiteRequest(name=site_id)
+        request = DeleteTargetSiteRequest(name=site_id)
         operation = client.delete_target_site(request=request)
 
         return operation
@@ -168,12 +177,12 @@ class Sites(scrapi_base.ScrapiBase):
     def enable_advanced_site_search(self, data_store_id: str) -> Operation:
         """Enables Advanced Site Search for the provided Data Store ID."""
         client_options = self._client_options_discovery_engine(data_store_id)
-        client = discoveryengine_v1alpha.SiteSearchEngineServiceClient(
+        client = SiteSearchEngineServiceClient(
             credentials=self.creds, client_options=client_options
         )
 
         parent = self.__build_site_search_parent(data_store_id)
-        request = discoveryengine_v1alpha.EnableAdvancedSiteSearchRequest(
+        request = EnableAdvancedSiteSearchRequest(
             site_search_engine=parent
             )
 
@@ -184,12 +193,12 @@ class Sites(scrapi_base.ScrapiBase):
     def disable_advanced_site_search(self, data_store_id: str) -> Operation:
         """Disable Advanced Site Search for the provided Data Store ID."""
         client_options = self._client_options_discovery_engine(data_store_id)
-        client = discoveryengine_v1alpha.SiteSearchEngineServiceClient(
+        client = SiteSearchEngineServiceClient(
             credentials=self.creds, client_options=client_options
         )
 
         parent = self.__build_site_search_parent(data_store_id)
-        request = discoveryengine_v1alpha.DisableAdvancedSiteSearchRequest(
+        request = DisableAdvancedSiteSearchRequest(
             site_search_engine=parent
             )
 
@@ -200,12 +209,12 @@ class Sites(scrapi_base.ScrapiBase):
     def recrawl_uris(self, data_store_id: str, uris: List[str]) -> Operation:
         """Recrawl the specified set of URIs for the Data Store."""
         client_options = self._client_options_discovery_engine(data_store_id)
-        client = discoveryengine_v1alpha.SiteSearchEngineServiceClient(
+        client = SiteSearchEngineServiceClient(
             credentials=self.creds, client_options=client_options
         )
 
         parent = self.__build_site_search_parent(data_store_id)
-        request = discoveryengine_v1alpha.RecrawlUrisRequest(
+        request = RecrawlUrisRequest(
             site_search_engine=parent, uris=uris
             )
 

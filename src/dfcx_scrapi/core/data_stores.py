@@ -17,8 +17,14 @@
 import logging
 from typing import Dict, List
 from google.longrunning.operations_pb2 import Operation
-from google.cloud import discoveryengine_v1alpha
-from google.cloud.discoveryengine_v1alpha.types import DataStore
+from google.cloud.discoveryengine import (
+    DataStore,
+    DataStoreServiceClient,
+    ListDataStoresRequest,
+    GetDataStoreRequest,
+    CreateDataStoreRequest,
+    DeleteDataStoreRequest
+    )
 
 from dfcx_scrapi.core import scrapi_base
 
@@ -85,10 +91,10 @@ class DataStores(scrapi_base.ScrapiBase):
         client_options = self._client_options_discovery_engine(
             f"projects/{self.project_id}/locations/{location}"
         )
-        client = discoveryengine_v1alpha.DataStoreServiceClient(
+        client = DataStoreServiceClient(
             credentials=self.creds, client_options=client_options
         )
-        request = discoveryengine_v1alpha.ListDataStoresRequest(parent=parent)
+        request = ListDataStoresRequest(parent=parent)
         page_result = client.list_data_stores(request=request)
 
         datastores = []
@@ -100,10 +106,10 @@ class DataStores(scrapi_base.ScrapiBase):
     def get_data_store(self, data_store_id: str) -> DataStore:
         """Get a single Data Store by specified ID."""
         client_options = self._client_options_discovery_engine(data_store_id)
-        client = discoveryengine_v1alpha.DataStoreServiceClient(
+        client = DataStoreServiceClient(
             credentials=self.creds, client_options=client_options
         )
-        request = discoveryengine_v1alpha.GetDataStoreRequest(
+        request = GetDataStoreRequest(
             name=data_store_id
             )
 
@@ -133,16 +139,16 @@ class DataStores(scrapi_base.ScrapiBase):
         client_options = self._client_options_discovery_engine(
             f"projects/{self.project_id}/locations/{location}"
         )
-        client = discoveryengine_v1alpha.DataStoreServiceClient(
+        client = DataStoreServiceClient(
             credentials=self.creds, client_options=client_options
         )
-        data_store = discoveryengine_v1alpha.DataStore()
+        data_store = DataStore()
         data_store.display_name = display_name
         data_store.industry_vertical = 1
         data_store.solution_types = [self._get_solution_type(solution_type)]
         data_store.content_config = self._get_content_config(datastore_type)
 
-        request = discoveryengine_v1alpha.CreateDataStoreRequest(
+        request = CreateDataStoreRequest(
             parent=parent,
             data_store=data_store,
             data_store_id=data_store.display_name,
@@ -156,11 +162,11 @@ class DataStores(scrapi_base.ScrapiBase):
     def delete_datastore(self, data_store_id: str):
         """Delete the specified Data Store by ID."""
         client_options = self._client_options_discovery_engine(data_store_id)
-        client = discoveryengine_v1alpha.DataStoreServiceClient(
+        client = DataStoreServiceClient(
             credentials=self.creds, client_options=client_options
         )
 
-        request = discoveryengine_v1alpha.DeleteDataStoreRequest(
+        request = DeleteDataStoreRequest(
             name=data_store_id
         )
         operation = client.delete_data_store(request=request)
