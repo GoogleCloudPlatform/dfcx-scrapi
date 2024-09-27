@@ -23,7 +23,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 setup(
     name='dfcx-scrapi',
-    version='1.12.1',
+    version='1.12.2',
     description='A high level scripting API for bot builders, developers, and\
       maintainers.',
     long_description=long_description,
