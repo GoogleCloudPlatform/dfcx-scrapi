@@ -17,8 +17,14 @@
 import logging
 from typing import Dict, List
 from google.longrunning.operations_pb2 import Operation
-from google.cloud import discoveryengine_v1alpha
-from google.cloud.discoveryengine_v1alpha.types import Engine
+from google.cloud.discoveryengine import (
+    Engine,
+    EngineServiceClient,
+    ListEnginesRequest,
+    GetEngineRequest,
+    CreateEngineRequest,
+    DeleteEngineRequest
+    )
 
 from dfcx_scrapi.core import scrapi_base
 
@@ -151,8 +157,8 @@ class Engines(scrapi_base.ScrapiBase):
             self, location: str = "global") -> List[Engine]:
         """List all Engines for a given project and location."""
         parent = self._build_data_store_parent(location)
-        client = discoveryengine_v1alpha.EngineServiceClient()
-        request = discoveryengine_v1alpha.ListEnginesRequest(parent=parent)
+        client = EngineServiceClient()
+        request = ListEnginesRequest(parent=parent)
         page_result = client.list_engines(request=request)
 
         engines = []
@@ -163,8 +169,8 @@ class Engines(scrapi_base.ScrapiBase):
 
     def get_engine(self, engine_id: str) -> Engine:
         """Get a single Engine by specified ID."""
-        client = discoveryengine_v1alpha.EngineServiceClient()
-        request = discoveryengine_v1alpha.GetEngineRequest(name=engine_id)
+        client = EngineServiceClient()
+        request = GetEngineRequest(name=engine_id)
         response = client.get_engine(request=request)
 
         return response
@@ -178,17 +184,17 @@ class Engines(scrapi_base.ScrapiBase):
 
         Args:
           location, the GCP region to create the Engine in
-          engine, a proto object of type discoveryengine_v1alpha.types.Engine
+          engine, a proto object of type discoveryengine.Engine
             Note that at this time only "Chat" engines are supported
           solution_type, "chat" is the only value supported at this time.
         """
         parent = self._build_data_store_parent(location)
         client_options = self._client_options_discovery_engine(parent)
-        client = discoveryengine_v1alpha.EngineServiceClient(
+        client = EngineServiceClient(
             credentials=self.creds, client_options=client_options
         )
 
-        request = discoveryengine_v1alpha.CreateEngineRequest(
+        request = CreateEngineRequest(
             parent=parent,
             engine=engine,
             engine_id=engine.display_name
@@ -204,11 +210,11 @@ class Engines(scrapi_base.ScrapiBase):
     def delete_engine(self, engine_id: str) -> Operation:
         """Deletes the specified Engine."""
         client_options = self._client_options_discovery_engine(engine_id)
-        client = discoveryengine_v1alpha.EngineServiceClient(
+        client = EngineServiceClient(
             credentials=self.creds, client_options=client_options
         )
 
-        request = discoveryengine_v1alpha.DeleteEngineRequest(
+        request = DeleteEngineRequest(
             name=engine_id
         )
         operation = client.delete_engine(request=request)
