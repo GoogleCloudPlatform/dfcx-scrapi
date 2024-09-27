@@ -49,6 +49,7 @@ setup(
     install_requires=[
         'google-cloud-dialogflow-cx',
         'google-cloud-aiplatform',
+        'google-cloud-discoveryengine',
         'rouge-score'
         ]
 )
