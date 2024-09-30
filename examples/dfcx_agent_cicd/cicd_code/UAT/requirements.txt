@@ -1,0 +1,3 @@
+dfcx-scrapi
+google-cloud-storage
+pandas
