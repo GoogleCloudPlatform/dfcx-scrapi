@@ -1,0 +1,16 @@
+{
+    "agent_name" : "carrental",
+    "dev_env_pull" : "ready to deploy",
+    "uat_env_deploy" : "ready to test",
+    "prod_env_deploy" :"deployed",
+    "devprodsyncenv" :"deployed",
+    "bucket": "dfcx_agent_cicd_export",
+    "dev_project": "yourprojectid",
+    "uat_project" : "yourprojectid",
+    "prod_project": "yourprojectid",
+    "devops_project": "yourprojectid",
+    "uat_webhook_env": "uat",
+    "prod_webhook_env": "prod",
+    "uat_engine_id" :"",
+    "prod_engine_id" :""
+}

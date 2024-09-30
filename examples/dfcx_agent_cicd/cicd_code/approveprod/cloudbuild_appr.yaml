@@ -1,0 +1,36 @@
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    args:
+      - '-c'
+      - |
+        apt-get update && apt-get install -y jq
+        echo $BUILD_ID
+
+        export devopsprojecthere=$(jq -r .devops_project config.json)
+        export build_info=$(gcloud builds describe $BUILD_ID --region=us-central1 --format=json)
+        export approverhere=$(echo "$build_info" | jq -r '.approval.result.approverAccount')
+        export commenthere=$(echo "$build_info" | jq -r '.approval.result.comment')
+        export tokenhere=$(gcloud auth print-access-token)
+        
+        echo $approverhere
+        echo $tokenhere
+
+        chmod 777 approveprod/trigger.sh
+
+        sed -i "s/tokenhere/$tokenhere/g" approveprod/trigger.sh
+        sed -i "s/approverhere/$approverhere/g" approveprod/trigger.sh
+        sed -i "s/devopsprojecthere/$devopsprojecthere/g" approveprod/trigger.sh
+        sed -i "s/commenthere/$commenthere/g" approveprod/trigger.sh
+        sed -i "s/appbuildhere/$_APP_BUILD_ID/g" approveprod/trigger.sh
+        cat approveprod/trigger.sh
+        approveprod/trigger.sh
+        echo $?
+        echo "prod build approved from code"
+
+        echo "error exit code"
+        
+    id: triggerexportbuild
+    entrypoint: /bin/bash
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamicSubstitutions: true
