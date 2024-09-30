@@ -244,7 +244,8 @@ class NluEvals(scrapi_base.ScrapiBase):
         # When a NO_MATCH occurs, the detected_intent field will be blank
         # this replaces with NO_MATCH string, which will allow for easier stats
         # calculation downstream
-        results.detected_intent.replace({"": "NO_MATCH"}, inplace=True)
+        results['detected_intent'] = results['detected_intent'].replace(
+            {"": "NO_MATCH"})
 
         logging.info(f"{logsx} {eval_run_display_name} COMPLETE {logsx}")
 
