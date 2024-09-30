@@ -650,22 +650,26 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             .assign(
                 match_type = lambda df: df.match.apply(
                     # pylint: disable=W0212
-                    lambda m: m.match_type._name_ if m else ""
+                    lambda match_value: match_value.match_type._name_ 
+                    if match_value else ""
                 ),
                 confidence = lambda df: df.match.apply(
-                    lambda m: m.confidence if m else ""
+                    lambda match_value: match_value.confidence
+                    if match_value else ""
                 ),
                 parameters_set = lambda df: df.match.apply(
-                    lambda m: m.parameters if m else ""
+                    lambda match_value: match_value.parameters
+                    if match_value else ""
                 ),
                 detected_intent = lambda df: df.match.apply(
-                    lambda m: m.intent.display_name if m else ""
+                    lambda match_value: match_value.intent.display_name
+                    if match_value else ""
                 )
             )
             .assign(
                 parameters_set = lambda df: df.parameters_set.apply(
-                    lambda p: self.recurse_proto_marshal_to_dict(
-                        p) if p else "")
+                    lambda parameter: self.recurse_proto_marshal_to_dict(
+                        parameter) if parameter else "")
             )
             .drop(columns="match")
         )
