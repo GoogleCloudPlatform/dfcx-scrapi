@@ -20,7 +20,6 @@ import traceback
 import uuid
 
 from typing import Dict, Any
-from operator import attrgetter
 from threading import Thread
 
 import pandas as pd
@@ -40,7 +39,6 @@ logging.basicConfig(
 )
 
 MAX_RETRIES = 3
-
 
 class DialogflowConversation(scrapi_base.ScrapiBase):
     """Class that wraps the SessionsClient to hold end to end conversations
@@ -165,17 +163,20 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             )
 
     @staticmethod
-    def _build_query_params_object(parameters, current_page, disable_webhook):
+    def _build_query_params_object(
+        parameters,
+        current_page,
+        disable_webhook,
+        end_user_metadata):
+
+        query_params = types.session.QueryParameters(
+          disable_webhook=disable_webhook,
+          current_page=current_page,
+          )
         if parameters:
-            query_params = types.session.QueryParameters(
-                disable_webhook=disable_webhook,
-                parameters=parameters,
-                current_page=current_page,
-            )
-        else:
-            query_params = types.session.QueryParameters(
-                disable_webhook=disable_webhook, current_page=current_page
-            )
+            query_params.parameters = parameters
+        if end_user_metadata:
+            query_params.end_user_metadata = end_user_metadata
 
         return query_params
 
@@ -310,6 +311,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
           results: Pandas Dataframe to capture and store the results
           i: Internal tracking for Python Threading
         """
+
         response = self.reply(
             send_obj={"text": utterance}, current_page=page_id, restart=True
         )
@@ -339,10 +341,10 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         self._validate_test_set_input(test_set_mapped)
 
-        threads = [None] * len(utterances)
+        threads = [None] * len(test_set_mapped)
         results = {
-            "target_page": [None] * len(utterances),
-            "match":[None] * len(utterances),
+            "target_page": [None] * len(test_set_mapped),
+            "match":[None] * len(test_set_mapped),
         }
         for i, (utterance, page_id) in enumerate(zip(utterances, page_ids)):
             threads[i] = Thread(
@@ -360,7 +362,6 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         intent_detection = test_set_mapped.copy()
 
         return intent_detection
-
 
     def restart(self):
         """Starts a new session/conversation for this agent"""
@@ -399,7 +400,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
           send_obj: Dictionary with the following structure:
             {'text': str,
             'params': Dict[str,str],
-            'dtmf': str}
+            'dtmf': str,
+            'end_user_metadata': Dict[str, str],}
           restart: Boolean flag that determines whether to use the existing
             session ID or start a new conversation with a new session ID.
             Passing True will create a new session ID on subsequent calls.
@@ -416,9 +418,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         """
         text = send_obj.get("text")
         send_params = send_obj.get("params")
-
-        if not text:
-            logging.warning(f"Input Text is empty. {send_obj}")
+        end_user_metadata = send_obj.get("end_user_metadata")
 
         if text and len(text) > 256:
             logging.warning(
@@ -451,7 +451,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
         # Build Query Params object
         query_params = self._build_query_params_object(
-            send_params, current_page, disable_webhook
+            send_params, current_page, disable_webhook, end_user_metadata
         )
 
         # Build Query Input object
@@ -479,7 +479,18 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             logging.error("text: %s", text)
             logging.error("query_params: %s", query_params)
             logging.error("query_input: %s", query_input)
-            return {}
+            return {
+                "response_messages": (
+                    f"""---- ERROR --- InternalServerError caught on CX.detect,
+                    {err}"""
+                ),
+                "confidence": "",
+                "page_name": "",
+                "intent_name": "",
+                "match_type": "",
+                "match": None,
+                "params": "",
+                }
 
         except core_exceptions.ClientError as err:
             logging.error(
@@ -499,7 +510,18 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
                 return self.reply(send_obj, restart=restart, retries=retries)
             else:
                 logging.error("MAX_RETRIES exceeded")
-                return {}
+                return {
+                    "response_messages": (
+                        f"""---- ERROR --- ClientError caught on CX.detect,
+                        {err}"""
+                    ),
+                    "confidence": "",
+                    "page_name": "",
+                    "intent_name": "",
+                    "match_type": "",
+                    "match": None,
+                    "params": "",
+                }
 
         if checkpoints:
             self.checkpoint("<< got response")
@@ -523,7 +545,6 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             )
         else:
             params = None
-
         reply["response_messages"] = response_messages
         reply["confidence"] = query_result.intent_detection_confidence
         reply["page_name"] = query_result.current_page.display_name
@@ -578,6 +599,8 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
               - NOTE, when using the Default Start Page of a Flow you must
                 define it as the special display name START_PAGE
             utterance: str
+            inject_parameters (optional): str
+            end_user_metadata (optional): str
           chunk_size: Determines the number of text requests to send in
             parallel. This should be adjusted based on your test_set size and
             the Quota limits set for your GCP project. Default is 300.
@@ -593,6 +616,9 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
               detected_intent: str
               confidence: float
               target_page: str
+              response_messages: str
+              match_type: str
+              parameters_set: str
         """
 
         result = pd.DataFrame()
@@ -609,6 +635,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
 
     def _unpack_match(self, df: pd.DataFrame):
         """ Unpacks a 'match' column into four component columns.
+        if a match column is None, then all four columns will be None.
 
         Args:
           df: dataframe containing a column named match of types.Match
@@ -616,19 +643,24 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         Returns:
           A copy of df with columns match_type, confidence, parameters_set,
             and detected_intent instead of match.
+
         """
-        df = (
-            df
-            .copy()
+        return (
+            df.copy()
             .assign(
                 match_type = lambda df: df.match.apply(
-                    attrgetter("match_type._name_")),
+                    # pylint: disable=W0212
+                    lambda m: m.match_type._name_ if m else ""
+                ),
                 confidence = lambda df: df.match.apply(
-                    attrgetter("confidence")),
+                    lambda m: m.confidence if m else ""
+                ),
                 parameters_set = lambda df: df.match.apply(
-                    attrgetter("parameters")),
+                    lambda m: m.parameters if m else ""
+                ),
                 detected_intent = lambda df: df.match.apply(
-                    attrgetter("intent.display_name"))
+                    lambda m: m.intent.display_name if m else ""
+                )
             )
             .assign(
                 parameters_set = lambda df: df.parameters_set.apply(
@@ -637,4 +669,3 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             )
             .drop(columns="match")
         )
-        return df
