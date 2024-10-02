@@ -171,13 +171,14 @@ class Sessions(scrapi_base.ScrapiBase):
             else:
                 # If no playbook invocation was found
                 # return the current Playbook
-                playbook_responses.append(
-                    {
-                        "playbook_name": self.get_playbook_name(
-                            res.generative_info.current_playbooks[-1]
-                        )
-                    }
-                )
+                if len(res.generative_info.current_playbooks) > 0:
+                    playbook_responses.append(
+                        {
+                            "playbook_name": self.get_playbook_name(
+                                res.generative_info.current_playbooks[-1]
+                            )
+                        }
+                    )
 
         return playbook_responses
 
