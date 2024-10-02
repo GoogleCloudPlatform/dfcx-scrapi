@@ -1,6 +1,6 @@
 """Base for other SCRAPI classes."""
 
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,9 @@ import functools
 import threading
 import vertexai
 from collections import defaultdict
-from typing import Dict, Any, Iterable
+from typing import Dict, Any, Iterable, List
 
+from google.auth import default
 from google.api_core import exceptions
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
@@ -68,24 +69,25 @@ ALL_EMBEDDING_MODELS = EMBEDDING_MODELS_NO_DIMENSIONALITY + [
 
 ALL_GENERATIVE_MODELS = ALL_GEMINI_MODELS + TEXT_GENERATION_MODELS
 
+# Define global scopes used for all Dialogflow CX Requests
+GLOBAL_SCOPES = [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/dialogflow",
+    ]
+
 class ScrapiBase:
     """Core Class for managing Auth and other shared functions."""
-
-    global_scopes = [
-        "https://www.googleapis.com/auth/cloud-platform",
-        "https://www.googleapis.com/auth/dialogflow",
-    ]
 
     def __init__(
         self,
         creds_path: str = None,
         creds_dict: Dict[str, str] = None,
         creds: service_account.Credentials = None,
-        scope=False,
-        agent_id=None,
+        scope: List[str] = None,
+        agent_id: str = None,
     ):
 
-        self.scopes = ScrapiBase.global_scopes
+        self.scopes = GLOBAL_SCOPES
         if scope:
             self.scopes += scope
 
@@ -93,24 +95,28 @@ class ScrapiBase:
             self.creds = creds
             self.creds.refresh(Request())
             self.token = self.creds.token
+
         elif creds_path:
             self.creds = service_account.Credentials.from_service_account_file(
                 creds_path, scopes=self.scopes
             )
             self.creds.refresh(Request())
             self.token = self.creds.token
+
         elif creds_dict:
             self.creds = service_account.Credentials.from_service_account_info(
                 creds_dict, scopes=self.scopes
             )
             self.creds.refresh(Request())
             self.token = self.creds.token
-        else:
-            self.creds = None
-            self.token = None
 
-        if agent_id:
-            self.agent_id = agent_id
+        else:
+            self.creds, _ = default()
+            self.creds.refresh(Request())
+            self.token = self.creds.token
+            self._check_and_update_scopes(self.creds)
+
+        self.agent_id = agent_id
 
         self.api_calls_dict = defaultdict(int)
 
@@ -399,6 +405,14 @@ class ScrapiBase:
             valid_sys_instruct = False
 
         return valid_sys_instruct
+
+    def _check_and_update_scopes(self, creds: Any):
+        """Update Credentials scopes if possible based on creds type."""
+        if creds.requires_scopes:
+            self.creds.scopes.extend(GLOBAL_SCOPES)
+
+        else:
+            logging.info("Found user OAuth2 creds, skipping global scopes...")
 
     def build_generative_model(
             self,
