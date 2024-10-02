@@ -17,7 +17,7 @@
 import json
 import logging
 import time
-from typing import Dict, List
+from typing import Dict, List, Any
 import gspread
 import pandas as pd
 import numpy as np
@@ -33,7 +33,7 @@ from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.pages import Pages
 from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
 
-GLOBAL_SCOPE = [
+SHEETS_SCOPE = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
 ]
@@ -52,8 +52,8 @@ class DataframeFunctions(ScrapiBase):
         self,
         creds_path: str = None,
         creds_dict: dict = None,
-        creds=None,
-        scope=False,
+        creds: Any = None,
+        scope: List[str] = None,
     ):
         super().__init__(
             creds_path=creds_path,
@@ -62,12 +62,7 @@ class DataframeFunctions(ScrapiBase):
             scope=scope,
         )
 
-        scopes = GLOBAL_SCOPE
-
-        if scope:
-            scopes += scope
-
-        self.creds.scopes.extend(scopes)
+        self._check_and_update_sheets_scopes()
 
         self.sheets_client = gspread.authorize(self.creds)
         self.entities = EntityTypes(creds=self.creds)
@@ -137,6 +132,11 @@ class DataframeFunctions(ScrapiBase):
         new_intent.description = original_intent.description
 
         return new_intent
+
+    def _check_and_update_sheets_scopes(self):
+        """Update Credentials scopes if possible based on creds type."""
+        if self.creds.requires_scopes:
+            self.creds.scopes.extend(SHEETS_SCOPE)
 
     def _update_intent_from_dataframe(
         self,
