@@ -21,8 +21,6 @@ from google.oauth2.service_account import Credentials as ServiceAccountCredentia
 from google.api_core import exceptions
 from google.protobuf import field_mask_pb2, struct_pb2
 from google.cloud.dialogflowcx_v3beta1 import types
-from proto.marshal.collections import repeated
-from proto.marshal.collections import maps
 
 from dfcx_scrapi.core.scrapi_base import (
     api_call_counter_decorator, 
@@ -120,7 +118,7 @@ def test_init_no_creds(mock_default, test_config):
     assert scrapi_base.creds == mock_adc_creds
     assert isinstance(scrapi_base.creds, UserCredentials)
     assert scrapi_base.token == mock_adc_creds.token
-    assert scrapi_base.agent_id == None
+    assert scrapi_base.agent_id is None
     assert not scrapi_base.creds.requires_scopes
     mock_adc_creds.refresh.assert_called_once()
     mock_default.assert_called_once()
@@ -134,7 +132,7 @@ def test_init_with_creds(test_config):
     assert scrapi_base.creds == mock_creds
     assert isinstance(scrapi_base.creds, ServiceAccountCredentials)
     assert scrapi_base.token == mock_creds.token
-    assert scrapi_base.agent_id == None
+    assert scrapi_base.agent_id is None
     assert scrapi_base.creds.requires_scopes
     mock_creds.refresh.assert_called_once()
 
@@ -154,7 +152,7 @@ def test_init_with_creds_path(mock_from_service_account_file, test_config):
     assert scrapi_base.creds == mock_creds
     assert isinstance(scrapi_base.creds, ServiceAccountCredentials)
     assert scrapi_base.token == mock_creds.token
-    assert scrapi_base.agent_id == None
+    assert scrapi_base.agent_id is None
     assert scrapi_base.creds.requires_scopes
     mock_creds.refresh.assert_called_once()
 
@@ -171,7 +169,7 @@ def test_init_with_creds_dict(mock_from_service_account_info, test_config):
     assert scrapi_base.creds == mock_creds
     assert isinstance(scrapi_base.creds, ServiceAccountCredentials)
     assert scrapi_base.token == mock_creds.token
-    assert scrapi_base.agent_id == None
+    assert scrapi_base.agent_id is None
     assert scrapi_base.creds.requires_scopes
     mock_creds.refresh.assert_called_once()
 
@@ -249,7 +247,7 @@ def test_parse_agent_id_short_resource_id(test_config):
     with pytest.raises(ValueError):
         ScrapiBase.parse_agent_id(test_config["global_parent"])
 
-def test_parse_agent_id_short_resource_id(test_config):
+def test_parse_agent_id_invalid_resource_id(test_config):
     """Test parse_agent_id with an invalid resource ID."""
     with pytest.raises(ValueError):
         ScrapiBase.parse_agent_id(test_config["global_datastore_id"])
