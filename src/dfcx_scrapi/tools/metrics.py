@@ -48,11 +48,13 @@ logging.basicConfig(
 
 MAX_RETRIES = 5  # Max # of attempts for exponential backoff if API errors
 RATE = 2  # Limit max LLM API calls per second
-SUPPORTED_METRICS = [
+DATASTORE_METRICS = [
     "url_match", "rougeL", "answer_correctness", "faithfulness",
-    "context_recall", "response_similarity", "semantic_similarity",
-    "similarity", "tool_call_quality"
-]
+    "context_recall",]
+CONVERSATIONAL_AGENTS_METRICS = [
+    "response_similarity", "semantic_similarity", "similarity",
+    "tool_call_quality"]
+SUPPORTED_METRICS = DATASTORE_METRICS + CONVERSATIONAL_AGENTS_METRICS
 
 def safe_geometric_mean(values: list[float]) -> float:
     return statistics.geometric_mean(
