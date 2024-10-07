@@ -229,13 +229,22 @@ class ScrapiBase:
     @staticmethod
     def parse_agent_id(resource_id: str):
         """Attempts to parse Agent ID from provided Resource ID."""
-        try:
-            agent_id = "/".join(resource_id.split("/")[:6])
-        except IndexError as err:
-            logging.error("IndexError - path too short? %s", resource_id)
-            raise err
+        parts = resource_id.split("/")
+        if len(parts) < 6:
+            raise ValueError(
+                "Resource ID is too short to contain an Agent ID: {}".format(
+                    resource_id
+                )
+            )
 
-        return agent_id
+        if parts[4] != "agents":
+            raise ValueError(
+                "Resource ID does not contain an agent ID: {}".format(
+                    resource_id
+                )
+            )
+
+        return "/".join(parts[:6])
 
     @staticmethod
     def _parse_resource_path(
@@ -412,7 +421,7 @@ class ScrapiBase:
             self.creds.scopes.extend(GLOBAL_SCOPES)
 
         else:
-            logging.info("Found user OAuth2 creds, skipping global scopes...")
+            logging.info("Found user creds, skipping global scopes...")
 
     def build_generative_model(
             self,
