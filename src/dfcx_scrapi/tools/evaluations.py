@@ -181,18 +181,19 @@ class Evaluations(ScrapiBase):
 
         return df
 
-    @staticmethod
-    def add_response_columns(df: pd.DataFrame) -> pd.DataFrame:
+    def add_response_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
 
         df.loc[:, "agent_response"] = pd.Series(dtype="str")
         df.loc[:, "agent_id"] = pd.Series(dtype="str")
         df.loc[:, "session_id"] = pd.Series(dtype="str")
         df.loc[:, "res_playbook_name"] = pd.Series(dtype="str")
-        df.loc[:, "res_tool_name"] = pd.Series(dtype="str")
-        df.loc[:, "res_tool_action"] = pd.Series(dtype="str")
-        df.loc[:, "res_input_params"] = pd.Series(dtype="str")
-        df.loc[:, "res_output_params"] = pd.Series(dtype="str")
+
+        if "tool_call_quality" in self.metrics:
+            df.loc[:, "res_tool_name"] = pd.Series(dtype="str")
+            df.loc[:, "res_tool_action"] = pd.Series(dtype="str")
+            df.loc[:, "res_input_params"] = pd.Series(dtype="str")
+            df.loc[:, "res_output_params"] = pd.Series(dtype="str")
 
         return df
 
@@ -242,11 +243,12 @@ class Evaluations(ScrapiBase):
                 )
 
             # Handle Tool Invocations
-            tool_responses = self.s.collect_tool_responses(res)
-            if len(tool_responses) > 0:
-                df = self.process_tool_invocations(
-                    tool_responses, index, row, df
-                )
+            if "tool_call_quality" in self.metrics:
+                tool_responses = self.s.collect_tool_responses(res)
+                if len(tool_responses) > 0:
+                    df = self.process_tool_invocations(
+                        tool_responses, index, row, df
+                    )
 
         return df
 
@@ -284,9 +286,8 @@ class DataLoader:
         self.required_columns = [
             "eval_id",
             "action_id",
+            "action_type",
             "action_input",
-            "action_input_parameters",
-            "tool_action",
         ]
 
     @staticmethod
@@ -511,16 +512,27 @@ class DataLoader:
         model_name = self.get_model_name(gen_settings)
 
         current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        metrics_info = {}
+        if "similarity" in df.columns:
+            metrics_info["similarity"] = df["similarity"].mean()
+        if "tool_name_match" in df.columns:
+            metrics_info["tool_match"] = df["tool_name_match"].mean()
+
         eval_results_summary = pd.DataFrame({
             'timestamp': [current_datetime],
             'total_conversations': [len(df['eval_id'].unique())],
-            'similarity': [df['similarity'].mean()],
-            'tool_match': [df['tool_name_match'].mean()],
             'model_name': [model_name],
             'agent_name': agent.display_name,
             'agent_id': [self.agent_id],
             'notes': [""]
         })
+
+        # insert metrics for report
+        insert_index = eval_results_summary.columns.get_loc(
+            "total_conversations") + 1
+        for metric, value in metrics_info.items():
+            eval_results_summary.insert(insert_index, metric, [value])
+            insert_index += 1
 
         return eval_results_summary
 
