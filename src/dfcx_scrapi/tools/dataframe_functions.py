@@ -142,7 +142,7 @@ class DataframeFunctions(ScrapiBase):
 
     def _check_and_update_sheets_scopes(self):
         """Update Credentials scopes if possible based on creds type."""
-        if self.creds.requires_scopes:
+        if self.creds.scopes:
             self.creds.scopes.extend(SHEETS_SCOPE)
 
     def _update_intent_from_dataframe(
