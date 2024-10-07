@@ -71,9 +71,13 @@ class Evaluations(ScrapiBase):
 
         print("Initializing Vertex AI...")
         self.init_vertex(self.agent_id)
-        self.s = Sessions(agent_id=self.agent_id, tools_map=tools_map)
-        self.p = Playbooks(agent_id=self.agent_id, playbooks_map=playbooks_map)
-        self.t = Tools(agent_id=self.agent_id, tools_map=tools_map)
+        self.s = Sessions(
+            agent_id=self.agent_id, tools_map=tools_map, creds=self.creds)
+        self.p = Playbooks(
+            agent_id=self.agent_id,
+            playbooks_map=playbooks_map, creds=self.creds)
+        self.t = Tools(
+            agent_id=self.agent_id, tools_map=tools_map, creds=self.creds)
         self.ar = AgentResponse()
 
         self.generation_model = self.model_setup(generation_model)
@@ -94,7 +98,12 @@ class Evaluations(ScrapiBase):
     def clean_outputs(df: pd.DataFrame) -> pd.DataFrame:
         """Clean final output dataframe."""
         # drop cols used for response mapping
-        df = df.drop(columns=["utterance_pair", "tool_pair", "playbook_pair"])
+        df = df.drop(columns=[
+            "utterance_pair",
+            "tool_pair",
+            "playbook_pair",
+            "flow_pair"
+            ])
         value_map = {}
         for col, dtype in zip(df.columns, df.dtypes):
             if dtype in ["string", "object"]:
@@ -108,10 +117,10 @@ class Evaluations(ScrapiBase):
 
     @staticmethod
     def process_playbook_invocations(
-            responses: List[str],
-            index: int,
-            row: pd.Series,
-            df: pd.DataFrame) -> pd.DataFrame:
+        responses: List[str],
+        index: int,
+        row: pd.Series,
+        df: pd.DataFrame) -> pd.DataFrame:
         if row["playbook_pair"] in [None, "", "NaN", "nan"]:
             playbook_index_list = [index]
         else:
@@ -120,6 +129,23 @@ class Evaluations(ScrapiBase):
         for idx in playbook_index_list:
             playbook = responses.pop(0)
             df.loc[int(idx), "res_playbook_name"] = playbook["playbook_name"]
+
+        return df
+
+    @staticmethod
+    def process_flow_invocations(
+        responses: List[str],
+        index: int,
+        row: pd.Series,
+        df: pd.DataFrame) -> pd.DataFrame:
+        if row["flow_pair"] in [None, "", "NaN", "nan"]:
+            flow_index_list = [index]
+        else:
+            flow_index_list = literal_eval(row["flow_pair"])
+
+        for idx in flow_index_list:
+            flow = responses.pop(0)
+            df.loc[int(idx), "res_flow_name"] = flow["flow_name"]
 
         return df
 
@@ -201,11 +227,18 @@ class Evaluations(ScrapiBase):
             utterance_idx = int(row["utterance_pair"])
             df.loc[utterance_idx, ["agent_response"]] = [text_res]
 
-            # Handle Play Invocations
+            # Handle Playbook Invocations
             playbook_responses = self.s.collect_playbook_responses(res)
             if len(playbook_responses) > 0:
                 df = self.process_playbook_invocations(
                     playbook_responses, index, row, df
+                )
+
+            # Handle Flow Invocations
+            flow_responses = self.s.collect_flow_responses(res)
+            if len(flow_responses) > 0:
+                df = self.process_flow_invocations(
+                    flow_responses, index, row, df
                 )
 
             # Handle Tool Invocations
@@ -390,6 +423,29 @@ class DataLoader:
                 df.loc[pair[0], "playbook_pair"] = str(pair[1])
 
         return df
+    
+    def pair_flow_calls(self, df: pd.DataFrame) -> pd.DataFrame:
+        "Identifies pairings of agent_utterance/flow_invocation by eval_id."
+        df["flow_pair"] = pd.Series(dtype="string")
+        grouped = df.groupby("eval_id")
+
+        for _, group in grouped:
+            user = group[
+                group["action_type"] == "User Utterance"
+            ].index.tolist()
+            flow_list = group[
+                group["action_type"] == "Flow Invocation"
+            ].index.tolist()
+
+            pairs = self.get_matching_list_idx(
+                user, flow_list
+            )
+
+            # Create pairs of user/flow_list row indices
+            for pair in pairs:
+                df.loc[pair[0], "flow_pair"] = str(pair[1])
+
+        return df
 
     def validate_input_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """Validate input columns"""
@@ -510,6 +566,7 @@ class DataLoader:
         df = self.pair_utterances(df)
         df = self.pair_tool_calls(df)
         df = self.pair_playbook_calls(df)
+        df = self.pair_flow_calls(df)
 
         # fill remaining NA with empty string
         for col in df.columns:

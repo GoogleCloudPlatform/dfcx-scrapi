@@ -26,7 +26,7 @@ from IPython.display import display, Markdown
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import tools
 from dfcx_scrapi.core import playbooks
-
+from dfcx_scrapi.core import flows
 
 # logging config
 logging.basicConfig(
@@ -48,7 +48,8 @@ class Sessions(scrapi_base.ScrapiBase):
         agent_id: str = None,
         session_id: str = None,
         tools_map: Dict[str, str] = None,
-        playbooks_map: Dict[str, str] = None
+        playbooks_map: Dict[str, str] = None,
+        flows_map: Dict[str, str] = None
     ):
         super().__init__(
             creds_path=creds_path, creds_dict=creds_dict,
@@ -59,6 +60,7 @@ class Sessions(scrapi_base.ScrapiBase):
         self.agent_id = agent_id
         self.tools_map = tools_map
         self.playbooks_map = playbooks_map
+        self.flows_map = flows_map
 
     @property
     def session_id(self):
@@ -122,7 +124,9 @@ class Sessions(scrapi_base.ScrapiBase):
     def get_playbook_name(self, playbook_id: str):
         agent_id = self.parse_agent_id(playbook_id)
         if not self.playbooks_map:
-            playbook_client = playbooks.Playbooks(agent_id)
+            playbook_client = playbooks.Playbooks(
+                agent_id=agent_id, creds=self.creds
+                )
             self.playbooks_map = playbook_client.get_playbooks_map(agent_id)
 
         return self.playbooks_map[playbook_id]
@@ -130,9 +134,17 @@ class Sessions(scrapi_base.ScrapiBase):
     def get_tool_name(self, tool_use: types.example.ToolUse) -> str:
         agent_id = self.parse_agent_id(tool_use.tool)
         if not self.tools_map:
-            tool_client = tools.Tools()
+            tool_client = tools.Tools(creds=self.creds)
             self.tools_map = tool_client.get_tools_map(agent_id)
         return self.tools_map[tool_use.tool]
+
+    def get_flow_name(self, flow_id: str):
+        agent_id = self.parse_agent_id(flow_id)
+        if not self.flows_map:
+            flow_client = flows.Flows(creds=self.creds)
+            self.flows_map = flow_client.get_flows_map(agent_id)
+
+        return self.flows_map[flow_id]
 
     def collect_tool_responses(
         self, res: types.session.QueryResult
@@ -168,19 +180,35 @@ class Sessions(scrapi_base.ScrapiBase):
                         )
                     }
                 )
-            else:
-                # If no playbook invocation was found
-                # return the current Playbook
-                if len(res.generative_info.current_playbooks) > 0:
-                    playbook_responses.append(
-                        {
-                            "playbook_name": self.get_playbook_name(
-                                res.generative_info.current_playbooks[-1]
+            # If no playbook invocation was found try to return the current
+            # Playbook
+            elif len(res.generative_info.current_playbooks) > 0:
+                playbook_responses.append(
+                    {
+                        "playbook_name": self.get_playbook_name(
+                            res.generative_info.current_playbooks[-1]
                             )
-                        }
-                    )
+                    }
+                )
 
         return playbook_responses
+
+    def collect_flow_responses(
+        self, res: types.session.QueryResult
+    ) -> List[Dict[str, str]]:
+        """Gather all the flow repsonses into a list of dicts."""
+        flow_responses = []
+        for action in res.generative_info.action_tracing_info.actions:
+            if action.flow_invocation:
+                flow_responses.append(
+                    {
+                        "flow_name": self.get_flow_name(
+                            action.flow_invocation.flow
+                        )
+                    }
+                )
+
+        return flow_responses
 
     def build_session_id(
         self, agent_id: str = None, overwrite: bool = True
