@@ -19,7 +19,7 @@
 
 import pytest
 import pandas as pd
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from dfcx_scrapi.core.test_cases import TestCases as PyTestCases
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.cloud.dialogflowcx_v3beta1.services import test_cases
@@ -27,7 +27,10 @@ from google.cloud.dialogflowcx_v3beta1.services import test_cases
 
 @pytest.fixture
 def test_config():
-    agent_id = "projects/mock-test/locations/global/agents/a1s2d3f4"
+    project_id = "my-project-id-1234"
+    location_id = "global"
+    parent = f"projects/{project_id}/locations/{location_id}"
+    agent_id = f"{parent}/agents/my-agent-1234"
     flow_id = f"{agent_id}/flows/00000000-0000-0000-0000-000000000000"
     page_id = f"{flow_id}/pages/mock-page-1234"
     other_flow_id = f"{agent_id}/flows/other1234"
@@ -42,6 +45,7 @@ def test_config():
     }
 
     return {
+        "project_id": project_id,
         "agent_id": agent_id,
         "flow_id": flow_id,
         "page_id": page_id,
@@ -156,8 +160,19 @@ def mock_list_tc_pager_no_turns(mock_tc_obj_no_turns):
         ),
     )
 
+@pytest.fixture(autouse=True)
+def mock_client(test_config):
+    """Fixture to create a mocked TestCasesClient."""
+    with patch("dfcx_scrapi.core.scrapi_base.default") as mock_default, \
+        patch("dfcx_scrapi.core.scrapi_base.Request") as mock_request, \
+        patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient") as mock_client:
 
-# Private Methods
+        mock_creds = MagicMock()
+        mock_default.return_value = (mock_creds, test_config["project_id"])
+        mock_request.return_value = MagicMock()
+
+        yield mock_client
+
 def test_convert_test_result_to_string(mock_tc_obj_turns):
     tests = [(0, "TEST_RESULT_UNSPECIFIED"), (1, "PASSED"), (2, "FAILED")]
     tc = PyTestCases()
@@ -311,10 +326,8 @@ def test_retest_cases(mock_batch_run, mock_tc_df):
 
 
 # List Test Cases
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_list_test_cases_agent_id_not_in_instance(
-    mock_client, mock_tc_obj_turns
-):
+        mock_client, mock_tc_obj_turns):
     mock_client.return_value.list_test_cases.return_value = [mock_tc_obj_turns]
 
     tc = PyTestCases()
@@ -323,7 +336,6 @@ def test_list_test_cases_agent_id_not_in_instance(
         _ = tc.list_test_cases()
 
 
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_list_test_cases_agent_id_in_instance(
     mock_client, mock_list_tc_pager, test_config
 ):
@@ -336,7 +348,6 @@ def test_list_test_cases_agent_id_in_instance(
     assert isinstance(res[0], types.TestCase)
 
 
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_list_test_cases_agent_id_in_method(
     mock_client, mock_list_tc_pager_no_turns, test_config
 ):
@@ -352,7 +363,6 @@ def test_list_test_cases_agent_id_in_method(
     assert res[0].test_case_conversation_turns == ""
 
 
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_list_test_cases_include_conversation_turns(
     mock_client, mock_list_tc_pager, test_config
 ):
@@ -367,11 +377,6 @@ def test_list_test_cases_include_conversation_turns(
     assert isinstance(res[0], types.TestCase)
     assert res[0].test_case_conversation_turns != ""
 
-
-# Update Test Cases
-
-
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_update_test_case_no_args(mock_client, mock_tc_obj_turns):
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
 
@@ -381,8 +386,6 @@ def test_update_test_case_no_args(mock_client, mock_tc_obj_turns):
     with pytest.raises(ValueError):
         _ = tc.update_test_case()
 
-
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_update_test_case_kwargs_only(mock_client, mock_tc_obj_turns):
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
 
@@ -392,8 +395,6 @@ def test_update_test_case_kwargs_only(mock_client, mock_tc_obj_turns):
     with pytest.raises(ValueError):
         _ = tc.update_test_case(display_name="mock test case object update")
 
-
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_update_test_case_id_only(mock_client, test_config, mock_tc_obj_turns):
 
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
@@ -404,8 +405,6 @@ def test_update_test_case_id_only(mock_client, test_config, mock_tc_obj_turns):
     with pytest.raises(ValueError):
         _ = tc.update_test_case(test_case_id=test_config["test_case_id"])
 
-
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_update_test_case_obj_only(mock_client, mock_tc_obj_turns):
     mock_client.return_value.update_test_case.return_value = mock_tc_obj_turns
 
@@ -416,8 +415,6 @@ def test_update_test_case_obj_only(mock_client, mock_tc_obj_turns):
     assert result.display_name == "mock test case object"
     assert result == mock_tc_obj_turns
 
-
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_update_test_case_obj_only_empty_name(mock_client, mock_tc_obj_turns):
     mock_tc_obj_turns.name = ""
 
@@ -429,8 +426,6 @@ def test_update_test_case_obj_only_empty_name(mock_client, mock_tc_obj_turns):
     with pytest.raises(ValueError):
         _ = tc.update_test_case(obj=mock_tc_obj_turns)
 
-
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_update_test_case_with_obj_and_kwargs(
     mock_client, mock_tc_obj_turns, mock_updated_tc_obj
 ):
@@ -446,8 +441,6 @@ def test_update_test_case_with_obj_and_kwargs(
     assert result.display_name == mock_updated_tc_obj.display_name
     assert result == mock_updated_tc_obj
 
-
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_update_test_case_with_id_and_kwargs(
     mock_client, test_config, mock_tc_obj_turns
 ):
@@ -465,8 +458,6 @@ def test_update_test_case_with_id_and_kwargs(
     # Assertions
     assert result.display_name == "mock test case object update"
 
-
-@patch("dfcx_scrapi.core.test_cases.services.test_cases.TestCasesClient")
 def test_update_test_case_with_obj_id_and_kwargs(
     mock_client, test_config, mock_tc_obj_turns
 ):

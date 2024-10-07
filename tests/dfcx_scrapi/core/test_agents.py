@@ -17,10 +17,13 @@
 # limitations under the License.
 
 import pytest
-from unittest.mock import patch
+from typing import Dict
+from unittest.mock import patch, MagicMock
 
 from google.cloud.dialogflowcx_v3beta1 import types
-from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1.services.agents import (
+    pagers, AgentsClient
+    )
 
 from dfcx_scrapi.core.agents import Agents
 
@@ -44,7 +47,7 @@ def test_config():
     }
 
 @pytest.fixture
-def mock_agent_obj_flow(test_config):
+def mock_agent_obj_flow(test_config: dict[str, str]):
     return types.Agent(
         name=test_config["agent_id"],
         display_name=test_config["display_name"],
@@ -54,7 +57,7 @@ def mock_agent_obj_flow(test_config):
     )
 
 @pytest.fixture
-def mock_agent_obj_playbook(test_config):
+def mock_agent_obj_playbook(test_config: dict[str, str]):
     return types.Agent(
         name=test_config["agent_id"],
         display_name=test_config["display_name"],
@@ -64,36 +67,48 @@ def mock_agent_obj_playbook(test_config):
     )
 
 @pytest.fixture
-def mock_agent_obj_kwargs(mock_agent_obj_flow):
+def mock_agent_obj_kwargs(mock_agent_obj_flow: types.Agent):
     mock_agent_obj_flow.description = "This is a Mock Agent description."
     mock_agent_obj_flow.enable_stackdriver_logging = True
 
     return mock_agent_obj_flow
 
 @pytest.fixture
-def mock_updated_agent_obj(mock_agent_obj_flow):
+def mock_updated_agent_obj(mock_agent_obj_flow: types.Agent):
     mock_agent_obj_flow.display_name = "Updated Agent Display Name"
     return mock_agent_obj_flow
 
 @pytest.fixture
-def mock_list_agents_response(mock_agent_obj_flow):
+def mock_list_agents_response(mock_agent_obj_flow: types.Agent):
     return types.agent.ListAgentsResponse(agents=[mock_agent_obj_flow])
 
 @pytest.fixture
-def mock_list_agents_pager(mock_list_agents_response):
-    return services.agents.pagers.ListAgentsPager(
-        services.agents.AgentsClient.list_agents,
+def mock_list_agents_pager(mock_list_agents_response: types.ListAgentsResponse):
+    return pagers.ListAgentsPager(
+        AgentsClient.list_agents,
         types.agent.ListAgentsRequest(),
         mock_list_agents_response,
     )
 
+@pytest.fixture(autouse=True)
+def mock_client(test_config: Dict[str, str]):
+    """Setup fixture for Agents Class to be used with all tests."""
+    with patch("dfcx_scrapi.core.scrapi_base.default") as mock_default, \
+        patch("dfcx_scrapi.core.scrapi_base.Request") as mock_request, \
+        patch("dfcx_scrapi.core.agents.services.agents.AgentsClient") as mock_client:
+        mock_creds = MagicMock()
+        mock_default.return_value = (mock_creds, test_config["project_id"])
+        mock_request.return_value = MagicMock()
+
+        yield mock_client # Return control to test method
+
 # Test list_agents with location_id
-@patch("dfcx_scrapi.core.agents.Agents._list_agents_client_request")
-def test_list_agents_with_location(mock_list_agents_client_request,
-                              mock_agent_obj_flow,
-                              test_config
-                              ):
-    mock_list_agents_client_request.return_value = [mock_agent_obj_flow]
+def test_list_agents_with_location(
+        mock_client: MagicMock,
+        mock_list_agents_pager: pagers.ListAgentsPager,
+        test_config: dict[str, str]):
+    mock_client.return_value.list_agents.return_value = mock_list_agents_pager
+
     agent = Agents()
     agents = agent.list_agents(
         project_id=test_config["project_id"],
@@ -104,12 +119,12 @@ def test_list_agents_with_location(mock_list_agents_client_request,
     assert agents[0].name == test_config["agent_id"]
 
 # Test list_agents without location_id
-@patch("dfcx_scrapi.core.agents.Agents._list_agents_client_request")
-def test_list_agents_without_location(mock_list_agents_client_request,
-                              mock_agent_obj_flow,
-                              test_config
-                              ):
-    mock_list_agents_client_request.return_value = [mock_agent_obj_flow]
+def test_list_agents_without_location(
+        mock_client: MagicMock,
+        mock_list_agents_pager: pagers.ListAgentsPager,
+        test_config: dict[str, str]):
+    mock_client.return_value.list_agents.return_value = mock_list_agents_pager
+
     agent = Agents()
     agents = agent.list_agents(project_id=test_config["project_id"])
     assert isinstance(agents, list)
@@ -117,8 +132,10 @@ def test_list_agents_without_location(mock_list_agents_client_request,
     assert agents[0].name == test_config["agent_id"]
 
 # Test get_agent
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
-def test_get_agent(mock_client, mock_agent_obj_flow, test_config):
+def test_get_agent(
+        mock_client: MagicMock,
+        mock_agent_obj_flow: types.Agent,
+        test_config: dict[str, str]):
     mock_client.return_value.get_agent.return_value = mock_agent_obj_flow
     agent = Agents()
     response = agent.get_agent(test_config["agent_id"])
@@ -126,9 +143,11 @@ def test_get_agent(mock_client, mock_agent_obj_flow, test_config):
     assert response.name == test_config["agent_id"]
     assert response.display_name == test_config["display_name"]
 
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
 def test_get_agent_by_display_name_no_location(
-    mock_client, mock_agent_obj_flow, mock_list_agents_pager, test_config):
+        mock_client: MagicMock,
+        mock_agent_obj_flow: types.Agent,
+        mock_list_agents_pager: pagers.ListAgentsPager,
+        test_config: dict[str, str]):
     mock_client.return_value.get_agent_by_display_name.return_value = mock_agent_obj_flow # pylint: disable=C0301
     mock_client.return_value.list_agents.return_value = mock_list_agents_pager
     agent = Agents()
@@ -138,9 +157,11 @@ def test_get_agent_by_display_name_no_location(
 
     assert response is None
 
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
 def test_get_agent_by_display_name_with_region(
-    mock_client, mock_agent_obj_flow, mock_list_agents_pager, test_config):
+        mock_client: MagicMock,
+        mock_agent_obj_flow: types.Agent,
+        mock_list_agents_pager: pagers.ListAgentsPager,
+        test_config: dict[str, str]):
     mock_client.return_value.get_agent_by_display_name.return_value = mock_agent_obj_flow # pylint: disable=C0301
     mock_client.return_value.list_agents.return_value = mock_list_agents_pager
     agent = Agents()
@@ -155,9 +176,10 @@ def test_get_agent_by_display_name_with_region(
     assert response.display_name == test_config["display_name"]
 
 # Test create_agent
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
 def test_create_agent_with_kwargs(
-    mock_client, mock_agent_obj_flow, test_config):
+        mock_client: MagicMock,
+        mock_agent_obj_flow: types.Agent,
+        test_config: dict[str, str]):
     mock_client.return_value.create_agent.return_value = mock_agent_obj_flow
     agent = Agents()
     response = agent.create_agent(
@@ -168,8 +190,10 @@ def test_create_agent_with_kwargs(
     assert response.name == test_config["agent_id"]
     assert response.display_name == test_config["display_name"]
 
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
-def test_create_agent_from_obj(mock_client, mock_agent_obj_flow, test_config):
+def test_create_agent_from_obj(
+        mock_client: MagicMock,
+        mock_agent_obj_flow: types.Agent,
+        test_config: dict[str, str]):
     mock_client.return_value.create_agent.return_value = mock_agent_obj_flow
 
     agents = Agents()
@@ -180,8 +204,9 @@ def test_create_agent_from_obj(mock_client, mock_agent_obj_flow, test_config):
     assert res.display_name == test_config["display_name"]
 
 
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
-def test_create_agent_from_obj_with_kwargs(mock_client, mock_agent_obj_kwargs):
+def test_create_agent_from_obj_with_kwargs(
+        mock_client: MagicMock,
+        mock_agent_obj_kwargs: types.Agent):
     mock_client.return_value.create_agent.return_value = mock_agent_obj_kwargs
 
     agents = Agents()
@@ -196,10 +221,10 @@ def test_create_agent_from_obj_with_kwargs(mock_client, mock_agent_obj_kwargs):
     assert res.description == "This is a Mock Agent description."
 
 # Test update_agent
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
-def test_update_agent_with_obj(mock_client,
-                             mock_updated_agent_obj,
-                             test_config):
+def test_update_agent_with_obj(
+        mock_client: MagicMock,
+        mock_updated_agent_obj: types.Agent,
+        test_config: dict[str, str]):
     mock_client.return_value.update_agent.return_value = (
         mock_updated_agent_obj
     )
@@ -212,10 +237,9 @@ def test_update_agent_with_obj(mock_client,
     assert response.name == test_config["agent_id"]
     assert response.display_name == "Updated Agent Display Name"
 
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
-def test_update_agent_with_kwargs(mock_client,
-                             mock_agent_obj_flow,
-                             test_config):
+def test_update_agent_with_kwargs(mock_client: MagicMock,
+                            mock_agent_obj_flow: types.Agent,
+                            test_config: dict[str, str]):
     mock_client.return_value.get_agent.return_value = mock_agent_obj_flow
     mock_client.return_value.update_agent.return_value = mock_agent_obj_flow
     agent = Agents()
@@ -229,18 +253,15 @@ def test_update_agent_with_kwargs(mock_client,
     assert response.display_name == "Updated Agent Display Name"
 
 # Test delete_agent
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
-def test_delete_agent(test_config):
+def test_delete_agent(test_config: dict[str, str]):
     agent = Agents()
     response = agent.delete_agent(agent_id=test_config["agent_id"])
-    print(response)
     assert (
         response == f"Agent '{test_config['agent_id']}' successfully deleted."
     )
 
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
 def test_create_agent_simple_default_region_no_kwargs(
-    mock_client, mock_agent_obj_flow, test_config
+    mock_client: MagicMock, mock_agent_obj_flow: types.Agent, test_config: dict[str, str]
 ):
     mock_client.return_value.create_agent.return_value = mock_agent_obj_flow
 
@@ -254,8 +275,9 @@ def test_create_agent_simple_default_region_no_kwargs(
     assert res.display_name == test_config["display_name"]
 
 
-@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
-def test_create_agent_with_extra_kwargs(mock_client, mock_agent_obj_kwargs):
+def test_create_agent_with_extra_kwargs(
+        mock_client: MagicMock,
+        mock_agent_obj_kwargs: types.Agent):
     mock_client.return_value.create_agent.return_value = mock_agent_obj_kwargs
 
     agents = Agents()
