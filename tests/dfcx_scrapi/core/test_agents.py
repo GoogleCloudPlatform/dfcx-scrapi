@@ -47,7 +47,7 @@ def test_config():
     }
 
 @pytest.fixture
-def mock_agent_obj_flow(test_config: dict[str, str]):
+def mock_agent_obj_flow(test_config: Dict[str, str]):
     return types.Agent(
         name=test_config["agent_id"],
         display_name=test_config["display_name"],
@@ -57,7 +57,7 @@ def mock_agent_obj_flow(test_config: dict[str, str]):
     )
 
 @pytest.fixture
-def mock_agent_obj_playbook(test_config: dict[str, str]):
+def mock_agent_obj_playbook(test_config: Dict[str, str]):
     return types.Agent(
         name=test_config["agent_id"],
         display_name=test_config["display_name"],
@@ -106,7 +106,7 @@ def mock_client(test_config: Dict[str, str]):
 def test_list_agents_with_location(
         mock_client: MagicMock,
         mock_list_agents_pager: pagers.ListAgentsPager,
-        test_config: dict[str, str]):
+        test_config: Dict[str, str]):
     mock_client.return_value.list_agents.return_value = mock_list_agents_pager
 
     agent = Agents()
@@ -122,7 +122,7 @@ def test_list_agents_with_location(
 def test_list_agents_without_location(
         mock_client: MagicMock,
         mock_list_agents_pager: pagers.ListAgentsPager,
-        test_config: dict[str, str]):
+        test_config: Dict[str, str]):
     mock_client.return_value.list_agents.return_value = mock_list_agents_pager
 
     agent = Agents()
@@ -135,7 +135,7 @@ def test_list_agents_without_location(
 def test_get_agent(
         mock_client: MagicMock,
         mock_agent_obj_flow: types.Agent,
-        test_config: dict[str, str]):
+        test_config: Dict[str, str]):
     mock_client.return_value.get_agent.return_value = mock_agent_obj_flow
     agent = Agents()
     response = agent.get_agent(test_config["agent_id"])
@@ -147,7 +147,7 @@ def test_get_agent_by_display_name_no_location(
         mock_client: MagicMock,
         mock_agent_obj_flow: types.Agent,
         mock_list_agents_pager: pagers.ListAgentsPager,
-        test_config: dict[str, str]):
+        test_config: Dict[str, str]):
     mock_client.return_value.get_agent_by_display_name.return_value = mock_agent_obj_flow # pylint: disable=C0301
     mock_client.return_value.list_agents.return_value = mock_list_agents_pager
     agent = Agents()
@@ -161,7 +161,7 @@ def test_get_agent_by_display_name_with_region(
         mock_client: MagicMock,
         mock_agent_obj_flow: types.Agent,
         mock_list_agents_pager: pagers.ListAgentsPager,
-        test_config: dict[str, str]):
+        test_config: Dict[str, str]):
     mock_client.return_value.get_agent_by_display_name.return_value = mock_agent_obj_flow # pylint: disable=C0301
     mock_client.return_value.list_agents.return_value = mock_list_agents_pager
     agent = Agents()
@@ -179,7 +179,7 @@ def test_get_agent_by_display_name_with_region(
 def test_create_agent_with_kwargs(
         mock_client: MagicMock,
         mock_agent_obj_flow: types.Agent,
-        test_config: dict[str, str]):
+        test_config: Dict[str, str]):
     mock_client.return_value.create_agent.return_value = mock_agent_obj_flow
     agent = Agents()
     response = agent.create_agent(
@@ -193,7 +193,7 @@ def test_create_agent_with_kwargs(
 def test_create_agent_from_obj(
         mock_client: MagicMock,
         mock_agent_obj_flow: types.Agent,
-        test_config: dict[str, str]):
+        test_config: Dict[str, str]):
     mock_client.return_value.create_agent.return_value = mock_agent_obj_flow
 
     agents = Agents()
@@ -224,7 +224,7 @@ def test_create_agent_from_obj_with_kwargs(
 def test_update_agent_with_obj(
         mock_client: MagicMock,
         mock_updated_agent_obj: types.Agent,
-        test_config: dict[str, str]):
+        test_config: Dict[str, str]):
     mock_client.return_value.update_agent.return_value = (
         mock_updated_agent_obj
     )
@@ -239,7 +239,7 @@ def test_update_agent_with_obj(
 
 def test_update_agent_with_kwargs(mock_client: MagicMock,
                             mock_agent_obj_flow: types.Agent,
-                            test_config: dict[str, str]):
+                            test_config: Dict[str, str]):
     mock_client.return_value.get_agent.return_value = mock_agent_obj_flow
     mock_client.return_value.update_agent.return_value = mock_agent_obj_flow
     agent = Agents()
@@ -253,7 +253,7 @@ def test_update_agent_with_kwargs(mock_client: MagicMock,
     assert response.display_name == "Updated Agent Display Name"
 
 # Test delete_agent
-def test_delete_agent(test_config: dict[str, str]):
+def test_delete_agent(test_config: Dict[str, str]):
     agent = Agents()
     response = agent.delete_agent(agent_id=test_config["agent_id"])
     assert (
@@ -261,7 +261,9 @@ def test_delete_agent(test_config: dict[str, str]):
     )
 
 def test_create_agent_simple_default_region_no_kwargs(
-    mock_client: MagicMock, mock_agent_obj_flow: types.Agent, test_config: dict[str, str]
+    mock_client: MagicMock,
+    mock_agent_obj_flow: types.Agent,
+    test_config: Dict[str, str]
 ):
     mock_client.return_value.create_agent.return_value = mock_agent_obj_flow
 
