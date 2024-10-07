@@ -64,7 +64,14 @@ class DataframeFunctions(ScrapiBase):
 
         self._check_and_update_sheets_scopes()
 
-        self.sheets_client = gspread.authorize(self.creds)
+        if hasattr(self.creds, "service_account_email") and self.creds.service_account_email:
+            self.sheets_client = gspread.authorize(self.creds)
+        else:
+            logging.warning(
+                "Application Default Credentials (ADC) found and Sheets Client"
+                " could not be authorized. Use Service Account or Oauth2 user"
+                " credentials if you require Sheets access.")
+
         self.entities = EntityTypes(creds=self.creds)
         self.intents = Intents(creds=self.creds)
         self.flows = Flows(creds=self.creds)
