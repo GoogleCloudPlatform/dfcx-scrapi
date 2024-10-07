@@ -19,14 +19,17 @@
 # limitations under the License.
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from dfcx_scrapi.core.tools import Tools
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.cloud.dialogflowcx_v3beta1 import services
 
 @pytest.fixture
 def test_config():
-    agent_id = "projects/mock-test/locations/global/agents/a1s2d3f4"
+    project_id = "my-project-id-1234"
+    location_id = "global"
+    parent = f"projects/{project_id}/locations/{location_id}"
+    agent_id = f"{parent}/agents/my-agent-1234"
     tool_id = f"{agent_id}/tools/1234"
     display_name = "mock tool"
     description = "This is a mock tool."
@@ -69,6 +72,7 @@ def test_config():
     """
 
     return {
+        "project_id": project_id,
         "agent_id": agent_id,
         "tool_id": tool_id,
         "display_name": display_name,
@@ -117,8 +121,20 @@ def mock_list_playbooks_pager(mock_playbook_obj):
         types.playbook.ListPlaybooksResponse(playbooks=[mock_playbook_obj]),
     )
 
+@pytest.fixture(autouse=True)
+def mock_client(test_config):
+    """Fixture to create a mocked ToolsClient."""
+    with patch("dfcx_scrapi.core.scrapi_base.default") as mock_default, \
+        patch("dfcx_scrapi.core.scrapi_base.Request") as mock_request, \
+        patch("dfcx_scrapi.core.tools.services.tools.ToolsClient") as mock_client:
+
+        mock_creds = MagicMock()
+        mock_default.return_value = (mock_creds, test_config["project_id"])
+        mock_request.return_value = MagicMock()
+
+        yield mock_client 
+
 # Test get_tools_map
-@patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_get_tools_map(mock_client, mock_list_tools_pager, test_config):
     mock_client.return_value.list_tools.return_value = mock_list_tools_pager
     tools = Tools(agent_id=test_config["agent_id"])
@@ -129,7 +145,6 @@ def test_get_tools_map(mock_client, mock_list_tools_pager, test_config):
     assert res[test_config["tool_id"]] == test_config["display_name"]
 
 # Test get_tools_map (reversed)
-@patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_get_tools_map_reversed(
     mock_client, mock_list_tools_pager, test_config):
     mock_client.return_value.list_tools.return_value = mock_list_tools_pager
@@ -141,7 +156,6 @@ def test_get_tools_map_reversed(
     assert res[test_config["display_name"]] == test_config["tool_id"]
 
 # Test list_tools
-@patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_list_tools(mock_client, mock_list_tools_pager, test_config):
     mock_client.return_value.list_tools.return_value = mock_list_tools_pager
     tools = Tools(agent_id=test_config["agent_id"])
@@ -151,7 +165,6 @@ def test_list_tools(mock_client, mock_list_tools_pager, test_config):
     assert isinstance(res[0], types.Tool)
 
 # Test get_tool
-@patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_get_tool(mock_client, mock_tool_obj, test_config):
     mock_client.return_value.get_tool.return_value = mock_tool_obj
     tools = Tools(agent_id=test_config["agent_id"])
@@ -161,7 +174,6 @@ def test_get_tool(mock_client, mock_tool_obj, test_config):
     assert res.display_name == test_config["display_name"]
 
 # Test create_tool
-@patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_create_tool_from_kwargs(
     mock_client, mock_tool_obj, test_config):
     mock_client.return_value.create_tool.return_value = mock_tool_obj
@@ -173,7 +185,6 @@ def test_create_tool_from_kwargs(
     assert isinstance(res, types.Tool)
     assert res.display_name == test_config["display_name"]
 
-@patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_create_tool_from_proto_object(
     mock_client, mock_tool_obj, test_config):
     mock_client.return_value.create_tool.return_value = mock_tool_obj
@@ -186,7 +197,6 @@ def test_create_tool_from_proto_object(
     assert res.display_name == test_config["display_name"]
 
 # Test delete_tool with tool_id
-@patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_delete_tool_with_tool_id(mock_client, test_config):
     tools = Tools(agent_id=test_config["agent_id"])
     tools.delete_tool(tool_id=test_config["tool_id"])
@@ -195,7 +205,6 @@ def test_delete_tool_with_tool_id(mock_client, test_config):
         )
 
 # Test delete_tool with obj
-@patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_delete_tool_with_obj(mock_client, mock_tool_obj, test_config):
     tools = Tools(agent_id=test_config["agent_id"])
     tools.delete_tool(obj=mock_tool_obj)
@@ -204,7 +213,6 @@ def test_delete_tool_with_obj(mock_client, mock_tool_obj, test_config):
         )
 
 # Test update_tool with kwargs
-@patch("dfcx_scrapi.core.tools.services.tools.ToolsClient")
 def test_update_tool_with_kwargs(
     mock_client, mock_tool_obj_updated, test_config):
     mock_client.return_value.update_tool.return_value = mock_tool_obj_updated

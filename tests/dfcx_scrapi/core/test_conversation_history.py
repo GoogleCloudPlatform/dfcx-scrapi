@@ -21,7 +21,7 @@
 import os
 import json
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from dfcx_scrapi.core.conversation_history import ConversationHistory
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -31,9 +31,13 @@ from google.protobuf import timestamp_pb2
 
 @pytest.fixture
 def test_config():
-    agent_id = "projects/mock-test/locations/global/agents/a1s2d3f4"
+    project_id = "my-project-id-1234"
+    location_id = "global"
+    parent = f"projects/{project_id}/locations/{location_id}"
+    agent_id = f"{parent}/agents/my-agent-1234"
     conversation_id = f"{agent_id}/conversations/1234"
     return {
+        "project_id": project_id,
         "agent_id": agent_id,
         "conversation_id": conversation_id,
     }
@@ -82,6 +86,18 @@ def mock_list_conversations_pager(test_conversation):
         ),
     )
 
+@pytest.fixture(autouse=True)
+def mock_client(test_config):
+    """Setup mock client for all tests."""
+    with patch("dfcx_scrapi.core.scrapi_base.default") as mock_default, \
+        patch("dfcx_scrapi.core.scrapi_base.Request") as mock_request, \
+        patch("dfcx_scrapi.core.conversation_history.services.conversation_history.ConversationHistoryClient") as mock_client:
+        mock_creds = MagicMock()
+        mock_default.return_value = (mock_creds, test_config["project_id"])
+        mock_request.return_value = MagicMock()
+
+        yield mock_client # Return control to test method
+
 # Test get_user_input
 def test_get_user_input():
     query_input = types.QueryInput(text=types.TextInput(text="test input"))
@@ -98,10 +114,6 @@ def test_get_query_result():
     assert agent_response == "test result"
 
 # Test list_conversations
-@patch(
-    "dfcx_scrapi.core.conversation_history.services.conversation_history"
-    ".ConversationHistoryClient"
-)
 def test_list_conversations(
     mock_client, mock_list_conversations_pager, test_config
     ):
@@ -114,10 +126,6 @@ def test_list_conversations(
     assert isinstance(res[0], types.Conversation)
 
 # Test get_conversation
-@patch(
-    "dfcx_scrapi.core.conversation_history.services.conversation_history"
-    ".ConversationHistoryClient"
-)
 def test_get_conversation(
     mock_client, test_conversation, test_config
     ):
@@ -131,10 +139,6 @@ def test_get_conversation(
     assert isinstance(res, types.Conversation)
 
 # Test delete_conversation
-@patch(
-    "dfcx_scrapi.core.conversation_history.services.conversation_history"
-    ".ConversationHistoryClient"
-)
 def test_delete_conversation(mock_client, test_config):
     ch = ConversationHistory(agent_id=test_config["agent_id"])
     ch.delete_conversation(
@@ -173,10 +177,6 @@ def test_read_conversations_from_file(tmpdir):
     assert loaded_data == data
 
 # Test conversation_history_to_file
-@patch(
-    "dfcx_scrapi.core.conversation_history.services.conversation_history"
-    ".ConversationHistoryClient"
-)
 @patch("dfcx_scrapi.core.conversation_history.thread_map")
 def test_conversation_history_to_file(
     mock_thread_map, mock_client, test_conversation, tmpdir, test_config
