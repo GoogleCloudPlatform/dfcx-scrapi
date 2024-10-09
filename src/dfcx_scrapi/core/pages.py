@@ -41,6 +41,7 @@ class Pages(scrapi_base.ScrapiBase):
         creds=None,
         page_id: str = None,
         flow_id: str = None,
+        language_code: str = "en"
     ):
         super().__init__(
             creds_path=creds_path,
@@ -51,6 +52,7 @@ class Pages(scrapi_base.ScrapiBase):
 
         self.page_id = page_id
         self.flow_id = flow_id
+        self.language_code = language_code
 
     @staticmethod
     def _add_generic_pages_to_map(flow_id, pages_map, reverse):
@@ -116,7 +118,7 @@ class Pages(scrapi_base.ScrapiBase):
     def list_pages(
         self,
         flow_id: str = None,
-        language_code: str = "en") -> List[gcdc_page.Page]:
+        language_code: str = None) -> List[gcdc_page.Page]:
         """Get a List of all pages for the specified Flow ID.
 
         Args:
@@ -131,7 +133,12 @@ class Pages(scrapi_base.ScrapiBase):
         """
         request = gcdc_page.ListPagesRequest()
         request.parent = flow_id
-        request.language_code = language_code
+
+        # prefer method input over class level input
+        if language_code:
+            request.language_code = language_code
+        else:
+            request.language_code = self.language_code
 
         client_options = self._set_region(flow_id)
         client = pages.PagesClient(
