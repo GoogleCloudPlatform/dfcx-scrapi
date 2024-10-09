@@ -272,11 +272,16 @@ class Agents(scrapi_base.ScrapiBase):
                 f"{parent}/agents/-/playbooks/{default_playbook_id}"
             )
 
+        request = types.CreateAgentRequest(
+            parent=parent,
+            agent=agent_obj
+        )
+
         client_options = self._set_region(parent)
         client = services.agents.AgentsClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.create_agent(parent=parent, agent=agent_obj)
+        response = client.create_agent(request)
 
         return response
 
@@ -582,11 +587,12 @@ class Agents(scrapi_base.ScrapiBase):
         paths = kwargs.keys()
         mask = field_mask_pb2.FieldMask(paths=paths)
 
+        request = types.UpdateAgentRequest(agent=agent, update_mask=mask)
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
             credentials=self.creds, client_options=client_options
         )
-        response = client.update_agent(agent=agent, update_mask=mask)
+        response = client.update_agent(request)
 
         return response
 
@@ -609,9 +615,10 @@ class Agents(scrapi_base.ScrapiBase):
         if obj:
             agent_id = obj.name
 
+        request = types.DeleteAgentRequest(name=agent_id)
         client_options = self._set_region(agent_id)
         client = services.agents.AgentsClient(
             credentials=self.creds, client_options=client_options)
-        client.delete_agent(name=agent_id)
+        client.delete_agent(request)
 
         return f"Agent '{agent_id}' successfully deleted."
