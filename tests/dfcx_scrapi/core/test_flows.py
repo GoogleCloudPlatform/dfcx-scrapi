@@ -19,7 +19,7 @@ from typing import Dict
 from unittest.mock import patch, MagicMock
 
 from google.cloud.dialogflowcx_v3beta1 import types
-from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1.services.flows import pagers, FlowsClient
 
 from dfcx_scrapi.core.flows import Flows
 
@@ -72,24 +72,23 @@ def mock_flows_list(test_config, nlu_settings):
 
 @pytest.fixture
 def mock_list_flows_pager(mock_flows_list):
-    return services.flows.pagers.ListFlowsPager(
-        services.flows.FlowsClient.list_flows,
+    return pagers.ListFlowsPager(
+        FlowsClient.list_flows,
         types.ListFlowsRequest(),
         types.ListFlowsResponse(
             flows=mock_flows_list),
     )
 
 @pytest.fixture(autouse=True)
-def mock_client(test_config: Dict[str, str]):
+def mock_creds(test_config: Dict[str, str]):
     """Setup fixture for Flows Class to be used with all tests."""
     with patch("dfcx_scrapi.core.scrapi_base.default") as mock_default, \
-        patch("dfcx_scrapi.core.scrapi_base.Request") as mock_request, \
-        patch("dfcx_scrapi.core.flows.services.flows.FlowsClient") as mock_client:
+        patch("dfcx_scrapi.core.scrapi_base.Request") as mock_request:
         mock_creds = MagicMock()
         mock_default.return_value = (mock_creds, test_config["project_id"])
         mock_request.return_value = MagicMock()
 
-        yield mock_client
+        yield mock_creds
 
 def test_build_nlu_settings_standard():
    nlu_settings = Flows._build_nlu_settings()
