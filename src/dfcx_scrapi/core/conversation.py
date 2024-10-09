@@ -74,8 +74,10 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
         self.turn_count = None
         self.agent_env = {}  # empty
         self.restart()
-        self.flows = flows.Flows(creds=self.creds)
-        self.pages = pages.Pages(creds=self.creds)
+        self.flows = flows.Flows(
+            creds=self.creds, language_code=self.language_code)
+        self.pages = pages.Pages(
+            creds=self.creds, language_code=self.language_code)
 
     @staticmethod
     def _set_language_code(language_code: str, config: Dict[str, Any]) -> str:

@@ -44,6 +44,7 @@ class Flows(scrapi_base.ScrapiBase):
         scope=False,
         flow_id: str = None,
         agent_id: str = None,
+        language_code: str = "en"
     ):
         super().__init__(
             creds_path=creds_path,
@@ -56,6 +57,7 @@ class Flows(scrapi_base.ScrapiBase):
             self.flow_id = flow_id
 
         self.agent_id = agent_id
+        self.language_code = language_code
         self.pages = pages.Pages(creds=self.creds)
 
     # TODO: Migrate to Flow Builder class when ready
@@ -197,7 +199,7 @@ class Flows(scrapi_base.ScrapiBase):
     def list_flows(
         self,
         agent_id: str = None,
-        language_code: str = "en") -> List[types.Flow]:
+        language_code: str = None) -> List[types.Flow]:
         """Get a List of all Flows in the current Agent.
 
         Args:
@@ -212,7 +214,12 @@ class Flows(scrapi_base.ScrapiBase):
 
         request = types.flow.ListFlowsRequest()
         request.parent = agent_id
-        request.language_code = language_code
+
+        # prefer method inputs over class level inputs
+        if language_code:
+            request.language_code = language_code
+        else:
+            request.language_code = self.language_code
 
         client_options = self._set_region(agent_id)
         client = services.flows.FlowsClient(
