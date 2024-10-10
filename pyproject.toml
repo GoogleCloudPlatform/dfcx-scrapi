@@ -1,27 +1,3 @@
-[tool.black]
-line-length = 88
-target-version = ['py36', 'py37', 'py38']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-  # The following are specific to Black, you probably don't want those.
-  | blib2to3
-  | tests/data
-  | profiling
-)/
-'''
-
-# Build system information below.
 [build-system]
 requires = ["setuptools>=42", "setuptools-scm", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -29,3 +5,7 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 line-length = 80
 extend-exclude = ["*.ipynb"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "tab"
