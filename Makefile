@@ -33,7 +33,7 @@ autofix-all:
 # use it like this:
 # make fix f=tools/validation_util.py
 fix:
-	black --line-length=80 ${f}
+	ruff format	${f}
 
 build:
 	python3 -m build
