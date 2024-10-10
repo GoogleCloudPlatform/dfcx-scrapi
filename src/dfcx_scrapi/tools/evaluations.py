@@ -83,8 +83,9 @@ class Evaluations(ScrapiBase):
         self.generation_model = self.model_setup(generation_model)
         self.embedding_model = self.model_setup(embedding_model)
 
+        self.user_input_metrics = metrics
         self.metrics = build_metrics(
-            metrics=metrics,
+            metrics=self.user_input_metrics,
             generation_model=self.generation_model,
             embedding_model=self.embedding_model
             )
@@ -189,7 +190,7 @@ class Evaluations(ScrapiBase):
         df.loc[:, "session_id"] = pd.Series(dtype="str")
         df.loc[:, "res_playbook_name"] = pd.Series(dtype="str")
 
-        if "tool_call_quality" in self.metrics:
+        if "tool_call_quality" in self.user_input_metrics:
             df.loc[:, "res_tool_name"] = pd.Series(dtype="str")
             df.loc[:, "res_tool_action"] = pd.Series(dtype="str")
             df.loc[:, "res_input_params"] = pd.Series(dtype="str")
@@ -243,7 +244,7 @@ class Evaluations(ScrapiBase):
                 )
 
             # Handle Tool Invocations
-            if "tool_call_quality" in self.metrics:
+            if "tool_call_quality" in self.user_input_metrics:
                 tool_responses = self.s.collect_tool_responses(res)
                 if len(tool_responses) > 0:
                     df = self.process_tool_invocations(
