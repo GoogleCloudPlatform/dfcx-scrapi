@@ -1,0 +1,1 @@
+gcloud logging read 'resource.labels.build_trigger_id="triggerhere" AND protoPayload.methodName="google.devtools.cloudbuild.v1.CloudBuild.RunBuildTrigger"' --limit 20 | grep principalEmail | head -n 1
