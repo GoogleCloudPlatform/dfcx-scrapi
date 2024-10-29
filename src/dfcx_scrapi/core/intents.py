@@ -44,6 +44,7 @@ class Intents(scrapi_base.ScrapiBase):
         scope=False,
         intent_id: str = None,
         agent_id: str = None,
+        language_code: str = "en"
     ):
         super().__init__(
             creds_path=creds_path,
@@ -58,6 +59,8 @@ class Intents(scrapi_base.ScrapiBase):
 
         if agent_id:
             self.agent_id = agent_id
+
+        self.language_code = language_code
 
     @staticmethod
     def concat_dict_and_df(
