@@ -22,7 +22,7 @@ import functools
 import threading
 import vertexai
 from collections import defaultdict
-from typing import Dict, Any, Iterable, List
+from typing import Dict, Any, Iterable, List, Optional
 
 from google.auth import default
 from google.api_core import exceptions
@@ -32,7 +32,12 @@ from google.auth.transport.requests import Request
 from google.protobuf import json_format
 from google.protobuf import field_mask_pb2, struct_pb2
 
-from vertexai.generative_models import GenerativeModel
+from vertexai.generative_models import (
+    GenerativeModel,
+    HarmBlockThreshold,
+    HarmCategory,
+    SafetySetting
+    )
 from vertexai.language_models import TextEmbeddingModel, TextGenerationModel
 
 from proto.marshal.collections import repeated
@@ -414,6 +419,120 @@ class ScrapiBase:
             valid_sys_instruct = False
 
         return valid_sys_instruct
+    
+    @staticmethod
+    def _update_kwargs(obj, **kwargs) -> field_mask_pb2.FieldMask:
+        """Create a FieldMask for Environment, Experiment, TestCase, Version."""
+        if kwargs:
+            for key, value in kwargs.items():
+                setattr(obj, key, value)
+            return field_mask_pb2.FieldMask(paths=kwargs.keys())
+        attrs_map = {
+            "Environment": [
+                "name", "display_name", "description", "version_configs",
+                "update_time", "test_cases_config", "webhook_config",
+            ],
+            "Experiment": [
+                "name", "display_name", "description", "state", "definition",
+                "rollout_config", "rollout_state", "rollout_failure_reason",
+                "result", "create_time", "start_time", "end_time",
+                "last_update_time", "experiment_length", "variants_history",
+            ],
+            "TestCase": [
+                "name", "tags", "display_name", "notes", "test_config",
+                "test_case_conversation_turns", "creation_time",
+                "last_test_result",
+            ],
+            "Version": [
+                "name", "display_name", "description", "nlu_settings",
+                "create_time", "state",
+            ],
+        }
+        if isinstance(obj, types.Environment):
+            paths = attrs_map["Environment"]
+        elif isinstance(obj, types.Experiment):
+            paths = attrs_map["Experiment"]
+        elif isinstance(obj, types.TestCase):
+            paths = attrs_map["TestCase"]
+        elif isinstance(obj, types.Version):
+            paths = attrs_map["Version"]
+        else:
+            raise ValueError(
+                "`obj` should be one of the following:"
+                " [Environment, Experiment, TestCase, Version]."
+            )
+
+        return field_mask_pb2.FieldMask(paths=paths)
+
+    def build_safety_settings(
+            self,
+            safety_config: Optional[Dict[str, str]] = None
+            ):
+        """Build a SafetyConfig payload for Gemini SDK calls.
+
+        If a safety_config dict is not provided, we'll set the defaults to OFF.
+        
+        Args:
+            safety_config: (Optional) A key / value pair dictionary containing
+            the category names and thresholds to set for each category. If not
+            provided, the default threshold will be used as defined below.
+        """
+        # https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/configure-safety-filters#harm_categories
+        CATEGORY_MAP = {
+            "hate_speech": HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            "harassment": HarmCategory.HARM_CATEGORY_HARASSMENT,
+            "sexually_explicit": HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+            "dangerous_content": HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT
+        }
+
+        # https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/configure-safety-filters#how_to_configure_safety_filters
+        THRESHOLD_MAP = {
+            "low": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+            "medium": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            "high": HarmBlockThreshold.BLOCK_ONLY_HIGH,
+            "off": HarmBlockThreshold.OFF,
+            "none": HarmBlockThreshold.BLOCK_NONE
+            }
+
+        if not safety_config:
+            safety_list = [
+                SafetySetting(
+                    category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                    threshold=HarmBlockThreshold.OFF
+                ),
+                SafetySetting(
+                    category=HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                    threshold=HarmBlockThreshold.OFF
+                ),
+                SafetySetting(
+                    category=HarmCategory.HARM_CATEGORY_HARASSMENT,
+                    threshold=HarmBlockThreshold.OFF
+                ),
+                SafetySetting(
+                    category=HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                    threshold=HarmBlockThreshold.OFF
+                )
+            ]
+
+        elif safety_config:
+            safety_list: List[SafetySetting] = []
+            for category, threshold in safety_config.items():
+                try:
+                    safety_list.append(
+                        SafetySetting(
+                            category=CATEGORY_MAP[category],
+                            threshold=THRESHOLD_MAP[threshold]
+                            )
+                        )
+                except KeyError as ke:
+                    available_categories = ", ".join(CATEGORY_MAP.keys())
+                    available_thresholds = ", ".join(THRESHOLD_MAP.keys())
+                    raise KeyError(
+                        f"Invalid key provided: {ke}. Available categories: "\
+                        f"[{available_categories}]. Available thresholds: "\
+                        f"[{available_thresholds}]") from ke
+
+        return safety_list
 
     def _check_and_update_scopes(self, creds: Any):
         """Update Credentials scopes if possible based on creds type."""
@@ -441,6 +560,8 @@ class ScrapiBase:
                 )
         else:
             return GenerativeModel(llm_model)
+
+
 
     def model_setup(self, llm_model: str, system_instructions: str = None):
         """Create a new LLM instance from user inputs."""
@@ -531,52 +652,6 @@ class ScrapiBase:
           Total calls to the API so far as an int.
         """
         return sum(self.get_api_calls_details().values())
-
-
-    @staticmethod
-    def _update_kwargs(obj, **kwargs) -> field_mask_pb2.FieldMask:
-        """Create a FieldMask for Environment, Experiment, TestCase, Version."""
-        if kwargs:
-            for key, value in kwargs.items():
-                setattr(obj, key, value)
-            return field_mask_pb2.FieldMask(paths=kwargs.keys())
-        attrs_map = {
-            "Environment": [
-                "name", "display_name", "description", "version_configs",
-                "update_time", "test_cases_config", "webhook_config",
-            ],
-            "Experiment": [
-                "name", "display_name", "description", "state", "definition",
-                "rollout_config", "rollout_state", "rollout_failure_reason",
-                "result", "create_time", "start_time", "end_time",
-                "last_update_time", "experiment_length", "variants_history",
-            ],
-            "TestCase": [
-                "name", "tags", "display_name", "notes", "test_config",
-                "test_case_conversation_turns", "creation_time",
-                "last_test_result",
-            ],
-            "Version": [
-                "name", "display_name", "description", "nlu_settings",
-                "create_time", "state",
-            ],
-        }
-        if isinstance(obj, types.Environment):
-            paths = attrs_map["Environment"]
-        elif isinstance(obj, types.Experiment):
-            paths = attrs_map["Experiment"]
-        elif isinstance(obj, types.TestCase):
-            paths = attrs_map["TestCase"]
-        elif isinstance(obj, types.Version):
-            paths = attrs_map["Version"]
-        else:
-            raise ValueError(
-                "`obj` should be one of the following:"
-                " [Environment, Experiment, TestCase, Version]."
-            )
-
-        return field_mask_pb2.FieldMask(paths=paths)
-
 
 def api_call_counter_decorator(func):
     """Counts the number of API calls for the function `func`."""
