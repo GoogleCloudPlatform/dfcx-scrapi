@@ -1,7 +1,8 @@
-google-cloud-aiplatform>=1.39.0
+google-api-core>=2.22.0
+google-cloud-aiplatform<1.71.0
 google-cloud-dialogflow-cx>=1.34.0
 google-cloud-discoveryengine>=0.11.10
-google-auth>=2.27.0
+google-auth>=2.35.0
 google-oauth
 oauth2client
 pandas
