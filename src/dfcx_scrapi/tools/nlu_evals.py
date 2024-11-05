@@ -24,9 +24,6 @@ import gspread
 
 from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.core import agents
-from dfcx_scrapi.core import flows
-from dfcx_scrapi.core import pages
-from dfcx_scrapi.core import intents
 from dfcx_scrapi.core import conversation
 from dfcx_scrapi.tools import dataframe_functions
 
@@ -99,6 +96,7 @@ class NluEvals(scrapi_base.ScrapiBase):
         creds_path: str = None,
         creds_dict: Dict[str, str] = None,
         creds=None,
+        language_code: str = "en"
     ):
 
         super().__init__(
@@ -111,14 +109,23 @@ class NluEvals(scrapi_base.ScrapiBase):
         self.agent_id = agent_id
         self._sheets_client = self._build_sheets_client()
 
-        self._a = agents.Agents(creds=self.creds)
-        self._i = intents.Intents(creds=self.creds)
-        self._f = flows.Flows(creds=self.creds)
-        self._p = pages.Pages(creds=self.creds)
+        self._a = agents.Agents(creds=self.creds, language_code=language_code)
         self._dc = conversation.DialogflowConversation(
-            creds_path=creds_path, agent_id=agent_id
+            creds_path=creds_path, agent_id=agent_id,
+            language_code=language_code
         )
         self._dffx = dataframe_functions.DataframeFunctions(creds=self.creds)
+
+    def get_agent_type(self, agent_id: str):
+        """Return the Agent type for logging purposes."""
+        agent = self._a.get_agent(agent_id)
+        
+        if agent.start_flow:
+            return "flow"
+        elif agent.start_playbook:
+            return "generative"
+        else:
+            raise ValueError("Could not determine Agent type.")
 
     def _build_sheets_client(self):
         client = gspread.authorize(self.creds)
@@ -232,6 +239,16 @@ class NluEvals(scrapi_base.ScrapiBase):
                   eval_run_display_name: str = "Evals"):
         """Run the full Eval dataset."""
         logsx = "-" * 10
+
+        agent_type = self.get_agent_type(self.agent_id)
+        warnx = "!" * 10
+        if agent_type == "generative":
+            msg = f"{warnx} Agent Type is GENERATIVE {warnx} \nThis specific"\
+                " class, NluEvals, is optimized for load testing standard"\
+                " Dialogflow CX Flow based Agents with Intents.\nIf you wish"\
+                " to evaluate a Generative Agent, please use"\
+                " dfcx_scrapi.tools.evaluations.Evaluations instead.\n"
+            logging.warning(msg)
 
         logging.info(f"{logsx} STARTING {eval_run_display_name} {logsx}")
         results = self._dc.run_intent_detection(

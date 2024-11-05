@@ -41,6 +41,7 @@ class Agents(scrapi_base.ScrapiBase):
         creds=None,
         scope=False,
         agent_id: str = None,
+        language_code: str = "en"
     ):
         super().__init__(
             creds_path=creds_path,
@@ -52,6 +53,8 @@ class Agents(scrapi_base.ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
             self.client_options = self._set_region(agent_id)
+
+        self.langauge_code = language_code
 
     @scrapi_base.api_call_counter_decorator
     def _list_agents_client_request(self, location_id) -> List[
