@@ -30,6 +30,7 @@ from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.sessions import Sessions
 from dfcx_scrapi.core.tools import Tools
 from dfcx_scrapi.core.playbooks import Playbooks
+from dfcx_scrapi.core.conversation_history import ConversationHistory
 from dfcx_scrapi.tools.dataframe_functions import DataframeFunctions
 from dfcx_scrapi.tools.agent_response import AgentResponse
 from dfcx_scrapi.tools.metrics import build_metrics
@@ -268,6 +269,154 @@ class Evaluations(ScrapiBase):
         df = self.clean_outputs(df)
 
         return df
+    
+    def parse_interactions_from_conversation_history(self, conversation):
+        t = Tools()
+        p = Playbooks(self.agent_id)
+
+        tools_map = t.get_tools_map(self.agent_id)
+        playbooks_map = p.get_playbooks_map(self.agent_id)
+        
+        results = []
+        
+        for interaction in reversed(conversation.interactions):
+            interaction_result = {
+                "query": interaction.request.query_input.text.text,
+                "tool_calls": [],
+                "responses": []
+            }
+            
+            query_result = interaction.response.query_result
+
+            if hasattr(query_result, 'generative_info'):
+                for action in query_result.generative_info.action_tracing_info.actions:
+                    if "tool_use" in action:
+                        tool_url = action.tool_use.tool
+                        
+                        matched_tool_name = None
+                        if isinstance(tools_map, dict):
+                            matched_tool_name = tools_map.get(tool_url)
+                        
+                        action_name = action.tool_use.action
+                        input_params = {}
+                        output_params = {}
+                        
+                        input_param = action.tool_use.input_action_parameters
+                        if hasattr(input_param, 'fields'):
+                            for field in input_param.fields:
+                                if hasattr(field.value, 'struct_value'):
+                                    for k, v in field.value.struct_value.fields.items():
+                                        input_params[k] = v.string_value if hasattr(v, 'string_value') else v.number_value
+                                else:
+                                    input_params[field.key] = field.value.string_value if hasattr(field.value, 'string_value') else field.value.number_value
+                        
+                        output_param = action.tool_use.output_action_parameters
+                        if hasattr(output_param, 'fields'):
+                            for field in output_param.fields:
+                                output_params[field.key] = field.value.string_value if hasattr(field.value, 'string_value') else field.value.number_value
+                        
+                        interaction_result["tool_calls"].append({
+                            "tool_name": matched_tool_name,
+                            "action": action_name,
+                            "input_parameters": input_params,
+                            "output_parameters": output_params
+                        })
+                    
+                    elif "agent_utterance" in action:
+                        response_text = action.agent_utterance.text
+                        interaction_result["responses"].append(response_text)
+                    
+                    elif "playbook_invocation" in action:
+                        playbook_url = action.playbook_invocation.playbook
+                        if isinstance(playbooks_map, dict):
+                            matched_playbooks_name = playbooks_map.get(playbook_url)
+                        interaction_result["playbook_invocation"] = matched_playbooks_name
+            
+            results.append(interaction_result)
+        
+        return results
+    
+    def create_golden_dataset_from_conv_ids(self, conversation_ids):
+        ch = ConversationHistory()
+        
+        INPUT_SCHEMA_REQUIRED_COLUMNS = [
+            'eval_id', 'action_id', 'action_type', 'action_input', 
+            'action_input_parameters', 'tool_action', 'notes'
+        ]
+        df_rows = []
+        
+        for idx, conv_id in enumerate(conversation_ids, start=1):
+            eval_id = f"{idx:03d}"
+            
+            convo = ch.get_conversation(conv_id)
+            parsed_conv = self.parse_interactions_from_conversation_history(convo)
+            
+            action_counter = 1
+            
+            playbook_count = sum(1 for interaction in parsed_conv if 'playbook_invocation' in interaction)
+            
+            for interaction in parsed_conv:
+                df_rows.append({
+                    'eval_id': eval_id,
+                    'action_id': action_counter,
+                    'action_type': 'User Utterance',
+                    'action_input': interaction['query'],
+                    'action_input_parameters': '',
+                    'tool_action': '',
+                    'notes': ''
+                })
+                action_counter += 1
+                
+                if 'playbook_invocation' in interaction and playbook_count > 1:
+                    playbook_value = interaction['playbook_invocation']
+                    if isinstance(playbook_value, dict):
+                        playbook_name = playbook_value.get('playbook', '')
+                    else:
+                        playbook_name = str(playbook_value)
+                        
+                    df_rows.append({
+                        'eval_id': eval_id,
+                        'action_id': action_counter,
+                        'action_type': 'Playbook Invocation',
+                        'action_input': playbook_name,
+                        'action_input_parameters': '',
+                        'tool_action': '',
+                        'notes': ''
+                    })
+                    action_counter += 1
+                
+                if 'tool_calls' in interaction:
+                    tool_calls = interaction['tool_calls']
+                    if isinstance(tool_calls, list):
+                        for tool_call in tool_calls:
+                            if isinstance(tool_call, dict):
+                                df_rows.append({
+                                    'eval_id': eval_id,
+                                    'action_id': action_counter,
+                                    'action_type': 'Tool Invocation',
+                                    'action_input': tool_call.get('tool_name', ''),
+                                    'action_input_parameters': str(tool_call.get('input_parameters', {})),
+                                    'tool_action': tool_call.get('action', ''),
+                                    'notes': ''
+                                })
+                                action_counter += 1
+                
+                if 'responses' in interaction:
+                    responses = interaction['responses']
+                    if isinstance(responses, list):
+                        for response in responses:
+                            df_rows.append({
+                                'eval_id': eval_id,
+                                'action_id': action_counter,
+                                'action_type': 'Agent Response',
+                                'action_input': str(response),
+                                'action_input_parameters': '',
+                                'tool_action': '',
+                                'notes': ''
+                            })
+                            action_counter += 1
+        
+        return pd.DataFrame(df_rows, columns=INPUT_SCHEMA_REQUIRED_COLUMNS)
 
 class DataLoader:
     def __init__(
@@ -611,3 +760,5 @@ class DataLoader:
         df = self.validate_and_prep_inputs(df)
 
         return df
+    
+    
