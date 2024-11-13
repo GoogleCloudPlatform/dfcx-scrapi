@@ -21,6 +21,7 @@ import time
 import functools
 import threading
 import vertexai
+import requests
 from collections import defaultdict
 from typing import Dict, Any, Iterable, List
 
@@ -414,6 +415,41 @@ class ScrapiBase:
             valid_sys_instruct = False
 
         return valid_sys_instruct
+
+    @staticmethod
+    def _handle_requests_response(response: requests.Response):
+        """Simple response wrapper for common directl requests API requests.
+
+        Args:
+          response: The Python requests.Response after directly invoking REST
+          APIs without the Python SDK.
+
+        Returns:
+          The API response JSON data, or None.
+        """
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        elif response.status_code == 404:
+            return None
+        else:
+            raise requests.exceptions.RequestException("API request failed", response.status_code, response)
+
+    def _set_request_headers(self, client_options: dict):
+        """Different regions have different API endpoints
+
+        Args:
+          client_options: A dictionary containing the api_endpoint to use when
+          instantiating other library client objects, or None
+          if the location is "global"
+
+        Returns:
+          The HTTP headers for authenticating and setting the GCP quota project.
+        """
+        return {
+            'Authorization': f'Bearer {self.token}',
+            'x-goog-user-project': client_options['quota_project_id']
+        }
 
     def _check_and_update_scopes(self, creds: Any):
         """Update Credentials scopes if possible based on creds type."""

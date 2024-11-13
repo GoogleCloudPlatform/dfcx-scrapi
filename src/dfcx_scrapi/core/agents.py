@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import logging
+import requests
 from typing import Dict, List
 from google.cloud.dialogflowcx_v3beta1 import services
 from google.cloud.dialogflowcx_v3beta1 import types
@@ -625,3 +626,81 @@ class Agents(scrapi_base.ScrapiBase):
         client.delete_agent(request)
 
         return f"Agent '{agent_id}' successfully deleted."
+
+    @scrapi_base.api_call_counter_decorator
+    def get_bq_settings(
+        self, agent_id: str = None) -> dict:
+        """Retrieve BigQuery Interaction Logging settings for an agent.
+
+        Args:
+          agent_id: CX Agent ID string in the following format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+
+        Returns:
+          CX agent BQ logging settings. If no agent is found, returns None.
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+
+        client_options = self._set_region(agent_id)
+        headers = self._set_request_headers(client_options)
+
+        response = requests.get(
+            f"https://{client_options['api_endpoint']}/v3beta1/{agent_id}", 
+            headers=headers
+        )
+
+        data = self._handle_requests_response(response)
+        if not data:
+            return None
+    
+        return {
+            'advancedSettings': {
+                'loggingSettings': data['advancedSettings']['loggingSettings']
+            },
+            'bigqueryExportSettings': data['bigqueryExportSettings']
+        }
+
+    @scrapi_base.api_call_counter_decorator
+    def update_bq_settings(
+        self, agent_id: str = None, bq_settings: dict = None) -> dict:
+        """Update BigQuery Interaction Logging settings for an agent.
+
+        Args:
+          agent_id: CX Agent ID string in the following format
+            projects/<PROJECT ID>/locations/<LOCATION ID>/agents/<AGENT ID>
+          bq_settings: The BQ interaction logging settings for the agent.
+          bq_settings.advancedSettings.loggingSettings.enableStackdriverLogging:
+            The flag to enable cloud logging.
+          bq_settings.advancedSettings.loggingSettings.enableInteractionLogging:
+            The flag to enable conversation history logging.
+          bq_settings.bigqueryExportSettings.enabled: The flag to enable
+          BigQuery interaction logging exports.
+          bq_settings.bigqueryExportSettings.bigqueryTable: The BigQuery
+          interaction logging table path in the form of:
+          `projects/<GCP PROJECT ID>/datasets/<DATASET ID>/tables/<TABLE ID>`
+
+        Returns:
+          String "Agent '(agent_id)' successfully updated."
+        """
+        if not agent_id:
+            agent_id = self.agent_id
+        if not bq_settings:
+           raise ValueError('bq_settings must be specified')
+
+        client_options = self._set_region(agent_id)
+        headers = self._set_request_headers(client_options)
+        update_mask = 'advancedSettings.loggingSettings,bigqueryExportSettings'
+
+        response = requests.patch(
+            f"https://{client_options['api_endpoint']}/v3beta1/{agent_id}?update_mask={update_mask}", 
+            headers=headers,
+            json=bq_settings
+        )
+
+        data = self._handle_requests_response(response)
+        if not data:
+            return None
+    
+        return f"Agent '{agent_id}' successfully updated."
+        
