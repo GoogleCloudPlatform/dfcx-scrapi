@@ -663,7 +663,7 @@ class Agents(scrapi_base.ScrapiBase):
 
     @scrapi_base.api_call_counter_decorator
     def update_bq_settings(
-        self, agent_id: str = None, bq_settings: dict = None) -> dict:
+        self, agent_id: str = None, bq_settings: dict = None) -> str:
         """Update BigQuery Interaction Logging settings for an agent.
 
         Args:
