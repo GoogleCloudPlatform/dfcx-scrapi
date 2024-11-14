@@ -16,6 +16,7 @@
 
 import json
 from google.cloud import storage
+from google.api_core.exceptions import NotFound
 
 class GcsUtils:
     def __init__(self, gcs_path: str = None):
@@ -114,5 +115,5 @@ class GcsUtils:
         try:
             storage_client = storage.Client()
             storage_client.get_bucket(bucket_name)
-        except:
-            raise ValueError(f"GCS Bucket `{bucket_name}` does not exist.")
+        except NotFound:
+            raise NotFound(f"GCS Bucket `{bucket_name}` does not exist.")

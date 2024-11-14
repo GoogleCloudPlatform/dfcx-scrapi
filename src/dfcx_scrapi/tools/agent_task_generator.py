@@ -303,7 +303,7 @@ class AgentTaskGenerator(ScrapiBase):
 
     def get_agent_tasks(self) -> Dict[str, Any]:
         """Extract App/Agent details and determine Agent's task list."""
-        task_msg = f"*** AUTO-GENERATING AGENT TASK LIST ***"
+        task_msg = "*** AUTO-GENERATING AGENT TASK LIST ***"
         logging.info(task_msg)
 
         agent = self.agents.get_agent(self.agent_id)
@@ -335,7 +335,7 @@ class AgentTaskGenerator(ScrapiBase):
     def get_agent_tasks_from_user_input(
             self, tasks: Any) -> Dict[str, Any]:
         """Given an arbitrary user input, clean and format with LLM."""
-        task_msg = f"*** FORMATTING AGENT TASK LIST ***"
+        task_msg = "*** FORMATTING AGENT TASK LIST ***"
         logging.info(task_msg)
 
         prompt = Prompts.user_task_main.replace("{USER_DETAILS}", str(tasks))
