@@ -464,6 +464,22 @@ class ScrapiBase:
 
         return field_mask_pb2.FieldMask(paths=paths)
 
+    @staticmethod
+    def set_logging_level(level: str):
+        LOGGING_MAP = {
+            "info": logging.INFO,
+            "warn": logging.WARN,
+            "error": logging.ERROR,
+            "debug": logging.DEBUG
+        }
+
+        logging.basicConfig(
+            level=LOGGING_MAP[level],
+            format="%(asctime)s %(levelname)-8s %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+            force=True
+        )
+
     def build_safety_settings(
             self,
             safety_config: Optional[Dict[str, str]] = None
