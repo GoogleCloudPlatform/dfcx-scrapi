@@ -16,14 +16,14 @@
 
 import json
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 from google.oauth2.service_account import Credentials
 
 from google.cloud.dialogflowcx_v3beta1 import types
 from vertexai.generative_models import GenerativeModel, GenerationResponse
 from dfcx_scrapi.tools.gcs_utils import GcsUtils
-from dfcx_scrapi.tools.agent_task_generator import AgentTaskGenerator, Prompts
+from dfcx_scrapi.tools.agent_task_generator import AgentTaskGenerator
 
 
 @pytest.fixture
@@ -410,7 +410,7 @@ def test_get_agent_tasks_from_user_input(test_config):
 
 	assert isinstance(tasks, dict)
 	assert isinstance(atg.model, GenerativeModel)
-	assert atg.creds == None
+	assert atg.creds is None
 	atg.model.generate_content.assert_called_once()
 	assert tasks == test_config["expected_tasks"]
 
