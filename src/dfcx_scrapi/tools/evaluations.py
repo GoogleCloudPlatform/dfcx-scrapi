@@ -24,7 +24,6 @@ from tqdm import tqdm
 from typing import Dict, List, Any
 
 from google.oauth2 import service_account
-from google.protobuf import struct_pb2
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.agents import Agents
@@ -345,7 +344,7 @@ class Evaluations(ScrapiBase):
                 action_counter += self.parse_playbook_invocation_to_golden_template(df_rows, eval_id, action_counter, interaction, playbook_count)
 
                 action_counter += self.parse_tool_calls_to_golden_template(df_rows, eval_id, action_counter, interaction.get('tool_calls', []))           
-                 
+
                 action_counter += self.parse_responses_to_golden_template(df_rows, eval_id, action_counter, interaction.get("responses", []))
 
         return pd.DataFrame(df_rows, columns=columns)
