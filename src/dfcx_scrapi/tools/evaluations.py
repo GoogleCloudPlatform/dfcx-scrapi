@@ -349,6 +349,45 @@ class Evaluations(ScrapiBase):
 
         return pd.DataFrame(df_rows, columns=columns)
     
+    def add_row_to_golden_template(self, df_rows, eval_id, action_id, action_type, action_input, action_input_parameters='', tool_action='', notes=''):
+        df_rows.append({
+            'eval_id': eval_id,
+            'action_id': action_id,
+            'action_type': action_type,
+            'action_input': action_input,
+            'action_input_parameters': action_input_parameters,
+            'tool_action': tool_action,
+            'notes': notes
+        })
+
+    def parse_playbook_invocation_to_golden_template(self, df_rows, eval_id, action_counter, interaction, playbook_count) -> int:
+        if 'playbook_invocation' in interaction and playbook_count > 1:
+            playbook_value = interaction['playbook_invocation']
+            playbook_name = playbook_value.get('playbook', '') if isinstance(playbook_value, dict) else str(playbook_value)
+            self.add_row_to_golden_template(df_rows, eval_id, action_counter, "Playbook Invocation", playbook_name)
+            return 1
+        return 0
+
+    def parse_tool_calls_to_golden_template(self, df_rows, eval_id, action_counter, tool_calls) -> int:
+        count = 0
+        if isinstance(tool_calls, list):
+            for tool_call in tool_calls:
+                if isinstance(tool_call, dict):
+                    self.add_row_to_golden_template(
+                        df_rows, eval_id, action_counter + count, "Tool Invocation", 
+                        tool_call.get('tool_name', ''), str(tool_call.get('input_parameters', {})), tool_call.get('action', '')
+                    )
+                    count += 1
+        return count
+
+    def parse_responses_to_golden_template(self, df_rows, eval_id, action_counter, responses) -> int:
+        count = 0
+        if isinstance(responses, list):
+            for response in responses:
+                self.add_row_to_golden_template(df_rows, eval_id, action_counter + count, "Agent Response", str(response))
+                count += 1
+        return count
+
 class DataLoader:
     def __init__(
             self,
