@@ -392,8 +392,16 @@ class Evaluations(ScrapiBase):
             if row["action_type"] != "User Utterance":
                 continue
 
-            res = self.sessions_client.detect_intent(
-                self.agent_id, self.session_id, row["action_input"]
+            if row["action_type"] != "User Utterance":
+                continue
+
+            session_parameters = None  
+
+            if "session_parameters" in row:
+                session_parameters = row["session_parameters"]
+
+            res = self.s.detect_intent(
+                self.agent_id, self.session_id, row["action_input"], parameters = session_parameters
             )
 
             # Add data to the existing row
@@ -768,7 +776,7 @@ class DataLoader:
         """Convert column types as needed."""
         STR_COLUMNS = [
             "eval_id", "action_type", "action_input", "action_input_parameters",
-            "tool_action", "notes"
+            "tool_action", "notes", "session_parameters"
         ]
 
         for col in df.columns:
