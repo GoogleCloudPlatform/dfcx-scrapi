@@ -31,11 +31,14 @@ def test_config():
     project_id = "my-project-id-1234"
     location_id = "global"
     parent = f"projects/{project_id}/locations/{location_id}"
-    agent_id = f"{parent}/agents/my-agent-1234"
+    agent_id = f"{parent}/agents/a1b2c3d4-e5f6-7890-1234-567890abcdef"
     display_name = "My Agent Display Name"
     default_id = "00000000-0000-0000-0000-000000000000"
     start_flow = f"{agent_id}/flows/{default_id}"
     start_playbook = f"{agent_id}/playbooks/{default_id}"
+    bq_dataset = "bq_dataset"
+    bq_table = "bq_table"
+    bq_table_full_path = f"projects/{project_id}/datasets/{bq_dataset}/tables/{bq_table}"
     return {
         "parent": parent,
         "project_id": project_id,
@@ -43,17 +46,31 @@ def test_config():
         "display_name": display_name,
         "location_id": location_id,
         "start_flow": start_flow,
-        "start_playbook": start_playbook
+        "start_playbook": start_playbook,
+        "bq_dataset": bq_dataset,
+        "bq_table": bq_table,
+        "bq_table_full_path": bq_table_full_path
     }
 
 @pytest.fixture
 def mock_agent_obj(test_config: Dict[str, str]):
+    agent_id = test_config["agent_id"]
+
     return types.Agent(
-        name=test_config["agent_id"],
+        name=agent_id,
         display_name=f"{test_config['display_name']}",
         default_language_code="en",
         time_zone="America/Chicago",
-        start_flow=test_config["start_flow"]
+        start_flow=test_config["start_flow"],
+        advanced_settings=types.AdvancedSettings(
+            logging_settings=types.AdvancedSettings.LoggingSettings(
+                enable_stackdriver_logging=False,
+                enable_interaction_logging=False
+            )
+        ),
+        bigquery_export_settings=types.BigQueryExportSettings(
+            enabled=False
+        )
     )
 
 @pytest.fixture
@@ -90,7 +107,39 @@ def mock_updated_agent_obj(test_config: Dict[str, str]):
         display_name="Updated Agent Display Name",
         default_language_code="en",
         time_zone="America/Chicago",
-        start_flow=test_config["start_flow"]
+        start_flow=test_config["start_flow"],
+        advanced_settings=types.AdvancedSettings(
+            logging_settings=types.AdvancedSettings.LoggingSettings(
+                enable_stackdriver_logging=False,
+                enable_interaction_logging=False
+            )
+        ),
+        bigquery_export_settings=types.BigQueryExportSettings(
+            enabled=False
+        )
+    )
+
+@pytest.fixture
+def mock_updated_agent_obj_bq_settings(test_config: Dict[str, str]):
+    agent_id = test_config["agent_id"]
+    bq_table_full_path = test_config["bq_table_full_path"]
+
+    return types.Agent(
+        name=agent_id,
+        display_name=f"{test_config['display_name']}",
+        default_language_code="en",
+        time_zone="America/Chicago",
+        start_flow=test_config["start_flow"],
+        advanced_settings=types.AdvancedSettings(
+            logging_settings=types.AdvancedSettings.LoggingSettings(
+                enable_stackdriver_logging=True,
+                enable_interaction_logging=True
+            )
+        ),
+        bigquery_export_settings=types.BigQueryExportSettings(
+            enabled=True,
+            bigquery_table=bq_table_full_path
+        )
     )
 
 @pytest.fixture
@@ -184,9 +233,10 @@ def test_get_agent_by_display_name_no_location(
         "europe-west1", "europe-west2"
     ]
     parent_stub = f"projects/{test_config['project_id']}/locations"
+    agent_uuid = "a1b2c3d4-e5f6-7890-1234-567890abcdef"
     agent_objects = [
         types.Agent(
-            name=f"{parent_stub}/{region}/agents/my-agent-1234",
+            name=f"{parent_stub}/{region}/agents/{agent_uuid}",
             display_name=f"{test_config['display_name']} {region}") 
         for region in expected_regions
     ]
@@ -289,7 +339,7 @@ def test_create_agent_from_obj(
 def test_create_agent_from_obj_with_kwargs(
         mock_create_agent: MagicMock,
         mock_agent_obj_kwargs: types.Agent,
-        test_config):
+        test_config: Dict[str, str]):
     mock_create_agent.return_value = mock_agent_obj_kwargs
     expected_agent = types.Agent(
         display_name=test_config["display_name"],
@@ -431,3 +481,127 @@ def test_delete_agent(
 
     assert response == res_str
     mock_delete_agent.assert_called_once_with(expected_request)
+
+@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient.get_agent")
+def test_get_bq_settings(
+    mock_get_agent: MagicMock,
+    mock_agent_obj: types.Agent,
+    test_config: Dict[str, str],
+    mock_creds: MagicMock):
+    mock_get_agent.return_value = mock_agent_obj
+    expected_request = types.GetAgentRequest(name=test_config["agent_id"])
+
+    agent = Agents(creds=mock_creds)
+    response = agent.get_bq_settings(test_config["agent_id"])
+
+    mock_get_agent.assert_called_once_with(expected_request)
+
+    assert isinstance(response, dict)
+    assert "advanced_settings" in response
+    assert "logging_settings" in response["advanced_settings"]
+    assert "enable_stackdriver_logging" in response["advanced_settings"]["logging_settings"]
+    assert "enable_interaction_logging" in response["advanced_settings"]["logging_settings"]
+    assert "bigquery_export_settings" in response
+    assert "enabled" in response["bigquery_export_settings"]
+    assert "bigquery_table" in response["bigquery_export_settings"]
+
+@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient.update_agent")
+@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient.get_agent")
+def test_update_bq_settings_with_bq_settings(
+    mock_get_agent: MagicMock,
+    mock_update_agent: MagicMock,
+    test_config: Dict[str, str],
+    mock_agent_obj: MagicMock,
+    mock_updated_agent_obj_bq_settings: MagicMock):
+    
+    mock_get_agent.return_value = mock_agent_obj
+    mock_update_agent.return_value = mock_updated_agent_obj_bq_settings
+    update_request = types.UpdateAgentRequest(
+        agent=mock_updated_agent_obj_bq_settings,
+        update_mask=field_mask_pb2.FieldMask(
+            paths=["advanced_settings", "bigquery_export_settings"]
+            )
+        )
+
+    bq_settings = {
+        "advanced_settings": {
+            "logging_settings": {
+                "enable_stackdriver_logging": True,
+                "enable_interaction_logging": True
+            }
+        },
+        "bigquery_export_settings": {
+            "enabled": True,
+            "bigquery_table": test_config["bq_table_full_path"]
+        }
+    }
+
+    agent = Agents()
+    response = agent.update_bq_settings(
+        agent_id=test_config["agent_id"],
+        bq_settings=bq_settings
+    )
+
+    assert isinstance(response, types.Agent)
+    assert response.advanced_settings.logging_settings.enable_stackdriver_logging
+    assert response.advanced_settings.logging_settings.enable_interaction_logging
+    assert response.bigquery_export_settings.enabled
+    assert response.bigquery_export_settings.bigquery_table == test_config["bq_table_full_path"]
+
+    mock_update_agent.assert_called_once_with(update_request)
+
+@patch("google.cloud.bigquery.Client")
+@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient.update_agent")
+@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient.get_agent")
+def test_update_bq_settings_with_kwargs(
+    mock_get_agent: MagicMock,
+    mock_update_agent: MagicMock,
+    mock_bigquery_client: MagicMock,
+    test_config: Dict[str, str],
+    mock_agent_obj: MagicMock,
+    mock_updated_agent_obj_bq_settings: MagicMock):
+    
+    mock_bq_client = mock_bigquery_client.return_value
+    mock_dataset = MagicMock()
+    mock_dataset.dataset_id = test_config["bq_dataset"]
+    mock_table = MagicMock()
+    mock_table.table_id = test_config["bq_table"]
+
+    mock_bq_client.list_datasets.return_value = [mock_dataset]
+    mock_bq_client.list_tables.return_value = [mock_table]
+    
+    mock_get_agent.return_value = mock_agent_obj
+    mock_update_agent.return_value = mock_updated_agent_obj_bq_settings
+    update_request = types.UpdateAgentRequest(
+        agent=mock_updated_agent_obj_bq_settings,
+        update_mask=field_mask_pb2.FieldMask(
+            paths=["advanced_settings", "bigquery_export_settings"]
+            )
+        )
+
+    agent = Agents()
+    response = agent.update_bq_settings(
+        agent_id=test_config["agent_id"],
+        enable_stackdriver_logging=True,
+        enable_interaction_logging=True,
+        bigquery_enabled=True,
+        bigquery_table=test_config["bq_table"]
+    )
+
+    assert isinstance(response, types.Agent)
+    assert response.advanced_settings.logging_settings.enable_stackdriver_logging
+    assert response.advanced_settings.logging_settings.enable_interaction_logging
+    assert response.bigquery_export_settings.enabled
+    assert response.bigquery_export_settings.bigquery_table == test_config["bq_table_full_path"]
+
+    mock_update_agent.assert_called_once_with(update_request)
+
+def test_update_bq_settings_no_args(test_config: Dict[str, str]):
+    agent = Agents()
+
+    with pytest.raises(ValueError) as e:
+        agent.update_bq_settings(
+            agent_id=test_config["agent_id"]
+        )
+
+    assert str(e.value) == "At least one setting must be provided if 'bq_settings' is not used."
