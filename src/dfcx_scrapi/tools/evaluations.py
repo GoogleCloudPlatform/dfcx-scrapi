@@ -206,7 +206,8 @@ class Evaluations(ScrapiBase):
         for index, row in tqdm(df.iterrows(), total=df.shape[0]):
             data = {}
             if row["action_id"] == 1:
-                self.session_id = self.sessions_client.build_session_id(self.agent_id)
+                self.session_id = self.sessions_client.build_session_id(
+                    self.agent_id)
                 data["session_id"] = self.session_id
                 data["agent_id"] = self.agent_id
 
@@ -234,7 +235,9 @@ class Evaluations(ScrapiBase):
             df.loc[utterance_idx, ["agent_response"]] = [text_res]
 
             # Handle Playbook Invocations
-            playbook_responses = self.sessions_client.collect_playbook_responses(res)
+            playbook_responses = (
+                self.sessions_client.collect_playbook_responses(res)
+            )
             if len(playbook_responses) > 0:
                 df = self.process_playbook_invocations(
                     playbook_responses, index, row, df
@@ -249,7 +252,9 @@ class Evaluations(ScrapiBase):
 
             # Handle Tool Invocations
             if "tool_call_quality" in self.user_input_metrics:
-                tool_responses = self.sessions_client.collect_tool_responses(res)
+                tool_responses = (
+                    self.sessions_client.collect_tool_responses(res)
+                )
                 if len(tool_responses) > 0:
                     df = self.process_tool_invocations(
                         tool_responses, index, row, df
@@ -273,11 +278,17 @@ class Evaluations(ScrapiBase):
 
         return df
 
-    def parse_interactions_from_conversation_history(self, conversation: ConversationHistory) -> List:
-        self.tools_map = self.tools_client.get_tools_map(self.agent_id)
-        self.playbooks_map = self.playbooks_client.get_playbooks_map(self.agent_id)
-        
+    def parse_interactions_from_conversation_history(
+            self,
+            conversation: ConversationHistory) -> List:
         results = []
+
+        # Load maps if they don't already exist
+        if not self.tools_map:
+            self.tools_map = self.tools_client.get_tools_map(self.agent_id)
+        if not self.playbooks_map:
+            self. playbooks_map = self.playbooks_client.get_playbooks_map(
+                self.agent_id)
         
         for interaction in reversed(conversation.interactions):
             interaction_result = {
@@ -289,9 +300,13 @@ class Evaluations(ScrapiBase):
             query_result = interaction.response.query_result
 
             if hasattr(query_result, 'generative_info'):
-                for action in query_result.generative_info.action_tracing_info.actions:
+                gen_info = query_result.generative_info
+                for action in gen_info.action_tracing_info.actions:
                     if "tool_use" in action:
-                        tool_calls = self.parse_tool_use_from_conversation_history(action.tool_use)
+                        tool_calls = (
+                            self.parse_tool_use_from_conversation_history(
+                                action.tool_use)
+                        )
                         interaction_result["tool_calls"].append(tool_calls)
                     
                     elif "agent_utterance" in action:
@@ -300,19 +315,24 @@ class Evaluations(ScrapiBase):
                     
                     elif "playbook_invocation" in action:
                         playbook_id = action.playbook_invocation.playbook
-                        matched_playbooks_name = self.playbooks_map.get(playbook_id)
-                        interaction_result["playbook_invocation"] = matched_playbooks_name
+                        matched_playbooks_name = self.playbooks_map.get(
+                            playbook_id)
+                        interaction_result["playbook_invocation"] = (
+                            matched_playbooks_name
+                        )
             
             results.append(interaction_result)
         
         return results
     
-    def parse_tool_use_from_conversation_history(self, tool_use: types.ToolUse) -> Dict:                  
+    def parse_tool_use_from_conversation_history(
+            self,
+            tool_use: types.ToolUse) -> Dict[str, Any]:       
         matched_tool_name = self.tools_map.get(tool_use.tool, None)
-        
-        input_params = self.recurse_proto_marshal_to_dict(tool_use.input_action_parameters)
-        
-        output_params = self.recurse_proto_marshal_to_dict(tool_use.output_action_parameters)
+        input_params = self.recurse_proto_marshal_to_dict(
+            tool_use.input_action_parameters)
+        output_params = self.recurse_proto_marshal_to_dict(
+            tool_use.output_action_parameters)
         
         return {
             "tool_name": matched_tool_name,
@@ -321,35 +341,66 @@ class Evaluations(ScrapiBase):
             "output_parameters": output_params
         }
 
-    def create_golden_dataset_from_conv_ids(self, conversation_ids: List) -> pd.DataFrame:
+    def create_golden_dataset_from_conv_ids(
+            self,
+            conversation_ids: List) -> pd.DataFrame:
         ch = ConversationHistory()
         columns = [
             'eval_id', 'action_id', 'action_type', 'action_input', 
             'action_input_parameters', 'tool_action', 'notes'
         ]
         df_rows = []
+
+        # Load maps if they don't already exist
+        if not self.tools_map:
+            self.tools_map = self.tools_client.get_tools_map(self.agent_id)
+        if not self.playbooks_map:
+            self. playbooks_map = self.playbooks_client.get_playbooks_map(
+                self.agent_id)
         
         for idx, conv_id in enumerate(conversation_ids, start=1):
             eval_id = f"{idx:03d}"
             convo = ch.get_conversation(conv_id)
-            parsed_convo = self.parse_interactions_from_conversation_history(convo)
+            parsed_convo = self.parse_interactions_from_conversation_history(
+                convo)
             
             action_counter = 1  
 
             for interaction in parsed_convo:
-                self.add_row_to_golden_template(df_rows, eval_id, action_counter, "User Utterance", interaction.get('query', ''))
+                self.add_row_to_golden_template(
+                    df_rows=df_rows,
+                    eval_id=eval_id,
+                    action_id=action_counter,
+                    action_type="User Utterance",
+                    action_input=interaction.get('query', '')
+                    )
                 action_counter += 1
 
                 playbook_count = sum(1 for i in parsed_convo if 'playbook_invocation' in i)
-                action_counter += self.parse_playbook_invocation_to_golden_template(df_rows, eval_id, action_counter, interaction, playbook_count)
-
-                action_counter += self.parse_tool_calls_to_golden_template(df_rows, eval_id, action_counter, interaction.get('tool_calls', []))           
-
-                action_counter += self.parse_responses_to_golden_template(df_rows, eval_id, action_counter, interaction.get("responses", []))
+                action_counter += (
+                    self.parse_playbook_invocation_to_golden_template(
+                        df_rows, eval_id, action_counter, interaction,
+                        playbook_count)
+                )
+                action_counter += self.parse_tool_calls_to_golden_template(
+                    df_rows, eval_id, action_counter,
+                    interaction.get('tool_calls', []))           
+                action_counter += self.parse_responses_to_golden_template(
+                    df_rows, eval_id, action_counter,
+                    interaction.get("responses", []))
 
         return pd.DataFrame(df_rows, columns=columns)
 
-    def add_row_to_golden_template(self, df_rows, eval_id, action_id, action_type, action_input, action_input_parameters='', tool_action='', notes=''):
+    def add_row_to_golden_template(
+            self,
+            df_rows,
+            eval_id,
+            action_id,
+            action_type,
+            action_input,
+            action_input_parameters='',
+            tool_action='',
+            notes=''):
         df_rows.append({
             'eval_id': eval_id,
             'action_id': action_id,
@@ -360,31 +411,65 @@ class Evaluations(ScrapiBase):
             'notes': notes
         })
 
-    def parse_playbook_invocation_to_golden_template(self, df_rows, eval_id, action_counter, interaction, playbook_count) -> int:
+    def parse_playbook_invocation_to_golden_template(
+            self,
+            df_rows,
+            eval_id,
+            action_counter,
+            interaction,
+            playbook_count) -> int:
         if 'playbook_invocation' in interaction and playbook_count > 1:
             playbook_value = interaction['playbook_invocation']
-            playbook_name = playbook_value.get('playbook', '') if isinstance(playbook_value, dict) else str(playbook_value)
-            self.add_row_to_golden_template(df_rows, eval_id, action_counter, "Playbook Invocation", playbook_name)
+            playbook_name = playbook_value.get('playbook', '') if isinstance(
+                playbook_value, dict) else str(playbook_value)
+            self.add_row_to_golden_template(
+                df_rows,
+                eval_id,
+                action_counter,
+                "Playbook Invocation",
+                playbook_name
+                )
             return 1
         return 0
 
-    def parse_tool_calls_to_golden_template(self, df_rows, eval_id, action_counter, tool_calls) -> int:
+    def parse_tool_calls_to_golden_template(
+            self,
+            df_rows,
+            eval_id,
+            action_counter,
+            tool_calls) -> int:
         count = 0
         if isinstance(tool_calls, list):
             for tool_call in tool_calls:
                 if isinstance(tool_call, dict):
                     self.add_row_to_golden_template(
-                        df_rows, eval_id, action_counter + count, "Tool Invocation", 
-                        tool_call.get('tool_name', ''), str(tool_call.get('input_parameters', {})), tool_call.get('action', '')
+                        df_rows,
+                        eval_id,
+                        action_counter + count,
+                        "Tool Invocation", 
+                        tool_call.get('tool_name', ''),
+                        str(tool_call.get('input_parameters', {})),
+                        tool_call.get('action', '')
                     )
                     count += 1
         return count
 
-    def parse_responses_to_golden_template(self, df_rows, eval_id, action_counter, responses) -> int:
+    def parse_responses_to_golden_template(
+            self,
+            df_rows,
+            eval_id,
+            action_counter,
+            responses) -> int:
         count = 0
         if isinstance(responses, list):
             for response in responses:
-                self.add_row_to_golden_template(df_rows, eval_id, action_counter + count, "Agent Response", str(response))
+                self.add_row_to_golden_template(
+                    df_rows,
+                    eval_id,
+                    action_counter + count,
+                    "Agent Response",
+                    str(response)
+                    )
                 count += 1
         return count
 
