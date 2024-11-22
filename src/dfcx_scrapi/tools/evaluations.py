@@ -290,7 +290,7 @@ class Evaluations(ScrapiBase):
             self. playbooks_map = self.playbooks_client.get_playbooks_map(
                 self.agent_id)
         
-        for interaction in reversed(conversation.interactions):
+        for interaction in conversation.interactions:
             interaction_result = {
                 "query": interaction.request.query_input.text.text,
                 "tool_calls": [],
@@ -322,6 +322,7 @@ class Evaluations(ScrapiBase):
                         )
             
             results.append(interaction_result)
+        results.reverse()
         
         return results
     
