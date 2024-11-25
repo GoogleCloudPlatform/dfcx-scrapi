@@ -6,6 +6,12 @@ build-backend = "setuptools.build_meta"
 line-length = 80
 extend-exclude = ["*.ipynb"]
 
+[tool.ruff.lint]
+select = [
+    "I"  # isort
+    ]
+ignore = []
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "tab"
