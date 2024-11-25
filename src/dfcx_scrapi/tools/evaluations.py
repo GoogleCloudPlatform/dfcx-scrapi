@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from typing import Dict, List, Any
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, field
 
 from google.oauth2 import service_account
 
