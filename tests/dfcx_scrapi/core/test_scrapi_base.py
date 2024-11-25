@@ -14,21 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from google.oauth2.credentials import Credentials as UserCredentials
-from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from google.api_core import exceptions
-from google.protobuf import field_mask_pb2, struct_pb2
 from google.cloud.dialogflowcx_v3beta1 import types
+from google.oauth2.credentials import Credentials as UserCredentials
+from google.oauth2.service_account import (
+    Credentials as ServiceAccountCredentials,
+)
+from google.protobuf import field_mask_pb2, struct_pb2
 
 from dfcx_scrapi.core.scrapi_base import (
-    api_call_counter_decorator, 
-    should_retry,
-    retry_api_call,
+    ScrapiBase,
+    api_call_counter_decorator,
     handle_api_error,
-    ScrapiBase
-    )
+    retry_api_call,
+    should_retry,
+)
+
 
 @pytest.fixture
 def test_config():

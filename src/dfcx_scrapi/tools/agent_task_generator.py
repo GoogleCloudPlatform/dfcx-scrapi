@@ -14,25 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import json
 import logging
+import os
 import random
-from typing import Dict, Any, List
 from pathlib import Path
+from typing import Any, Dict, List
 
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
+from vertexai.generative_models import GenerationConfig, GenerativeModel
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.intents import Intents
 from dfcx_scrapi.core.playbooks import Playbooks
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.tools import Tools
 from dfcx_scrapi.tools.gcs_utils import GcsUtils
-
-from google.cloud.dialogflowcx_v3beta1 import types
-from vertexai.generative_models import GenerativeModel, GenerationConfig
 
 
 class AgentTaskGenerator(ScrapiBase):

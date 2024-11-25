@@ -15,20 +15,22 @@
 # limitations under the License.
 
 import sys
+from typing import Dict, Set
+
+import gspread
 import numpy as np
 import pandas as pd
 import scann
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from typing import Dict, Set
-
 import tensorflow_hub
+from oauth2client.service_account import ServiceAccountCredentials
 
-from dfcx_scrapi.core import flows
-from dfcx_scrapi.core import intents
-from dfcx_scrapi.core import pages
-from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core import transition_route_groups
+from dfcx_scrapi.core import (
+    flows,
+    intents,
+    pages,
+    scrapi_base,
+    transition_route_groups,
+)
 
 if "google.colab" in sys.modules:
     from google.colab import data_table

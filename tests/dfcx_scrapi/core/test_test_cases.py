@@ -17,12 +17,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
-from unittest.mock import patch, MagicMock
-from dfcx_scrapi.core.test_cases import TestCases as PyTestCases
+import pytest
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.cloud.dialogflowcx_v3beta1.services import test_cases
+
+from dfcx_scrapi.core.test_cases import TestCases as PyTestCases
 
 
 @pytest.fixture

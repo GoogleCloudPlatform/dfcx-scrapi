@@ -14,12 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import json
+import os
 
-from dfcx_scrapi.agent_extract import common
-from dfcx_scrapi.agent_extract import types
-from dfcx_scrapi.agent_extract import routes
+from dfcx_scrapi.agent_extract import common, routes, types
 
 
 class RouteGroups:

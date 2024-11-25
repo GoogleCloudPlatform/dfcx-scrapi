@@ -18,12 +18,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from dfcx_scrapi.core.playbooks import Playbooks
-from google.cloud.dialogflowcx_v3beta1 import types
-from google.cloud.dialogflowcx_v3beta1 import services
+from google.cloud.dialogflowcx_v3beta1 import services, types
 from google.protobuf import field_mask_pb2
+
+from dfcx_scrapi.core.playbooks import Playbooks
+
 
 @pytest.fixture
 def test_config():

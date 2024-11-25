@@ -16,6 +16,7 @@
 
 import collections
 
+
 class Graph:
     """Utility class for manaing graph structure."""
 

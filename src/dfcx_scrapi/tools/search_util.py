@@ -16,19 +16,22 @@
 
 import logging
 import time
-from typing import Dict, List
 from operator import attrgetter
-import pandas as pd
-import numpy as np
-from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core import intents
-from dfcx_scrapi.core import flows
-from dfcx_scrapi.core import pages
-from dfcx_scrapi.core import entity_types
-from dfcx_scrapi.core import transition_route_groups
+from typing import Dict, List
 
+import numpy as np
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
+
+from dfcx_scrapi.core import (
+    entity_types,
+    flows,
+    intents,
+    pages,
+    scrapi_base,
+    transition_route_groups,
+)
 
 # logging config
 logging.basicConfig(

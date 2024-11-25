@@ -14,15 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Tuple
 import logging
-from google.oauth2 import service_account
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
+from typing import Dict, List, Tuple
 
-from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core import flows
-from dfcx_scrapi.core import versions
+from google.cloud.dialogflowcx_v3beta1 import services, types
+from google.oauth2 import service_account
+
+from dfcx_scrapi.core import flows, scrapi_base, versions
 
 # logging config
 logging.basicConfig(

@@ -14,29 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
 import logging
-
 from ast import literal_eval
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List
+
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-from typing import Dict, List, Any
-from dataclasses import dataclass, field
-
-from google.oauth2 import service_account
-
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
-from dfcx_scrapi.core.agents import Agents
-from dfcx_scrapi.core.sessions import Sessions
-from dfcx_scrapi.core.conversation_history import ConversationHistory
-from dfcx_scrapi.core.tools import Tools
-from dfcx_scrapi.core.playbooks import Playbooks
-from dfcx_scrapi.tools.dataframe_functions import DataframeFunctions
-from dfcx_scrapi.tools.agent_response import AgentResponse
-from dfcx_scrapi.tools.metrics import build_metrics
-
 from google.cloud.dialogflowcx_v3beta1 import types
+from google.oauth2 import service_account
+from tqdm import tqdm
+
+from dfcx_scrapi.core.agents import Agents
+from dfcx_scrapi.core.conversation_history import ConversationHistory
+from dfcx_scrapi.core.playbooks import Playbooks
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.sessions import Sessions
+from dfcx_scrapi.core.tools import Tools
+from dfcx_scrapi.tools.agent_response import AgentResponse
+from dfcx_scrapi.tools.dataframe_functions import DataframeFunctions
+from dfcx_scrapi.tools.metrics import build_metrics
 
 # logging config
 logging.basicConfig(

@@ -16,13 +16,11 @@
 
 import datetime
 import logging
-
 from typing import Dict
 
 import pandas as pd
+from google.cloud.dialogflowcx_v3beta1 import services, types
 
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
 from dfcx_scrapi.core import scrapi_base
 
 # logging config

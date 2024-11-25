@@ -15,16 +15,18 @@
 # limitations under the License.
 
 import re
-from typing import Dict, Any, List, Union, Optional
+from typing import Any, Dict, List, Optional, Union
+
 from google.cloud.discoveryengine import (
-    SearchServiceClient,
-    DocumentServiceClient,
-    SearchRequest,
-    UserInfo,
-    Interval,
     Document,
-    ListDocumentsRequest
-    )
+    DocumentServiceClient,
+    Interval,
+    ListDocumentsRequest,
+    SearchRequest,
+    SearchServiceClient,
+    UserInfo,
+)
+
 from dfcx_scrapi.core import scrapi_base
 
 

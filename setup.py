@@ -15,7 +15,8 @@
 # limitations under the License.
 
 import pathlib
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 here = pathlib.Path(__file__).parent.resolve()
 

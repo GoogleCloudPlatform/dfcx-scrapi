@@ -14,16 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd
 import logging
 from typing import Dict, List, Union
 
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
+import pandas as pd
+from google.cloud.dialogflowcx_v3beta1 import services, types
 
-from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core import flows
-from dfcx_scrapi.core import pages
+from dfcx_scrapi.core import flows, pages, scrapi_base
 
 # logging config
 logging.basicConfig(

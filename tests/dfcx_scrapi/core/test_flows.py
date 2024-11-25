@@ -14,14 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from typing import Dict
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 from google.cloud.dialogflowcx_v3beta1 import types
-from google.cloud.dialogflowcx_v3beta1.services.flows import pagers, FlowsClient
+from google.cloud.dialogflowcx_v3beta1.services.flows import FlowsClient, pagers
 
 from dfcx_scrapi.core.flows import Flows
+
 
 @pytest.fixture
 def test_config():

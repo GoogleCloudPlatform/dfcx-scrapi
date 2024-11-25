@@ -16,13 +16,12 @@
 
 import logging
 import string
-from typing import List, Dict
+from typing import Dict, List
 
 import pandas as pd
-
 from google.oauth2 import service_account
-from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core import intents
+
+from dfcx_scrapi.core import intents, scrapi_base
 from dfcx_scrapi.core_ml import utterance_generator
 
 # logging config

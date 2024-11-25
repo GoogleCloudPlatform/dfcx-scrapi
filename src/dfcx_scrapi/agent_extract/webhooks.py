@@ -17,8 +17,8 @@
 import json
 import os
 
-from dfcx_scrapi.agent_extract import common
-from dfcx_scrapi.agent_extract import types
+from dfcx_scrapi.agent_extract import common, types
+
 
 class Webhooks:
     """Webhook linter methods and functions."""

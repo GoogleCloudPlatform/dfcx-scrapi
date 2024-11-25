@@ -17,8 +17,11 @@
 import logging
 from typing import List, Union
 
-from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
-from google.cloud.dialogflowcx_v3beta1.types import TransitionRouteGroup
+from google.cloud.dialogflowcx_v3beta1.types import (
+    TransitionRoute,
+    TransitionRouteGroup,
+)
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.routes import TransitionRouteBuilder
 

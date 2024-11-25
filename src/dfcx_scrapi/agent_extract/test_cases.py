@@ -16,11 +16,9 @@
 
 import json
 import os
+from typing import Any, Dict, List
 
-from typing import Dict, List, Any
-
-from dfcx_scrapi.agent_extract import common
-from dfcx_scrapi.agent_extract import types
+from dfcx_scrapi.agent_extract import common, types
 
 
 class TestCases:

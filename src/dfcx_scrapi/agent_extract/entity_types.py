@@ -16,11 +16,10 @@
 
 import json
 import os
-
 from typing import Dict
 
-from dfcx_scrapi.agent_extract import common
-from dfcx_scrapi.agent_extract import types
+from dfcx_scrapi.agent_extract import common, types
+
 
 class EntityTypes:
     """Entity Type processing methods and functions."""

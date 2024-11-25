@@ -16,15 +16,16 @@
 
 import json
 import os
-
 from typing import List
 
-from dfcx_scrapi.agent_extract import graph
-from dfcx_scrapi.agent_extract import common
-from dfcx_scrapi.agent_extract import types
-from dfcx_scrapi.agent_extract import pages
-from dfcx_scrapi.agent_extract import routes
-from dfcx_scrapi.agent_extract import route_groups
+from dfcx_scrapi.agent_extract import (
+    common,
+    graph,
+    pages,
+    route_groups,
+    routes,
+    types,
+)
 
 
 class Flows:

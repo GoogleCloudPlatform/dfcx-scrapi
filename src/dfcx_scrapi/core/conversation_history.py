@@ -17,12 +17,10 @@
 import json
 import logging
 import os
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
+from google.cloud.dialogflowcx_v3beta1 import services, types
 from tqdm.contrib.concurrent import thread_map
-
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
 
 from dfcx_scrapi.core import scrapi_base
 

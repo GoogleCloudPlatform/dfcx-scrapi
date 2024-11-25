@@ -17,11 +17,12 @@
 import logging
 import re
 from typing import Dict
+
 import pandas as pd
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 
 SCOPES = [
     "https://www.googleapis.com/auth/cloud-platform",
