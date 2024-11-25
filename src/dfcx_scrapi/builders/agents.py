@@ -17,8 +17,8 @@
 import logging
 from typing import List
 
-from google.cloud.dialogflowcx_v3beta1.types import Agent
-from google.cloud.dialogflowcx_v3beta1.types import SpeechToTextSettings
+from google.cloud.dialogflowcx_v3beta1.types import Agent, SpeechToTextSettings
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config

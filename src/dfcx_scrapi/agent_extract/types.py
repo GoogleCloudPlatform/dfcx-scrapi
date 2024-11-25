@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Any, Tuple
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Tuple
 
 from dfcx_scrapi.agent_extract import graph as graph_class
+
 
 @dataclass
 class AgentMetadata:

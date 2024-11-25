@@ -18,9 +18,10 @@ all countries with the word country or all dates with the word date"""
 
 import logging
 import re
+
 import pandas as pd
-from sklearn.cluster import DBSCAN
 import tensorflow_hub as hub
+from sklearn.cluster import DBSCAN
 
 # logging config
 logging.basicConfig(

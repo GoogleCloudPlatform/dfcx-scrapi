@@ -14,17 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
-from dataclasses import dataclass
-
-import logging
 import datetime
-import pandas as pd
-import gspread
+import logging
+from dataclasses import dataclass
+from typing import Dict
 
-from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core import agents
-from dfcx_scrapi.core import conversation
+import gspread
+import pandas as pd
+
+from dfcx_scrapi.core import agents, conversation, scrapi_base
 from dfcx_scrapi.tools import dataframe_functions
 
 pd.options.display.max_colwidth = 200

@@ -17,16 +17,13 @@
 import logging
 import uuid
 from typing import Dict, List
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
-from google.protobuf.json_format import MessageToDict
-from proto.marshal.collections import maps
-from IPython.display import display, Markdown
 
-from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core import tools
-from dfcx_scrapi.core import playbooks
-from dfcx_scrapi.core import flows
+from google.cloud.dialogflowcx_v3beta1 import services, types
+from google.protobuf.json_format import MessageToDict
+from IPython.display import Markdown, display
+from proto.marshal.collections import maps
+
+from dfcx_scrapi.core import flows, playbooks, scrapi_base, tools
 
 # logging config
 logging.basicConfig(

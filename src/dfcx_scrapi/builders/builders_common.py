@@ -17,8 +17,10 @@
 import logging
 from typing import List, Union
 
-from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
-from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+from google.cloud.dialogflowcx_v3beta1.types import (
+    EventHandler,
+    TransitionRoute,
+)
 
 # logging config
 logging.basicConfig(

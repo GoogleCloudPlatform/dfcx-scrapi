@@ -15,14 +15,13 @@
 # limitations under the License.
 
 import logging
-from string import ascii_lowercase
-from string import digits
 from collections import defaultdict
-from dataclasses import dataclass
-from dataclasses import field
-from typing import List, Dict, Union
+from dataclasses import dataclass, field
+from string import ascii_lowercase, digits
+from typing import Dict, List, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import Intent
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config

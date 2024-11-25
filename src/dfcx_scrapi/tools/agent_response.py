@@ -16,10 +16,10 @@
 
 import dataclasses
 import json
-
 from typing import Any, Union
-from google.protobuf.json_format import MessageToDict
+
 from google.cloud.dialogflowcx_v3beta1 import types
+from google.protobuf.json_format import MessageToDict
 
 DataStoreConnectionSignals = (
     types.data_store_connection.DataStoreConnectionSignals

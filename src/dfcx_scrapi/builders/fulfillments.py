@@ -15,10 +15,10 @@
 # limitations under the License.
 
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
-from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
+from google.cloud.dialogflowcx_v3beta1.types import Fulfillment, ResponseMessage
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.response_messages import ResponseMessageBuilder
 

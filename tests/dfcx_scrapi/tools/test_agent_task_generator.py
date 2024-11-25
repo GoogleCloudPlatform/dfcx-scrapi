@@ -15,15 +15,15 @@
 # limitations under the License.
 
 import json
-import pytest
 from unittest.mock import MagicMock
 
-from google.oauth2.service_account import Credentials
-
+import pytest
 from google.cloud.dialogflowcx_v3beta1 import types
-from vertexai.generative_models import GenerativeModel, GenerationResponse
-from dfcx_scrapi.tools.gcs_utils import GcsUtils
+from google.oauth2.service_account import Credentials
+from vertexai.generative_models import GenerationResponse, GenerativeModel
+
 from dfcx_scrapi.tools.agent_task_generator import AgentTaskGenerator
+from dfcx_scrapi.tools.gcs_utils import GcsUtils
 
 
 @pytest.fixture

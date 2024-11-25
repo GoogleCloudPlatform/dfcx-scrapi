@@ -18,21 +18,15 @@ import logging
 import time
 import traceback
 import uuid
-
-from typing import Dict, Any
 from threading import Thread
+from typing import Any, Dict
 
 import pandas as pd
-
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
 from google.api_core import exceptions as core_exceptions
-from proto.marshal.collections import repeated
-from proto.marshal.collections import maps
+from google.cloud.dialogflowcx_v3beta1 import services, types
+from proto.marshal.collections import maps, repeated
 
-from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core import flows
-from dfcx_scrapi.core import pages
+from dfcx_scrapi.core import flows, pages, scrapi_base
 
 logging.basicConfig(
     format="[dfcx] %(levelname)s:%(message)s", level=logging.INFO

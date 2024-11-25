@@ -17,7 +17,7 @@
 import logging
 from typing import Dict
 
-from google.api_core import operations_v1, grpc_helpers
+from google.api_core import grpc_helpers, operations_v1
 
 from dfcx_scrapi.core import scrapi_base
 

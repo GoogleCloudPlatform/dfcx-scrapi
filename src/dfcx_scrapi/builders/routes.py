@@ -16,9 +16,12 @@
 
 import logging
 
-from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
-from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
-from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+from google.cloud.dialogflowcx_v3beta1.types import (
+    EventHandler,
+    Fulfillment,
+    TransitionRoute,
+)
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
 

@@ -17,16 +17,17 @@
 import datetime
 import json
 import re
+from typing import Any, Union
+
 import gspread
 import pandas as pd
-from tqdm.auto import tqdm
-from typing import Union, Any
 from google.oauth2 import service_account
+from tqdm.auto import tqdm
 
-from dfcx_scrapi.tools.agent_response import AgentResponse
+from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.scrapi_base import ScrapiBase, retry_api_call
 from dfcx_scrapi.core.sessions import Sessions
-from dfcx_scrapi.core.agents import Agents
+from dfcx_scrapi.tools.agent_response import AgentResponse
 
 MAX_RETRIES = 5
 INPUT_SCHEMA_REQUIRED_COLUMNS = [

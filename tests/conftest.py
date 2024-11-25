@@ -16,6 +16,7 @@
 
 import pytest
 
+
 def pytest_addoption(parser):
     """Method to add option for creds in tests."""
     parser.addoption("--creds", action="store")

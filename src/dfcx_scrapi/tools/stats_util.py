@@ -16,13 +16,14 @@
 
 from typing import Dict
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.agents import Agents
-from dfcx_scrapi.core.intents import Intents
-from dfcx_scrapi.core.flows import Flows
-from dfcx_scrapi.core.pages import Pages
 from dfcx_scrapi.core.entity_types import EntityTypes
+from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.intents import Intents
+from dfcx_scrapi.core.pages import Pages
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
+
 
 class StatsUtil(ScrapiBase):
     """A util class to provide common stats for a CX Agent."""

@@ -14,35 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import json
-import re
-import time
 import functools
+import json
+import logging
+import re
 import threading
-import vertexai
-import requests
+import time
 from collections import defaultdict
-from typing import Dict, Any, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
-from google.auth import default
+import requests
+import vertexai
 from google.api_core import exceptions
+from google.auth import default
+from google.auth.transport.requests import Request
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
-from google.auth.transport.requests import Request
-from google.protobuf import json_format
-from google.protobuf import field_mask_pb2, struct_pb2
-
+from google.protobuf import field_mask_pb2, json_format, struct_pb2
+from proto.marshal.collections import maps, repeated
 from vertexai.generative_models import (
     GenerativeModel,
     HarmBlockThreshold,
     HarmCategory,
-    SafetySetting
-    )
+    SafetySetting,
+)
 from vertexai.language_models import TextEmbeddingModel, TextGenerationModel
-
-from proto.marshal.collections import repeated
-from proto.marshal.collections import maps
 
 _INTERVAL_SENTINEL = object()
 

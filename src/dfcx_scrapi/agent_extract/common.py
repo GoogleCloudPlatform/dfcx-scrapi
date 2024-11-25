@@ -16,6 +16,7 @@
 
 import logging
 import re
+
 from dfcx_scrapi.agent_extract import types
 
 # logging config

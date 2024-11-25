@@ -16,9 +16,10 @@
 
 import logging
 from typing import Dict
+
+from google.cloud.dialogflowcx_v3beta1 import services, types
 from google.oauth2 import service_account
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
+
 from dfcx_scrapi.core import scrapi_base
 
 # logging config

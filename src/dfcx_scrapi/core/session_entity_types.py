@@ -17,9 +17,8 @@
 import logging
 from typing import Dict, List
 
+from google.cloud.dialogflowcx_v3beta1 import services, types
 from google.oauth2 import service_account
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core import scrapi_base

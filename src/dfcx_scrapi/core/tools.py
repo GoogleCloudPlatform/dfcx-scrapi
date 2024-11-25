@@ -14,12 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dfcx_scrapi.core import scrapi_base
 from typing import Dict
 
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
+from google.cloud.dialogflowcx_v3beta1 import services, types
 from google.protobuf import field_mask_pb2
+
+from dfcx_scrapi.core import scrapi_base
 
 
 class Tools(scrapi_base.ScrapiBase):

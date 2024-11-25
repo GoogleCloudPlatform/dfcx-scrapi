@@ -15,23 +15,22 @@
 # limitations under the License.
 
 import dataclasses
-from datetime import datetime, timezone
 import io
 import itertools
 import json
 import math
 import os
 import re
-import pandas as pd
-from tqdm import tqdm
+from datetime import datetime, timezone
 from typing import Union
 
-import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-
+import pandas as pd
+import plotly.graph_objects as go
 from google.cloud import bigquery
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaInMemoryUpload, MediaIoBaseDownload
+from tqdm import tqdm
 
 from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.tools.agent_response import AgentResponse

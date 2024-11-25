@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 import logging
-from typing import List, Dict, Union, Any
+import re
+from typing import Any, Dict, List, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import ResponseMessage
 from google.protobuf import struct_pb2
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config

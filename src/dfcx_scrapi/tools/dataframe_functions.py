@@ -17,20 +17,20 @@
 import json
 import logging
 import time
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 import gspread
-import pandas as pd
 import numpy as np
-from tabulate import tabulate
-from gspread_dataframe import set_with_dataframe
-
+import pandas as pd
 from google.cloud.dialogflowcx_v3beta1 import types
+from gspread_dataframe import set_with_dataframe
+from tabulate import tabulate
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
-from dfcx_scrapi.core.intents import Intents
 from dfcx_scrapi.core.entity_types import EntityTypes
 from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.intents import Intents
 from dfcx_scrapi.core.pages import Pages
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.transition_route_groups import TransitionRouteGroups
 
 SHEETS_SCOPE = [

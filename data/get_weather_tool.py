@@ -1,12 +1,12 @@
 """Sample Tool for Agent Builder."""
 import logging
+
 import requests
-from google.auth import default as google_default_auth
-from google.auth.transport.requests import Request as GoogleRequest
-from flask import Flask, request
 from firebase_admin import initialize_app
 from firebase_functions import https_fn
-
+from flask import Flask, request
+from google.auth import default as google_default_auth
+from google.auth.transport.requests import Request as GoogleRequest
 
 initialize_app()
 app = Flask(__name__)

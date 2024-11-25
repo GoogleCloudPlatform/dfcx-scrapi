@@ -16,12 +16,9 @@
 
 import json
 import os
+from typing import Any, Dict
 
-from typing import Dict, Any
-
-from dfcx_scrapi.agent_extract import common
-from dfcx_scrapi.agent_extract import types
-from dfcx_scrapi.agent_extract import routes
+from dfcx_scrapi.agent_extract import common, routes, types
 
 
 class Pages:

@@ -17,8 +17,13 @@
 import logging
 from typing import List
 
-from google.cloud.dialogflowcx_v3beta1.types.generative_settings import GenerativeSettings
-from google.cloud.dialogflowcx_v3beta1.types.safety_settings import SafetySettings
+from google.cloud.dialogflowcx_v3beta1.types.generative_settings import (
+    GenerativeSettings,
+)
+from google.cloud.dialogflowcx_v3beta1.types.safety_settings import (
+    SafetySettings,
+)
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config

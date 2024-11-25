@@ -16,8 +16,7 @@
 
 import pytest
 
-from dfcx_scrapi.builders.fulfillments import Fulfillment
-from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
+from dfcx_scrapi.builders.fulfillments import Fulfillment, FulfillmentBuilder
 
 
 def test_create_new_proto_obj():

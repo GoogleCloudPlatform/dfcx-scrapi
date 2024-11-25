@@ -16,18 +16,19 @@
 
 import logging
 from typing import Dict, List
-from google.longrunning.operations_pb2 import Operation
+
 from google.cloud.discoveryengine import (
-    TargetSite,
-    SiteSearchEngineServiceClient,
-    ListTargetSitesRequest,
-    GetTargetSiteRequest,
     CreateTargetSiteRequest,
     DeleteTargetSiteRequest,
-    EnableAdvancedSiteSearchRequest,
     DisableAdvancedSiteSearchRequest,
-    RecrawlUrisRequest
+    EnableAdvancedSiteSearchRequest,
+    GetTargetSiteRequest,
+    ListTargetSitesRequest,
+    RecrawlUrisRequest,
+    SiteSearchEngineServiceClient,
+    TargetSite,
 )
+from google.longrunning.operations_pb2 import Operation
 
 from dfcx_scrapi.core import scrapi_base
 

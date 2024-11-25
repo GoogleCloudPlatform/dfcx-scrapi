@@ -15,8 +15,10 @@
 # limitations under the License.
 
 import json
-from google.cloud import storage
+
 from google.api_core.exceptions import NotFound
+from google.cloud import storage
+
 
 class GcsUtils:
     def __init__(self, gcs_path: str = None):

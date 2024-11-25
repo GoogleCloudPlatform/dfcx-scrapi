@@ -17,10 +17,11 @@
 import logging
 from typing import Union
 
-import pandas
 import numpy as np
-from dfcx_scrapi.core.intents import Intents
+import pandas
 from google.cloud.dialogflowcx_v3beta1 import types
+
+from dfcx_scrapi.core.intents import Intents
 
 # logging config
 logging.basicConfig(

@@ -15,18 +15,14 @@
 # limitations under the License.
 
 import logging
-from typing import Dict, List, Union
 import time
+from typing import Dict, List, Union
 
-from google.cloud.dialogflowcx_v3beta1 import types
 from google.api_core import exceptions as core_exceptions
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.protobuf.struct_pb2 import Struct
 
-from dfcx_scrapi.core import scrapi_base
-from dfcx_scrapi.core import flows
-from dfcx_scrapi.core import pages
-from dfcx_scrapi.core import intents
-from dfcx_scrapi.core import test_cases
+from dfcx_scrapi.core import flows, intents, pages, scrapi_base, test_cases
 
 logging.basicConfig(
     level=logging.INFO,

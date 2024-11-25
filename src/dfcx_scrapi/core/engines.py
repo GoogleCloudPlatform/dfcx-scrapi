@@ -16,15 +16,16 @@
 
 import logging
 from typing import Dict, List
-from google.longrunning.operations_pb2 import Operation
+
 from google.cloud.discoveryengine import (
+    CreateEngineRequest,
+    DeleteEngineRequest,
     Engine,
     EngineServiceClient,
-    ListEnginesRequest,
     GetEngineRequest,
-    CreateEngineRequest,
-    DeleteEngineRequest
-    )
+    ListEnginesRequest,
+)
+from google.longrunning.operations_pb2 import Operation
 
 from dfcx_scrapi.core import scrapi_base
 

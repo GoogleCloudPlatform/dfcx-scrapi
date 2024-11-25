@@ -18,6 +18,7 @@ import logging
 from typing import List, Union
 
 from google.cloud.dialogflowcx_v3beta1.types import EntityType
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
 
 # logging config

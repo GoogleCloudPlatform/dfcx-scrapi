@@ -19,6 +19,7 @@
 # PLEASE NOTE THAT THE /builders CLASSES WILL TAKE PRECEDENCE OVER THIS CLASS
 
 import logging
+
 from google.cloud.dialogflowcx_v3beta1 import types
 
 # logging config

@@ -18,11 +18,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+from google.cloud.dialogflowcx_v3beta1 import services, types
+
 from dfcx_scrapi.core.examples import Examples
-from google.cloud.dialogflowcx_v3beta1 import types
-from google.cloud.dialogflowcx_v3beta1 import services
+
 
 @pytest.fixture
 def test_config():

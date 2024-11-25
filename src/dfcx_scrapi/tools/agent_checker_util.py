@@ -17,10 +17,11 @@
 import logging
 import time
 from typing import Dict, List
+
 import pandas as pd
 
-from dfcx_scrapi.core import scrapi_base
 from dfcx_scrapi.agent_extract import agents
+from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(

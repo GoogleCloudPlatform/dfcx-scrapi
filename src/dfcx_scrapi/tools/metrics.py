@@ -20,23 +20,25 @@ import dataclasses
 import json
 import logging
 import math
+import statistics
+from typing import Any, Dict, List, Optional, Union
+
 import numpy as np
 import pandas as pd
-import statistics
+from rouge_score import rouge_scorer
 from tqdm.contrib import concurrent
-from typing import Any, Union, List, Optional, Dict
-
 from vertexai.generative_models import GenerativeModel
 from vertexai.language_models import (
-    TextGenerationModel, TextEmbeddingInput, TextEmbeddingModel
+    TextEmbeddingInput,
+    TextEmbeddingModel,
+    TextGenerationModel,
 )
-from rouge_score import rouge_scorer
 
 from dfcx_scrapi.core.scrapi_base import (
+    EMBEDDING_MODELS_NO_DIMENSIONALITY,
+    handle_api_error,
     ratelimit,
     retry_api_call,
-    handle_api_error,
-    EMBEDDING_MODELS_NO_DIMENSIONALITY
 )
 
 # logging config

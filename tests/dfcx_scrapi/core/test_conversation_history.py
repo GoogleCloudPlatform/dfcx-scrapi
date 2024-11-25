@@ -18,15 +18,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import json
+import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+from google.cloud.dialogflowcx_v3beta1 import services, types
+from google.protobuf import timestamp_pb2
 
 from dfcx_scrapi.core.conversation_history import ConversationHistory
-from google.cloud.dialogflowcx_v3beta1 import types
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.protobuf import timestamp_pb2
 
 
 @pytest.fixture

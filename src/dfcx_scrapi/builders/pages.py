@@ -18,15 +18,20 @@ import logging
 from dataclasses import dataclass
 from typing import List, Union
 
-from google.cloud.dialogflowcx_v3beta1.types import Page
-from google.cloud.dialogflowcx_v3beta1.types import Form
-from google.cloud.dialogflowcx_v3beta1.types import Fulfillment
-from google.cloud.dialogflowcx_v3beta1.types import TransitionRoute
-from google.cloud.dialogflowcx_v3beta1.types import EventHandler
+from google.cloud.dialogflowcx_v3beta1.types import (
+    EventHandler,
+    Form,
+    Fulfillment,
+    Page,
+    TransitionRoute,
+)
+
 from dfcx_scrapi.builders.builders_common import BuildersCommon
-from dfcx_scrapi.builders.routes import TransitionRouteBuilder
-from dfcx_scrapi.builders.routes import EventHandlerBuilder
 from dfcx_scrapi.builders.fulfillments import FulfillmentBuilder
+from dfcx_scrapi.builders.routes import (
+    EventHandlerBuilder,
+    TransitionRouteBuilder,
+)
 
 # logging config
 logging.basicConfig(

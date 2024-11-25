@@ -17,8 +17,9 @@
 import json
 import logging
 from typing import Dict
-from google.cloud.dialogflowcx_v3beta1 import services
-from google.cloud.dialogflowcx_v3beta1 import types
+
+from google.cloud.dialogflowcx_v3beta1 import services, types
+
 from dfcx_scrapi.core import scrapi_base
 
 # logging config
