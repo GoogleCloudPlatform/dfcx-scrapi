@@ -24,4 +24,4 @@ jobs:
         pip install ruff
     - name: Running Ruff Check
       run: |
-        ruff check $(git ls-files '*.py')
+        ruff check
