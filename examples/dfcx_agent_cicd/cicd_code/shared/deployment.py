@@ -1,23 +1,21 @@
 """ Shared module to do deployement acting as a wrapper for deployment"""
 
 import datetime
-import time
+import json
 import logging
 import sys
-import json
-
-from dfcx_scrapi.core.agents import Agents
-from dfcx_scrapi.core.versions import Versions 
-from dfcx_scrapi.core.environments import Environments 
-from dfcx_scrapi.core.flows import Flows
+import time
 
 from google.cloud.dialogflowcx_v3beta1 import types
 
+from dfcx_scrapi.core.agents import Agents
+from dfcx_scrapi.core.environments import Environments
+from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.versions import Versions
 
+from .en_vs_other_lang import en_vs_lang
 from .test_case_run import RunTestCases
 from .webhook_update import update_webhook
-from .en_vs_other_lang import en_vs_lang
-
 
 # logging config
 logging.basicConfig(
@@ -30,8 +28,9 @@ class Deployment:
     """
     Manages the deployment and lifecycle of Dialogflow CX agents.
 
-    This class provides methods for importing, testing, versioning, and deploying
-    Dialogflow CX agents across different environments. It handles tasks such as:
+    This class provides methods for importing, testing, versioning, and
+    deploying Dialogflow CX agents across different environments. It handles
+    tasks such as:
 
     - Importing agents from GCS.
     - Updating webhook configurations.
@@ -48,10 +47,12 @@ class Deployment:
         import_agent: Imports an agent from GCS to a target project.
         test_case_validation: Runs test cases and validates the results.
         collect_flow_id: Collects the IDs of flows to be deployed.
-        version_count_delete: Manages version count and deletes old versions if necessary.
+        version_count_delete: Manages version count and deletes old versions if
+            necessary.
         version_cut: Creates new versions of the specified flows.
         deploy_versions: Deploys the new versions to the target environment.
-        dev_prod_sync: Synchronizes flows between development and production environments.
+        dev_prod_sync: Synchronizes flows between development and production
+            environments.
         datastore_update: Updates datastore settings for the agent.
     """
     def __init__(self,input_dict):
@@ -61,7 +62,7 @@ class Deployment:
     def import_agent(self,webhookenv):
         """Imports a Dialogflow CX agent to the target project.
 
-        This method restores a Dialogflow CX agent from a GCS bucket to the 
+        This method restores a Dialogflow CX agent from a GCS bucket to the
         specified target project and updates the webhook URI for the agent.
 
         Args:
@@ -77,7 +78,7 @@ class Deployment:
         self.target_agent_id=target_agent_details.name
 
 
-        #restoring the agent from the SHA ID folder 
+        #restoring the agent from the SHA ID folder
         agent.restore_agent(
             agent_id=self.target_agent_id,
             gcs_bucket_uri=f"{self.sha_agent_gcs_location}/{self.agent_name}",
@@ -115,9 +116,10 @@ class Deployment:
     def collect_flow_id(self):
         """Collects the IDs of flows to be deployed.
 
-        This method retrieves the IDs of the flows specified in `self.source_flow_names`
-        from the target Dialogflow CX agent. It introduces a 50-second delay to allow
-        for agent stabilization before fetching the flow IDs.
+        This method retrieves the IDs of the flows specified in
+        `self.source_flow_names` from the target Dialogflow CX agent. It
+        introduces a 50-second delay to allow for agent stabilization before
+        fetching the flow IDs.
         """
         time.sleep(50)
         flow=Flows()
@@ -137,7 +139,7 @@ class Deployment:
 
     def version_count_delete(self):
         """
-        1. Check if the count of versions of a flow is not exceeding 20(limit) 
+        1. Check if the count of versions of a flow is not exceeding 20(limit)
         else delete the older version
         2. and make room for new version cut
         """
@@ -252,11 +254,11 @@ class Deployment:
     def fullfillment_lang_check(self,lang):
         """Checks fulfillment language coverage compared to English.
 
-        This method compares the fulfillment coverage of the specified language 
+        This method compares the fulfillment coverage of the specified language
         (`lang`) with the English language ('en') for the given agent and flows.
-        It returns dataframes containing statistics on fulfillment entries, parameters,
-        and routes, along with a boolean result indicating whether all elements have 
-        agent responses in the specified language.
+        It returns dataframes containing statistics on fulfillment entries,
+        parameters, and routes, along with a boolean result indicating whether
+        all elements have agent responses in the specified language.
 
         Args:
             lang: The language code to compare against English (e.g., 'fr-ca').
@@ -264,9 +266,11 @@ class Deployment:
         Returns:
             A tuple containing:
             - entry_df: DataFrame with statistics on entry fulfillment coverage.
-            - param_df: DataFrame with statistics on parameter fulfillment coverage.
+            - param_df: DataFrame with statistics on parameter fulfillment
+                coverage.
             - route_df: DataFrame with statistics on route fulfillment coverage.
-            - result: A boolean indicating if all elements have agent responses in the specified language.
+            - result: A boolean indicating if all elements have agent responses
+                in the specified language.
         """
 
         entry_df,param_df,route_df,result= en_vs_lang(

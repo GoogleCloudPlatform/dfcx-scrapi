@@ -1,11 +1,10 @@
 """ UAT Deployment functions"""
 
-import sys
 import json
 import logging
+import sys
 
 from shared.deployment import Deployment
-
 
 #from .shared.deployments import Deployment
 # logging config
@@ -32,7 +31,8 @@ def main(data):
     8. Updates the datastore with UAT information.
 
     Args:
-        data: A dictionary containing configuration data, including the 'uat_webhook_env' key.
+        data: A dictionary containing configuration data, including the
+            'uat_webhook_env' key.
     """
 
     dep=Deployment(data)
@@ -61,7 +61,8 @@ if __name__=="__main__":
     config["sha_agent_gcs_location"]=sha_gs_loc
     config["target_project_id"] = config["uat_project"]
     config["target_environment_name"]=config["uat_env_deploy"]
-    with open("agent_artifacts/metadata.json" , encoding='utf-8') as metadata_file:
+    with open("agent_artifacts/metadata.json",
+              encoding='utf-8') as metadata_file:
         metadata = json.load(metadata_file)
 
     config["source_flow_names"]=metadata["source_flow_names"]

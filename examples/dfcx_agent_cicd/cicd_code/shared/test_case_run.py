@@ -1,11 +1,11 @@
 """ Running test cases and produce results"""
 
-from typing import Tuple, Dict
 import logging
+from typing import Dict, Tuple
 
-from dfcx_scrapi.core.test_cases import TestCases
 from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.environments import Environments
+from dfcx_scrapi.core.test_cases import TestCases
 
 # logging config
 logging.basicConfig(
@@ -18,17 +18,20 @@ class RunTestCases:
     """
     Manages and executes test cases for Dialogflow CX agents.
 
-    This class provides functionality to run test cases against a specified 
-    Dialogflow CX agent and environment. It retrieves the necessary agent and 
-    environment information and allows triggering test cases with optional tag filtering.
+    This class provides functionality to run test cases against a specified
+    Dialogflow CX agent and environment. It retrieves the necessary agent and
+    environment information and allows triggering test cases with optional tag
+    filtering.
 
     Attributes:
         project_id: The ID of the Google Cloud project where the agent resides.
         agent_name: The display name of the agent.
-        environment_name: The display name of the agent's environment (can be None).
+        environment_name: The display name of the agent's environment
+        (can be None).
 
     Methods:
-        triggerTestcase: Executes test cases for the agent, optionally filtered by tags.
+        triggerTestcase: Executes test cases for the agent, optionally filtered
+        by tags.
     """
 
     def __init__(
@@ -65,7 +68,7 @@ class RunTestCases:
         agent_id=None,
         env_id=None) -> Tuple[Dict[str, int], bool] :
         """
-        Function to trigger the test case module in dfcx 
+        Function to trigger the test case module in dfcx
         Returns:
         Result: Dict of results
         boolean mentioning test case status
@@ -94,7 +97,7 @@ class RunTestCases:
                 "UAT deployment will be done without test case validation"
             )
             result={"Pass": 0, "Fail": 0}
-            return result, True 
+            return result, True
         filtered_tc_id=[filtestcase.name for filtestcase in filtered_tc]
         print(filtered_tc_id)
 

@@ -1,9 +1,8 @@
-""" Functions to update the webhook env"""
+"""Functions to update the webhook env."""
 import logging
 import re
 
 from dfcx_scrapi.core.webhooks import Webhooks
-
 
 # logging config
 logging.basicConfig(

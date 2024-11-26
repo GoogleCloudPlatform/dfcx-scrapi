@@ -1,13 +1,14 @@
 """ export functions"""
 
 import json
-import sys
 import logging
+import sys
+
+from google.cloud import storage
 
 from dfcx_scrapi.core.agents import Agents
 
 from .flow_impacted import Impacted
-from google.cloud import storage
 
 # logging config
 logging.basicConfig(
@@ -23,7 +24,7 @@ def agent_to_gcs(
     gsloc):
     """Exports a Dialogflow CX agent to Google Cloud Storage (GCS).
 
-    This function exports a specified Dialogflow CX agent and its environment 
+    This function exports a specified Dialogflow CX agent and its environment
     to a designated location in Google Cloud Storage.
 
     Args:
@@ -62,8 +63,8 @@ def meta_to_gcs(
     ):
     """Exports metadata to a JSON file in Google Cloud Storage (GCS).
 
-    This function takes configuration data, flow names, a commit message, 
-    GCS location information, agent name, and version IDs, and creates a JSON 
+    This function takes configuration data, flow names, a commit message,
+    GCS location information, agent name, and version IDs, and creates a JSON
     file containing this metadata in the specified GCS bucket.
 
     Args:
@@ -103,7 +104,6 @@ if __name__=='__main__':
     bucket=config["bucket"]
     user_commit_message=sys.argv[1]
     userid=sys.argv[2]
-    #updated_commit_message=f"{user_commit_message} by {userid} for {source_agent_name}"
     updated_commit_message = (
     f"{user_commit_message} by {userid} "
     f"for {source_agent_name}"
@@ -128,4 +128,3 @@ if __name__=='__main__':
     meta_to_gcs(config,source_flow_names,
                 updated_commit_message,gs_loc,
                 source_agent_name,bucket,impacted_version_ids)
-    

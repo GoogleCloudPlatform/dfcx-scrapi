@@ -1,19 +1,24 @@
 """ Compare the fullfillments of en vs french langauge or etc"""
-from dfcx_scrapi.core.flows import Flows
-
 import pandas as pd
 
-from .fullfillment_helper import get_entry_ff,get_param_ff,get_route_ff
-from .fullfillment_helper import PagesChild
+from dfcx_scrapi.core.flows import Flows
+
+from .fullfillment_helper import (
+    PagesChild,
+    get_entry_ff,
+    get_param_ff,
+    get_route_ff,
+)
+
 
 def en_vs_lang(agent_id,flows,lang):
     """Compares fulfillment coverage between English and a specified language.
 
-    This function analyzes the fulfillment configurations (entry fulfillments, 
-    parameter fulfillments, and route fulfillments) for a given Dialogflow CX agent
-    and a set of flows. It compares the coverage of the specified language (`lang`)
-    with the English language ('en'), generating dataframes that highlight any
-    discrepancies in fulfillment setup.
+    This function analyzes the fulfillment configurations (entry fulfillments,
+    parameter fulfillments, and route fulfillments) for a given Dialogflow CX
+    agent and a set of flows. It compares the coverage of the specified language
+    (`lang`) with the English language ('en'), generating dataframes that
+    highlight any discrepancies in fulfillment setup.
 
     Args:
         agent_id: The ID of the Dialogflow CX agent.
@@ -25,7 +30,7 @@ def en_vs_lang(agent_id,flows,lang):
         - entry_df: DataFrame with statistics on entry fulfillment coverage.
         - param_df: DataFrame with statistics on parameter fulfillment coverage.
         - route_df: DataFrame with statistics on route fulfillment coverage.
-        - result: A boolean indicating if all elements have agent responses 
+        - result: A boolean indicating if all elements have agent responses
         in the specified language.
     """
     entry_columns = ['flow','page', 'text_entry_en', f'text_entry_{lang}',

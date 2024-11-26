@@ -15,11 +15,11 @@ logging.basicConfig(
 def main(data):
     """
     Deploys and validates a Dialogflow CX agent in a production environment.
-    This function orchestrates the deployment and validation of a Dialogflow CX agent
-    in a production environment. It performs the following key steps:
+    This function orchestrates the deployment and validation of a Dialogflow CX
+    agent in a production environment. It performs the following key steps:
 
     1. Imports the agent to the specified production webhook environment.
-    2. Performs a language check on fulfillment entries, parameters, and routes, 
+    2. Performs a language check on fulfillment entries, parameters, and routes,
         specifically for French Canadian ('fr-ca').
     3. Collects flow IDs.
     4. Manages version count and deletion.
@@ -29,10 +29,12 @@ def main(data):
     8. Updates the datastore with production information.
 
     Args:
-        data: A dictionary containing configuration data, including the 'prod_webhook_env' key.
+        data: A dictionary containing configuration data, including the
+            'prod_webhook_env' key.
 
     Raises:
-        SystemExit: If the language check fails, indicating missing agent responses.
+        SystemExit: If the language check fails, indicating missing agent
+            responses.
     """
     dep=Deployment(data)
     # call the steps sequentially
@@ -71,7 +73,8 @@ if __name__=='__main__':
     config["sha_agent_gcs_location"]=sha_agent_gcs_location
     config["target_project_id"] = config["prod_project"]
     config['target_environment_name']=config["prod_env_deploy"]
-    with open("agent_artifacts/metadata.json" , encoding='utf-8') as metadata_file:
+    with open("agent_artifacts/metadata.json",
+              encoding='utf-8') as metadata_file:
         metadata = json.load(metadata_file)
 
     config["source_flow_names"]=metadata["source_flow_names"]

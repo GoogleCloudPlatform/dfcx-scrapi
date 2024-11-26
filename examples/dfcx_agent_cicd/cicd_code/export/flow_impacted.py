@@ -1,29 +1,33 @@
 """ Getting impacted flow functions"""
 
+from typing import Dict
+
 from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.environments import Environments
 from dfcx_scrapi.core.flows import Flows
 
-from typing import Dict
-
 
 class Impacted:
     """
-    Analyzes and identifies changes in Dialogflow CX agent flows across environment versions.
+    Analyzes and identifies changes in Dialogflow CX agent flows across
+    environment versions.
 
-    This class retrieves information about a specified Dialogflow CX agent and its environment,
-    including version history and flow details. It then compares the latest two versions to
-    identify any changes in the flows, providing a mapping of impacted flow IDs and names.
+    This class retrieves information about a specified Dialogflow CX agent and
+    its environment, including version history and flow details. It then
+    compares the latest two versions to identify any changes in the flows,
+    providing a mapping of impacted flow IDs and names.
 
     Attributes:
-        source_project_id: The ID of the Google Cloud project where the agent resides.
+        source_project_id: The ID of the Google Cloud project where the agent
+            resides.
         source_agent_name: The display name of the agent.
-        environment_name: The display name of the agent's environment (default: "ready to deploy").
+        environment_name: The display name of the agent's environment
+            (default: "ready to deploy").
 
     Methods:
-        filter_flows: (Static method) Filters a flow map based on 
+        filter_flows: (Static method) Filters a flow map based on
         differences between two environments.
-        check_flow: Identifies and returns a dictionary of 
+        check_flow: Identifies and returns a dictionary of
         changed flows between the latest two versions.
     """
 
