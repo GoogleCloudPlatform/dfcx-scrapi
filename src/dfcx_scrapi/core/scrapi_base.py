@@ -282,72 +282,72 @@ class ScrapiBase:
         standard_id_match = r"[-0-9a-f]{1,36}"
         version_id_match = r"[0-9]{1,4}"
 
-        matcher_root = f"^projects/(?P<project>.+?)/locations/(?P<location>{location_id_match})"
+        matcher_root = f"^projects/(?P<project>.+?)/locations/(?P<location>{location_id_match})" # noqa: E501
 
         pattern_map = {
             "agent": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`", # noqa: E501
             },
             "data_store": {
-                "matcher": fr"{matcher_root}/collections/default_collection/dataStores/(?P<data_store>{data_store_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/collections/default_collection/dataStores/<Data Store ID>`"
+                "matcher": fr"{matcher_root}/collections/default_collection/dataStores/(?P<data_store>{data_store_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/collections/default_collection/dataStores/<Data Store ID>`" # noqa: E501
             },
             "engine": {
-                "matcher": fr"{matcher_root}/collections/default_collection/engines/(?P<engine>{engine_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/collections/default_collection/engines/<Engine ID>`"
+                "matcher": fr"{matcher_root}/collections/default_collection/engines/(?P<engine>{engine_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/collections/default_collection/engines/<Engine ID>`" # noqa: E501
             },
             "entity_type": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/entityTypes/(?P<entity>{entity_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/entityTypes/<Entity Types ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/entityTypes/(?P<entity>{entity_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/entityTypes/<Entity Types ID>`", # noqa: E501
             },
             "environment": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/environments/(?P<environment>{standard_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/environments/<Environment ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/environments/(?P<environment>{standard_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/environments/<Environment ID>`", # noqa: E501
             },
             "flow": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>`", # noqa: E501
             },
             "intent": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/intents/(?P<intent>{standard_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/intents/<Intent ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/intents/(?P<intent>{standard_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/intents/<Intent ID>`", # noqa: E501
             },
             "page": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/pages/(?P<page>{page_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/pages/(?P<page>{page_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>/pages/<Page ID>`", # noqa: E501
             },
             "project": {
                 "matcher": fr"{matcher_root}$",
                 "format": "`projects/<Project ID>/locations/<Location ID>/`",
             },
             "security_setting": {
-                "matcher": fr"{matcher_root}/securitySettings/(?P<security_setting>{standard_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/securitySettings/<Security Setting ID>`",
+                "matcher": fr"{matcher_root}/securitySettings/(?P<security_setting>{standard_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/securitySettings/<Security Setting ID>`", # noqa: E501
             },
             "session": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/sessions/(?P<session>{session_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/sessions/(?P<session>{session_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>`", # noqa: E501
             },
             "session_entity_type": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/sessions/(?P<session>{session_id_match})/entityTypes/(?P<entity>{entity_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>/entityTypes/<Entity Type ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/sessions/(?P<session>{session_id_match})/entityTypes/(?P<entity>{entity_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>/entityTypes/<Entity Type ID>`", # noqa: E501
             },
             "test_case": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/testCases/(?P<test_case>{standard_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/testCases/<Test Case ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/testCases/(?P<test_case>{standard_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/testCases/<Test Case ID>`", # noqa: E501
             },
             "transition_route_group": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/transitionRouteGroups/(?P<transition_route_group>{standard_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>/transitionRouteGroups/<Transition Route Group ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/transitionRouteGroups/(?P<transition_route_group>{standard_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>/transitionRouteGroups/<Transition Route Group ID>`", # noqa: E501
             },
             "version": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/versions/(?P<version>{version_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/versions/(?P<version>{version_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>`", # noqa: E501
             },
             "webhook": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/webhooks/(?P<webhook>{standard_id_match})$",
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`",
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/webhooks/(?P<webhook>{standard_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`", # noqa: E501
             }
         }
 
@@ -564,7 +564,8 @@ class ScrapiBase:
         elif response.status_code == 404:
             return None
         else:
-            raise requests.exceptions.RequestException("API request failed", response.status_code, response)
+            raise requests.exceptions.RequestException(
+                "API request failed", response.status_code, response)
 
     def _set_request_headers(self, client_options: dict):
         """Different regions have different API endpoints

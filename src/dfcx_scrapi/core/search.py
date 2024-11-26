@@ -216,7 +216,7 @@ class Search(scrapi_base.ScrapiBase):
         self, spell_spec_dict: Dict[str, Any]
     ) -> SearchRequest.SpellCorrectionSpec.Mode:
         mode_map = {
-            "SUGGESTION_ONLY": SearchRequest.SpellCorrectionSpec.Mode.SUGGESTION_ONLY, # pylint: disable=C0301
+            "SUGGESTION_ONLY": SearchRequest.SpellCorrectionSpec.Mode.SUGGESTION_ONLY, # noqa: E501
             "AUTO": SearchRequest.SpellCorrectionSpec.Mode.AUTO,
         }
 
@@ -242,7 +242,7 @@ class Search(scrapi_base.ScrapiBase):
             "model_prompt_spec", None
         )
         if model_prompt_spec_dict:
-            return SearchRequest.ContentSearchSpec.SummarySpec.ModelPromptSpec( # pylint: disable=C0301
+            return SearchRequest.ContentSearchSpec.SummarySpec.ModelPromptSpec(
                 preamble=model_prompt_spec_dict.get("preamble", None)
             )
 
@@ -438,42 +438,41 @@ class Search(scrapi_base.ScrapiBase):
             print(SUCCESS_MESSAGE.replace("{DOCS}", str(len(docs))))
 
 
-	# pylint: disable=C0301
     def search(self, search_config: Dict[str, Any], total_results: int = 10):
         """Performs a search against an indexed Vertex Data Store.
 
         Args:
-        	search_config: A dictionary containing keys that correspond to the
-            	SearchRequest attributes as defined in:
-                https://cloud.google.com/python/docs/reference/discoveryengine/latest/google.cloud.discoveryengine.SearchRequest
+            search_config: A dictionary containing keys that correspond to the
+                SearchRequest attributes as defined in: https://cloud.google.com/python/docs/reference/discoveryengine/latest/google.cloud.discoveryengine.SearchRequest
+                
                 For complex attributes that require nested fields, you can pass
                 in another Dictionary as the value.
-
-				Example: To represent the complex facet_specs config with some
-				other simple parameters, you would do the following.
+                
+                Example: To represent the complex facet_specs config with some
+                other simple parameters, you would do the following.
 
 				```py
-				search_config = {
-				"facet_specs": [
-						{
-						"facet_key": {
-								"key": "my_key",
-								"intervals": [
-								{
-										"minimum": .5
-									},
-									{
-										"maximum": .95
-									}
-								],
-								"case_insensitive": True
-							},
-							"limit": 10
-						}
-					],
-					"page_size": 10,
-					"offset": 2
-				}
+                search_config = {
+                    "facet_specs": [
+                        {
+                        "facet_key": {
+                            "key": "my_key",
+                            "intervals": [
+                                {
+                                "minimum": .5
+                                },
+                                {
+                                "maximum": .95
+                                }
+                            ],
+                        "case_insensitive": True
+                        },
+                        "limit": 10
+                        }
+                    ],
+                    "page_size": 10,
+                    "offset": 2
+                    }
 			total_results: Total number of results to return for the search. If
 				not specified, will default to 10 results. Increasing this to a
 				high number can result in long search times.

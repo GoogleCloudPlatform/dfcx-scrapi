@@ -405,7 +405,7 @@ The resulting information should be returned in JSON format which will follow th
   ]
 }
 ```
-"""
+""" # noqa: E501
 
     user_task_main: str = """APP DETAILS PROVIDED BY USER:
 {USER_DETAILS}

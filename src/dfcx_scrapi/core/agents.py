@@ -704,8 +704,8 @@ class Agents(scrapi_base.ScrapiBase):
         return {
             "advanced_settings": {
                 "logging_settings": {
-                    "enable_stackdriver_logging": agent.advanced_settings.logging_settings.enable_stackdriver_logging,
-                    "enable_interaction_logging": agent.advanced_settings.logging_settings.enable_interaction_logging
+                    "enable_stackdriver_logging": agent.advanced_settings.logging_settings.enable_stackdriver_logging, # noqa: E501
+                    "enable_interaction_logging": agent.advanced_settings.logging_settings.enable_interaction_logging # noqa: E501
                 }
             },
             "bigquery_export_settings": {

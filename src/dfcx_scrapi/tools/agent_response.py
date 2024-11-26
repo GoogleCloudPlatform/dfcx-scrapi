@@ -310,7 +310,8 @@ class AgentResponse:
 
     @property
     def cited_search_result_links(self):
-        return [search_result.uri for search_result in self.cited_search_results]
+        return [
+            search_result.uri for search_result in self.cited_search_results]
 
     @property
     def prompt_snippets(self):
