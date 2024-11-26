@@ -229,6 +229,14 @@ class ScrapiBase:
         return new_struct
 
     @staticmethod
+    def str_to_dict(some_str: str) -> Dict[str, Any]:
+        """Safe convert str to Dict or fail."""
+        try:
+            return json.loads(some_str)  
+        except json.JSONDecodeError as err:
+            raise ValueError(f"Invalid JSON string: `{some_str}`") from err
+
+    @staticmethod
     def parse_agent_id(resource_id: str):
         """Attempts to parse Agent ID from provided Resource ID."""
         parts = resource_id.split("/")
