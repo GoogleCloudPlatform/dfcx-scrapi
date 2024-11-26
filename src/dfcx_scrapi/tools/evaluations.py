@@ -392,16 +392,16 @@ class Evaluations(ScrapiBase):
             if row["action_type"] != "User Utterance":
                 continue
 
-            if row["action_type"] != "User Utterance":
-                continue
-
             session_parameters = None  
 
             if "session_parameters" in row:
-                session_parameters = row["session_parameters"]
+                session_parameters = self.str_to_dict(row["session_parameters"])
 
             res = self.s.detect_intent(
-                self.agent_id, self.session_id, row["action_input"], parameters = session_parameters
+                agent_id=self.agent_id,
+                session_id=self.session_id,
+                text=row["action_input"],
+                parameters=session_parameters
             )
 
             # Add data to the existing row
