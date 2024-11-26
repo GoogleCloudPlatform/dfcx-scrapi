@@ -10,7 +10,8 @@ extend-exclude = ["tests", "*.ipynb"]
 select = [
     "E", # pycodestyle
     "F", # Pyflakes
-    "I"  # isort
+    "I", # isort
+    "W"  # warn
     ]
 ignore = []
 
