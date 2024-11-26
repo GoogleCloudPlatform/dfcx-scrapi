@@ -181,8 +181,8 @@ class CopyUtil(ScrapiBase):
                     if "webhook" in (
                         param.fill_behavior.initial_prompt_fulfillment
                     ):
-                        param.fill_behavior.initial_prompt_fulfillment.webhook = webhooks_map[  # pylint: disable=line-too-long
-                            param.fill_behavior.initial_prompt_fulfillment.webhook  # pylint: disable=line-too-long
+                        param.fill_behavior.initial_prompt_fulfillment.webhook = webhooks_map[  # noqa: E501
+                            param.fill_behavior.initial_prompt_fulfillment.webhook  # noqa: E501
                         ]
 
                 if "reprompt_event_handlers" in param.fill_behavior:
@@ -445,7 +445,8 @@ class CopyUtil(ScrapiBase):
         for entity in resources_objects["entities"]:
             logging.info("Creating Entity %s...", entity.display_name)
             try:
-                self.entities.create_entity_type(agent_id=destination_agent, obj=entity)
+                self.entities.create_entity_type(
+                    agent_id=destination_agent, obj=entity)
                 resources_skip_list["entities"].append(entity.display_name)
                 logging.info(
                     "Entity %s created successfully.", entity.display_name

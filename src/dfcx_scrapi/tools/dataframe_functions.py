@@ -64,7 +64,10 @@ class DataframeFunctions(ScrapiBase):
 
         self._check_and_update_sheets_scopes()
 
-        if hasattr(self.creds, "service_account_email") and self.creds.service_account_email:
+        if (
+            hasattr(self.creds, "service_account_email")
+            and self.creds.service_account_email
+            ):
             self.sheets_client = gspread.authorize(self.creds)
         else:
             logging.warning(

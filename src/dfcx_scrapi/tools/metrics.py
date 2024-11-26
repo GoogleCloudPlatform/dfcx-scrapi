@@ -362,9 +362,9 @@ class Scorer:
             for key, value in sorted(
                 merged_top_log_probs.items(), key=lambda x: x[1], reverse=True
             ):
-                # checking containment instead of equality because sometimes the answer
-                # might be returned as "_<completion>" instead of "<completion>" due
-                # to the LLM's tokenizer
+                # checking containment instead of equality because sometimes the
+                # answer might be returned as "_<completion>" instead of
+                # "<completion>" due to the LLM's tokenizer
                 if completion in key:
                     result[completion] = value
                     break
@@ -526,7 +526,8 @@ class AnswerCorrectness(Metric):
         else:
             prediction_statements = (
                 self._statement_extractor.extract_statements(
-                    question=inputs["query"], answer=inputs["query_result"].answer_text
+                    question=inputs["query"],
+                    answer=inputs["query_result"].answer_text
                 )
             )
         precision_result = self._precision_answer_scorer.score(
@@ -717,13 +718,14 @@ class StatementBasedBundledMetric(Metric):
             columns=["reference_statements"], index=inputs.index
         )
         if self._context_recall or self._answer_correctness:
-            reference_statements["reference_statements"] = concurrent.thread_map(
-                self._statement_extractor.extract_statements,
-                inputs["query"].tolist(),
-                inputs["expected_answer"].tolist(),
-                max_workers=4,
-                desc="Extracting statements: `expected_answer`",
-            )
+            reference_statements[
+                "reference_statements"] = concurrent.thread_map(
+                    self._statement_extractor.extract_statements,
+                    inputs["query"].tolist(),
+                    inputs["expected_answer"].tolist(),
+                    max_workers=4,
+                    desc="Extracting statements: `expected_answer`",
+                    )
 
         prediction_statements = pd.DataFrame(
             columns=["prediction_statements"], index=inputs.index
@@ -828,7 +830,7 @@ statements in json:
 
 question: {question}
 answer: {answer}
-statements in json: """
+statements in json: """ # noqa: E501
 
     ANSWER_CORRECTNESS_PROMPT_TEMPLATE = """You are provided with a question, an answer and a statement.
 Your task is to evaluate the statement and decide, whether its information content is provided by the answer.
@@ -974,7 +976,7 @@ START_ANSWER
 END_ANSWER
 START_STATEMENT_EVALUATION
 statement: {statement}
-provided: """
+provided: """ # noqa: E501
 
     GROUNDING_PROMPT_TEMPLATE = """I need your help with "Natural language inference". Your task is to check if the hypothesis is true, given the premise. The answer should be a single `TRUE` or `FALSE`.
 
@@ -1038,7 +1040,7 @@ Now its your turn, think-step-by step, remember the instructions, carefully read
 
 premise: {sources}
 hypothesis: {statement}
-answer: """
+answer: """ # noqa: E501
 
 
 class Metrics:

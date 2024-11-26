@@ -127,14 +127,17 @@ class Engines(scrapi_base.ScrapiBase):
         return engine
 
 
-    def build_search_engine_proto(self, display_name: str, data_store_ids: List[str],
-                                  search_tier: str = "SEARCH_TIER_STANDARD"):
+    def build_search_engine_proto(
+            self, display_name: str, data_store_ids: List[str],
+            search_tier: str = "SEARCH_TIER_STANDARD"):
         """Build the Search Engine proto for creating a new Engine.
 
         Args:
-          display_name: the human readable display name of the Search Engine
-          data_store_ids: a list of Data Store IDs associated with this engine.
-          search_tier: either SEARCH_TIER_STANDARD (default) or SEARCH_TIER_ENTERPRISE
+            display_name: the human readable display name of the Search Engine
+            data_store_ids: a list of Data Store IDs associated with this
+                engine.
+            search_tier: either SEARCH_TIER_STANDARD (default) or
+                SEARCH_TIER_ENTERPRISE
 
         Returns:
           The Engine object configured as a SearchEngine.

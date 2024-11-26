@@ -171,7 +171,7 @@ class AgentAssist(scrapi_base.ScrapiBase):
         query_config.max_results = max_results
         feature_config.query_config = query_config
 
-        conversation_profile.human_agent_assistant_config.human_agent_suggestion_config.feature_configs = [feature_config] # pylint: disable=C0301
+        conversation_profile.human_agent_assistant_config.human_agent_suggestion_config.feature_configs = [feature_config] # noqa: E501
 
         request = types.conversation_profile.CreateConversationProfileRequest(
                     parent= project_path,
