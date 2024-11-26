@@ -330,7 +330,7 @@ class AgentTaskGenerator(ScrapiBase):
         tasks_dict = json.loads(res.text)
 
         return tasks_dict
-    
+
     def get_agent_tasks_from_user_input(
             self, tasks: Any) -> Dict[str, Any]:
         """Given an arbitrary user input, clean and format with LLM."""
@@ -363,7 +363,7 @@ class Prompts:
 """
 
     # System prompt for task generation
-    task_system: str = """You are a senior virtual agent evaluator. 
+    task_system: str = """You are a senior virtual agent evaluator.
 Your job is to determine the core tasks that a virtual agent can handle based on its provided details, playbook, and available tools.
 Focus on the main functionalities that would be useful to an end user rather than individual steps or specific details within the process. Do not include generic functionalities such as "Intent Detection" or "Sentiment Analysis" unless those features provide a tangible outcome for the end user.  Explain each functionality clearly and concisely.
 Return a concise list of the primary capabilities.

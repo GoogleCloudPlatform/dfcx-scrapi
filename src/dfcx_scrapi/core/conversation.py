@@ -646,7 +646,7 @@ class DialogflowConversation(scrapi_base.ScrapiBase):
             .assign(
                 match_type = lambda df: df.match.apply(
                     # pylint: disable=W0212
-                    lambda match_value: match_value.match_type._name_ 
+                    lambda match_value: match_value.match_type._name_
                     if match_value else ""
                 ),
                 confidence = lambda df: df.match.apply(

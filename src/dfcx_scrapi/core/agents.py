@@ -94,7 +94,7 @@ class Agents(scrapi_base.ScrapiBase):
         return bq_settings
 
     def get_bq_dataset_table_map(self, agent_id: str) -> Dict[str, str]:
-        """Get all dataset/tables accessible from the provided agent_id."""     
+        """Get all dataset/tables accessible from the provided agent_id."""
         parts = self._parse_resource_path("agent", agent_id)
         project_id = parts.get("project", None)
 
@@ -734,7 +734,7 @@ class Agents(scrapi_base.ScrapiBase):
             agent. Use `get_bq_settings` to get the proper input format for
             this option.
           enable_stackdriver_logging: (Optional) Boolean indicating whether
-            Stackdriver logging is enabled. 
+            Stackdriver logging is enabled.
           enable_interaction_logging: (Optional) Boolean indicating whether
             interaction logging is enabled.
           biqquery_enabled: (Optional) Boolean indicating whether BigQuery
@@ -755,7 +755,7 @@ class Agents(scrapi_base.ScrapiBase):
 
         if not agent_id:
             agent_id = self.agent_id
-        
+
         if not bq_settings and not any(BIGQUERY_INPUTS):
             raise ValueError(
                 "At least one setting must be provided if 'bq_settings' is"\
@@ -779,5 +779,5 @@ class Agents(scrapi_base.ScrapiBase):
             advanced_settings = bq_settings["advanced_settings"],
             bigquery_export_settings = bq_settings["bigquery_export_settings"]
             )
-    
+
         return agent
