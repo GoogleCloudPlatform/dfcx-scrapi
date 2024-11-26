@@ -392,7 +392,7 @@ class Evaluations(ScrapiBase):
             if row["action_type"] != "User Utterance":
                 continue
 
-            session_parameters = None  
+            session_parameters = None
 
             if "session_parameters" in row:
                 session_parameters = self.str_to_dict(row["session_parameters"])

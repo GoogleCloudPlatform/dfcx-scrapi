@@ -232,7 +232,7 @@ class ScrapiBase:
     def str_to_dict(some_str: str) -> Dict[str, Any]:
         """Safe convert str to Dict or fail."""
         try:
-            return json.loads(some_str)  
+            return json.loads(some_str)
         except json.JSONDecodeError as err:
             raise ValueError(f"Invalid JSON string: `{some_str}`") from err
 
