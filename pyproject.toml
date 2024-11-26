@@ -8,6 +8,8 @@ extend-exclude = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = [
+    "E", # pycodestyle
+    "F", # Pyflakes
     "I"  # isort
     ]
 ignore = []
