@@ -397,7 +397,7 @@ class Evaluations(ScrapiBase):
             if "session_parameters" in row:
                 session_parameters = self.str_to_dict(row["session_parameters"])
 
-            res = self.s.detect_intent(
+            res = self.sessions_client.detect_intent(
                 agent_id=self.agent_id,
                 session_id=self.session_id,
                 text=row["action_input"],
@@ -498,6 +498,7 @@ class DataLoader:
             creds: service_account.Credentials = None,
             agent_id: str = None,
             sheet_name: str = None,
+            language_code: str = "en"
             ):
 
         self.agent_id = agent_id
@@ -511,6 +512,7 @@ class DataLoader:
             "action_type",
             "action_input",
         ]
+        self.language_code = language_code
 
     @staticmethod
     def get_matching_list_idx(a, b):
@@ -728,9 +730,10 @@ class DataLoader:
             self.agent_id = self.get_agent_id_from_results(df)
 
         # Get Generative Settings for report data
-        a = Agents()
+        a = Agents(language_code=self.language_code)
         agent = a.get_agent(self.agent_id)
-        gen_settings = a.get_generative_settings(self.agent_id)
+        gen_settings = a.get_generative_settings(
+            self.agent_id, language_code=self.language_code)
         model_name = self.get_model_name(gen_settings)
 
         current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -753,6 +756,8 @@ class DataLoader:
         insert_index = eval_results_summary.columns.get_loc(
             "total_conversations") + 1
         for metric, value in metrics_info.items():
+            if (isinstance(value, float) and np.isnan(value)):
+                value = "-"
             eval_results_summary.insert(insert_index, metric, [value])
             insert_index += 1
 
