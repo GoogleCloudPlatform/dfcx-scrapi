@@ -223,11 +223,11 @@ class Evaluations(ScrapiBase):
 
     def parse_tool_use_from_conversation_history(
             self,
-            tool_use: types.ToolUse) -> Dict[str, Any]:       
+            tool_use: types.ToolUse) -> Dict[str, Any]:
         tool_name = self.tools_map.get(tool_use.tool, None)
         input_params = self.recurse_proto_marshal_to_dict(
             tool_use.input_action_parameters)
-        
+
         # The DFCX proto for input params will add an extra top level key that
         # needs to be removed before writing to our output sheet. This only
         # applies to input_action_parameters
@@ -236,7 +236,7 @@ class Evaluations(ScrapiBase):
 
         output_params = self.recurse_proto_marshal_to_dict(
             tool_use.output_action_parameters)
-        
+
         return {
             "tool_name": tool_name,
             "action": tool_use.action,
@@ -258,7 +258,7 @@ class Evaluations(ScrapiBase):
                 )
 
             self.action_counter += 1
-    
+
     def append_playbook(
             self,
             df_rows: List[Dict[str, Any]],
@@ -289,7 +289,7 @@ class Evaluations(ScrapiBase):
                 df_rows=df_rows,
                 eval_id=eval_id,
                 action_id=self.action_counter + count,
-                action_type="Tool Invocation", 
+                action_type="Tool Invocation",
                 action_input=tool_name,
                 action_input_parameters=input_params,
                 tool_action=tool_action
@@ -327,7 +327,7 @@ class Evaluations(ScrapiBase):
             if not self.playbooks_map:
                 self. playbooks_map = self.playbooks_client.get_playbooks_map(
                     self.agent_id)
-            
+
             for conv_interaction in conversation.interactions:
                 interaction = Interaction(
                     query=conv_interaction.request.query_input.text.text,
@@ -342,19 +342,19 @@ class Evaluations(ScrapiBase):
                                     action.tool_use)
                             )
                             interaction.tool_calls.append(tool_calls)
-                        
+
                         elif "agent_utterance" in action:
                             response_text = action.agent_utterance.text
                             interaction.responses.append(response_text)
-                        
+
                         elif "playbook_invocation" in action:
                             playbook_name = self.playbooks_map.get(
                                 action.playbook_invocation.playbook, None)
                             interaction.playbook_invocation = playbook_name
-                
+
                 results.append(interaction)
             results.reverse()
-            
+
             return results
 
     def add_response_columns(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -453,7 +453,7 @@ class Evaluations(ScrapiBase):
             self,
             conversation_ids: List) -> pd.DataFrame:
         columns = [
-            'eval_id', 'action_id', 'action_type', 'action_input', 
+            'eval_id', 'action_id', 'action_type', 'action_input',
             'action_input_parameters', 'tool_action', 'notes'
         ]
         df_rows = []
@@ -464,19 +464,19 @@ class Evaluations(ScrapiBase):
         if not self.playbooks_map:
             self. playbooks_map = self.playbooks_client.get_playbooks_map(
                 self.agent_id)
-        
+
         for idx, conv_id in enumerate(conversation_ids, start=1):
             eval_id = f"{idx:03d}"
             convo = self.ch.get_conversation(conv_id)
             interactions = self.parse_interactions_from_conversation_history(
                 convo)
-            
+
             self.action_counter = 1
 
             for interaction in interactions:
                 self.append_user_query(df_rows, eval_id, interaction)
                 self.append_playbook(df_rows, eval_id, interaction)
-                self.append_tools(df_rows, eval_id, interaction)           
+                self.append_tools(df_rows, eval_id, interaction)
                 self.append_responses(df_rows, eval_id, interaction)
 
         return pd.DataFrame(df_rows, columns=columns)
@@ -638,7 +638,7 @@ class DataLoader:
                 df.loc[pair[0], "playbook_pair"] = str(pair[1])
 
         return df
-    
+
     def pair_flow_calls(self, df: pd.DataFrame) -> pd.DataFrame:
         "Identifies pairings of agent_utterance/flow_invocation by eval_id."
         df["flow_pair"] = pd.Series(dtype="string")

@@ -162,4 +162,3 @@ class WebhookUtil():
             user_utterance = request['text']
 
         return user_utterance
-        

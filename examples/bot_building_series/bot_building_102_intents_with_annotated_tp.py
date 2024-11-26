@@ -42,18 +42,18 @@ def build_agent(creds_path, project_id, gcp_region, display_name):
     # Next, we will set some variables for our agent creation or retrieval args
 
     # Then we will call the `create_agent` and capture the result in a var call
-	# `my_agent`
+    # `my_agent`
     my_agent = agent_instance.create_agent(project_id, display_name, gcp_region)
 
     # Option 2: If agent already exists
     # The agent ID must be entered as a string
     # "projects/<PROJECT_ID>/locations/<GCP_REGION>/agents/<AGENT_ID>"
     # my_agent = a.get_agent(
-	#   "projects/<PROJECT_ID>/locations/<GCP_REGION>/agents/<AGENT_ID>")
+    # "projects/<PROJECT_ID>/locations/<GCP_REGION>/agents/<AGENT_ID>")
 
     # ## Create Your First Intent
     # For this demo agent, we'll build a basic intent from list of Training
-	# Phrases (TPs)
+    # Phrases (TPs)
 
     # To simplify the Intent creation, we'll utilize the `DataframeFunctions`
     # class from the `tools` portion of the SCRAPI library.

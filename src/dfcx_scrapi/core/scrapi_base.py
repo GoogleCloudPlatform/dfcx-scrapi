@@ -416,7 +416,7 @@ class ScrapiBase:
             valid_sys_instruct = False
 
         return valid_sys_instruct
-    
+
     @staticmethod
     def _update_kwargs(obj, **kwargs) -> field_mask_pb2.FieldMask:
         """Create a FieldMask for Environment, Experiment, TestCase, Version."""
@@ -484,7 +484,7 @@ class ScrapiBase:
         """Build a SafetyConfig payload for Gemini SDK calls.
 
         If a safety_config dict is not provided, we'll set the defaults to OFF.
-        
+
         Args:
             safety_config: (Optional) A key / value pair dictionary containing
             the category names and thresholds to set for each category. If not

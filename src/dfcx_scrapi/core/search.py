@@ -86,7 +86,7 @@ class Search(scrapi_base.ScrapiBase):
                 return Interval(exclusive_maximum=v)
             else:
                 return None
-            
+
     @staticmethod
     def search_url(urls: List[str], url: str, regex: bool = False) -> List[str]:
         """Searches a url in a list of urls."""
@@ -359,7 +359,7 @@ class Search(scrapi_base.ScrapiBase):
 
         else:
             return None
-        
+
     def list_documents(
             self, datastore_id: str, page_size: int = 1000) -> List[Document]:
         """List all documents in the provided datastore."""
@@ -382,7 +382,7 @@ class Search(scrapi_base.ScrapiBase):
                 all_docs.append(doc)
 
         return all_docs
-    
+
     def list_indexed_urls(
             self, datastore_id: str, docs: Optional[List[Document]] = None
             ) -> List[str]:
@@ -405,7 +405,7 @@ class Search(scrapi_base.ScrapiBase):
 
         elif not docs and datastore_id:
             docs = self.list_documents(datastore_id)
-    
+
         doc_found = False
         for doc in docs:
             if doc.parent_document_id == document_id:
@@ -444,10 +444,10 @@ class Search(scrapi_base.ScrapiBase):
         Args:
             search_config: A dictionary containing keys that correspond to the
                 SearchRequest attributes as defined in: https://cloud.google.com/python/docs/reference/discoveryengine/latest/google.cloud.discoveryengine.SearchRequest
-                
+
                 For complex attributes that require nested fields, you can pass
                 in another Dictionary as the value.
-                
+
                 Example: To represent the complex facet_specs config with some
                 other simple parameters, you would do the following.
 

@@ -117,7 +117,7 @@ class NluEvals(scrapi_base.ScrapiBase):
     def get_agent_type(self, agent_id: str):
         """Return the Agent type for logging purposes."""
         agent = self._a.get_agent(agent_id)
-        
+
         if agent.start_flow:
             return "flow"
         elif agent.start_playbook:
