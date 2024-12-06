@@ -17,13 +17,12 @@
 import logging
 from typing import Dict
 
+from dfcx_scrapi.core import scrapi_base
 from google.cloud.dialogflow_v2beta1 import services, types
 from google.cloud.dialogflow_v2beta1.services.knowledge_bases import (
     KnowledgeBasesClient,
 )
 from google.protobuf import field_mask_pb2
-
-from dfcx_scrapi.core import scrapi_base
 
 # logging config
 logging.basicConfig(
