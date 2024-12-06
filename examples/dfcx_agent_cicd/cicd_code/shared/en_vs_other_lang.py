@@ -1,6 +1,5 @@
 """ Compare the fullfillments of en vs french langauge or etc"""
 import pandas as pd
-
 from dfcx_scrapi.core.flows import Flows
 
 from .fullfillment_helper import (
