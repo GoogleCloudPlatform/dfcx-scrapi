@@ -18,11 +18,11 @@ import logging
 from ast import literal_eval
 from dataclasses import dataclass, field
 from datetime import datetime
+from itertools import zip_longest
 from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
-from itertools import zip_longest
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 from tqdm import tqdm
@@ -177,7 +177,8 @@ class Evaluations(ScrapiBase):
         row: pd.Series,
         df: pd.DataFrame,
     ) -> pd.DataFrame:
-        """Process tool invocations and map them to the correct rows in the dataframe."""
+        """Process tool invocations and map them
+        to the correct rows in the dataframe."""
         # Get the list of indices where tool responses should be mapped
         if row["tool_pair"] in [None, "", "NaN", "nan"]:
             tool_index_list = [index]
@@ -191,7 +192,12 @@ class Evaluations(ScrapiBase):
         # If we have no tool responses but expected some
         if not tool_responses and tool_index_list:
             for idx in tool_index_list:
-                df.loc[int(idx), ["res_tool_name", "res_tool_action", "res_input_params", "res_output_params"]] = [
+                df.loc[int(idx), [
+                    "res_tool_name",
+                    "res_tool_action",
+                    "res_input_params",
+                    "res_output_params"
+                    ]] = [
                     "NO_TOOL_RESPONSE",
                     "NO_TOOL_RESPONSE",
                     "NO_TOOL_RESPONSE",
@@ -203,12 +209,25 @@ class Evaluations(ScrapiBase):
         for i, idx in enumerate(tool_index_list):
             if i < len(tool_responses):
                 tool = tool_responses[i]
-                df.loc[int(idx), "res_tool_name"] = tool.get("tool_name", "")
-                df.loc[int(idx), "res_tool_action"] = tool.get("tool_action", "")
-                df.loc[int(idx), "res_input_params"] = str(tool.get("input_params", {}))
-                df.loc[int(idx), "res_output_params"] = str(tool.get("output_params", {}))
+                df.loc[int(idx), "res_tool_name"] = (
+                    tool.get("tool_name", "")
+                )
+                df.loc[int(idx), "res_tool_action"] = (
+                    tool.get("tool_action", "")
+                )
+                df.loc[int(idx), "res_input_params"] = (
+                    str(tool.get("input_params", {}))
+                )
+                df.loc[int(idx), "res_output_params"] = (
+                    str(tool.get("output_params", {}))
+                )
             else:
-                df.loc[int(idx), ["res_tool_name", "res_tool_action", "res_input_params", "res_output_params"]] = [
+                df.loc[int(idx), [
+                    "res_tool_name",
+                    "res_tool_action",
+                    "res_input_params",
+                    "res_output_params"
+                    ]] = [
                     "NO_TOOL_RESPONSE",
                     "NO_TOOL_RESPONSE",
                     "NO_TOOL_RESPONSE",
@@ -426,7 +445,8 @@ class Evaluations(ScrapiBase):
             ]
             text_res = self.ar._extract_text(res)
 
-            utterance_idx = int(row["utterance_pair"] or index) # if utterance_pair is empty/''/NaN, use index
+            # if utterance_pair is empty/''/NaN, use index
+            utterance_idx = int(row["utterance_pair"] or index)
             df.loc[utterance_idx, ["agent_response"]] = [text_res]
 
             # Handle Playbook Invocations
@@ -447,9 +467,16 @@ class Evaluations(ScrapiBase):
 
             # Handle Tool Invocations
             if "tool_call_quality" in self.user_input_metrics:
-                tool_responses = self.sessions_client.collect_tool_responses(res)
+                tool_responses = (
+                    self.sessions_client.collect_tool_responses(res)
+                )
                 if tool_responses:  # Only call if not empty
-                    df = self.process_tool_invocations(tool_responses, index, row, df)
+                    df = self.process_tool_invocations(
+                        tool_responses,
+                        index,
+                        row,
+                        df
+                    )
 
         return df
 
@@ -570,23 +597,36 @@ class DataLoader:
     @staticmethod
     def pair_utterances(df: pd.DataFrame) -> pd.DataFrame:
         """
-        Identifies pairings of user_utterance and agent_utterance by eval_id.
-        Handles cases where a user utterance has no corresponding agent response.
+        Identifies pairings of user_utterance and
+        agent_utterance by eval_id.
+        Handles cases where a user utterance has no
+        corresponding agent response.
         """
         df["utterance_pair"] = np.nan  # Initialize with NaN for missing pairs
 
         grouped = df.groupby("eval_id")
 
         for _, group in grouped:
-            user_utterances = group[group["action_type"] == "User Utterance"].index.tolist()
-            agent_responses = group[group["action_type"] == "Agent Response"].index.tolist()
+            user_utterances = (
+                group[group["action_type"] == "User Utterance"]
+                .index
+                .tolist()
+            )
+            agent_responses = (
+                group[group["action_type"] == "Agent Response"]
+                .index
+                .tolist()
+            )
 
             # Use zip_longest to handle unequal list lengths
-            for user_idx, agent_idx in zip_longest(user_utterances, agent_responses):
+            for user_idx, agent_idx in zip_longest(
+                user_utterances,
+                agent_responses
+            ):
                 if agent_idx is not None:  # Check if agent response exists
                     df.loc[user_idx, "utterance_pair"] = str(agent_idx)
                 else:  # Assign NaN if there is no agent_response
-                    df.loc[user_idx, "utterance_pair"] = np.nan # or "NO_AGENT_RESPONSE" if needed
+                    df.loc[user_idx, "utterance_pair"] = np.nan
 
         return df
 
@@ -616,7 +656,8 @@ class DataLoader:
         return model_map.get(model_name, "")
 
     def pair_tool_calls(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Associates user utterances with the indices of subsequent tool invocations."""
+        """Associates user utterances with the
+        indices of subsequent tool invocations."""
 
         df["tool_pair"] = ""  # Initialize as empty string
         grouped = df.groupby("eval_id")
@@ -627,20 +668,25 @@ class DataLoader:
 
             for index, row in group.iterrows():
                 if row["action_type"] == "User Utterance":
-                    # Assign accumulated tool indices to the *previous* user utterance (if any)
+                    # Assign accumulated tool indices to
+                    # the *previous* user utterance (if any)
                     if last_user_utterance_index is not None:
-                        df.loc[last_user_utterance_index, "tool_pair"] = str(tool_indices)
-
+                        df.loc[last_user_utterance_index, "tool_pair"] = (
+                            str(tool_indices)
+                        )
                     # Reset for the current user utterance:
-                    tool_indices = []  # Clear the list for the current user utterance
-                    last_user_utterance_index = index  # Update the user utterance index
+                    tool_indices = []
+                    last_user_utterance_index = index
 
                 elif row["action_type"] == "Tool Invocation":
                     tool_indices.append(index)
 
-            # After processing the group, assign any remaining tool indices to the last user utterance
+            # After processing the group, assign any remaining
+            # tool indices to the last user utterance
             if last_user_utterance_index is not None and tool_indices:
-                df.loc[last_user_utterance_index, "tool_pair"] = str(tool_indices)
+                df.loc[last_user_utterance_index, "tool_pair"] = (
+                    str(tool_indices)
+                )
 
         return df
 

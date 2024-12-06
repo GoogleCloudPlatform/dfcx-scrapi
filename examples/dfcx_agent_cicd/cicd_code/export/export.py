@@ -4,9 +4,8 @@ import json
 import logging
 import sys
 
-from google.cloud import storage
-
 from dfcx_scrapi.core.agents import Agents
+from google.cloud import storage
 
 from .flow_impacted import Impacted
 
