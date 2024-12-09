@@ -6,11 +6,12 @@ import logging
 import sys
 import time
 
+from google.cloud.dialogflowcx_v3beta1 import types
+
 from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.environments import Environments
 from dfcx_scrapi.core.flows import Flows
 from dfcx_scrapi.core.versions import Versions
-from google.cloud.dialogflowcx_v3beta1 import types
 
 from .en_vs_other_lang import en_vs_lang
 from .test_case_run import RunTestCases

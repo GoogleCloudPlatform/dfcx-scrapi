@@ -1,8 +1,9 @@
 """ Helper functions for en vs lang"""
 
-from dfcx_scrapi.core.pages import Pages
 from google.cloud.dialogflowcx_v3beta1.services import pages
 from google.cloud.dialogflowcx_v3beta1.types import page as gcdc_page
+
+from dfcx_scrapi.core.pages import Pages
 
 
 class PagesChild(Pages):
