@@ -18,7 +18,6 @@ import logging
 from ast import literal_eval
 from dataclasses import dataclass, field
 from datetime import datetime
-from itertools import zip_longest
 from typing import Any, Dict, List
 
 import numpy as np
@@ -109,6 +108,7 @@ class Evaluations(ScrapiBase):
             generation_model=self.generation_model,
             embedding_model=self.embedding_model
             )
+        self.unexpected_rows = []
 
         if debug:
             logging.basicConfig(level=logging.DEBUG, force=True)
@@ -183,27 +183,7 @@ class Evaluations(ScrapiBase):
         if row["tool_pair"] in [None, "", "NaN", "nan"]:
             tool_index_list = [index]
         else:
-            try:
-                # Convert string representation of list to actual list
-                tool_index_list = literal_eval(row["tool_pair"])
-            except (ValueError, SyntaxError):
-                return df
-
-        # If we have no tool responses but expected some
-        if not tool_responses and tool_index_list:
-            for idx in tool_index_list:
-                df.loc[int(idx), [
-                    "res_tool_name",
-                    "res_tool_action",
-                    "res_input_params",
-                    "res_output_params"
-                    ]] = [
-                    "NO_TOOL_RESPONSE",
-                    "NO_TOOL_RESPONSE",
-                    "NO_TOOL_RESPONSE",
-                    "NO_TOOL_RESPONSE"
-                ]
-            return df
+            tool_index_list = literal_eval(row["tool_pair"])
 
         # Process each tool response and map it to the corresponding index
         for i, idx in enumerate(tool_index_list):
@@ -445,9 +425,23 @@ class Evaluations(ScrapiBase):
             ]
             text_res = self.ar._extract_text(res)
 
-            # if utterance_pair is empty/''/NaN, use index
-            utterance_idx = int(row["utterance_pair"] or index)
-            df.loc[utterance_idx, ["agent_response"]] = [text_res]
+            # Handle Agent Responses
+            if row["utterance_pair"] != "":
+                utterance_idx = int(row["utterance_pair"])
+                df.loc[utterance_idx, ["agent_response"]] = [text_res]
+
+            else:
+                # collect the data for inserting later
+                self.unexpected_rows.append(
+                    {
+                        "session_id": data["session_id"],
+                        "agent_id": data["agent_id"],
+                        "action_type": "UNEXPECTED Agent Response",
+                        "index": index,
+                        "column": "agent_response",
+                        "data": text_res
+                    }
+                    )
 
             # Handle Playbook Invocations
             playbook_responses = (
@@ -480,6 +474,26 @@ class Evaluations(ScrapiBase):
 
         return df
 
+    def insert_unexpected_rows(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Insert any unexpected rows collected during runtime."""
+        if self.unexpected_rows:
+            for row in reversed(self.unexpected_rows):
+                index = row["index"]
+                new_row = pd.DataFrame(columns=df.columns, index=[index])
+                new_row["session_id"] = row["session_id"]
+                new_row["agent_id"] = row["agent_id"]
+                new_row["action_type"] = row["action_type"]
+                new_row[row["column"]] = row["data"]
+                df = pd.concat(
+                    [
+                        df.iloc[:index],
+                        new_row,
+                        df.iloc[index:]
+                    ])
+
+        df = df.sort_index()
+
+        return df
 
     def run_evals(self, df: pd.DataFrame) -> pd.DataFrame:
         print("Starting Evals...")
@@ -489,9 +503,15 @@ class Evaluations(ScrapiBase):
 
         return df
 
-    def run_query_and_eval(self, df: pd.DataFrame) -> pd.DataFrame:
+    def scrape_results(self, df: pd.DataFrame) -> pd.DataFrame:
         df = self.add_response_columns(df)
         df = self.run_detect_intent_queries(df)
+        df = self.insert_unexpected_rows(df)
+
+        return df
+
+    def run_query_and_eval(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = self.scrape_results(df)
         df = self.run_evals(df)
         df = self.clean_outputs(df)
 
@@ -596,37 +616,24 @@ class DataLoader:
 
     @staticmethod
     def pair_utterances(df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Identifies pairings of user_utterance and
-        agent_utterance by eval_id.
-        Handles cases where a user utterance has no
-        corresponding agent response.
-        """
-        df["utterance_pair"] = np.nan  # Initialize with NaN for missing pairs
-
+        "Identifies pairings of user_utterance and agent_utterance by eval_id."
+        df["utterance_pair"] = pd.Series(dtype="string")
         grouped = df.groupby("eval_id")
 
         for _, group in grouped:
-            user_utterances = (
-                group[group["action_type"] == "User Utterance"]
-                .index
-                .tolist()
-            )
-            agent_responses = (
-                group[group["action_type"] == "Agent Response"]
-                .index
-                .tolist()
+            user = group[
+                group["action_type"] == "User Utterance"
+            ].index.tolist()
+            agent = group[
+                group["action_type"] == "Agent Response"
+            ].index.tolist()
+            pairs = list(
+                zip(user, agent)
             )
 
-            # Use zip_longest to handle unequal list lengths
-            for user_idx, agent_idx in zip_longest(
-                user_utterances,
-                agent_responses
-            ):
-                if agent_idx is not None:  # Check if agent response exists
-                    df.loc[user_idx, "utterance_pair"] = str(agent_idx)
-                else:  # Assign NaN if there is no agent_response
-                    df.loc[user_idx, "utterance_pair"] = np.nan
+            # Create pairs of user/agent row indices
+            for pair in pairs:
+                df.loc[pair[0], "utterance_pair"] = str(pair[1])
 
         return df
 
@@ -656,10 +663,9 @@ class DataLoader:
         return model_map.get(model_name, "")
 
     def pair_tool_calls(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Associates user utterances with the
-        indices of subsequent tool invocations."""
+        """Pairs user utterances with indices of relevant tool invocations."""
 
-        df["tool_pair"] = ""  # Initialize as empty string
+        df["tool_pair"] = pd.Series(dtype="string")
         grouped = df.groupby("eval_id")
 
         for _, group in grouped:
