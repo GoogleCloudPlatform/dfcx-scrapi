@@ -46,11 +46,17 @@ class Environments(scrapi_base.ScrapiBase):
             creds=creds,
         )
 
-        if agent_id:
-            self.agent_id = agent_id
-
+        self.agent_id = agent_id
         self._versions = versions.Versions(creds=self.creds)
         self._flows = flows.Flows(creds=self.creds)
+        self._environments_map = None
+
+    @property
+    def environments_map(self) -> Dict[str, str]:
+        """Property for the environments map."""
+        if self._environments_map is None:
+            self._environments_map = self.get_environments_map(self.agent_id)
+        return self._environments_map
 
     @staticmethod
     def _get_flow_version_id(
@@ -124,6 +130,8 @@ class Environments(scrapi_base.ScrapiBase):
                 environment.name: environment.display_name
                 for environment in self.list_environments(agent_id)
             }
+
+        self._environments_map = environments_dict
 
         return environments_dict
 
