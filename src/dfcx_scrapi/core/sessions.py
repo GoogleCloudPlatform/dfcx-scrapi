@@ -23,7 +23,11 @@ from google.protobuf.json_format import MessageToDict
 from IPython.display import Markdown, display
 from proto.marshal.collections import maps
 
-from dfcx_scrapi.core import flows, playbooks, scrapi_base, tools
+from dfcx_scrapi.core.environments import Environments
+from dfcx_scrapi.core.flows import Flows
+from dfcx_scrapi.core.playbooks import Playbooks
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.tools import Tools
 
 # logging config
 logging.basicConfig(
@@ -33,7 +37,7 @@ logging.basicConfig(
 )
 
 
-class Sessions(scrapi_base.ScrapiBase):
+class Sessions(ScrapiBase):
     """Core Class for CX Session Resource functions."""
 
     def __init__(
@@ -53,22 +57,51 @@ class Sessions(scrapi_base.ScrapiBase):
             creds=creds, scope=scope
         )
 
-        self.session_id = session_id
+        self._session_id = session_id
         self.agent_id = agent_id
         self.tools_map = tools_map
         self.playbooks_map = playbooks_map
         self.flows_map = flows_map
+        self.env_client = Environments(creds=self.creds)
+        self._tools_client = None
+        self._playbooks_client = None
+        self._flows_client = None
 
     @property
     def session_id(self):
+        """Property for the session ID, parses the resource path if needed."""
+        if self._session_id:
+            self._parse_resource_path("session", self._session_id)
+
         return self._session_id
 
-    @session_id.setter
-    def session_id(self, value):
-        if value:
-            self._parse_resource_path("session", value)
+    @property
+    def playbooks_client(self):
+        """Property for Playbooks client."""
+        if self._playbooks_client is None:
+            if not self.agent_id:
+                raise ValueError(
+                    "agent_id must be set to use Playbooks Client.")
+            self._playbooks_client = Playbooks(
+                agent_id=self.agent_id, creds=self.creds
+            )
+        return self._playbooks_client
 
-        self._session_id = value
+    @property
+    def tools_client(self):
+        """Property for Tools client."""
+        if self._tools_client is None:
+            self._tools_client = Tools(creds=self.creds)
+
+        return self._tools_client
+
+    @property
+    def flows_client(self):
+        """Property for Flows client."""
+        if self._flows_client is None:
+            self._flows_client = Flows(creds=self.creds)
+
+        return self._flows_client
 
     @staticmethod
     def printmd(string):
@@ -121,25 +154,22 @@ class Sessions(scrapi_base.ScrapiBase):
     def get_playbook_name(self, playbook_id: str):
         agent_id = self.parse_agent_id(playbook_id)
         if not self.playbooks_map:
-            playbook_client = playbooks.Playbooks(
-                agent_id=agent_id, creds=self.creds
-                )
-            self.playbooks_map = playbook_client.get_playbooks_map(agent_id)
+            self.playbooks_map = self.playbooks_client.get_playbooks_map(
+                agent_id)
 
         return self.playbooks_map[playbook_id]
 
     def get_tool_name(self, tool_use: types.example.ToolUse) -> str:
         agent_id = self.parse_agent_id(tool_use.tool)
         if not self.tools_map:
-            tool_client = tools.Tools(creds=self.creds)
-            self.tools_map = tool_client.get_tools_map(agent_id)
+            self.tools_map = self.tools_client.get_tools_map(agent_id)
+
         return self.tools_map[tool_use.tool]
 
     def get_flow_name(self, flow_id: str):
         agent_id = self.parse_agent_id(flow_id)
         if not self.flows_map:
-            flow_client = flows.Flows(creds=self.creds)
-            self.flows_map = flow_client.get_flows_map(agent_id)
+            self.flows_map = self.flows_client.get_flows_map(agent_id)
 
         return self.flows_map[flow_id]
 
@@ -208,24 +238,38 @@ class Sessions(scrapi_base.ScrapiBase):
         return flow_responses
 
     def build_session_id(
-        self, agent_id: str = None, overwrite: bool = True
+        self, agent_id: str = None, overwrite: bool = True,
+        environment_name: str = None
     ) -> str:
         """Creates a valid UUID-4 Session ID to use with other methods.
 
         Args:
+          agent_id: the Agent ID of the CX Agent.
           overwrite (Optional), if a session_id already exists, this will
             overwrite the existing Session ID parameter. Defaults to True.
+          environment_name: (Optional) the human readable Environment name to
+            use when building the session ID. If this is not provided, DRAFT is
+            assumed.
         """
 
-        agent_parts = self._parse_resource_path("agent", agent_id)
-        session_id = (
-            f"projects/{agent_parts['project']}/"
-            f"locations/{agent_parts['location']}/agents/"
-            f"{agent_parts['agent']}/sessions/{uuid.uuid4()}"
-        )
+        # Parse and validate the incoming agent_id
+        _ = self._parse_resource_path("agent", agent_id)
+
+
+        if environment_name:
+            env = self.env_client.get_environment_by_display_name(
+                environment_name, agent_id
+            )
+            if not env:
+                raise ValueError(f"Environment `{environment_name}` does not"
+                                 " exist.")
+            session_id = f"{env.name}/sessions/{uuid.uuid4()}"
+
+        else:
+            session_id = f"{agent_id}/sessions/{uuid.uuid4()}"
 
         if overwrite:
-            self.session_id = session_id
+            self._session_id = session_id
 
         return session_id
 
@@ -326,7 +370,8 @@ class Sessions(scrapi_base.ScrapiBase):
         parameters=None,
         end_user_metadata=None,
         populate_data_store_connection_signals=False,
-        intent_id: str = None
+        intent_id: str = None,
+        timezone: str = None
     ):
         """Returns the result of detect intent with texts as inputs.
 
@@ -339,6 +384,8 @@ class Sessions(scrapi_base.ScrapiBase):
             for the duration of the conversation session. When using Python
             uuid library, uuid.uuid4() is preferred.
           text: the user utterance to run intent detection on
+          language_code: corresponds to the language code to use with query
+            inputs to the agent.
           parameters: (Optional) Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
           end_user_metadata: (Optional) Dict of CX Session endUserMetadata to
@@ -347,6 +394,14 @@ class Sessions(scrapi_base.ScrapiBase):
             stores are involved in serving the request then query result will
             be populated with data_store_connection_signals field which
             contains data that can help evaluations.
+          intent_id: fully qualified Intent ID path to pass in for query
+            input instead of text. This allows for the direct triggering of a
+            specific Intent, and will bypass the NLU engine.
+          timezone: IANA Timezone database code to pass in with query input
+            which can be used by the agent runtime. For example, when capturing
+            datetime via system functions, they can be modified to user the
+            provied timezone vs. the default agent timezone.
+            Refs: https://www.iana.org/time-zones
 
         Returns:
           The CX query result from intent detection
@@ -387,6 +442,9 @@ class Sessions(scrapi_base.ScrapiBase):
             query_param_mapping[
                 "populate_data_store_connection_signals"
             ] = populate_data_store_connection_signals
+
+        if timezone:
+            query_param_mapping["time_zone"] = timezone
 
         if query_param_mapping:
             query_params = types.session.QueryParameters(query_param_mapping)
