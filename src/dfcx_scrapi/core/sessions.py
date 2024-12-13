@@ -62,7 +62,7 @@ class Sessions(ScrapiBase):
         self.tools_map = tools_map
         self.playbooks_map = playbooks_map
         self.flows_map = flows_map
-        self.env_client = Environments(creds=self.creds)
+        self._env_client = None
         self._tools_client = None
         self._playbooks_client = None
         self._flows_client = None
@@ -102,6 +102,14 @@ class Sessions(ScrapiBase):
             self._flows_client = Flows(creds=self.creds)
 
         return self._flows_client
+
+    @property
+    def env_client(self):
+        """Property for Environments client."""
+        if self._env_client is None:
+            self._env_client = Environments(creds=self.creds)
+
+        return self._env_client
 
     @staticmethod
     def printmd(string):
@@ -257,7 +265,7 @@ class Sessions(ScrapiBase):
 
 
         if environment_name:
-            env = self.env_client.get_environment_by_display_name(
+            env = self._env_client.get_environment_by_display_name(
                 environment_name, agent_id
             )
             if not env:
@@ -272,94 +280,6 @@ class Sessions(ScrapiBase):
             self._session_id = session_id
 
         return session_id
-
-    def run_conversation(
-        self,
-        agent_id: str = None,
-        session_id: str = None,
-        conversation: List[str] = None,
-        parameters=None,
-        response_text=False,
-    ):
-        """Tests a full conversation with the specified CX Agent.
-
-        Args:
-          agent_id: the Agent ID of the CX Agent to have the conversation with.
-          session_id: an RFC 4122 formatted UUID to be used as the unique ID
-            for the duration of the conversation session. When using Python
-            uuid library, uuid.uuid4() is preferred.
-          conversation: a List of Strings that represent the USER utterances
-            for the given conversation, in the order they would happen
-            chronologically in the conversation.
-            Ex:
-              ['I want to check my bill', 'yes', 'no that is all', 'thanks!']
-          parameters: (Optional) Dict of CX Session Parameters to set in the
-            conversation. Typically this is set before a conversation starts.
-          response_text: Will provide the Agent Response text if set to True.
-            Default value is False.
-
-        Returns:
-          None, the conversation Request/Response is printed to console.
-        """
-        if not session_id:
-            session_id = self.session_id
-
-        client_options = self._set_region(agent_id)
-        session_client = services.sessions.SessionsClient(
-            client_options=client_options, credentials=self.creds
-        )
-        session_path = f"{agent_id}/sessions/{session_id}"
-
-        if parameters:
-            query_params = types.session.QueryParameters(parameters=parameters)
-            text_input = types.session.TextInput(text="")
-            query_input = types.session.QueryInput(
-                text=text_input, language_code="en"
-            )
-            request = types.session.DetectIntentRequest(
-                session=session_path,
-                query_params=query_params,
-                query_input=query_input,
-            )
-
-            response = session_client.detect_intent(request=request)
-
-        for text in conversation:
-            text_input = types.session.TextInput(text=text)
-            query_input = types.session.QueryInput(
-                text=text_input, language_code="en"
-            )
-            request = types.session.DetectIntentRequest(
-                session=session_path, query_input=query_input
-            )
-            response = session_client.detect_intent(request=request)
-            query_result = response.query_result
-
-            print("=" * 20)
-            print(f"Query text: {query_result.text}")
-            if "intent" in query_result:
-                print(f"Triggered Intent: {query_result.intent.display_name}")
-
-            if "intent_detection_confidence" in query_result:
-                print(
-                    f"Intent Confidence: \
-                        f{query_result.intent_detection_confidence}"
-                )
-
-            print(f"Response Page: {query_result.current_page.display_name}")
-
-            for param in query_result.parameters:
-                if param == "statusMessage":
-                    print(f"Status Message: {query_result.parameters[param]}")
-
-            if response_text:
-                concat_messages = " ".join(
-                    [
-                        " ".join(response_message.text.text)
-                        for response_message in query_result.response_messages
-                    ]
-                )
-                print(f"Response Text: {concat_messages}\n")
 
     def detect_intent(
         self,
