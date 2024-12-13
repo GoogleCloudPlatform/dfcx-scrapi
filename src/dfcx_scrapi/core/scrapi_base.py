@@ -334,8 +334,8 @@ class ScrapiBase:
                 "format": "`projects/<Project ID>/locations/<Location ID>/securitySettings/<Security Setting ID>`", # noqa: E501
             },
             "session": {
-                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/sessions/(?P<session>{session_id_match})$", # noqa: E501
-                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>`", # noqa: E501
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})(?:/environments/(?P<environment>{standard_id_match}))?/sessions/(?P<session>{session_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/sessions/<Session ID>` or `projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/environments/<Environment ID>/sessions/<Session ID>`", # noqa: E501
             },
             "session_entity_type": {
                 "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/sessions/(?P<session>{session_id_match})/entityTypes/(?P<entity>{entity_id_match})$", # noqa: E501
