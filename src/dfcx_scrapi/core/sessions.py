@@ -16,7 +16,7 @@
 
 import logging
 import uuid
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from google.cloud.dialogflowcx_v3beta1 import services, types
 from google.protobuf.json_format import MessageToDict
@@ -285,11 +285,11 @@ class Sessions(ScrapiBase):
         self,
         agent_id,
         session_id,
-        text,
-        language_code="en",
-        parameters=None,
-        end_user_metadata=None,
-        populate_data_store_connection_signals=False,
+        text: str = None,
+        language_code: str = "en",
+        parameters: Dict[str, Any] = None,
+        end_user_metadata: Dict[str, Any] = None,
+        populate_data_store_connection_signals: bool = False,
         intent_id: str = None,
         timezone: str = None
     ):
@@ -303,9 +303,9 @@ class Sessions(ScrapiBase):
           session_id: an RFC 4122 formatted UUID to be used as the unique ID
             for the duration of the conversation session. When using Python
             uuid library, uuid.uuid4() is preferred.
-          text: the user utterance to run intent detection on
-          language_code: corresponds to the language code to use with query
-            inputs to the agent.
+          text: (Optional) the user utterance to run intent detection on
+          language_code: (Optional) corresponds to the language code to use with
+            query inputs to the agent.
           parameters: (Optional) Dict of CX Session Parameters to set in the
             conversation. Typically this is set before a conversation starts.
           end_user_metadata: (Optional) Dict of CX Session endUserMetadata to
@@ -317,10 +317,10 @@ class Sessions(ScrapiBase):
           intent_id: fully qualified Intent ID path to pass in for query
             input instead of text. This allows for the direct triggering of a
             specific Intent, and will bypass the NLU engine.
-          timezone: IANA Timezone database code to pass in with query input
-            which can be used by the agent runtime. For example, when capturing
-            datetime via system functions, they can be modified to user the
-            provied timezone vs. the default agent timezone.
+          timezone: (Optional) IANA Timezone database code to pass in with query
+            input   which can be used by the agent runtime. For example, when
+            capturing datetime via system functions, they can be modified to
+            user the provied timezone vs. the default agent timezone.
             Refs: https://www.iana.org/time-zones
 
         Returns:
@@ -370,7 +370,7 @@ class Sessions(ScrapiBase):
             query_params = types.session.QueryParameters(query_param_mapping)
             request.query_params = query_params
 
-        response = session_client.detect_intent(request)
+        response = session_client.detect_intent(request=request)
         query_result = response.query_result
 
         return query_result
