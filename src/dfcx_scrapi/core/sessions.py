@@ -265,7 +265,7 @@ class Sessions(ScrapiBase):
 
 
         if environment_name:
-            env = self._env_client.get_environment_by_display_name(
+            env = self.env_client.get_environment_by_display_name(
                 environment_name, agent_id
             )
             if not env:
