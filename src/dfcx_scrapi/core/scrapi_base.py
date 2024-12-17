@@ -135,6 +135,9 @@ class ScrapiBase:
           instantiating other library client objects, or None
           if the location is "global"
         """
+        if not resource_id:
+            raise ValueError("resource_id must not be None.")
+
         try:
             location = resource_id.split("/")[3]
         except IndexError as err:
