@@ -16,7 +16,7 @@
 
 import logging
 import uuid
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 from google.cloud.dialogflowcx_v3beta1 import services, types
 from google.protobuf.json_format import MessageToDict
@@ -374,43 +374,6 @@ class Sessions(ScrapiBase):
         query_result = response.query_result
 
         return query_result
-
-    def preset_parameters(
-        self, agent_id: str = None, session_id: str = None, parameters=None
-    ):
-        """Used to set session parameters before a conversation starts.
-
-        Args:
-          agent_id: the Agent ID of the CX Agent to have the conversation with.
-          session_id: an RFC 4122 formatted UUID to be used as the unique ID
-            for the duration of the conversation session. When using Python
-            uuid library, uuid.uuid4() is preferred.
-          parameters: Dict of CX Session Parameters to set in the
-            conversation. Typically this is set before a conversation starts.
-
-        Returns:
-          The CX query result from intent detection run with no text input
-        """
-        client_options = self._set_region(agent_id)
-        session_client = services.sessions.SessionsClient(
-            client_options=client_options, credentials=self.creds
-        )
-        session_path = f"{agent_id}/sessions/{session_id}"
-
-        query_params = types.session.QueryParameters(parameters=parameters)
-        text_input = types.session.TextInput(text=None)
-        query_input = types.session.QueryInput(
-            text=text_input, language_code="en"
-        )
-        request = types.session.DetectIntentRequest(
-            session=session_path,
-            query_params=query_params,
-            query_input=query_input,
-        )
-
-        response = session_client.detect_intent(request=request)
-
-        return response
 
     def get_agent_answer(self, user_query: str) -> str:
         """Extract the answer/citation from a Vertex Conversation response."""
