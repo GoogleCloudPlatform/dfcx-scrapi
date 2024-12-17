@@ -334,7 +334,7 @@ def test_list_test_cases_agent_id_not_in_instance(
 
     tc = PyTestCases()
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(ValueError):
         _ = tc.list_test_cases()
 
 
