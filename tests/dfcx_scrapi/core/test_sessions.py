@@ -19,7 +19,6 @@ import uuid
 import pytest
 from google.protobuf import struct_pb2
 from google.cloud.dialogflowcx_v3beta1 import types
-from IPython.display import Markdown
 
 from dfcx_scrapi.core.sessions import Sessions
 
