@@ -16,7 +16,7 @@
 
 import logging
 import time
-from typing import Dict
+from typing import Dict, List
 
 import pandas as pd
 from google.cloud.dialogflowcx_v3beta1 import services, types
@@ -44,6 +44,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         route_group_id: str = None,
         flow_id: str = None,
         agent_id: str = None,
+        language_code: str = "en"
     ):
         super().__init__(
             creds_path=creds_path,
@@ -67,6 +68,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
 
+        self.language_code = language_code
         self._get_agent_level_data_only = False
 
     def _rg_temp_dict_update(self, temp_dict, element):
@@ -132,7 +134,9 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         return pages_dict
 
     @scrapi_base.api_call_counter_decorator
-    def list_transition_route_groups(self, flow_id: str = None):
+    def list_transition_route_groups(
+        self, flow_id: str = None, language_code: str = None
+    ) -> List[types.TransitionRouteGroup]:
         """Exports List of all Route Groups in the specified CX Flow ID.
 
         Args:
@@ -148,6 +152,12 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
             types.transition_route_group.ListTransitionRouteGroupsRequest()
         )
         request.parent = flow_id
+
+        # prefer method inputs over class level inputs
+        if language_code:
+            request.language_code = language_code
+        else:
+            request.language_code = self.language_code
 
         client_options = self._set_region(flow_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
