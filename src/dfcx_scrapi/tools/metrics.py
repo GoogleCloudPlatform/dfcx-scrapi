@@ -18,6 +18,7 @@ import abc
 import collections
 import dataclasses
 import json
+import re
 import logging
 import math
 import statistics
@@ -37,6 +38,7 @@ from vertexai.language_models import (
 from dfcx_scrapi.core.scrapi_base import (
     EMBEDDING_MODELS_NO_DIMENSIONALITY,
     handle_api_error,
+    get_generation_config,
     ratelimit,
     retry_api_call,
 )
@@ -300,7 +302,7 @@ class UrlMatch(Metric):
 class Scorer:
     def __init__(
         self,
-        llm: TextGenerationModel,
+        llm: TextGenerationModel | GenerativeModel,
         completions: list[str],
         logprobs: int = 5,
         max_output_tokens: int = 1,
@@ -337,26 +339,42 @@ class Scorer:
     def score(self, prompt: str) -> Union[dict[str, float], None]:
         result = {completion: None for completion in self._completions}
 
-        response = self._llm.predict(
-            prompt,
-            max_output_tokens=self._max_output_tokens,
-            temperature=0.0,
-            logprobs=self._logprobs,
-        )
+        if isinstance(self._llm, GenerativeModel) :
+            parameter = {
+                "temperature" : 0.0,
+                "maxOutputTokens" : self._max_output_tokens,
+            }
+            response = self._llm.generate_content(contents=prompt,
+                                       generation_config= get_generation_config(parameter))
+            merged_top_log_probs = collections.defaultdict(lambda: float("-inf"))
+            for candidate in response.candidates:
+                for target_text in ["true", "false"]:
+                    if target_text in candidate.text:
+                        merged_top_log_probs[target_text] = max(
+                            merged_top_log_probs[target_text], candidate.avg_logprobs
+                        )
 
-        raw_response = response.raw_prediction_response
+        elif isinstance(self._llm, TextGenerationModel):
+            response = self._llm.predict(
+                prompt,
+                max_output_tokens=self._max_output_tokens,
+                temperature=0.0,
+                logprobs=self._logprobs,
+            )
 
-        if not raw_response.predictions:
-            return None
+            raw_response = response.raw_prediction_response
 
-        merged_top_log_probs = collections.defaultdict(lambda: float("-inf"))
-        for top_log_probs in raw_response.predictions[0]["logprobs"][
-            "topLogProbs"
-        ]:
-            for key, value in top_log_probs.items():
-                merged_top_log_probs[key] = max(
-                    merged_top_log_probs[key], value
-                )
+            if not raw_response.predictions:
+                return None
+
+            merged_top_log_probs = collections.defaultdict(lambda: float("-inf"))
+            for top_log_probs in raw_response.predictions[0]["logprobs"][
+                "topLogProbs"
+            ]:
+                for key, value in top_log_probs.items():
+                    merged_top_log_probs[key] = max(
+                        merged_top_log_probs[key], value
+                    )
 
         for completion in self._completions:
             for key, value in sorted(
@@ -373,20 +391,36 @@ class Scorer:
 
 
 class StatementExtractor:
-    def __init__(self, llm: TextGenerationModel):
+    def __init__(self, llm: TextGenerationModel | GenerativeModel):
         self.llm = llm
 
     def generate_text_vertex(
-          self,
-          prompt: str,
-          parameters: dict[str, Any]
-          ) -> list[str]:
-        response = self.llm._endpoint.predict(
-            instances=[{"content": prompt}],
-            parameters=parameters,
-        )
+        self,
+        prompt: str,
+        parameters: dict[str, Any]
+    ) -> list[str]:
+        if isinstance(self.llm, GenerativeModel):
+            generation_config = get_generation_config(parameters)
+            response = self.llm.generate_content(
+                generation_config=generation_config,
+                contents=prompt
+            )
+            pattern = r"```json\s*([\s\S]*?)\s*```"
+            generative_statement_list = []
+            for candidate in response.candidates:
+                candidate_text = candidate.text
+                json_match = re.search(pattern,  candidate_text)
+                if json_match:
+                    text = json_match.group(1).strip()
+                    generative_statement_list.append(text)
+            return generative_statement_list
+        elif isinstance(self.llm, TextGenerationModel):
+            response = self.llm._endpoint.predict(
+                instances=[{"content": prompt}],
+                parameters=parameters,
+            )
 
-        return [prediction["content"] for prediction in response.predictions]
+            return [prediction["content"] for prediction in response.predictions]
 
     @ratelimit(RATE)
     @handle_api_error
@@ -444,9 +478,9 @@ class StatementScorer:
 
 
 class AnswerCorrectnessScorer:
-    def __init__(self, llm: TextGenerationModel):
+    def __init__(self, llm: TextGenerationModel | GenerativeModel):
         self._statement_scorer = StatementScorer(
-            scorer=Scorer(llm=llm, completions=["true", "false"]),
+            scorer=Scorer(llm=llm, completions=["true", "false"], max_output_tokens=3),
             prompt_template=MetricPrompts.ANSWER_CORRECTNESS_PROMPT_TEMPLATE,
         )
 
@@ -487,8 +521,8 @@ class AnswerCorrectness(Metric):
     ]
 
     def __init__(
-            self, llm: TextGenerationModel, compute_precision: bool = True
-            ):
+            self, llm: TextGenerationModel | GenerativeModel, compute_precision: bool = True
+    ):
         self._statement_extractor = StatementExtractor(llm)
 
         answer_scorer = AnswerCorrectnessScorer(llm)
@@ -554,7 +588,7 @@ class AnswerCorrectness(Metric):
 
 
 class AnswerGroundednessScorer:
-    def __init__(self, llm: TextGenerationModel):
+    def __init__(self, llm: TextGenerationModel | GenerativeModel):
         self._statement_scorer = StatementScorer(
             scorer=Scorer(
                 llm=llm, completions=["▁TRUE", "▁FALSE"], max_output_tokens=2
@@ -586,7 +620,7 @@ class AnswerGroundednessScorer:
 
 
 class AnswerGroundedness(Metric):
-    def __init__(self, llm: TextGenerationModel):
+    def __init__(self, llm: TextGenerationModel | GenerativeModel):
         self._statement_extractor = StatementExtractor(llm)
         self._answer_scorer = AnswerGroundednessScorer(llm)
 
@@ -648,7 +682,7 @@ class StatementBasedBundledMetric(Metric):
 
     def __init__(
         self,
-        llm: TextGenerationModel,
+        llm: TextGenerationModel | GenerativeModel,
         answer_correctness: bool = True,
         faithfulness: bool = True,
         context_recall: bool = True,
