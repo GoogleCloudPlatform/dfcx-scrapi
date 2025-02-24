@@ -98,6 +98,18 @@ class AgentResponse:
                 query_result.data_store_connection_signals
                 )
 
+    def from_analyze_content_results(self, answer_text: str, search_results: list[dict[str, Any]],
+                                    rewritten_query:str):
+        """Populates the AgentResponse from extracted AnalyzeContent results."""
+        self.answer_text = answer_text
+        self.rewritten_query = rewritten_query
+        self.search_results = [
+            Snippet(uri=result.get("uri"), title=result.get("title"), text=result.get("text"))
+            for result in search_results
+        ]
+        self.cited_snippet_indices = [i for i in range(len(self.search_results))]
+
+
     @classmethod
     def from_row(cls, row: dict[str, Any]):
         """Extracts the relevant fields from a dictionary."""
