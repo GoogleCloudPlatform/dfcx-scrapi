@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import functools
 import json
 import logging
@@ -28,6 +29,7 @@ import vertexai
 from google.api_core import exceptions
 from google.auth import default
 from google.auth.transport.requests import Request
+from google.cloud import aiplatform_v1beta1
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 from google.protobuf import field_mask_pb2, json_format, struct_pb2
@@ -724,6 +726,20 @@ def api_call_counter_decorator(func):
     wrapper.calls_api = True
 
     return wrapper
+
+def get_generation_config(parameters: Dict[str, Any]) -> aiplatform_v1beta1.GenerationConfig:
+    """Parse the dictionary of parameters for tuning Generative
+       model output into the GenerationConfig object and ignore the
+       unknown field"""
+    try:
+        generation_config = aiplatform_v1beta1.types.GenerationConfig.from_json(
+            json.dumps(obj=parameters), ignore_unknown_fields=True)
+    except (json.JSONDecodeError, ValueError) as e:
+        logging.error(f"Error creating GenerationConfig: {e}")
+        raise ValueError(
+            f"Invalid parameters for GenerationConfig: {e}"
+        ) from e
+    return generation_config
 
 def should_retry(err: exceptions.GoogleAPICallError) -> bool:
   """Helper function for deciding whether we should retry the error or not."""
