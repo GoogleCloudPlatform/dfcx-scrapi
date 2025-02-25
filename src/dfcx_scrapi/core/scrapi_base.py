@@ -715,9 +715,10 @@ class ScrapiBase:
         """
         return sum(self.get_api_calls_details().values())
 
-    def get_gen_ai_client(self, project_id: str, location_id:str) -> genai.client.Client:
+    def get_gen_ai_client(self, project_id: str = None, location_id: str = None) -> genai.client.Client:
         """Get the Gen AI Client for Generative Model"""
         if project_id is None or location_id is None:
+            print("Warning no Gen AI client is being created, use the GenerativeModel directly")
             return None
         client = genai.Client(
             vertexai=True, project=project_id, location=location_id
