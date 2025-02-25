@@ -54,7 +54,7 @@ class DataStoreEvaluator(ScrapiBase):
        self.metrics = build_metrics(metrics,
                                     generation_model=self.model_obj,
                                     model_id= model,
-                                    genai_client = self.get_gen_ai_client(project_id, location_id))
+                                    genai_client = self.get_gen_ai_client(self.project_id, self.location_id))
 
     def run(self, scraper_output: pd.DataFrame) -> "EvaluationResult":
         timestamp = datetime.now(tz=timezone.utc)
