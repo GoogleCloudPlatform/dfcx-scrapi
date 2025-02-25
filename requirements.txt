@@ -4,6 +4,7 @@ google-cloud-dialogflow-cx>=1.34.0
 google-cloud-discoveryengine>=0.11.10
 google-auth>=2.35.0
 google-oauth
+google-genai
 oauth2client
 pandas
 tabulate

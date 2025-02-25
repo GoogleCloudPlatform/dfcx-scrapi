@@ -14,22 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import functools
 import json
 import logging
 import re
 import threading
 import time
+import pydantic
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional
 
 import requests
 import vertexai
+from google import genai
 from google.api_core import exceptions
 from google.auth import default
+from google.genai import types as genai_types
 from google.auth.transport.requests import Request
-from google.cloud import aiplatform_v1beta1
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2 import service_account
 from google.protobuf import field_mask_pb2, json_format, struct_pb2
@@ -121,7 +122,6 @@ class ScrapiBase:
             self._check_and_update_scopes(self.creds)
 
         self.agent_id = agent_id
-
         self.api_calls_dict = defaultdict(int)
 
     @staticmethod
@@ -715,6 +715,15 @@ class ScrapiBase:
         """
         return sum(self.get_api_calls_details().values())
 
+    def get_gen_ai_client(self, project_id: str, location_id:str) -> genai.client.Client:
+        """Get the Gen AI Client for Generative Model"""
+        if project_id is None or location_id is None:
+            return None
+        client = genai.Client(
+            vertexai=True, project=project_id, location=location_id
+        )
+        return client
+
 def api_call_counter_decorator(func):
     """Counts the number of API calls for the function `func`."""
 
@@ -727,18 +736,16 @@ def api_call_counter_decorator(func):
 
     return wrapper
 
-def get_generation_config(parameters: Dict[str, Any]) -> aiplatform_v1beta1.GenerationConfig:
+def get_generate_content_config(parameters: Dict[str, Any]) -> genai_types.GenerateContentConfig:
     """Parse the dictionary of parameters for tuning Generative
        model output into the GenerationConfig object and ignore the
        unknown field"""
     try:
-        generation_config = aiplatform_v1beta1.types.GenerationConfig.from_json(
-            json.dumps(obj=parameters), ignore_unknown_fields=True)
-    except (json.JSONDecodeError, ValueError) as e:
-        logging.error(f"Error creating GenerationConfig: {e}")
-        raise ValueError(
-            f"Invalid parameters for GenerationConfig: {e}"
-        ) from e
+        generation_config = genai_types.GenerateContentConfig.model_validate_json(json.dumps(parameters))
+    except pydantic.ValidationError as e:
+        invalid_name = [error.get('loc')[0] for error in e.errors()]
+        list(map(parameters.pop, invalid_name))
+        generation_config = genai_types.GenerateContentConfig.model_validate_json(json.dumps(parameters))
     return generation_config
 
 def should_retry(err: exceptions.GoogleAPICallError) -> bool:

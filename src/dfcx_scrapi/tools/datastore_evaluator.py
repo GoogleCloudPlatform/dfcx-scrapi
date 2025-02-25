@@ -43,9 +43,18 @@ EVAL_RESULTS_COLS = [
             ]
 
 class DataStoreEvaluator(ScrapiBase):
-    def __init__(self, metrics: list[str], model: str = "text-bison@002"):
-       self.model = self.model_setup(model)
-       self.metrics = build_metrics(metrics, generation_model=self.model)
+    def __init__(self, metrics: list[str], model: str = "text-bison@002", project_id: str = None, location_id: str = None):
+       self.project_id = project_id
+       self.location_id = location_id
+       self.model_obj = None
+       self.metrics = []
+       if not self.project_id or not self.location_id:
+        ## make sure this code is backward compatible with the old way to setup model
+        self.model_obj = self.model_setup(llm_model=model)
+       self.metrics = build_metrics(metrics,
+                                    generation_model=self.model_obj,
+                                    model_id= model,
+                                    genai_client = self.get_gen_ai_client(project_id, location_id))
 
     def run(self, scraper_output: pd.DataFrame) -> "EvaluationResult":
         timestamp = datetime.now(tz=timezone.utc)
@@ -60,8 +69,6 @@ class DataStoreEvaluator(ScrapiBase):
         result["evaluation_timestamp"] = timestamp.isoformat()
 
         return EvaluationResult(scraper_output, result)
-
-
 @dataclasses.dataclass
 class EvaluationResult:
     scrape_outputs: pd.DataFrame = None
