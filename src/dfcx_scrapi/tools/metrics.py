@@ -536,7 +536,10 @@ class StatementScorer:
 
 class AnswerCorrectnessScorer:
     def __init__(
-        self, llm: TextGenerationModel | GenerativeModel, genai_client: genai.client.Client, model_id: str
+        self,
+        llm: TextGenerationModel | GenerativeModel,
+        genai_client: genai.client.Client,
+        model_id: str
     ):
         self._statement_scorer = StatementScorer(
             scorer=Scorer(llm=llm, completions=["true", "false"], max_output_tokens=3, genai_client = genai_client, model_id = model_id),
@@ -658,7 +661,10 @@ class AnswerCorrectness(Metric):
 
 class AnswerGroundednessScorer:
     def __init__(
-        self, llm: TextGenerationModel | GenerativeModel, genai_client: genai.client.Client, model_id: str
+        self,
+        llm: TextGenerationModel | GenerativeModel,
+        genai_client: genai.client.Client,
+        model_id: str
     ):
         self._statement_scorer = StatementScorer(
             scorer=Scorer(
