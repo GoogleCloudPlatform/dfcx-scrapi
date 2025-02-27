@@ -39,9 +39,10 @@ from vertexai.generative_models import (
     GenerativeModel,
     HarmBlockThreshold,
     HarmCategory,
-    SafetySetting
+    SafetySetting,
 )
 from vertexai.language_models import TextEmbeddingModel, TextGenerationModel
+
 
 _INTERVAL_SENTINEL = object()
 
