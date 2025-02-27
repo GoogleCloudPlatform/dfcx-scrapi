@@ -29,7 +29,6 @@ import pandas as pd
 from google import genai
 from rouge_score import rouge_scorer
 from tqdm.contrib import concurrent
-
 from vertexai.language_models import (
     TextEmbeddingInput,
     TextEmbeddingModel,
