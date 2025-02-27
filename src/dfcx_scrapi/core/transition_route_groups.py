@@ -1,6 +1,6 @@
 """CX Transition Route Group Resource functions."""
 
-# Copyright 2023 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import logging
 import time
-from typing import Dict
+from typing import Dict, List
 
 import pandas as pd
 from google.cloud.dialogflowcx_v3beta1 import services, types
@@ -44,6 +44,7 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         route_group_id: str = None,
         flow_id: str = None,
         agent_id: str = None,
+        language_code: str = "en"
     ):
         super().__init__(
             creds_path=creds_path,
@@ -51,11 +52,6 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
             creds=creds,
             scope=scope,
         )
-
-        self.flows = flows.Flows(creds=self.creds)
-        self.intents = intents.Intents(creds=self.creds)
-        self.pages = pages.Pages(creds=self.creds)
-        self.webhooks = webhooks.Webhooks(creds=self.creds)
 
         if route_group_id:
             self.route_group_id = route_group_id
@@ -67,7 +63,16 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         if agent_id:
             self.agent_id = agent_id
 
+        self.language_code = language_code
         self._get_agent_level_data_only = False
+
+        self.flows = flows.Flows(
+            creds=self.creds, language_code=self.language_code)
+        self.intents = intents.Intents(
+            creds=self.creds, language_code=self.language_code)
+        self.pages = pages.Pages(
+            creds=self.creds, language_code=self.language_code)
+        self.webhooks = webhooks.Webhooks(creds=self.creds)
 
     def _rg_temp_dict_update(self, temp_dict, element):
         """Modify the temp dict and return to dataframe function."""
@@ -132,7 +137,9 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
         return pages_dict
 
     @scrapi_base.api_call_counter_decorator
-    def list_transition_route_groups(self, flow_id: str = None):
+    def list_transition_route_groups(
+        self, flow_id: str = None, language_code: str = None
+    ) -> List[types.TransitionRouteGroup]:
         """Exports List of all Route Groups in the specified CX Flow ID.
 
         Args:
@@ -148,6 +155,12 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
             types.transition_route_group.ListTransitionRouteGroupsRequest()
         )
         request.parent = flow_id
+
+        # prefer method inputs over class level inputs
+        if language_code:
+            request.language_code = language_code
+        else:
+            request.language_code = self.language_code
 
         client_options = self._set_region(flow_id)
         client = services.transition_route_groups.TransitionRouteGroupsClient(
@@ -267,6 +280,8 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         if language_code:
             request.language_code = language_code
+        else:
+            request.language_code = self.language_code
 
         response = client.update_transition_route_group(request)
 
