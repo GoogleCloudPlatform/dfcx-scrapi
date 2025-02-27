@@ -35,8 +35,12 @@ from google.genai import types as genai_types
 from google.oauth2 import service_account
 from google.protobuf import field_mask_pb2, json_format, struct_pb2
 from proto.marshal.collections import maps, repeated
-from vertexai.generative_models import (GenerativeModel, HarmBlockThreshold,
-                                        HarmCategory, SafetySetting)
+from vertexai.generative_models import (
+    GenerativeModel,
+    HarmBlockThreshold,
+    HarmCategory,
+    SafetySetting
+)
 from vertexai.language_models import TextEmbeddingModel, TextGenerationModel
 
 _INTERVAL_SENTINEL = object()
