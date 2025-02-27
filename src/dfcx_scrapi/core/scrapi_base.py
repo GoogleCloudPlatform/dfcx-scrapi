@@ -27,7 +27,6 @@ import pydantic
 import requests
 import vertexai
 from google import genai
-
 from google.api_core import exceptions
 from google.auth import default
 from google.auth.transport.requests import Request
@@ -43,7 +42,6 @@ from vertexai.generative_models import (
     SafetySetting,
 )
 from vertexai.language_models import TextEmbeddingModel, TextGenerationModel
-
 
 _INTERVAL_SENTINEL = object()
 
