@@ -29,11 +29,9 @@ import pandas as pd
 from rouge_score import rouge_scorer
 from tqdm.contrib import concurrent
 from google import genai
-from vertexai.generative_models import GenerativeModel
 from vertexai.language_models import (
     TextEmbeddingInput,
     TextEmbeddingModel,
-    TextGenerationModel,
 )
 
 from dfcx_scrapi.core.scrapi_base import (
@@ -68,9 +66,8 @@ def safe_geometric_mean(values: list[float]) -> float:
 
 def build_metrics(
         metrics: list[str],
-        generation_model: GenerativeModel = None,
-        genai_client: genai.client.Client = None,
-        model_id: str = None,
+        genai_client: genai.client.Client,
+        model_id: str,
         embedding_model: TextEmbeddingModel = None
         ) -> list["Metric"]:
     metric_list: list[Metric] = []
@@ -80,11 +77,26 @@ def build_metrics(
         elif metric == "rougeL":
             metric_list.append(RougeL())
         elif metric == "answer_correctness":
-            metric_list.append(AnswerCorrectness(llm=generation_model, genai_client =genai_client, model_id = model_id))
+            metric_list.append(
+                AnswerCorrectness(
+                    genai_client =genai_client,
+                    model_id = model_id
+                    )
+            )
         elif metric == "faithfulness":
-            metric_list.append(Faithfulness(llm=generation_model, genai_client =genai_client, model_id = model_id))
+            metric_list.append(
+                Faithfulness(
+                    genai_client =genai_client,
+                    model_id = model_id
+                    )
+                )
         elif metric == "context_recall":
-            metric_list.append(ContextRecall(llm=generation_model, genai_client =genai_client, model_id = model_id))
+            metric_list.append(
+                ContextRecall(
+                    genai_client =genai_client,
+                    model_id = model_id
+                    )
+                )
         elif metric in [
             "response_similarity",
             "semantic_similarity",
@@ -305,16 +317,12 @@ class UrlMatch(Metric):
 class Scorer:
     def __init__(
         self,
-        llm: TextGenerationModel | GenerativeModel,
         completions: list[str],
-        logprobs: int = 5,
+        genai_client: genai.client.Client,
+        model_id: str,
         max_output_tokens: int = 1,
-        genai_client: genai.client.Client = None,
-        model_id: str = None,
     ):
-        self._llm = llm
         self._completions = completions
-        self._logprobs = logprobs
         self._max_output_tokens = max_output_tokens
         self.genai_client = genai_client
         self.model_id = model_id
@@ -337,10 +345,12 @@ class Scorer:
 
         for key, value in exp_scores.items():
             result[key] = value / norm
-
         return result
 
-    def score_with_genai(self, prompt: str) ->Union[dict[str, float], None]:
+    @ratelimit(RATE)
+    @handle_api_error
+    @retry_api_call([2**i for i in range(MAX_RETRIES)])
+    def score(self, prompt: str) -> Union[dict[str, float], None]:
         result = {completion: None for completion in self._completions}
         parameter = {
                 "temperature" : 0.0,
@@ -351,7 +361,10 @@ class Scorer:
         response = self.genai_client.models.generate_content(
                                     model=self.model_id,
                                     contents=prompt,
-                                    config= get_generate_content_config(parameter))
+                                    config= get_generate_content_config(
+                                        parameters=parameter
+                                        )
+                                    )
 
         if not response:
             return None
@@ -363,7 +376,6 @@ class Scorer:
                     merged_top_log_probs[target_text] = max(
                         merged_top_log_probs[target_text], candidate.avg_logprobs
                     )
-
         for completion in self._completions:
             for key, value in sorted(
                 merged_top_log_probs.items(), key=lambda x: x[1], reverse=True
@@ -371,72 +383,25 @@ class Scorer:
                 if completion in key:
                     result[completion] = value
                     break
-
-        return result
-
-    def score_with_text_generation_model(self, prompt: str)->Union[dict[str, float], None]:
-        result = {completion: None for completion in self._completions}
-        response = self._llm.predict(
-            prompt,
-            max_output_tokens=self._max_output_tokens,
-            temperature=0.0,
-            logprobs=self._logprobs,
-        )
-        raw_response = response.raw_prediction_response
-
-        if not raw_response.predictions:
-            return None
-
-        merged_top_log_probs = collections.defaultdict(lambda: float("-inf"))
-        for top_log_probs in raw_response.predictions[0]["logprobs"][
-            "topLogProbs"
-        ]:
-            for key, value in top_log_probs.items():
-                merged_top_log_probs[key] = max(
-                    merged_top_log_probs[key], value
-                )
-
-        for completion in self._completions:
-            for key, value in sorted(
-                merged_top_log_probs.items(), key=lambda x: x[1], reverse=True
-            ):
-                # checking containment instead of equality because sometimes the
-                # answer might be returned as "_<completion>" instead of
-                # "<completion>" due to the LLM's tokenizer
-                if completion in key:
-                    result[completion] = value
-                    break
-
-        return result
-
-    @ratelimit(RATE)
-    @handle_api_error
-    @retry_api_call([2**i for i in range(MAX_RETRIES)])
-    def score(self, prompt: str) -> Union[dict[str, float], None]:
-        result = {completion: None for completion in self._completions}
-
-        if self.genai_client is not None :
-            self.score_with_genai(prompt=prompt)
-
-        elif isinstance(self._llm, TextGenerationModel):
-            self.score_with_text_generation_model(prompt=prompt)
 
         return self._normalize(result)
 
 
 class StatementExtractor:
     def __init__(
-        self, llm: TextGenerationModel | GenerativeModel, genai_client: genai.client.Client = None, model_id: str = None
+        self,
+        genai_client: genai.client.Client,
+        model_id: str
     ):
-        self.llm = llm
         self.genai_client = genai_client
         self.model_id = model_id
 
-    def generate_text_with_genai(
+    def generate_text_vertex(
         self,
         prompt: str,
         parameters: dict[str, Any]
     ) -> list[str]:
+
         pattern = r"```json\s*([\s\S]*?)\s*```"
         generate_content_config = get_generate_content_config(parameters)
         generative_statement_list = []
@@ -454,30 +419,6 @@ class StatementExtractor:
                 text = json_match.group(1).strip()
                 generative_statement_list.append(text)
         return generative_statement_list
-
-    def generate_text_with_text_generation_model(
-        self,
-        prompt: str,
-        parameters: dict[str, Any]
-    ) -> list[str]:
-        response = self.llm._endpoint.predict(
-            instances=[{"content": prompt}],
-            parameters=parameters,
-        )
-        return [prediction["content"] for prediction in response.predictions]
-
-    def generate_text_vertex(
-        self,
-        prompt: str,
-        parameters: dict[str, Any]
-    ) -> list[str]:
-
-        if self.genai_client is not None:
-            return self.generate_text_with_genai(prompt, parameters)
-        elif isinstance(self.llm, TextGenerationModel):
-            return self.generate_text_with_text_generation_model(prompt, parameters)
-        else:
-            raise ValueError("No Gen AI Client and no TextGenerationModel is constructed")
 
     @ratelimit(RATE)
     @handle_api_error
@@ -537,12 +478,16 @@ class StatementScorer:
 class AnswerCorrectnessScorer:
     def __init__(
         self,
-        llm: TextGenerationModel | GenerativeModel,
         genai_client: genai.client.Client,
         model_id: str
     ):
         self._statement_scorer = StatementScorer(
-            scorer=Scorer(llm=llm, completions=["true", "false"], max_output_tokens=3, genai_client = genai_client, model_id = model_id),
+            scorer=Scorer(
+                completions=["true", "false"],
+                max_output_tokens=3,
+                genai_client = genai_client,
+                model_id = model_id
+            ),
             prompt_template=MetricPrompts.ANSWER_CORRECTNESS_PROMPT_TEMPLATE,
         )
         self.genai_client = genai_client
@@ -586,18 +531,19 @@ class AnswerCorrectness(Metric):
 
     def __init__(
             self,
-            llm: TextGenerationModel | GenerativeModel ,
             genai_client: genai.client.Client = None,
             model_id: str = None,
             compute_precision: bool = True
     ):
-        self._statement_extractor = StatementExtractor(llm,
-                                                       genai_client=genai_client,
-                                                       model_id=model_id)
+        self._statement_extractor = StatementExtractor(
+            genai_client=genai_client,
+            model_id=model_id
+        )
 
-        answer_scorer = AnswerCorrectnessScorer(llm,
-                                                genai_client=genai_client,
-                                                model_id=model_id)
+        answer_scorer = AnswerCorrectnessScorer(
+            genai_client=genai_client,
+            model_id=model_id
+        )
         self._recall_answer_scorer = answer_scorer
         self._precision_answer_scorer = (
             answer_scorer if compute_precision else None
@@ -662,13 +608,12 @@ class AnswerCorrectness(Metric):
 class AnswerGroundednessScorer:
     def __init__(
         self,
-        llm: TextGenerationModel | GenerativeModel,
         genai_client: genai.client.Client,
         model_id: str
     ):
         self._statement_scorer = StatementScorer(
             scorer=Scorer(
-                llm=llm, completions=["▁TRUE", "▁FALSE"],
+                completions=["▁TRUE", "▁FALSE"],
                 max_output_tokens=2,
                 genai_client=genai_client,
                 model_id=model_id
@@ -702,12 +647,11 @@ class AnswerGroundednessScorer:
 class AnswerGroundedness(Metric):
     def __init__(
         self,
-        llm: TextGenerationModel | GenerativeModel,
         genai_client: genai.client.Client = None,
         model_id: str = None
     ):
-        self._statement_extractor = StatementExtractor(llm, genai_client=genai_client, model_id=model_id)
-        self._answer_scorer = AnswerGroundednessScorer(llm, genai_client=genai_client, model_id=model_id)
+        self._statement_extractor = StatementExtractor(genai_client=genai_client, model_id=model_id)
+        self._answer_scorer = AnswerGroundednessScorer(genai_client=genai_client, model_id=model_id)
 
     def call(
         self,
@@ -767,12 +711,16 @@ class StatementBasedBundledMetric(Metric):
 
     def __init__(
         self,
-        llm: TextGenerationModel | GenerativeModel,
+        genai_client: genai.client.Client,
+        model_id: str,
         answer_correctness: bool = True,
         faithfulness: bool = True,
         context_recall: bool = True,
     ):
-        self._statement_extractor = StatementExtractor(llm)
+        self._statement_extractor = StatementExtractor(
+            genai_client=genai_client,
+            model_id=model_id
+        )
 
         if not any([answer_correctness, faithfulness, context_recall]):
             raise ValueError(
@@ -781,10 +729,19 @@ class StatementBasedBundledMetric(Metric):
             )
 
         self._answer_correctness = (
-            AnswerCorrectness(llm) if answer_correctness else None
+            AnswerCorrectness(
+                genai_client=genai_client,
+                model_id=model_id
+            ) if answer_correctness else None
         )
-        self._faithfulness = Faithfulness(llm) if faithfulness else None
-        self._context_recall = ContextRecall(llm) if context_recall else None
+        self._faithfulness = Faithfulness(
+            genai_client=genai_client,
+            model_id=model_id
+        ) if faithfulness else None
+        self._context_recall = ContextRecall(
+            genai_client=genai_client,
+            model_id=model_id
+        ) if context_recall else None
 
     def __call__(self, inputs: dict[str, Any]) -> dict[str, Any]:
         reference_statements = None

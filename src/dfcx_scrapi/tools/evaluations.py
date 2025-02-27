@@ -29,7 +29,7 @@ from tqdm import tqdm
 from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.conversation_history import ConversationHistory
 from dfcx_scrapi.core.playbooks import Playbooks
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.scrapi_base import ScrapiBase, get_gen_ai_client
 from dfcx_scrapi.core.sessions import Sessions
 from dfcx_scrapi.core.tools import Tools
 from dfcx_scrapi.tools.agent_response import AgentResponse
@@ -94,18 +94,21 @@ class Evaluations(ScrapiBase):
             agent_id=self.agent_id, tools_map=tools_map, creds=self.creds)
         self.ar = AgentResponse()
         self.ch = ConversationHistory(agent_id=self.agent_id, creds=self.creds)
-
+        self.project_id = self.get_project_id_from_agent_id("agent", agent_id)
+        self.location = self.get_location_id_from_agent_id("agent", agent_id)
         self.tools_map = None
         self.playbooks_map = None
         self.action_counter = 1
 
-        self.generation_model = self.model_setup(generation_model)
         self.embedding_model = self.model_setup(embedding_model)
 
         self.user_input_metrics = metrics
         self.metrics = build_metrics(
             metrics=self.user_input_metrics,
-            generation_model=self.generation_model,
+            genai_client=get_gen_ai_client(
+                project_id=self.project_id,
+                location_id=self.location
+                ),
             embedding_model=self.embedding_model
             )
         self.unexpected_rows = []
