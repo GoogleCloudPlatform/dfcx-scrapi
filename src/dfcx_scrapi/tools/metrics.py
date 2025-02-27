@@ -374,7 +374,8 @@ class Scorer:
             for target_text in ["true", "false"]:
                 if target_text in candidate_text:
                     merged_top_log_probs[target_text] = max(
-                        merged_top_log_probs[target_text], candidate.avg_logprobs
+                        merged_top_log_probs[target_text],
+                        candidate.avg_logprobs
                     )
         for completion in self._completions:
             for key, value in sorted(
@@ -650,8 +651,14 @@ class AnswerGroundedness(Metric):
         genai_client: genai.client.Client = None,
         model_id: str = None
     ):
-        self._statement_extractor = StatementExtractor(genai_client=genai_client, model_id=model_id)
-        self._answer_scorer = AnswerGroundednessScorer(genai_client=genai_client, model_id=model_id)
+        self._statement_extractor = StatementExtractor(
+            genai_client=genai_client,
+            model_id=model_id
+            )
+        self._answer_scorer = AnswerGroundednessScorer(
+            genai_client=genai_client,
+            model_id=model_id
+            )
 
     def call(
         self,
