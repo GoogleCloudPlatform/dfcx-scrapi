@@ -26,14 +26,15 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from dfcx_scrapi.core.scrapi_base import (EMBEDDING_MODELS_NO_DIMENSIONALITY,
-                                          get_generate_content_config,
-                                          handle_api_error, ratelimit,
-                                          retry_api_call)
 from google import genai
 from rouge_score import rouge_scorer
 from tqdm.contrib import concurrent
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+
+from dfcx_scrapi.core.scrapi_base import (EMBEDDING_MODELS_NO_DIMENSIONALITY,
+                                          get_generate_content_config,
+                                          handle_api_error, ratelimit,
+                                          retry_api_call)
 
 # logging config
 logging.basicConfig(

@@ -20,27 +20,23 @@ import logging
 import re
 import threading
 import time
-import pydantic
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional
 
+import pydantic
 import requests
 import vertexai
 from google import genai
 from google.api_core import exceptions
 from google.auth import default
-from google.genai import types as genai_types
 from google.auth.transport.requests import Request
 from google.cloud.dialogflowcx_v3beta1 import types
+from google.genai import types as genai_types
 from google.oauth2 import service_account
 from google.protobuf import field_mask_pb2, json_format, struct_pb2
 from proto.marshal.collections import maps, repeated
-from vertexai.generative_models import (
-    GenerativeModel,
-    HarmBlockThreshold,
-    HarmCategory,
-    SafetySetting,
-)
+from vertexai.generative_models import (GenerativeModel, HarmBlockThreshold,
+                                        HarmCategory, SafetySetting)
 from vertexai.language_models import TextEmbeddingModel, TextGenerationModel
 
 _INTERVAL_SENTINEL = object()
