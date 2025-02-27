@@ -489,15 +489,11 @@ def test_get_generation_config_invalid_parameters():
         "invalid_parameter": "some_value"
     }
 
-    # Call the function
     gen_config = get_generate_content_config(parameters)
 
-    # Assert that the function returns a GenerateContentConfig object
     assert isinstance(gen_config, genai_types.GenerateContentConfig)
 
-    # Assert that the valid parameter is set correctly
     assert gen_config.temperature == 0.9
 
-    # Assert that the invalid parameter is not present
     assert not hasattr(gen_config, "invalid_parameter")
 
