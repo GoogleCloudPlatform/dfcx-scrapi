@@ -32,7 +32,7 @@ from tqdm.contrib import concurrent
 
 from vertexai.language_models import (
     TextEmbeddingInput,
-    TextEmbeddingModel
+    TextEmbeddingModel,
 )
 
 from dfcx_scrapi.core.scrapi_base import (
@@ -40,7 +40,7 @@ from dfcx_scrapi.core.scrapi_base import (
     get_generate_content_config,
     handle_api_error,
     ratelimit,
-    retry_api_call
+    retry_api_call,
 )
 
 # logging config
