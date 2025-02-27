@@ -1,6 +1,6 @@
 """CX Transition Route Group Resource functions."""
 
-# Copyright 2023 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,11 +53,6 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
             scope=scope,
         )
 
-        self.flows = flows.Flows(creds=self.creds)
-        self.intents = intents.Intents(creds=self.creds)
-        self.pages = pages.Pages(creds=self.creds)
-        self.webhooks = webhooks.Webhooks(creds=self.creds)
-
         if route_group_id:
             self.route_group_id = route_group_id
             self.client_options = self._set_region(route_group_id)
@@ -70,6 +65,14 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         self.language_code = language_code
         self._get_agent_level_data_only = False
+
+        self.flows = flows.Flows(
+            creds=self.creds, language_code=self.language_code)
+        self.intents = intents.Intents(
+            creds=self.creds, language_code=self.language_code)
+        self.pages = pages.Pages(
+            creds=self.creds, language_code=self.language_code)
+        self.webhooks = webhooks.Webhooks(creds=self.creds)
 
     def _rg_temp_dict_update(self, temp_dict, element):
         """Modify the temp dict and return to dataframe function."""
@@ -277,6 +280,8 @@ class TransitionRouteGroups(scrapi_base.ScrapiBase):
 
         if language_code:
             request.language_code = language_code
+        else:
+            request.language_code = self.language_code
 
         response = client.update_transition_route_group(request)
 
