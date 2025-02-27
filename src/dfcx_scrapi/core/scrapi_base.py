@@ -653,6 +653,25 @@ class ScrapiBase:
 
         vertexai.init(project=project_id, location=location)
 
+
+    def get_project_id_from_agent_id(self, resource_type: str, resource_id: str) -> str:
+        """Get the project ID from agent id."""
+        parts = self._parse_resource_path(
+            resource_type=resource_type,
+            resource_id=resource_id
+            )
+        project_id = parts.get("project")
+        return project_id
+
+    def get_location_id_from_agent_id(self, resource_type: str, resource_id: str) -> str:
+        """Get the location ID from agent id."""
+        parts = self._parse_resource_path(
+            resource_type=resource_type,
+            resource_id=resource_id
+            )
+        location = parts.get("location")
+        return location
+
     def _build_data_store_parent(self, location: str) -> str:
         """Build the Parent ID needed for Discovery Engine API calls."""
         return (f"projects/{self.project_id}/locations/{location}/collections/"
@@ -715,16 +734,6 @@ class ScrapiBase:
         """
         return sum(self.get_api_calls_details().values())
 
-    def get_gen_ai_client(self, project_id: str = None, location_id: str = None) -> genai.client.Client:
-        """Get the Gen AI Client for Generative Model"""
-        if project_id is None or location_id is None:
-            print("Warning no Gen AI client is being created, use the GenerativeModel directly")
-            return None
-        client = genai.Client(
-            vertexai=True, project=project_id, location=location_id
-        )
-        return client
-
 def api_call_counter_decorator(func):
     """Counts the number of API calls for the function `func`."""
 
@@ -737,17 +746,34 @@ def api_call_counter_decorator(func):
 
     return wrapper
 
-def get_generate_content_config(parameters: Dict[str, Any]) -> genai_types.GenerateContentConfig:
+def get_generate_content_config(
+    parameters: Dict[str, Any]
+ ) -> genai_types.GenerateContentConfig:
     """Parse the dictionary of parameters for tuning Generative
        model output into the GenerationConfig object and ignore the
        unknown field"""
     try:
-        generation_config = genai_types.GenerateContentConfig.model_validate_json(json.dumps(parameters))
+        gen_config = genai_types.GenerateContentConfig.model_validate_json(
+            json.dumps(parameters)
+            )
     except pydantic.ValidationError as e:
         invalid_name = [error.get('loc')[0] for error in e.errors()]
         list(map(parameters.pop, invalid_name))
-        generation_config = genai_types.GenerateContentConfig.model_validate_json(json.dumps(parameters))
-    return generation_config
+        gen_config = genai_types.GenerateContentConfig.model_validate_json(
+            json.dumps(parameters)
+            )
+    return gen_config
+
+def get_gen_ai_client(
+    project_id: str,
+    location_id: str
+) -> genai.client.Client:
+    """Get the Gen AI Client"""
+
+    client = genai.Client(
+        vertexai=True, project=project_id, location=location_id
+    )
+    return client
 
 def should_retry(err: exceptions.GoogleAPICallError) -> bool:
   """Helper function for deciding whether we should retry the error or not."""

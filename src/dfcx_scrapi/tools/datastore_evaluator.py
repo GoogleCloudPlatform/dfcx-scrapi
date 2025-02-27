@@ -32,7 +32,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaInMemoryUpload, MediaIoBaseDownload
 from tqdm import tqdm
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.core.scrapi_base import ScrapiBase, get_gen_ai_client
 from dfcx_scrapi.tools.agent_response import AgentResponse
 from dfcx_scrapi.tools.metrics import build_metrics
 
@@ -43,18 +43,23 @@ EVAL_RESULTS_COLS = [
             ]
 
 class DataStoreEvaluator(ScrapiBase):
-    def __init__(self, metrics: list[str], model: str = "text-bison@002", project_id: str = None, location_id: str = None):
-       self.project_id = project_id
-       self.location_id = location_id
-       self.model_obj = None
-       self.metrics = []
-       if not self.project_id or not self.location_id:
-        ## make sure this code is backward compatible with the old way to setup model
-        self.model_obj = self.model_setup(llm_model=model)
-       self.metrics = build_metrics(metrics,
-                                    generation_model=self.model_obj,
-                                    model_id= model,
-                                    genai_client = self.get_gen_ai_client(self.project_id, self.location_id))
+    def __init__(
+        self,
+        metrics: list[str],
+        project_id: str,
+        location_id: str,
+        model: str = "gemini-2.0-flash-001"
+        ):
+        self.project_id = project_id
+        self.location_id = location_id
+        self.metrics = build_metrics(
+            metrics=metrics,
+            model_id= model,
+            genai_client = get_gen_ai_client(
+                self.project_id,
+                self.location_id
+                )
+        )
 
     def run(self, scraper_output: pd.DataFrame) -> "EvaluationResult":
         timestamp = datetime.now(tz=timezone.utc)
