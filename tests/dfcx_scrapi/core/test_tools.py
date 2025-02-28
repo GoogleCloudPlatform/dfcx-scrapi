@@ -151,11 +151,6 @@ def mock_client(test_config):
         yield mock_client
 
 
-@pytest.fixture
-def mock_build_metrics():
-    with patch("dfcx_scrapi.tools.datastore_evaluator.build_metrics") as mock:
-        yield mock
-
 # Test get_tools_map
 def test_get_tools_map(mock_client, mock_list_tools_pager, test_config):
     mock_client.return_value.list_tools.return_value = mock_list_tools_pager
