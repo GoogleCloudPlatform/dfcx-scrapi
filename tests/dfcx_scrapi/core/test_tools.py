@@ -19,12 +19,14 @@
 # limitations under the License.
 
 from unittest.mock import MagicMock, patch
+import pandas as pd
 
 import pytest
 from google.cloud.dialogflowcx_v3beta1 import services, types
 
 from dfcx_scrapi.core.tools import Tools
-
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
+from dfcx_scrapi.tools.metrics import RougeL, UrlMatch, AnswerCorrectness
 
 @pytest.fixture
 def test_config():
@@ -36,6 +38,17 @@ def test_config():
     display_name = "mock tool"
     description = "This is a mock tool."
     updated_description = "This is an updated mock tool."
+    mock_evaluator_input = {
+        "query_result": [MagicMock(
+            answer_text="generated answer",
+            cited_search_results=[MagicMock(text="golden snippet")],
+            cited_search_result_links=["www.cited.com","www.cited2.com"],
+            search_result_links=["www.cite.com"]
+            )],
+        "expected_answer": ["expected answer"],
+        "expected_uri": "www.cited.com",
+        "golden_snippet": ["golden snippet"]
+    }
     open_api_spec = """
     openapi: 3.0.0
     info:
@@ -80,7 +93,8 @@ def test_config():
         "display_name": display_name,
         "description": description,
         "updated_description": updated_description,
-        "open_api_spec": open_api_spec
+        "open_api_spec": open_api_spec,
+        "mock_evaluator_input": mock_evaluator_input
         }
 
 @pytest.fixture
@@ -134,7 +148,13 @@ def mock_client(test_config):
         mock_default.return_value = (mock_creds, test_config["project_id"])
         mock_request.return_value = MagicMock()
 
-        yield mock_client 
+        yield mock_client
+
+
+@pytest.fixture
+def mock_build_metrics():
+    with patch("dfcx_scrapi.tools.datastore_evaluator.build_metrics") as mock:
+        yield mock
 
 # Test get_tools_map
 def test_get_tools_map(mock_client, mock_list_tools_pager, test_config):
@@ -250,3 +270,39 @@ def test_build_open_api_tool_with_description(test_config):
     assert isinstance(tool, types.Tool)
     assert tool.display_name == test_config["display_name"]
     assert tool.description == test_config["description"]
+
+
+def test_rouge_l_call(test_config):
+    rouge_l = RougeL()
+    data = test_config["mock_evaluator_input"]
+    inputs = pd.DataFrame(data)
+    result = rouge_l.run(inputs)
+    expected_columns = ["rougeL_generative","rougeL_extractive"]
+
+    assert isinstance(result, pd.DataFrame)
+
+    for col in expected_columns:
+        assert col in result.columns
+    assert result is not None
+    assert result["rougeL_generative"].iloc[0]== 0.5
+    assert result["rougeL_extractive"].iloc[0]== 1.0
+
+
+def test_url_match_call(test_config):
+    url_match = UrlMatch()
+    data = test_config["mock_evaluator_input"]
+    inputs = pd.DataFrame(data)
+    result = url_match.run(inputs)
+    expected_columns = ["cited_url_match@1",
+                        "cited_url_match",
+                        "search_url_match"]
+
+    assert isinstance(result, pd.DataFrame)
+
+    for col in expected_columns:
+        assert col in result.columns
+    assert result is not None
+    assert str(result["cited_url_match@1"].iloc[0])== "True"
+    assert str(result["cited_url_match"].iloc[0])== "True"
+    assert str(result["search_url_match"].iloc[0])== "False"
+

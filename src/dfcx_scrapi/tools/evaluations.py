@@ -94,8 +94,12 @@ class Evaluations(ScrapiBase):
             agent_id=self.agent_id, tools_map=tools_map, creds=self.creds)
         self.ar = AgentResponse()
         self.ch = ConversationHistory(agent_id=self.agent_id, creds=self.creds)
-        self.project_id = self.get_project_id_from_agent_id("agent", agent_id)
-        self.location = self.get_location_id_from_agent_id("agent", agent_id)
+        self.project_id = self.get_project_id_from_agent_id(
+            resource_id=agent_id
+            )
+        self.location = self.get_location_id_from_agent_id(
+            resource_id=agent_id
+            )
         self.tools_map = None
         self.playbooks_map = None
         self.action_counter = 1
@@ -109,6 +113,7 @@ class Evaluations(ScrapiBase):
                 project_id=self.project_id,
                 location_id=self.location
                 ),
+            model_id=generation_model,
             embedding_model=self.embedding_model
             )
         self.unexpected_rows = []

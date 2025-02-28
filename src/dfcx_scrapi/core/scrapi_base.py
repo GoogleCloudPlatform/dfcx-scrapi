@@ -654,30 +654,22 @@ class ScrapiBase:
         vertexai.init(project=project_id, location=location)
 
 
-    def get_project_id_from_agent_id(
-        self,
-        resource_type: str,
-        resource_id: str
-        ) -> str:
+    def get_project_id_from_agent_id(self,resource_id: str) -> str:
         """Get the project ID from agent id."""
         parts = self._parse_resource_path(
-            resource_type=resource_type,
+            resource_type="agent",
             resource_id=resource_id
             )
-        project_id = parts.get("project")
+        project_id = parts.get("project", None)
         return project_id
 
-    def get_location_id_from_agent_id(
-        self,
-        resource_type: str,
-        resource_id: str
-        ) -> str:
+    def get_location_id_from_agent_id(self,resource_id: str) -> str:
         """Get the location ID from agent id."""
         parts = self._parse_resource_path(
-            resource_type=resource_type,
+            resource_type="agent",
             resource_id=resource_id
             )
-        location = parts.get("location")
+        location = parts.get("location", None)
         return location
 
     def _build_data_store_parent(self, location: str) -> str:
