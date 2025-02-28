@@ -17,6 +17,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from google.genai import types as genai_types
 from google.api_core import exceptions
 from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2.credentials import Credentials as UserCredentials
@@ -28,6 +29,8 @@ from google.protobuf import field_mask_pb2, struct_pb2
 from dfcx_scrapi.core.scrapi_base import (
     ScrapiBase,
     api_call_counter_decorator,
+    get_gen_ai_client,
+    get_generate_content_config,
     handle_api_error,
     retry_api_call,
     should_retry,
@@ -475,3 +478,38 @@ def test_get_api_calls_count_with_calls(mocked_scrapi_base):
 
         # Assert that the count is correct
         assert api_calls_count == 2
+
+
+def test_get_project_id_from_agent (mocked_scrapi_base):
+    project_id = mocked_scrapi_base.get_project_id_from_agent_id(
+        resource_id="projects/p1234/locations/global/agents/a1234"
+        )
+
+    assert project_id == "p1234"
+
+
+def test_get_location_id_from_agent(mocked_scrapi_base):
+    location_id = mocked_scrapi_base.get_location_id_from_agent_id(
+        resource_id="projects/p1234/locations/global/agents/a1234")
+
+    assert location_id == "global"
+
+def test_get_generation_config_invalid_parameters():
+    """Test get_generation_config function with invalid parameters.
+    This test ensures that the function ignores invalid parameters and
+    still creates a valid GenerateContentConfig object.
+    """
+    parameters = {
+        "temperature": 0.9,
+        "invalid_parameter": "some_value"
+    }
+
+    gen_config = get_generate_content_config(parameters)
+
+    assert isinstance(gen_config, genai_types.GenerateContentConfig)
+
+    assert gen_config.temperature == 0.9
+
+    assert not hasattr(gen_config, "invalid_parameter")
+
+
