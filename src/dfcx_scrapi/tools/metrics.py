@@ -381,6 +381,9 @@ class Scorer:
             for key, value in sorted(
                 merged_top_log_probs.items(), key=lambda x: x[1], reverse=True
             ):
+                # checking containment instead of equality because sometimes the
+                # answer might be returned as "_<completion>" instead of
+                # "<completion>" due to the LLM's tokenizer
                 if completion in key:
                     result[completion] = value
                     break
@@ -403,7 +406,7 @@ class StatementExtractor:
         parameters: dict[str, Any]
     ) -> list[str]:
 
-        pattern = r"```json\s*([\s\S]*?)\s*```"
+        json_pattern = r"```json\s*([\s\S]*?)\s*```"
         generate_content_config = get_generate_content_config(parameters)
         generative_statement_list = []
 
@@ -415,7 +418,7 @@ class StatementExtractor:
 
         for candidate in response.candidates:
             candidate_text = candidate.content.parts[0].text
-            json_match = re.search(pattern,  candidate_text)
+            json_match = re.search(json_pattern,  candidate_text)
             if json_match:
                 text = json_match.group(1).strip()
                 generative_statement_list.append(text)
@@ -486,8 +489,8 @@ class AnswerCorrectnessScorer:
             scorer=Scorer(
                 completions=["true", "false"],
                 max_output_tokens=3,
-                genai_client = genai_client,
-                model_id = model_id
+                genai_client=genai_client,
+                model_id=model_id
             ),
             prompt_template=MetricPrompts.ANSWER_CORRECTNESS_PROMPT_TEMPLATE,
         )
