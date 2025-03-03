@@ -357,7 +357,6 @@ class Scorer:
                 "maxOutputTokens" : self._max_output_tokens,
         }
         merged_top_log_probs = collections.defaultdict(lambda: float("-inf"))
-
         response = self.genai_client.models.generate_content(
                                     model=self.model_id,
                                     contents=prompt,
@@ -365,18 +364,15 @@ class Scorer:
                                         parameters=parameter
                                         )
                                     )
-
         if not response:
             return None
 
         for candidate in response.candidates:
             candidate_text = candidate.content.parts[0].text
-            for target_text in ["true", "false"]:
-                if target_text in candidate_text:
-                    merged_top_log_probs[target_text] = max(
-                        merged_top_log_probs[target_text],
-                        candidate.avg_logprobs
-                    )
+            merged_top_log_probs[candidate_text] = max(
+                merged_top_log_probs[candidate_text],
+                candidate.avg_logprobs
+            )
         for completion in self._completions:
             for key, value in sorted(
                 merged_top_log_probs.items(), key=lambda x: x[1], reverse=True
@@ -617,7 +613,7 @@ class AnswerGroundednessScorer:
     ):
         self._statement_scorer = StatementScorer(
             scorer=Scorer(
-                completions=["▁TRUE", "▁FALSE"],
+                completions=["TRUE", "FALSE"],
                 max_output_tokens=2,
                 genai_client=genai_client,
                 model_id=model_id
@@ -637,7 +633,7 @@ class AnswerGroundednessScorer:
         )
 
         scores = [
-            scored_statement.scores["▁TRUE"]
+            scored_statement.scores["TRUE"]
             for scored_statement in scored_statements
         ]
 
@@ -678,11 +674,9 @@ class AnswerGroundedness(Metric):
         answer_scorer_result = self._answer_scorer.score(
             answer_statements=answer_statements, sources=sources
         )
-
         score = (
             answer_scorer_result.gmean_score if answer_scorer_result else np.nan
         )
-
         return {"gmean": score}
 
 
