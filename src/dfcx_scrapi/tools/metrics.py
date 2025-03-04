@@ -20,13 +20,14 @@ import dataclasses
 import json
 import logging
 import math
-import re
 import statistics
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 from google import genai
+from google.genai import types as genai_types
+from pydantic import BaseModel
 from rouge_score import rouge_scorer
 from tqdm.contrib import concurrent
 from vertexai.language_models import (
@@ -36,7 +37,6 @@ from vertexai.language_models import (
 
 from dfcx_scrapi.core.scrapi_base import (
     EMBEDDING_MODELS_NO_DIMENSIONALITY,
-    get_generate_content_config,
     handle_api_error,
     ratelimit,
     retry_api_call,
@@ -48,6 +48,10 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+class Statement(BaseModel):
+    statements: list[str]
+
 
 MAX_RETRIES = 5  # Max # of attempts for exponential backoff if API errors
 RATE = 2  # Limit max LLM API calls per second
@@ -352,17 +356,17 @@ class Scorer:
     @retry_api_call([2**i for i in range(MAX_RETRIES)])
     def score(self, prompt: str) -> Union[dict[str, float], None]:
         result = {completion: None for completion in self._completions}
-        parameter = {
-                "temperature" : 0.0,
-                "maxOutputTokens" : self._max_output_tokens,
-        }
         merged_top_log_probs = collections.defaultdict(lambda: float("-inf"))
         response = self.genai_client.models.generate_content(
                                     model=self.model_id,
                                     contents=prompt,
-                                    config= get_generate_content_config(
-                                        parameters=parameter
-                                        )
+                                    config= genai_types.GenerateContentConfig(
+                                            response_mime_type="text/x.enum",
+                                            response_schema={
+                                                "type": "STRING",
+                                                "enum": self._completions,
+                                            },
+    ),
                                     )
         if not response:
             return None
@@ -383,7 +387,6 @@ class Scorer:
                 if completion in key:
                     result[completion] = value
                     break
-
         return self._normalize(result)
 
 
@@ -399,25 +402,22 @@ class StatementExtractor:
     def generate_text_vertex(
         self,
         prompt: str,
-        parameters: dict[str, Any]
     ) -> list[str]:
 
-        json_pattern = r"```json\s*([\s\S]*?)\s*```"
-        generate_content_config = get_generate_content_config(parameters)
         generative_statement_list = []
-
         response = self.genai_client.models.generate_content(
             model=self.model_id,
-            config=generate_content_config,
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=Statement,
+            ),
             contents=prompt
         )
 
         for candidate in response.candidates:
-            candidate_text = candidate.content.parts[0].text
-            json_match = re.search(json_pattern,  candidate_text)
-            if json_match:
-                text = json_match.group(1).strip()
-                generative_statement_list.append(text)
+            generative_statement_list.append(
+                candidate.content.parts[0].text
+                )
         return generative_statement_list
 
     @ratelimit(RATE)
@@ -430,12 +430,6 @@ class StatementExtractor:
 
         llm_outputs = self.generate_text_vertex(
             prompt=prompt,
-            parameters={
-                "seed": 0,
-                "temperature": 0.4,
-                "maxDecodeSteps": 1024,
-                "candidateCount": 8,
-            },
         )
 
         statements = []
