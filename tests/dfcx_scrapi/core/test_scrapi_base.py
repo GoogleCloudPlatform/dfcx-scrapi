@@ -29,8 +29,6 @@ from google.protobuf import field_mask_pb2, struct_pb2
 from dfcx_scrapi.core.scrapi_base import (
     ScrapiBase,
     api_call_counter_decorator,
-    get_gen_ai_client,
-    get_generate_content_config,
     handle_api_error,
     retry_api_call,
     should_retry,
@@ -504,7 +502,7 @@ def test_get_generation_config_invalid_parameters():
         "invalid_parameter": "some_value"
     }
 
-    gen_config = get_generate_content_config(parameters)
+    gen_config = ScrapiBase._get_generate_content_config(parameters)
 
     assert isinstance(gen_config, genai_types.GenerateContentConfig)
 

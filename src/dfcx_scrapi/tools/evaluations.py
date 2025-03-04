@@ -29,7 +29,7 @@ from tqdm import tqdm
 from dfcx_scrapi.core.agents import Agents
 from dfcx_scrapi.core.conversation_history import ConversationHistory
 from dfcx_scrapi.core.playbooks import Playbooks
-from dfcx_scrapi.core.scrapi_base import ScrapiBase, get_gen_ai_client
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.core.sessions import Sessions
 from dfcx_scrapi.core.tools import Tools
 from dfcx_scrapi.tools.agent_response import AgentResponse
@@ -109,7 +109,7 @@ class Evaluations(ScrapiBase):
         self.user_input_metrics = metrics
         self.metrics = build_metrics(
             metrics=self.user_input_metrics,
-            genai_client=get_gen_ai_client(
+            genai_client=ScrapiBase._get_genai_client(
                 project_id=self.project_id,
                 location_id=self.location
                 ),

@@ -32,7 +32,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaInMemoryUpload, MediaIoBaseDownload
 from tqdm import tqdm
 
-from dfcx_scrapi.core.scrapi_base import ScrapiBase, get_gen_ai_client
+from dfcx_scrapi.core.scrapi_base import ScrapiBase
 from dfcx_scrapi.tools.agent_response import AgentResponse
 from dfcx_scrapi.tools.metrics import build_metrics
 
@@ -55,7 +55,7 @@ class DataStoreEvaluator(ScrapiBase):
         self.metrics = build_metrics(
             metrics=metrics,
             model_id= model,
-            genai_client = get_gen_ai_client(
+            genai_client = ScrapiBase._get_genai_client(
                 self.project_id,
                 self.location_id
                 )

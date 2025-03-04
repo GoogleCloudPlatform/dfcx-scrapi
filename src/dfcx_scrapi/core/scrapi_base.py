@@ -580,6 +580,37 @@ class ScrapiBase:
             raise requests.exceptions.RequestException(
                 "API request failed", response.status_code, response)
 
+    @staticmethod
+    def _get_genai_client(
+        project_id: str,
+        location_id: str
+    ) -> genai.client.Client:
+        """Get the Gen AI Client"""
+
+        client = genai.Client(
+            vertexai=True, project=project_id, location=location_id
+        )
+        return client
+
+    @staticmethod
+    def _get_generate_content_config(
+        parameters: Dict[str, Any]
+    ) -> genai_types.GenerateContentConfig:
+        """Parse the dictionary of parameters for tuning Generative
+        model output into the GenerationConfig object and ignore the
+        unknown field"""
+        try:
+            gen_config = genai_types.GenerateContentConfig.model_validate_json(
+                json.dumps(parameters)
+                )
+        except pydantic.ValidationError as e:
+            invalid_name = [error.get('loc')[0] for error in e.errors()]
+            list(map(parameters.pop, invalid_name))
+            gen_config = genai_types.GenerateContentConfig.model_validate_json(
+                json.dumps(parameters)
+                )
+        return gen_config
+
     def _set_request_headers(self, client_options: dict):
         """Different regions have different API endpoints
 
@@ -746,34 +777,6 @@ def api_call_counter_decorator(func):
 
     return wrapper
 
-def get_generate_content_config(
-    parameters: Dict[str, Any]
- ) -> genai_types.GenerateContentConfig:
-    """Parse the dictionary of parameters for tuning Generative
-       model output into the GenerationConfig object and ignore the
-       unknown field"""
-    try:
-        gen_config = genai_types.GenerateContentConfig.model_validate_json(
-            json.dumps(parameters)
-            )
-    except pydantic.ValidationError as e:
-        invalid_name = [error.get('loc')[0] for error in e.errors()]
-        list(map(parameters.pop, invalid_name))
-        gen_config = genai_types.GenerateContentConfig.model_validate_json(
-            json.dumps(parameters)
-            )
-    return gen_config
-
-def get_gen_ai_client(
-    project_id: str,
-    location_id: str
-) -> genai.client.Client:
-    """Get the Gen AI Client"""
-
-    client = genai.Client(
-        vertexai=True, project=project_id, location=location_id
-    )
-    return client
 
 def should_retry(err: exceptions.GoogleAPICallError) -> bool:
   """Helper function for deciding whether we should retry the error or not."""
