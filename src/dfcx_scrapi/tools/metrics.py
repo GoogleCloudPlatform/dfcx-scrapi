@@ -480,7 +480,6 @@ class AnswerCorrectnessScorer:
         self._statement_scorer = StatementScorer(
             scorer=Scorer(
                 completions=["true", "false"],
-                max_output_tokens=3,
                 genai_client=genai_client,
                 model_id=model_id
             ),
@@ -610,7 +609,6 @@ class AnswerGroundednessScorer:
         self._statement_scorer = StatementScorer(
             scorer=Scorer(
                 completions=["TRUE", "FALSE"],
-                max_output_tokens=2,
                 genai_client=genai_client,
                 model_id=model_id
             ),
