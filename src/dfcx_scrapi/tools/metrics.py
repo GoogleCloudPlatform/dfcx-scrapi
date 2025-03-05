@@ -373,6 +373,8 @@ class Scorer:
 
         for candidate in response.candidates:
             candidate_text = candidate.content.parts[0].text
+            if candidate.avg_logprobs is None:
+                raise ValueError("The candidate avgLogprobs in None")
             merged_top_log_probs[candidate_text] = max(
                 merged_top_log_probs[candidate_text],
                 candidate.avg_logprobs
