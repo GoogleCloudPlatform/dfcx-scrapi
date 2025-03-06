@@ -97,12 +97,13 @@ class Evaluations(ScrapiBase):
         self.project_id = self.get_project_id_from_agent_id(
             resource_id=agent_id
             )
-        self.location = self.get_location_id_from_agent_id(
+        self.location_id = self.get_location_id_from_agent_id(
             resource_id=agent_id
             )
         self.tools_map = None
         self.playbooks_map = None
         self.action_counter = 1
+        self.model_id = generation_model
 
         self.embedding_model = self.model_setup(embedding_model)
 
@@ -111,9 +112,9 @@ class Evaluations(ScrapiBase):
             metrics=self.user_input_metrics,
             genai_client=ScrapiBase._get_genai_client(
                 project_id=self.project_id,
-                location_id=self.location
+                location_id=self.location_id
                 ),
-            model_id=generation_model,
+            model_id=self.model_id,
             embedding_model=self.embedding_model
             )
         self.unexpected_rows = []

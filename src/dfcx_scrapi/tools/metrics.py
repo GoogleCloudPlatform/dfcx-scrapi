@@ -438,6 +438,7 @@ class StatementExtractor:
         for output in llm_outputs:
             try:
                 statements = json.loads(output)["statements"]
+                print(f"statements {statements}")
             except ValueError:
                 continue
             break

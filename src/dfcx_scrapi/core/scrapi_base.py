@@ -604,11 +604,14 @@ class ScrapiBase:
                 json.dumps(parameters)
                 )
         except pydantic.ValidationError as e:
-            invalid_name = [error.get('loc')[0] for error in e.errors()]
-            list(map(parameters.pop, invalid_name))
+            invalid_names = [error.get('loc')[0] for error in e.errors()]
+            for name in invalid_names:
+                if name in parameters:
+                    del parameters[name]
             gen_config = genai_types.GenerateContentConfig.model_validate_json(
                 json.dumps(parameters)
                 )
+
         return gen_config
 
     def _set_request_headers(self, client_options: dict):
@@ -685,7 +688,7 @@ class ScrapiBase:
         vertexai.init(project=project_id, location=location)
 
 
-    def get_project_id_from_agent_id(self,resource_id: str) -> str:
+    def get_project_id_from_agent_id(self, resource_id: str) -> Optional[str]:
         """Get the project ID from agent id."""
         parts = self._parse_resource_path(
             resource_type="agent",
@@ -694,7 +697,7 @@ class ScrapiBase:
         project_id = parts.get("project", None)
         return project_id
 
-    def get_location_id_from_agent_id(self,resource_id: str) -> str:
+    def get_location_id_from_agent_id(self, resource_id: str) -> Optional[str]:
         """Get the location ID from agent id."""
         parts = self._parse_resource_path(
             resource_type="agent",
