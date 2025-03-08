@@ -21,7 +21,7 @@ import json
 import logging
 import math
 import statistics
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 import numpy as np
 import pandas as pd
@@ -204,6 +204,30 @@ class SemanticSimilarity(Metric):
         self.model = model
 
     @staticmethod
+    def safe_check(
+        reference: Union[str, float],
+        prediction: Union[str, float]) -> Union[Tuple[str, str], float]:
+        """
+        Checks if either reference or prediction is np.nan or an empty string.
+
+        Args:
+            reference: Can be a string or np.nan.
+            prediction: Can be a string or np.nan.
+
+        Returns:
+            np.nan if either input is np.nan or an empty string,
+            otherwise returns a tuple of (reference, prediction) with
+            non-string inputs converted to strings.
+        """
+        if (isinstance(reference, float) and np.isnan(reference)) or \
+           (isinstance(prediction, float) and np.isnan(prediction)) or \
+           (isinstance(reference, str) and not reference) or \
+           (isinstance(prediction, str) and not prediction):
+            return np.nan
+        else:
+            return str(reference), str(prediction)
+
+    @staticmethod
     def vertex_embed(
         model: TextEmbeddingModel,
         texts: List[str] = ["banana muffins? ", "banana bread? muffins?"],
@@ -225,8 +249,12 @@ class SemanticSimilarity(Metric):
         return [embedding.values for embedding in embeddings]
 
     def compute(self, reference: str, prediction: str) -> float:
-        if not reference or not prediction:
+        checked_inputs = self.safe_check(reference, prediction)
+        if isinstance(checked_inputs, float) and np.isnan(checked_inputs):
             return np.nan
+        
+        # else, safe check returned tuple, so unpack it
+        reference, prediction = checked_inputs
 
         embeds = self.vertex_embed(self.model, [reference, prediction])
         embed_reference = embeds[0]
