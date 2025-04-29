@@ -329,7 +329,7 @@ class Search(scrapi_base.ScrapiBase):
 
             return SearchRequest.ContentSearchSpec(
                 snippet_spec=snippet_spec,
-                summary_spect=summary_spec,
+                summary_spec=summary_spec,
                 extractive_content_spec=extractive_content_spec,
             )
 
