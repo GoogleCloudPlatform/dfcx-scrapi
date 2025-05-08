@@ -364,7 +364,7 @@ class EntitiesCheckerUtil(scrapi_base.ScrapiBase):
                 {
                     "flow_display_name": flow.display_name,
                     "flow_name": flow.name,
-                    "page_name": f"{flow.name}/START_PAGE",
+                    "page_name": f"{flow.name}/pages/START_PAGE",
                     "route_groups": flow.transition_route_groups,
                     "routes": flow.transition_routes,
                 }
