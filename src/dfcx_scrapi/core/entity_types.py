@@ -206,7 +206,8 @@ class EntityTypes(scrapi_base.ScrapiBase):
                 "fuzzy_extraction": bool,
                 "redact": bool
             }
-            main_df = main_df.astype(type_map)
+            if not main_df.empty: 
+                main_df = main_df.astype(type_map)
 
             return {
                 "entity_types": main_df, "excluded_phrases": excl_phrases_df
