@@ -397,7 +397,7 @@ class Evaluations(ScrapiBase):
 
         return df
 
-    def run_detect_intent_queries(self, df: pd.DataFrame) -> pd.DataFrame:
+    def run_detect_intent_queries(self, df: pd.DataFrame, language_code: str = "en") -> pd.DataFrame:
         for index, row in tqdm(df.iterrows(), total=df.shape[0]):
             data = {}
             if row["action_id"] == 1:
@@ -425,7 +425,8 @@ class Evaluations(ScrapiBase):
                 agent_id=self.agent_id,
                 session_id=self.session_id,
                 text=row["action_input"],
-                parameters=session_parameters
+                parameters=session_parameters,
+                language_code=language_code
             )
             # Add data to the existing row
             df.loc[index, ["session_id", "agent_id"]] = [
@@ -512,15 +513,15 @@ class Evaluations(ScrapiBase):
 
         return df
 
-    def scrape_results(self, df: pd.DataFrame) -> pd.DataFrame:
+    def scrape_results(self, df: pd.DataFrame, language_code: str = "en") -> pd.DataFrame:
         df = self.add_response_columns(df)
-        df = self.run_detect_intent_queries(df)
+        df = self.run_detect_intent_queries(df, language_code=language_code)
         df = self.insert_unexpected_rows(df)
 
         return df
 
-    def run_query_and_eval(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = self.scrape_results(df)
+    def run_query_and_eval(self, df: pd.DataFrame, language_code: str = "en") -> pd.DataFrame:
+        df = self.scrape_results(df, language_code=language_code)
         df = self.run_evals(df)
         df = self.clean_outputs(df)
 
