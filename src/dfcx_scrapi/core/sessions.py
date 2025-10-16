@@ -141,7 +141,7 @@ class Sessions(ScrapiBase):
         return query_input
 
     @staticmethod
-    def get_tool_action(tool_use: types.example.ToolUse) -> str:
+    def get_tool_action(tool_use: types.trace.ToolUse) -> str:
         return tool_use.action
 
     def get_tool_params(self, params: maps.MapComposite):
@@ -167,7 +167,7 @@ class Sessions(ScrapiBase):
 
         return self.playbooks_map[playbook_id]
 
-    def get_tool_name(self, tool_use: types.example.ToolUse) -> str:
+    def get_tool_name(self, tool_use: types.trace.ToolUse) -> str:
         agent_id = self.parse_agent_id(tool_use.tool)
         if not self.tools_map:
             self.tools_map = self.tools_client.get_tools_map(agent_id)
