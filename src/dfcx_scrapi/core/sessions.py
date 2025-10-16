@@ -8,7 +8,7 @@
 #
 #     https://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
+# Unless required by applicable law in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
@@ -19,6 +19,7 @@ import uuid
 from typing import Any, Dict, List
 
 from google.cloud.dialogflowcx_v3beta1 import services, types
+from google.cloud.dialogflowcx_v3beta1.types import trace  # <-- CHANGE APPLIED
 from google.protobuf.json_format import MessageToDict
 from IPython.display import Markdown, display
 from proto.marshal.collections import maps
@@ -141,7 +142,7 @@ class Sessions(ScrapiBase):
         return query_input
 
     @staticmethod
-    def get_tool_action(tool_use: types.example.ToolUse) -> str:
+    def get_tool_action(tool_use: trace.ToolUse) -> str:  # <-- CHANGE APPLIED
         return tool_use.action
 
     def get_tool_params(self, params: maps.MapComposite):
@@ -167,7 +168,7 @@ class Sessions(ScrapiBase):
 
         return self.playbooks_map[playbook_id]
 
-    def get_tool_name(self, tool_use: types.example.ToolUse) -> str:
+    def get_tool_name(self, tool_use: trace.ToolUse) -> str:  # <-- CHANGE APPLIED
         agent_id = self.parse_agent_id(tool_use.tool)
         if not self.tools_map:
             self.tools_map = self.tools_client.get_tools_map(agent_id)
