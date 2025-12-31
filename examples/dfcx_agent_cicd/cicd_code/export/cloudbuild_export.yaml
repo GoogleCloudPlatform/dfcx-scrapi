@@ -1,4 +1,3 @@
-
 availableSecrets:
   secretManager:
   - versionName: # your version name
@@ -111,8 +110,8 @@ steps:
       echo $agent_name
       echo $bucket_name
       mkdir agenttemp
-      gsutil cp "gs://$bucket_name/exports/dev/$agent_name" agenttemp/$agent_name
-      gsutil cp "gs://$bucket_name/exports/dev/${agent_name}_metadata.json" agenttemp/metadata.json
+      gcloud storage cp "gs://$bucket_name/exports/dev/$agent_name" agenttemp/$agent_name
+      gcloud storage cp "gs://$bucket_name/exports/dev/${agent_name}_metadata.json" agenttemp/metadata.json
 
   - id: csrcheckin
     #dir: 'set your path till the readme doc in the git'

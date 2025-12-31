@@ -72,8 +72,8 @@ steps:
       echo $agent_name
       echo $bucket_name
       mkdir agenttemp
-      gsutil cp "gs://$bucket_name/exports/dev/$agent_name" agenttemp/$agent_name
-      gsutil cp "gs://$bucket_name/exports/dev/${agent_name}_metadata.json" agenttemp/metadata.json
+      gcloud storage cp "gs://$bucket_name/exports/dev/$agent_name" agenttemp/$agent_name
+      gcloud storage cp "gs://$bucket_name/exports/dev/${agent_name}_metadata.json" agenttemp/metadata.json
 
   - id: repocheckin
     #dir: your/path/here till the readme dir
