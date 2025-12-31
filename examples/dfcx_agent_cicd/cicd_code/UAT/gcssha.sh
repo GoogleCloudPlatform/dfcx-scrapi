@@ -1,4 +1,3 @@
-
 # Set your GCS bucket name and destination directory
 apt-get update && apt-get install -y jq
 export GCS_BUCKET=$(jq -r .bucket config.json)
@@ -13,7 +12,7 @@ cp agent_artifacts/$agent_name $1
 cp agent_artifacts/metadata.json $1
 
 # Upload the local directory to GCS
-gsutil -m cp -r $1 "gs://$GCS_BUCKET/$DESTINATION_DIR"
+gcloud storage cp --recursive $1 "gs://$GCS_BUCKET/$DESTINATION_DIR"
 
 # Clean up the local directory if needed
 rm -r $1
