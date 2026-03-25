@@ -122,7 +122,7 @@ def mock_query_result_tools_playbooks_flows(test_config):
             action_tracing_info=types.Example(
                 actions=[
                     types.Action(
-                        tool_use=types.example.ToolUse(
+                        tool_use=types.trace.ToolUse(
                             tool=test_config["tool_id"],
                             action=test_config["tool_action"],
                             input_action_parameters=test_config["tool_input_params"],
@@ -130,12 +130,12 @@ def mock_query_result_tools_playbooks_flows(test_config):
                         ),
                     ),
                     types.Action(
-                        playbook_invocation=types.example.PlaybookInvocation(
+                        playbook_invocation=types.trace.PlaybookInvocation(
                             playbook=test_config["playbook_id"]
                         ),
                     ),
                     types.Action(
-                        flow_invocation=types.example.FlowInvocation(
+                        flow_invocation=types.trace.FlowInvocation(
                             flow=test_config["flow_id"]
                         )
                     ),
@@ -363,7 +363,7 @@ def test_build_intent_query_input(test_config):
 
 def test_get_tool_action(test_config):
     session = Sessions()
-    mock_tool_use = types.example.ToolUse(action=test_config["tool_action"])
+    mock_tool_use = types.trace.ToolUse(action=test_config["tool_action"])
     action = session.get_tool_action(mock_tool_use)
 
     assert action == test_config["tool_action"]
@@ -405,7 +405,7 @@ def test_get_tool_name(test_config, mock_tools_instance, monkeypatch):
     session = Sessions(agent_id=test_config["agent_id"])
     monkeypatch.setattr(session, "_tools_client", mock_tools_instance)
 
-    mock_tool_use = types.example.ToolUse(tool=test_config["tool_id"])
+    mock_tool_use = types.trace.ToolUse(tool=test_config["tool_id"])
     name = session.get_tool_name(tool_use=mock_tool_use)
     assert name == "mock tool"
 
@@ -484,7 +484,7 @@ def test_collect_flow_responses(test_config, monkeypatch):
             action_tracing_info=types.Example(
                 actions=[
                     types.Action(
-                        flow_invocation=types.example.FlowInvocation(
+                        flow_invocation=types.trace.FlowInvocation(
                             flow=test_config["flow_id"]
                         ),
                     ),
