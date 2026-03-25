@@ -26,7 +26,7 @@ class Impacted:
 
     Methods:
         filter_flows: (Static method) Filters a flow map based on
-        differences between two environments.
+        differences between two versions in the same environments.
         check_flow: Identifies and returns a dictionary of
         changed flows between the latest two versions.
     """
@@ -67,11 +67,11 @@ class Impacted:
         )
 
     @staticmethod
-    def filter_flows(env1,env2,flowmap,versions):
+    def filter_flows(env_ver1,env_ver2,flowmap,versions):
         """ Returns filtered dict and impacted version ids"""
         impacted_flows=[]
-        for k,v in env1.items():
-            if v!=env2.get(k,0):
+        for k,v in env_ver1.items():
+            if v!=env_ver2.get(k,0):
                 impacted_flows.append(k)
 
         filtered_dict = {
@@ -98,25 +98,25 @@ class Impacted:
         """
         returns map of flow id:flow name which was found to be changed
         """
-        env1={}
+        env_ver1={}
         for i in self.hist[0].version_configs:
             flow=i.version.split("/")[-3]
             version=i.version.split("/")[-1]
-            env1[flow]=version
+            env_ver1[flow]=version
 
-        env2={}
+        env_ver2={}
         if len(self.hist)>1:
             for i in self.hist[1].version_configs:
                 flow=i.version.split("/")[-3]
                 version=i.version.split("/")[-1]
-                env2[flow]=version
+                env_ver2[flow]=version
 
         #get flow map for id name comparision
         flowmap=self.flows.get_flows_map(agent_id=self.agent_id)
 
         self.filtered_dict,self.impacted_version_ids = Impacted.filter_flows(
-            env1,
-            env2,
+            env_ver1,
+            env_ver2,
             flowmap,
             self.hist[0].version_configs
         )
