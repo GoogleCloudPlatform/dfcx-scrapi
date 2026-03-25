@@ -21,7 +21,7 @@ import json
 import logging
 import math
 import statistics
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -252,7 +252,7 @@ class SemanticSimilarity(Metric):
         checked_inputs = self.safe_check(reference, prediction)
         if isinstance(checked_inputs, float) and np.isnan(checked_inputs):
             return np.nan
-        
+
         # else, safe check returned tuple, so unpack it
         reference, prediction = checked_inputs
 
