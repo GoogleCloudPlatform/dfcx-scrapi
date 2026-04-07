@@ -102,11 +102,15 @@ def test_config():
     )
 
     playbook_version_description = "v1.0"
+    version_id = "1"
+    playbook_version_id = f"{playbook_id}/versions/{version_id}"
 
     return {
         "project_id": project_id,
         "agent_id": agent_id,
         "playbook_id": playbook_id,
+        "playbook_version_id": playbook_version_id,
+        "version_id": version_id,
         "goal": goal,
         "instructions_list": instructions_list,
         "instructions_str": instructions_str,
@@ -181,6 +185,23 @@ def mock_list_playbooks_pager(mock_playbook_obj_list):
         types.playbook.ListPlaybooksRequest(),
         types.playbook.ListPlaybooksResponse(
             playbooks=[mock_playbook_obj_list]),
+    )
+
+@pytest.fixture
+def mock_playbook_version_obj(test_config, mock_playbook_obj_empty_instructions):
+    return types.PlaybookVersion(
+        name=test_config["playbook_version_id"],
+        description=test_config["playbook_version_description"],
+        playbook=mock_playbook_obj_empty_instructions,
+    )
+
+@pytest.fixture
+def mock_list_playbook_versions_pager(mock_playbook_version_obj):
+    return services.playbooks.pagers.ListPlaybookVersionsPager(
+        services.playbooks.PlaybooksClient.list_playbook_versions,
+        types.playbook.ListPlaybookVersionsRequest(),
+        types.playbook.ListPlaybookVersionsResponse(
+            playbook_versions=[mock_playbook_version_obj]),
     )
 
 
@@ -472,3 +493,33 @@ def test_create_playbook_version_with_description(
     assert isinstance(res, types.PlaybookVersion)
     assert res.playbook.name == test_config["playbook_id"]
     assert res.description == test_config["playbook_version_description"]
+
+
+# Test get_playbook_version
+def test_get_playbook_version(
+        mock_client, test_config, mock_playbook_version_obj):
+    pb = Playbooks(agent_id=test_config["agent_id"])
+    mock_client.return_value.get_playbook_version.return_value = mock_playbook_version_obj
+
+    res = pb.get_playbook_version(
+        playbook_id=test_config["playbook_id"],
+        version_id=test_config["version_id"]
+    )
+
+    mock_client.return_value.get_playbook_version.assert_called()
+    assert isinstance(res, types.PlaybookVersion)
+    assert res.name == test_config["playbook_version_id"]
+    assert res.description == test_config["playbook_version_description"]
+
+
+# Test list_playbook_versions
+def test_list_playbook_versions(
+        mock_client, test_config, mock_list_playbook_versions_pager):
+    pb = Playbooks(agent_id=test_config["agent_id"])
+    mock_client.return_value.list_playbook_versions.return_value = mock_list_playbook_versions_pager
+
+    res = pb.list_playbook_versions(playbook_id=test_config["playbook_id"])
+
+    assert isinstance(res, list)
+    assert isinstance(res[0], types.PlaybookVersion)
+    assert res[0].name == test_config["playbook_version_id"]

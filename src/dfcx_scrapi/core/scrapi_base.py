@@ -358,6 +358,10 @@ class ScrapiBase:
                 "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/flows/(?P<flow>{standard_id_match})/versions/(?P<version>{version_id_match})$", # noqa: E501
                 "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/flows/<Flow ID>`", # noqa: E501
             },
+            "playbook_version": {
+                "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/playbooks/(?P<playbook>{standard_id_match})/versions/(?P<version>{version_id_match})$", # noqa: E501
+                "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>/playbooks/<Playbook ID>/versions/<Version ID>`", # noqa: E501
+            },
             "webhook": {
                 "matcher": fr"{matcher_root}/agents/(?P<agent>{standard_id_match})/webhooks/(?P<webhook>{standard_id_match})$", # noqa: E501
                 "format": "`projects/<Project ID>/locations/<Location ID>/agents/<Agent ID>`", # noqa: E501
@@ -370,7 +374,8 @@ class ScrapiBase:
                 " `agent`, `data_store`, `engine`, `entity_type`, "
                 "`environmnet`, `flow`, `intent`, `page`, `project`, "
                 "`security_setting`, `session`, `session_entity_type`, "
-                "`test_case`, `transition_route_group`, `version`, `webhook`"
+                "`test_case`, `transition_route_group`, `version`, "
+                "`playbook_version`, `webhook`"
             )
 
         match_res = re.match(pattern_map[resource_type]["matcher"], resource_id)
