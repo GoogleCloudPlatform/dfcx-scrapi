@@ -348,3 +348,52 @@ class Playbooks(scrapi_base.ScrapiBase):
         response = self.playbooks_client.create_playbook_version(request)
 
         return response
+
+    @scrapi_base.api_call_counter_decorator
+    def get_playbook_version(
+        self, playbook_id: str, version_id: str
+    ) -> types.PlaybookVersion:
+        """Get a single CX Playbook Version object.
+
+        Args:
+          playbook_id: CX Playbook ID in the proper format
+            projects/<ProjectID>/locations/<LocationID>/agents/<AgentID>/playbooks/<PlaybookID>
+          version_id: The version ID to retrieve.
+
+        Returns:
+          A single CX PlaybookVersion object.
+        """
+        name = f"{playbook_id}/versions/{version_id}"
+        self._parse_resource_path("playbook_version", name)
+
+        request = types.GetPlaybookVersionRequest()
+        request.name = name
+
+        response = self.playbooks_client.get_playbook_version(request)
+
+        return response
+
+    @scrapi_base.api_call_counter_decorator
+    def list_playbook_versions(
+        self, playbook_id: str
+    ) -> List[types.PlaybookVersion]:
+        """Get a list of all Versions for a given Playbook.
+
+        Args:
+          playbook_id: CX Playbook ID in the proper format
+            projects/<ProjectID>/locations/<LocationID>/agents/<AgentID>/playbooks/<PlaybookID>
+
+        Returns:
+          List of PlaybookVersion objects.
+        """
+        request = types.ListPlaybookVersionsRequest()
+        request.parent = playbook_id
+
+        response = self.playbooks_client.list_playbook_versions(request)
+
+        versions = []
+        for page in response.pages:
+            for version in page.playbook_versions:
+                versions.append(version)
+
+        return versions
