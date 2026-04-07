@@ -364,6 +364,7 @@ class Playbooks(scrapi_base.ScrapiBase):
           A single CX PlaybookVersion object.
         """
         name = f"{playbook_id}/versions/{version_id}"
+        self._parse_resource_path("playbook_version", name)
 
         request = types.GetPlaybookVersionRequest()
         request.name = name
