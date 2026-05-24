@@ -126,7 +126,7 @@ def test_init_no_creds(mock_default, test_config):
     assert scrapi_base.agent_id is None
     assert not scrapi_base.creds.requires_scopes
     mock_adc_creds.refresh.assert_called_once()
-    mock_default.assert_called_once()
+    mock_default.assert_called_once_with(scopes=test_config["global_scopes"])
 
 def test_init_with_creds(test_config):
     """Test initialization with user provided credentials."""
@@ -176,6 +176,19 @@ def test_init_with_creds_dict(mock_from_service_account_info, test_config):
     assert scrapi_base.token == mock_creds.token
     assert scrapi_base.agent_id is None
     assert scrapi_base.creds.requires_scopes
+    mock_creds.refresh.assert_called_once()
+
+@patch("dfcx_scrapi.core.scrapi_base.default")
+def test_init_no_creds_scopes_service_account_adc(mock_default, test_config):
+    """Test ADC initialization scopes service account credentials."""
+    mock_creds = test_config["creds_object"]
+    mock_default.return_value = (mock_creds, "mock_project_id")
+
+    scrapi_base = ScrapiBase()
+
+    mock_default.assert_called_once_with(scopes=test_config["global_scopes"])
+    assert scrapi_base.creds == mock_creds
+    assert scrapi_base.token == mock_creds.token
     mock_creds.refresh.assert_called_once()
 
 def test_set_region_non_global(test_config):
@@ -509,5 +522,4 @@ def test_get_generation_config_invalid_parameters():
     assert gen_config.temperature == 0.9
 
     assert not hasattr(gen_config, "invalid_parameter")
-
 
