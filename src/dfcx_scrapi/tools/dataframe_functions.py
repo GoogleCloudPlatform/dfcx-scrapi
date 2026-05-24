@@ -140,6 +140,7 @@ class DataframeFunctions(ScrapiBase):
         new_intent.is_fallback = original_intent.is_fallback
         new_intent.labels = dict(original_intent.labels)
         new_intent.description = original_intent.description
+        new_intent.parameters = list(original_intent.parameters)
 
         return new_intent
 
@@ -175,6 +176,8 @@ class DataframeFunctions(ScrapiBase):
         Returns:
           The new intents protobuf object
         """
+        if params is None:
+            params = pd.DataFrame()
 
         if mode == "basic":
             if hasattr(train_phrases, "text"):
@@ -264,18 +267,23 @@ class DataframeFunctions(ScrapiBase):
                 training_phrases.append(training_phrase)
 
             intent.training_phrases = training_phrases
-            parameters = []
+            existing_parameters = {
+                parameter.id for parameter in intent.parameters
+            }
             for _, row in params.iterrows():
-                parameter = {
-                    "id": row["id"],
-                    "entity_type": row["entity_type"],
-                    "is_list": False,
-                    "redact": False,
-                }
-                parameters.append(parameter)
+                parameter_id = row["id"]
+                if parameter_id in existing_parameters:
+                    continue
 
-            if parameters:
-                intent.parameters = parameters
+                intent.parameters.append(
+                    types.Intent.Parameter(
+                        id=parameter_id,
+                        entity_type=row["entity_type"],
+                        is_list=False,
+                        redact=False,
+                    )
+                )
+                existing_parameters.add(parameter_id)
 
         elif mode == "basic":
             training_phrases = []
@@ -324,6 +332,8 @@ class DataframeFunctions(ScrapiBase):
           Dictionary with intent display names as keys and the new intent
           protobufs as values
         """
+        if params_df is None:
+            params_df = pd.DataFrame()
 
         if mode == "basic":
             if all(k in tp_df for k in ["display_name", "text"]):
@@ -441,7 +451,7 @@ class DataframeFunctions(ScrapiBase):
                 columns="display_name"
             )
             params = pd.DataFrame()
-            if mode == "advanced":
+            if mode == "advanced" and not params_df.empty:
                 params = params_df.copy()[
                     params_df["display_name"] == intent_name
                 ].drop(columns="display_name")
