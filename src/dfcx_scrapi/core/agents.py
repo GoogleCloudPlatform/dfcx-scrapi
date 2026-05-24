@@ -497,6 +497,25 @@ class Agents(scrapi_base.ScrapiBase):
 
         return response
 
+    @staticmethod
+    def _export_agent_data_format(data_format):
+        data_format_enum = types.agent.ExportAgentRequest.DataFormat
+
+        if isinstance(data_format, data_format_enum):
+            return data_format
+
+        if isinstance(data_format, str):
+            normalized_data_format = data_format.strip().upper()
+            if normalized_data_format in ["JSON", "ZIP", "JSON_PACKAGE"]:
+                return data_format_enum.JSON_PACKAGE
+            if normalized_data_format == "BLOB":
+                return data_format_enum.BLOB
+
+        try:
+            return data_format_enum(data_format)
+        except (TypeError, ValueError):
+            return data_format_enum.BLOB
+
 
     @scrapi_base.api_call_counter_decorator
     def export_agent(
@@ -532,18 +551,11 @@ class Agents(scrapi_base.ScrapiBase):
             check the status of the export using
               dfcx_scrapi.core.operations->get_lro()
         """
-        blob_format = types.agent.ExportAgentRequest.DataFormat(1)
-        json_format = types.agent.ExportAgentRequest.DataFormat(4)
-
         request = types.agent.ExportAgentRequest()
         request.name = agent_id
         request.agent_uri = gcs_bucket_uri
         request.include_bigquery_export_settings = include_bq_export_settings
-
-        if data_format in ["JSON", "ZIP", "JSON_PACKAGE"]:
-            request.data_format = json_format
-        else:
-            request.data_format = blob_format
+        request.data_format = self._export_agent_data_format(data_format)
 
         if git_branch:
             git_settings = types.agent.ExportAgentRequest.GitDestination()
