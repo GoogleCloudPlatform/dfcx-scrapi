@@ -50,7 +50,8 @@ _INTERVAL_SENTINEL = object()
 SYS_INSTRUCT_MODELS = [
     "gemini-1.0-pro-002",
     "gemini-1.5-pro-001",
-    "gemini-1.5-flash-001"
+    "gemini-1.5-flash-001",
+    "gemini-2.0-flash-001"
 ]
 
 NON_SYS_INSTRUCT_GEM_MODELS = [

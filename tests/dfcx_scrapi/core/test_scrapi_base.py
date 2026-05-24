@@ -27,6 +27,7 @@ from google.oauth2.service_account import (
 from google.protobuf import field_mask_pb2, struct_pb2
 
 from dfcx_scrapi.core.scrapi_base import (
+    ALL_GEMINI_MODELS,
     ScrapiBase,
     api_call_counter_decorator,
     handle_api_error,
@@ -510,4 +511,26 @@ def test_get_generation_config_invalid_parameters():
 
     assert not hasattr(gen_config, "invalid_parameter")
 
+
+def test_model_setup_supports_gemini_2_flash(mocked_scrapi_base):
+    """Test model_setup routes current Gemini 2 Flash model IDs."""
+    assert "gemini-2.0-flash-001" in ALL_GEMINI_MODELS
+
+    with patch.object(
+        mocked_scrapi_base,
+        "build_generative_model"
+    ) as mock_build_generative_model:
+        mock_model = MagicMock()
+        mock_build_generative_model.return_value = mock_model
+
+        res = mocked_scrapi_base.model_setup(
+            "gemini-2.0-flash-001",
+            system_instructions="Use concise responses.",
+        )
+
+    assert res == mock_model
+    mock_build_generative_model.assert_called_once_with(
+        "gemini-2.0-flash-001",
+        "Use concise responses.",
+    )
 
