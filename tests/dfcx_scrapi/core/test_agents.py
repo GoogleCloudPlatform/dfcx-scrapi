@@ -607,3 +607,46 @@ def test_update_bq_settings_no_args(test_config: Dict[str, str]):
         )
 
     assert str(e.value) == "At least one setting must be provided if 'bq_settings' is not used."
+
+@pytest.mark.parametrize(
+    "data_format,expected",
+    [
+        ("json", types.agent.ExportAgentRequest.DataFormat.JSON_PACKAGE),
+        ("JSON_PACKAGE", types.agent.ExportAgentRequest.DataFormat.JSON_PACKAGE),
+        ("zip", types.agent.ExportAgentRequest.DataFormat.JSON_PACKAGE),
+        ("blob", types.agent.ExportAgentRequest.DataFormat.BLOB),
+        (
+            types.agent.ExportAgentRequest.DataFormat.JSON_PACKAGE,
+            types.agent.ExportAgentRequest.DataFormat.JSON_PACKAGE,
+        ),
+        (4, types.agent.ExportAgentRequest.DataFormat.JSON_PACKAGE),
+        ("unsupported", types.agent.ExportAgentRequest.DataFormat.BLOB),
+    ],
+)
+def test_export_agent_data_format_mapping(data_format, expected):
+    assert Agents._export_agent_data_format(data_format) == expected
+
+
+@patch("dfcx_scrapi.core.agents.services.agents.AgentsClient")
+def test_export_agent_accepts_lowercase_data_format(
+    mock_agents_client: MagicMock,
+    test_config: Dict[str, str],
+):
+    mock_operation = MagicMock()
+    mock_operation.operation.name = "operations/export-agent"
+    mock_client = mock_agents_client.return_value
+    mock_client.export_agent.return_value = mock_operation
+
+    agent = Agents()
+    response = agent.export_agent(
+        agent_id=test_config["agent_id"],
+        gcs_bucket_uri="gs://bucket/agent",
+        data_format="json",
+    )
+
+    request = mock_client.export_agent.call_args.args[0]
+
+    assert response == "operations/export-agent"
+    assert request.data_format == (
+        types.agent.ExportAgentRequest.DataFormat.JSON_PACKAGE
+    )
