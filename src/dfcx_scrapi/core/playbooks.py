@@ -134,6 +134,7 @@ class Playbooks(scrapi_base.ScrapiBase):
     def process_playbook_kwargs(
             self,
             playbook: types.Playbook,
+            overwrite_instructions: bool = True,
             **kwargs):
         """Process incoming kwargs and create the proper update mask."""
         paths = []
@@ -141,12 +142,19 @@ class Playbooks(scrapi_base.ScrapiBase):
             if key in ["instruction", "instructions"]:
                 if isinstance(value, list):
                     instructions = self.build_instructions_from_list(value)
-                    setattr(playbook, "instruction", instructions)
                 elif isinstance(value, str):
                     instructions = self.build_instructions_from_string(value)
-                    setattr(playbook, "instruction", instructions)
                 elif isinstance(value, types.Playbook.Instruction):
-                    setattr(playbook, "instruction", value)
+                    instructions = value
+                else:
+                    raise ValueError(
+                        "`instructions` must be a list, string, or "
+                        "Playbook.Instruction."
+                    )
+                if overwrite_instructions:
+                    setattr(playbook, "instruction", instructions)
+                else:
+                    playbook.instruction.steps.extend(instructions.steps)
                 paths.append("instruction")
             else:
                 setattr(playbook, key, value)
@@ -286,6 +294,7 @@ class Playbooks(scrapi_base.ScrapiBase):
         self,
         playbook_id: str,
         obj: types.Playbook = None,
+        overwrite_instructions: bool = False,
         **kwargs
     ) -> types.Playbook:
         """Update a single specific CX Playbook object.
@@ -308,7 +317,11 @@ class Playbooks(scrapi_base.ScrapiBase):
             playbook = self.get_playbook(playbook_id)
 
         # set optional args as playbook attributes
-        playbook, mask = self.process_playbook_kwargs(playbook, **kwargs)
+        playbook, mask = self.process_playbook_kwargs(
+            playbook,
+            overwrite_instructions=overwrite_instructions,
+            **kwargs
+        )
 
         response = self.playbooks_client.update_playbook(
             playbook=playbook, update_mask=mask)

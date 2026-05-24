@@ -312,6 +312,49 @@ def test_update_playbook_with_kwargs(
     assert isinstance(res, types.Playbook)
     assert res.display_name == "mock playbook updated"
 
+def test_update_playbook_appends_instructions_by_default(
+    mock_client, mock_playbook_obj_list, test_config):
+    pb = Playbooks(agent_id=test_config["agent_id"])
+    mock_client.return_value.get_playbook.return_value = mock_playbook_obj_list
+    mock_client.return_value.update_playbook.return_value = mock_playbook_obj_list # pylint: disable=C0301
+
+    pb.update_playbook(
+        playbook_id=test_config["playbook_id"],
+        instructions=test_config["instructions_str"]
+    )
+
+    expected_instruction = types.Playbook.Instruction()
+    expected_instruction.steps.extend(
+        test_config["instructions_proto_from_list"].steps)
+    expected_instruction.steps.extend(
+        test_config["instructions_proto_from_str"].steps)
+    update_call = mock_client.return_value.update_playbook.call_args.kwargs
+
+    assert update_call["playbook"].instruction == expected_instruction
+    assert update_call["update_mask"] == field_mask_pb2.FieldMask(
+        paths=["instruction"])
+
+def test_update_playbook_overwrites_instructions_when_requested(
+    mock_client, mock_playbook_obj_list, test_config):
+    pb = Playbooks(agent_id=test_config["agent_id"])
+    mock_client.return_value.get_playbook.return_value = mock_playbook_obj_list
+    mock_client.return_value.update_playbook.return_value = mock_playbook_obj_list # pylint: disable=C0301
+
+    pb.update_playbook(
+        playbook_id=test_config["playbook_id"],
+        overwrite_instructions=True,
+        instructions=test_config["instructions_str"]
+    )
+
+    update_call = mock_client.return_value.update_playbook.call_args.kwargs
+
+    assert (
+        update_call["playbook"].instruction
+        == test_config["instructions_proto_from_str"]
+    )
+    assert update_call["update_mask"] == field_mask_pb2.FieldMask(
+        paths=["instruction"])
+
 # Test the playbook kwarg processing helper methods
 def test_process_playbook_kwargs_display_name(
         mock_playbook_obj_str, mock_updated_playbook_obj, test_config):
