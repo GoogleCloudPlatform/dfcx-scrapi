@@ -160,6 +160,11 @@ class Search(scrapi_base.ScrapiBase):
     def build_condition_boost_spec(
         self, spec: Dict[str, Any]
     ) -> SearchRequest.BoostSpec.ConditionBoostSpec:
+        if isinstance(
+            spec, SearchRequest.BoostSpec.ConditionBoostSpec
+        ):
+            return spec
+
         return SearchRequest.BoostSpec.ConditionBoostSpec(
             condition=spec.get("condition", None), boost=spec.get("boost", None)
         )
@@ -167,11 +172,22 @@ class Search(scrapi_base.ScrapiBase):
     def build_boost_spec(
         self, search_request: Dict[str, Any]
     ) -> Union[SearchRequest.BoostSpec, None]:
-        boost_spec_dict = search_request.get("boost_spec", None)
-        if boost_spec_dict:
-            condition_boost_specs = boost_spec_dict.get(
+        boost_spec = search_request.get("boost_spec", None)
+        if boost_spec is None:
+            boost_spec = search_request.get("boostSpec", None)
+
+        if boost_spec is not None:
+            if isinstance(boost_spec, SearchRequest.BoostSpec):
+                return boost_spec
+
+            condition_boost_specs = boost_spec.get(
                 "condition_boost_specs", None
             )
+            if condition_boost_specs is None:
+                condition_boost_specs = boost_spec.get(
+                    "conditionBoostSpecs", []
+                )
+
             all_boost_specs = []
             for spec in condition_boost_specs:
                 all_boost_specs.append(self.build_condition_boost_spec(spec))
