@@ -18,6 +18,7 @@
 
 from unittest.mock import MagicMock
 
+import pandas as pd
 import pytest
 from google.oauth2.service_account import Credentials
 
@@ -155,3 +156,25 @@ def test_dffx_init_creds_object(mock_dffx_setup, test_config):
     dffx = DataframeFunctions(creds=test_config["creds_object"])
 
     assert dffx.creds == test_config["creds_object"]
+
+
+def test_make_schema_returns_dtype_row():
+    schema = DataframeFunctions._make_schema(["display_name", "text"])
+
+    assert schema.to_dict(orient="records") == [
+        {"display_name": "string", "text": "string"}
+    ]
+
+
+def test_bulk_create_intent_schema_error_does_not_crash():
+    dffx = DataframeFunctions.__new__(DataframeFunctions)
+    bad_training_phrases = pd.DataFrame([{"display_name": "Intent A"}])
+
+    with pytest.raises(
+        ValueError, match="basic mode train_phrases schema must be"
+    ):
+        dffx.bulk_create_intent_from_dataframe(
+            agent_id="projects/p/locations/l/agents/a",
+            tp_df=bad_training_phrases,
+            mode="basic",
+        )

@@ -108,9 +108,6 @@ class DataframeFunctions(ScrapiBase):
 
     @staticmethod
     def _make_schema(columns: List[str]) -> pd.DataFrame:
-
-        dataframe = pd.DataFrame(columns=columns)
-
         type_map = {
             "display_name": "string",
             "text": "string",
@@ -121,14 +118,11 @@ class DataframeFunctions(ScrapiBase):
             "entity_type": "string",
         }
 
-        temp_data = {}
-        for column in dataframe.columns:
-            dataframe = dataframe.astype({column: type_map[column]})
-            temp_data[column] = type_map[column]
+        schema_data = {}
+        for column in columns:
+            schema_data[column] = type_map[column]
 
-        dataframe = pd.concat([dataframe, temp_data], ignore_index=True)
-
-        return dataframe
+        return pd.DataFrame([schema_data], columns=columns)
 
     @staticmethod
     def _remap_intent_values(original_intent: types.Intent) -> types.Intent:
