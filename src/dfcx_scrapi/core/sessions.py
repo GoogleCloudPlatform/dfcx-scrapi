@@ -386,15 +386,22 @@ class Sessions(ScrapiBase):
         )
 
         answer_text = res["responseMessages"][0]["text"]["text"][0]
-        answer_link = (
-            res["responseMessages"][1]["payload"]["richContent"][0][0][
-                "actionLink"
-            ]
-            if len(res["responseMessages"]) > 1
-            else ""
-        )
+        answer_link = self._get_agent_answer_link(res["responseMessages"])
 
         return f"{answer_text} ({answer_link})"
+
+    @staticmethod
+    def _get_agent_answer_link(response_messages: List[Dict[str, Any]]) -> str:
+        for response_message in response_messages[1:]:
+            rich_content = response_message.get("payload", {}).get(
+                "richContent", []
+            )
+            for content_group in rich_content:
+                for content in content_group:
+                    action_link = content.get("actionLink")
+                    if action_link:
+                        return action_link
+        return ""
 
     def parse_result(self, res):
 

@@ -755,6 +755,60 @@ def test_get_agent_answer_no_citation(test_config, mock_sessions_client, monkeyp
     assert answer == "Test Response ()"
     mock_detect_intent.assert_called_once()
 
+def test_get_agent_answer_citation_payload_without_action_link(
+        test_config, mock_sessions_client, monkeypatch):
+    mock_detect_intent_response = MagicMock()
+    mock_detect_intent_response.query_result = types.session.QueryResult(
+        response_messages=[
+            types.ResponseMessage(
+                text=types.ResponseMessage.Text(
+                    text=["Answer with citation payload"]
+                )
+            ),
+            types.ResponseMessage(
+                payload=struct_pb2.Struct(
+                    fields={
+                        "richContent": struct_pb2.Value(
+                            list_value=struct_pb2.ListValue(
+                                values=[
+                                    struct_pb2.Value(
+                                        list_value=struct_pb2.ListValue(
+                                            values=[
+                                                struct_pb2.Value(
+                                                    struct_value=struct_pb2.Struct(
+                                                        fields={
+                                                            "type": struct_pb2.Value(
+                                                                string_value="info"
+                                                            ),
+                                                            "title": struct_pb2.Value(
+                                                                string_value="Citation"
+                                                            ),
+                                                        }
+                                                    )
+                                                )
+                                            ]
+                                        )
+                                    )
+                                ]
+                            )
+                        )
+                    }
+                )
+            )
+        ]
+    )
+
+    mock_detect_intent = MagicMock(return_value=mock_detect_intent_response)
+    mock_sessions_client.return_value.detect_intent = mock_detect_intent
+
+    session = Sessions(agent_id=test_config["agent_id"])
+    monkeypatch.setattr(session, "build_session_id",
+                        MagicMock(return_value=test_config["session_id_plain"]))
+
+    answer = session.get_agent_answer(user_query="test query")
+    assert answer == "Answer with citation payload ()"
+    mock_detect_intent.assert_called_once()
+
 def test_parse_result(
     test_config, mock_query_result_tools_playbooks_flows, monkeypatch
 ):
