@@ -18,7 +18,9 @@
 
 from unittest.mock import MagicMock
 
+import pandas as pd
 import pytest
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2.service_account import Credentials
 
 from dfcx_scrapi.tools.dataframe_functions import DataframeFunctions
@@ -155,3 +157,84 @@ def test_dffx_init_creds_object(mock_dffx_setup, test_config):
     dffx = DataframeFunctions(creds=test_config["creds_object"])
 
     assert dffx.creds == test_config["creds_object"]
+
+
+def test_create_entity_from_dataframe_allows_default_meta():
+    dffx = DataframeFunctions.__new__(DataframeFunctions)
+    entity_df = pd.DataFrame([
+        {
+            "value": "coffee",
+            "synonyms": '["coffee", "espresso"]',
+        }
+    ])
+
+    entity = dffx.create_entity_from_dataframe(
+        display_name="drink",
+        entity_df=entity_df,
+    )
+
+    assert entity.display_name == "drink"
+    assert entity.kind == types.EntityType.Kind.KIND_MAP
+    assert entity.entities[0].value == "coffee"
+    assert list(entity.entities[0].synonyms) == ["coffee", "espresso"]
+
+
+def test_bulk_create_entity_from_dataframe_allows_missing_meta():
+    dffx = DataframeFunctions.__new__(DataframeFunctions)
+    entity_df = pd.DataFrame([
+        {
+            "display_name": "drink",
+            "value": "coffee",
+            "synonyms": '["coffee", "espresso"]',
+            "kind": int(types.EntityType.Kind.KIND_LIST),
+        }
+    ])
+
+    entities = dffx.bulk_create_entity_from_dataframe(
+        agent_id="projects/test/locations/global/agents/a",
+        entities_df=entity_df,
+    )
+
+    assert list(entities.keys()) == ["drink"]
+    assert entities["drink"].kind == types.EntityType.Kind.KIND_LIST
+    assert entities["drink"].entities[0].value == "coffee"
+
+
+def test_bulk_create_entity_from_dataframe_uses_meta():
+    dffx = DataframeFunctions.__new__(DataframeFunctions)
+    entity_df = pd.DataFrame([
+        {
+            "display_name": "drink",
+            "value": "coffee",
+            "synonyms": '["coffee", "espresso"]',
+            "kind": int(types.EntityType.Kind.KIND_MAP),
+            "meta": '{"enable_fuzzy_extraction": true}',
+        }
+    ])
+
+    entities = dffx.bulk_create_entity_from_dataframe(
+        agent_id="projects/test/locations/global/agents/a",
+        entities_df=entity_df,
+    )
+
+    assert entities["drink"].enable_fuzzy_extraction is True
+
+
+def test_bulk_update_entity_from_dataframe_allows_missing_meta():
+    dffx = DataframeFunctions.__new__(DataframeFunctions)
+    entity_df = pd.DataFrame([
+        {
+            "display_name": "drink",
+            "name": "projects/test/locations/global/agents/a/entityTypes/drink",
+            "value": "coffee",
+            "synonyms": '["coffee", "espresso"]',
+            "kind": int(types.EntityType.Kind.KIND_MAP),
+        }
+    ])
+
+    entities = dffx.bulk_update_entity_from_dataframe(
+        entities_df=entity_df,
+    )
+
+    assert list(entities.keys()) == ["drink"]
+    assert entities["drink"].kind == types.EntityType.Kind.KIND_MAP

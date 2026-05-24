@@ -773,6 +773,7 @@ class DataframeFunctions(ScrapiBase):
         display_name: str,
         entity_df: pd.DataFrame,
         meta: Dict[str, str] = None,
+        kind: int = None,
     ):
         """Create an entity.
 
@@ -780,6 +781,7 @@ class DataframeFunctions(ScrapiBase):
           display_name: display_name parameter of the entity to update
           entity_df: dataframe values and synonyms
           meta: dictionary of entity metadata
+          kind: Dialogflow CX EntityType.Kind enum value
 
         Returns:
           The new entity protobuf object
@@ -788,7 +790,9 @@ class DataframeFunctions(ScrapiBase):
             meta = {}
         entity_obj = {}
         entity_obj["display_name"] = display_name
-        entity_obj["kind"] = meta.get("kind", 1)
+        if kind is None:
+            kind = meta.get("kind", 1)
+        entity_obj["kind"] = kind
         entity_obj["auto_expansion_mode"] = meta.get("auto_expansion_mode", 0)
         entity_obj["excluded_phrases"] = meta.get("excluded_phrases", [])
         entity_obj["enable_fuzzy_extraction"] = meta.get(
@@ -829,10 +833,13 @@ class DataframeFunctions(ScrapiBase):
           Dictionary with entity display names as keys and the
           new entity protobufs as values
         """
-        meta = None
+        meta_df = None
+        if "kind" not in entities_df.columns:
+            entities_df = entities_df.copy()
+            entities_df["kind"] = 1
 
         if "meta" in entities_df.columns:
-            meta = (
+            meta_df = (
                 entities_df.copy()[["display_name", "meta"]]
                 .drop_duplicates()
                 .reset_index()
@@ -841,17 +848,20 @@ class DataframeFunctions(ScrapiBase):
         i, custom_entities = 0, {}
         for entity in list(set(entities_df["display_name"])):
             one_entity = entities_df[entities_df["display_name"] == entity]
-            if "meta" in locals():
-                meta_ = meta[meta["display_name"] == entity]["meta"].iloc[0]
+            kind = int(one_entity["kind"].iloc[0])
+            meta_ = None
+            if meta_df is not None:
+                meta_ = meta_df[
+                    meta_df["display_name"] == entity
+                ]["meta"].iloc[0]
                 meta_ = json.loads(meta_)
-                new_entity = self.create_entity_from_dataframe(
-                    display_name=entity, entity_df=one_entity, meta=meta
-                )
 
-            else:
-                new_entity = self.create_entity_from_dataframe(
-                    display_name=entity, entity_df=one_entity
-                )
+            new_entity = self.create_entity_from_dataframe(
+                display_name=entity,
+                entity_df=one_entity,
+                meta=meta_,
+                kind=kind,
+            )
 
             custom_entities[entity] = new_entity
             i += 1
@@ -890,10 +900,13 @@ class DataframeFunctions(ScrapiBase):
           Dictionary with entity display names as keys and the
           new entity protobufs as values
         """
-        meta = None
+        meta_df = None
+        if "kind" not in entities_df.columns:
+            entities_df = entities_df.copy()
+            entities_df["kind"] = 1
 
         if "meta" in entities_df.columns:
-            meta = (
+            meta_df = (
                 entities_df.copy()[["display_name", "meta"]]
                 .drop_duplicates()
                 .reset_index()
@@ -902,17 +915,19 @@ class DataframeFunctions(ScrapiBase):
         i, custom_entities = 0, {}
         for entity in list(set(entities_df["display_name"])):
             one_entity = entities_df[entities_df["display_name"] == entity]
-            if "meta" in locals():
-                meta_ = meta[meta["display_name"] == entity]["meta"].iloc[0]
+            kind = int(one_entity["kind"].iloc[0])
+            meta_ = None
+            if meta_df is not None:
+                meta_ = meta_df[
+                    meta_df["display_name"] == entity
+                ]["meta"].iloc[0]
                 meta_ = json.loads(meta_)
-                new_entity = self.create_entity_from_dataframe(
-                    display_name=entity, entity_df=one_entity, meta=meta
-                )
-
-            else:
-                new_entity = self.create_entity_from_dataframe(
-                    display_name=entity, entity_df=one_entity
-                )
+            new_entity = self.create_entity_from_dataframe(
+                display_name=entity,
+                entity_df=one_entity,
+                meta=meta_,
+                kind=kind,
+            )
 
             custom_entities[entity] = new_entity
             i += 1
