@@ -60,6 +60,12 @@ class Interaction:
 
 class Evaluations(ScrapiBase):
     """Evaluation tooling for Generative features in Agent Builder and DFCX."""
+    PAIRING_COLUMNS = [
+        "utterance_pair",
+        "tool_pair",
+        "playbook_pair",
+        "flow_pair",
+    ]
 
     def __init__(
         self,
@@ -383,6 +389,7 @@ class Evaluations(ScrapiBase):
 
     def add_response_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
+        df = self.add_pairing_columns(df)
 
         df.loc[:, "agent_response"] = pd.Series(dtype="str")
         df.loc[:, "agent_id"] = pd.Series(dtype="str")
@@ -394,6 +401,31 @@ class Evaluations(ScrapiBase):
             df.loc[:, "res_tool_action"] = pd.Series(dtype="str")
             df.loc[:, "res_input_params"] = pd.Series(dtype="str")
             df.loc[:, "res_output_params"] = pd.Series(dtype="str")
+
+        return df
+
+    @classmethod
+    def add_pairing_columns(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """Ensure response mapping columns exist before running evals."""
+        if "utterance_pair" not in df.columns:
+            df.loc[:, "utterance_pair"] = pd.Series(dtype="string")
+            if {"eval_id", "action_type"}.issubset(df.columns):
+                grouped = df.groupby("eval_id")
+                for _, group in grouped:
+                    user = group[
+                        group["action_type"] == "User Utterance"
+                    ].index.tolist()
+                    agent = group[
+                        group["action_type"] == "Agent Response"
+                    ].index.tolist()
+
+                    for user_index, agent_index in zip(user, agent):
+                        df.loc[user_index, "utterance_pair"] = str(agent_index)
+
+        for column in cls.PAIRING_COLUMNS:
+            if column not in df.columns:
+                df.loc[:, column] = pd.Series(dtype="string")
+            df.loc[:, column] = df[column].fillna("")
 
         return df
 
