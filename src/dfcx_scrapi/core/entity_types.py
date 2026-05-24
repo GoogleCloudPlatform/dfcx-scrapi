@@ -23,6 +23,27 @@ from google.protobuf import field_mask_pb2
 
 from dfcx_scrapi.core import scrapi_base
 
+BASIC_ENTITY_TYPE_COLUMNS = [
+    "display_name",
+    "entity_value",
+    "synonyms",
+]
+ADVANCED_ENTITY_TYPE_COLUMNS = [
+    "entity_type_id",
+    "display_name",
+    "kind",
+    "auto_expansion_mode",
+    "fuzzy_extraction",
+    "redact",
+    "entity_value",
+    "synonyms",
+]
+EXCLUDED_PHRASES_COLUMNS = [
+    "entity_type_id",
+    "display_name",
+    "excluded_phrase",
+]
+
 # logging config
 logging.basicConfig(
     level=logging.INFO,
@@ -173,7 +194,7 @@ class EntityTypes(scrapi_base.ScrapiBase):
 
         entity_types = self.list_entity_types(agent_id)
         if mode == "basic":
-            main_df = pd.DataFrame()
+            main_df = pd.DataFrame(columns=BASIC_ENTITY_TYPE_COLUMNS)
             for obj in entity_types:
                 if (entity_type_subset and
                         obj.display_name not in entity_type_subset):
@@ -188,8 +209,8 @@ class EntityTypes(scrapi_base.ScrapiBase):
             return main_df
 
         elif mode == "advanced":
-            main_df = pd.DataFrame()
-            excl_phrases_df = pd.DataFrame()
+            main_df = pd.DataFrame(columns=ADVANCED_ENTITY_TYPE_COLUMNS)
+            excl_phrases_df = pd.DataFrame(columns=EXCLUDED_PHRASES_COLUMNS)
             for obj in entity_types:
                 if (entity_type_subset and
                         obj.display_name not in entity_type_subset):
