@@ -202,6 +202,43 @@ class Playbooks(scrapi_base.ScrapiBase):
 
         return playbooks_dict
 
+    @staticmethod
+    def _set_parameter_definition_type(parameter: types.ParameterDefinition):
+        """Set ParameterDefinition.type_ from inline schema when it is absent."""
+        if (
+            parameter.type_ !=
+            types.ParameterDefinition.ParameterType.PARAMETER_TYPE_UNSPECIFIED
+        ):
+            return
+
+        if (
+            "type_schema" not in parameter or
+            "inline_schema" not in parameter.type_schema or
+            "type_" not in parameter.type_schema.inline_schema
+        ):
+            return
+
+        inline_type = parameter.type_schema.inline_schema.type_
+        inline_type_enum = types.InlineSchema.meta.fields["type_"].enum
+        parameter_type = types.ParameterDefinition.ParameterType
+        type_map = {
+            inline_type_enum.STRING: parameter_type.STRING,
+            inline_type_enum.NUMBER: parameter_type.NUMBER,
+            inline_type_enum.BOOLEAN: parameter_type.BOOLEAN,
+            inline_type_enum.ARRAY: parameter_type.LIST,
+        }
+        mapped_type = type_map.get(inline_type)
+        if mapped_type:
+            parameter.type_ = mapped_type
+
+    @classmethod
+    def _set_playbook_parameter_types(cls, playbook: types.Playbook):
+        """Set missing parameter types for Playbook input/output definitions."""
+        for parameter in playbook.input_parameter_definitions:
+            cls._set_parameter_definition_type(parameter)
+        for parameter in playbook.output_parameter_definitions:
+            cls._set_parameter_definition_type(parameter)
+
     @scrapi_base.api_call_counter_decorator
     def list_playbooks(self, agent_id: str = None):
         """Get a List of all Playbooks in the current Agent.
@@ -241,6 +278,7 @@ class Playbooks(scrapi_base.ScrapiBase):
             playbook_id = self.playbook_id
 
         response = self.playbooks_client.get_playbook(name=playbook_id)
+        self._set_playbook_parameter_types(response)
 
         return response
 
@@ -270,6 +308,7 @@ class Playbooks(scrapi_base.ScrapiBase):
         if obj:
             playbook = obj
             playbook.name = ""
+            self._set_playbook_parameter_types(playbook)
         else:
             playbook = types.Playbook()
 

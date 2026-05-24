@@ -174,6 +174,33 @@ def mock_updated_playbook_obj(mock_playbook_obj_list):
     return mock_playbook_obj_list
 
 
+def _parameter_definition(name, inline_type):
+    return types.ParameterDefinition(
+        name=name,
+        type_schema=types.TypeSchema(
+            inline_schema=types.InlineSchema(type_=inline_type)
+        ),
+    )
+
+
+@pytest.fixture
+def mock_playbook_obj_without_parameter_types(test_config):
+    inline_type = types.InlineSchema.meta.fields["type_"].enum
+    return types.Playbook(
+        name=test_config["playbook_id"],
+        display_name="mock playbook",
+        goal=test_config["goal"],
+        input_parameter_definitions=[
+            _parameter_definition("customer_name", inline_type.STRING),
+            _parameter_definition("order_total", inline_type.NUMBER),
+        ],
+        output_parameter_definitions=[
+            _parameter_definition("is_valid", inline_type.BOOLEAN),
+            _parameter_definition("line_items", inline_type.ARRAY),
+        ],
+    )
+
+
 @pytest.fixture
 def mock_list_playbooks_pager(mock_playbook_obj_list):
     return services.playbooks.pagers.ListPlaybooksPager(
@@ -242,6 +269,22 @@ def test_get_playbook(mock_client, mock_playbook_obj_list, test_config):
     assert res.display_name == "mock playbook"
 
 
+def test_get_playbook_sets_missing_parameter_types(
+        mock_client, mock_playbook_obj_without_parameter_types, test_config):
+    pb = Playbooks(agent_id=test_config["agent_id"])
+    mock_client.return_value.get_playbook.return_value = (
+        mock_playbook_obj_without_parameter_types
+    )
+
+    res = pb.get_playbook(playbook_id=test_config["playbook_id"])
+
+    parameter_type = types.ParameterDefinition.ParameterType
+    assert res.input_parameter_definitions[0].type_ == parameter_type.STRING
+    assert res.input_parameter_definitions[1].type_ == parameter_type.NUMBER
+    assert res.output_parameter_definitions[0].type_ == parameter_type.BOOLEAN
+    assert res.output_parameter_definitions[1].type_ == parameter_type.LIST
+
+
 # Test create_playbook
 def test_create_playbook_from_kwargs_instruction_list(
         mock_client, mock_playbook_obj_list, test_config):
@@ -281,6 +324,34 @@ def test_create_playbook_from_proto_object(
     )
     assert isinstance(res, types.Playbook)
     assert res.display_name == "mock playbook"
+
+
+def test_create_playbook_from_proto_sets_missing_parameter_types(
+        mock_client, mock_playbook_obj_without_parameter_types, test_config):
+    pb = Playbooks(agent_id=test_config["agent_id"])
+    mock_client.return_value.create_playbook.return_value = (
+        mock_playbook_obj_without_parameter_types
+    )
+
+    pb.create_playbook(
+        agent_id=test_config["agent_id"],
+        obj=mock_playbook_obj_without_parameter_types,
+    )
+
+    request = mock_client.return_value.create_playbook.call_args.args[0]
+    parameter_type = types.ParameterDefinition.ParameterType
+    assert request.playbook.input_parameter_definitions[0].type_ == (
+        parameter_type.STRING
+    )
+    assert request.playbook.input_parameter_definitions[1].type_ == (
+        parameter_type.NUMBER
+    )
+    assert request.playbook.output_parameter_definitions[0].type_ == (
+        parameter_type.BOOLEAN
+    )
+    assert request.playbook.output_parameter_definitions[1].type_ == (
+        parameter_type.LIST
+    )
 
 
 # Test update_playbook
