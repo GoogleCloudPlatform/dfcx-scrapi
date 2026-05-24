@@ -92,7 +92,7 @@ class ScrapiBase:
         agent_id: str = None,
     ):
 
-        self.scopes = GLOBAL_SCOPES
+        self.scopes = list(GLOBAL_SCOPES)
         if scope:
             self.scopes += scope
 
@@ -116,10 +116,9 @@ class ScrapiBase:
             self.token = self.creds.token
 
         else:
-            self.creds, _ = default()
+            self.creds, _ = default(scopes=self.scopes)
             self.creds.refresh(Request())
             self.token = self.creds.token
-            self._check_and_update_scopes(self.creds)
 
         self.agent_id = agent_id
         self.api_calls_dict = defaultdict(int)
