@@ -772,6 +772,46 @@ class DataLoader:
 
         return df
 
+    def validate_required_values(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Validate required columns have non-empty values."""
+        empty_values = {}
+        for column in self.required_columns:
+            empty_mask = (
+                df[column].isna() | df[column].astype(str).str.strip().eq("")
+            )
+
+            if empty_mask.any():
+                empty_values[column] = df.index[empty_mask].tolist()
+
+        if empty_values:
+            raise ValueError(
+                "Required columns contain empty values at row indices: "
+                f"{empty_values}. Fill required eval input values before "
+                "loading the dataset."
+            )
+
+        return df
+
+    @staticmethod
+    def validate_and_convert_action_id(df: pd.DataFrame) -> pd.DataFrame:
+        """Validate and convert action_id values to integers."""
+        try:
+            action_ids = pd.to_numeric(df["action_id"], errors="raise")
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "`action_id` must contain integer-compatible values."
+            ) from exc
+
+        if not action_ids.mod(1).eq(0).all():
+            invalid_rows = df.index[~action_ids.mod(1).eq(0)].tolist()
+            raise ValueError(
+                "`action_id` must contain integer-compatible values. "
+                f"Invalid row indices: {invalid_rows}"
+            )
+
+        df["action_id"] = action_ids.astype(int)
+        return df
+
     def check_existing_tab_name(
         self, sheet_name: str, results_tab: str
     ) -> bool:
@@ -884,9 +924,13 @@ class DataLoader:
         if "action_id" not in df.columns.to_list():
             df["action_id"] = 1
 
-        df["action_id"] = df["action_id"].astype(int)
         self.validate_input_columns(df)
+        self.validate_required_values(df)
+        self.validate_and_convert_action_id(df)
         self.convert_column_types(df)
+        for col in self.required_columns:
+            if col != "action_id":
+                df[col] = df[col].astype(str)
 
         df = self.pair_utterances(df)
         df = self.pair_tool_calls(df)
