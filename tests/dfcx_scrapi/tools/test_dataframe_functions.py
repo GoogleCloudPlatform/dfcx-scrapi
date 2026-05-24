@@ -18,7 +18,9 @@
 
 from unittest.mock import MagicMock
 
+import pandas as pd
 import pytest
+from google.cloud.dialogflowcx_v3beta1 import types
 from google.oauth2.service_account import Credentials
 
 from dfcx_scrapi.tools.dataframe_functions import DataframeFunctions
@@ -155,3 +157,164 @@ def test_dffx_init_creds_object(mock_dffx_setup, test_config):
     dffx = DataframeFunctions(creds=test_config["creds_object"])
 
     assert dffx.creds == test_config["creds_object"]
+
+
+def test_remap_intent_values_preserves_parameters():
+    original_intent = types.Intent(
+        name="projects/test/locations/global/agents/a/intents/intent-1",
+        display_name="Book Flight",
+        parameters=[
+            types.Intent.Parameter(
+                id="destination",
+                entity_type=(
+                    "projects/test/locations/global/agents/a"
+                    "/entityTypes/location"
+                ),
+                is_list=True,
+                redact=True,
+            )
+        ],
+    )
+
+    remapped_intent = DataframeFunctions._remap_intent_values(original_intent)
+
+    assert len(remapped_intent.parameters) == 1
+    assert remapped_intent.parameters[0].id == "destination"
+    assert remapped_intent.parameters[0].is_list is True
+    assert remapped_intent.parameters[0].redact is True
+
+
+def test_update_intent_from_dataframe_preserves_existing_parameters():
+    dffx = DataframeFunctions.__new__(DataframeFunctions)
+    dffx.intents = MagicMock()
+    dffx.intents.get_intent.return_value = types.Intent(
+        name="projects/test/locations/global/agents/a/intents/intent-1",
+        display_name="Book Flight",
+        parameters=[
+            types.Intent.Parameter(
+                id="destination",
+                entity_type=(
+                    "projects/test/locations/global/agents/a"
+                    "/entityTypes/location"
+                ),
+                is_list=True,
+                redact=True,
+            )
+        ],
+    )
+    train_phrases = pd.DataFrame([
+        {
+            "training_phrase": 0,
+            "part": 0,
+            "text": "Book a flight",
+            "parameter_id": "",
+        }
+    ])
+
+    updated_intent = dffx._update_intent_from_dataframe(
+        intent_id="intent-1",
+        train_phrases=train_phrases,
+        params=None,
+        mode="advanced",
+    )
+
+    assert [parameter.id for parameter in updated_intent.parameters] == [
+        "destination"
+    ]
+    assert updated_intent.parameters[0].is_list is True
+    assert updated_intent.parameters[0].redact is True
+
+
+def test_update_intent_from_dataframe_appends_new_parameters():
+    dffx = DataframeFunctions.__new__(DataframeFunctions)
+    dffx.intents = MagicMock()
+    dffx.intents.get_intent.return_value = types.Intent(
+        name="projects/test/locations/global/agents/a/intents/intent-1",
+        display_name="Book Flight",
+        parameters=[
+            types.Intent.Parameter(
+                id="destination",
+                entity_type=(
+                    "projects/test/locations/global/agents/a"
+                    "/entityTypes/location"
+                ),
+            )
+        ],
+    )
+    train_phrases = pd.DataFrame([
+        {
+            "training_phrase": 0,
+            "part": 0,
+            "text": "Book a flight to Seattle",
+            "parameter_id": "destination",
+        }
+    ])
+    params = pd.DataFrame([
+        {
+            "id": "destination",
+            "entity_type": (
+                "projects/test/locations/global/agents/a/entityTypes/location"
+            ),
+        },
+        {
+            "id": "date",
+            "entity_type": (
+                "projects/test/locations/global/agents/a/entityTypes/date"
+            ),
+        },
+    ])
+
+    updated_intent = dffx._update_intent_from_dataframe(
+        intent_id="intent-1",
+        train_phrases=train_phrases,
+        params=params,
+        mode="advanced",
+    )
+
+    assert [parameter.id for parameter in updated_intent.parameters] == [
+        "destination",
+        "date",
+    ]
+    assert updated_intent.parameters[1].entity_type.endswith(
+        "/entityTypes/date"
+    )
+
+
+def test_bulk_update_intents_from_dataframe_allows_missing_params_df():
+    dffx = DataframeFunctions.__new__(DataframeFunctions)
+    dffx.intents = MagicMock()
+    dffx.intents.get_intents_map.return_value = {"Book Flight": "intent-1"}
+    dffx.intents.get_intent.return_value = types.Intent(
+        name="projects/test/locations/global/agents/a/intents/intent-1",
+        display_name="Book Flight",
+        parameters=[
+            types.Intent.Parameter(
+                id="destination",
+                entity_type=(
+                    "projects/test/locations/global/agents/a"
+                    "/entityTypes/location"
+                ),
+            )
+        ],
+    )
+    tp_df = pd.DataFrame([
+        {
+            "display_name": "Book Flight",
+            "training_phrase": 0,
+            "part": 0,
+            "text": "Book a flight",
+            "parameter_id": "",
+        }
+    ])
+
+    updated_intents = dffx.bulk_update_intents_from_dataframe(
+        agent_id="projects/test/locations/global/agents/a",
+        tp_df=tp_df,
+        params_df=None,
+        mode="advanced",
+    )
+
+    assert list(updated_intents.keys()) == ["Book Flight"]
+    assert [parameter.id for parameter in updated_intents[
+        "Book Flight"
+    ].parameters] == ["destination"]
