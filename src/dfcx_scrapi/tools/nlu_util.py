@@ -141,7 +141,7 @@ class NaturalLanguageUnderstandingUtil(scrapi_base.ScrapiBase):
         )
         self.name_to_trg = {i.name: i for i in self.trgs}
 
-        if page_display_name != "Start Page":
+        if page_display_name not in {"START_PAGE", "Start Page"}:
             page_loader = pages.Pages(creds=self.creds)
             page_map = page_loader.get_pages_map(self.flow.name, reverse=True)
             page_id = page_map.get(page_display_name, None)
