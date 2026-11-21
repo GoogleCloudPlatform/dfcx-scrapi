@@ -751,6 +751,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             route_group_name,
             intent,
             condition,
+            fulfillment_type,
             response_type,
             response_message,
             conditional_cases
@@ -789,8 +790,12 @@ class SearchUtil(scrapi_base.ScrapiBase):
                 lambda cc: np.nan if cc == [] else cc
             )
         ).dropna(subset=["response_type", "conditional_cases"], thresh=1)
+        msg_df.loc[
+            msg_df.response_type.isna() & msg_df.conditional_cases.notna(),
+            "response_type",
+        ] = "conditional_response"
         if message_format == "human-readable":
-            msg_df.fillna("", inplace=True)
+            msg_df = msg_df.astype(object).fillna("")
 
         column_order = [
             "flow_name",
@@ -800,6 +805,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             "route_group_name",
             "intent",
             "condition",
+            "fulfillment_type",
             "response_type",
             "response_message",
             "conditional_cases",
@@ -822,6 +828,7 @@ class SearchUtil(scrapi_base.ScrapiBase):
             route_group_name,
             intent,
             condition,
+            fulfillment_type,
             fulfillment
         """
         flow_df = self.get_flow_df(agent_id)
@@ -863,15 +870,18 @@ class SearchUtil(scrapi_base.ScrapiBase):
                         "routes",
                         "event_handlers",
                     ]
-                ).rename(columns={"entry_fulfillment": "fulfillment"}),
+                )
+                .rename(columns={"entry_fulfillment": "fulfillment"})
+                .assign(fulfillment_type="entry_fulfillment"),
                 event_handler_df.rename(
                     columns={"trigger_fulfillment": "fulfillment"}
-                ),
+                ).assign(fulfillment_type="event_handler"),
                 route_df.rename(
-                    columns={"trigger_fulfillment": "fulfillment"}),
+                    columns={"trigger_fulfillment": "fulfillment"}
+                ).assign(fulfillment_type="route"),
                 param_initial_prompt_fulfillment_df.rename(
                     columns={"initial_prompt_fulfillment": "fulfillment"}
-                ),
+                ).assign(fulfillment_type="initial_prompt_fulfillment"),
             ],
             ignore_index=True,
         ).dropna(subset=["fulfillment"], axis="index")
